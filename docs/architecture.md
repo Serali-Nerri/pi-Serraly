@@ -1,0 +1,93 @@
+# pi-ui architecture — Pi 0.99.2
+
+## Ownership
+
+`src/index.ts` registers Markdown, `/context`, and the UI lifecycle. Factory
+loading has no UI timers or prototype patches.
+
+`src/lifecycle.ts` owns one host subscription per event, a local domain router,
+one `pi-ui-bridge`, the current context/generation, presentation commands and
+resource cleanup. TUI resources require both `ctx.mode === "tui"` and `hasUI`.
+Print, JSON and RPC retain their native prototypes and protocol output.
+
+`src/scheduler.ts` is the single keyed scheduler. Thinking, tool/group loading,
+footer elapsed time, query coalescing and deferred rebuilds share one timer.
+Replacement cancellation is identity-safe; errors in one callback do not prevent
+other jobs from running. Shutdown stops scheduling before resources are released.
+
+## Boundaries
+
+| Directory | Responsibility |
+| --- | --- |
+| `compat/` | Private host fields, prototype capability checks, source-aware renderer policy, ownership, grouping/compact/message/mouse integration |
+| `state/` | Billing/context snapshots and Thinking timing/persistence controller |
+| `shell/` | Header/footer views, statuses, bounded Git/runtime queries and generation guards |
+| `transcript/` | Thinking and tool/file/diff/Input-Output views over captured data |
+| `overlays/` | Context and text-preview dialogs, hover/TUI state |
+| `markdown/` | One display-only transformer; native Mermaid/ordinary URLs plus narrow CJK-punctuation URL-boundary compatibility |
+| `config/` | Twelve effective settings, atomic explicit saves, panel and `/context` registration |
+
+## Compatibility pipeline
+
+Display patches preserve legacy `Symbol.for("claude-style-tools.*")` ownership
+slots. `compat/method-pipeline.ts` mounts one dispatcher per host method and
+composes ordered steps. Captured downstream methods cannot re-enter that mutable
+dispatcher; disposed steps become inert even if a foreign wrapper captured them.
+Only an owned prototype value is restored.
+
+Thinking decorates hidden native runs after Pi builds its message content. Visible
+reasoning, per-run overrides, native Markdown and errors stay with Pi. Compact
+then composes the process presentation. Tool background and compact display steps
+share the same tool update dispatcher. No rendering tool is re-registered.
+
+Domain installation retains reverse-order cleanup and capability failure
+reporting. Git/runtime subprocesses keep bounded timeouts; disposed sessions ignore
+late results rather than updating newer installations.
+
+## Renderer decisions
+
+All tooling presentation domains use `compat/policy.ts`:
+
+1. `off` or exclusion preserves native/tool-owned presentation.
+2. A third-party dedicated call/result/self renderer is protected.
+3. Public builtin source metadata permits the ccstyle renderer for real builtins.
+4. Valid `apply_patch.v1` reports receive file/diff views; other reports use generic
+   captured Input/Output.
+
+Definitions, execution, tool discovery, schemas, prompts and returned content are
+outside UI ownership.
+
+Only source-confirmed builtin write/edit definitions receive file adapters.
+Renderer-less same-name overrides use generic Input/Output and its matching
+group/compact/background decisions.
+
+## Data
+
+Billing scans all session entries, including off-branch usage and every independent
+usage kind. A session/revision cache uses cheap entry-count/leaf checks before the
+next render; cache warming can therefore update idle totals without inventing a
+public usage event.
+
+Context uses the active projected history, invalidates anchors after edits or
+compaction, and distinguishes actual usage anchors, mixed estimates, estimates
+and unknown. Footer and inspector share the snapshot contract. Billing entries
+do not enter the context projection or latest-assistant cache ratio.
+
+Thinking duration entries keep `claude-style-tools-thinking-duration` and
+`{messageTimestamp, contentIndex, durationMs}`. Restoration reads `getEntries()`
+across the full session and does not write historical session data.
+
+Compaction watches mounted native transcript identities from the bridge. This
+places the refresh after the host rebuild even if another compaction handler
+awaits across timer turns. No extra animation timer is introduced.
+
+## Build and acceptance
+
+Development versions are locked in the root workspace. Bundles externalize all
+Pi/TypeBox imports and retain source-license records. Actual CLI acceptance loads
+an ESM stage outside that dependency tree and checks live host class identity.
+The scripted provider and network guard make acceptance independent of real
+credentials, sessions and endpoints.
+
+Stage one ends with user acceptance. The other five modules and formal runtime
+installation remain behind that gate.

@@ -1,0 +1,29 @@
+# Dependencies and generated builds
+node_modules/
+dist/
+.stage/
+*.tsbuildinfo
+
+# Test output, caches and temporary work
+coverage/
+.nyc_output/
+.cache/
+/tmp/
+/temp/
+*.log
+
+# Local configuration, credentials and Pi runtime state
+.pi/
+.env
+.env.*
+!.env.example
+!.env.template
+.npmrc
+auth.json
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~

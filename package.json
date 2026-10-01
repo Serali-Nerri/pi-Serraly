@@ -1,0 +1,25 @@
+{
+  "name": "pi-serraly",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Private Pi extensions; stage one contains the unified UI only.",
+  "engines": { "node": ">=22.19.0" },
+  "workspaces": ["modules/ui"],
+  "scripts": {
+    "check": "tsc -p modules/ui/tsconfig.json",
+    "test": "node scripts/test.mjs",
+    "build": "node scripts/build.mjs",
+    "verify": "npm run check && npm test && npm run build"
+  },
+  "pi": { "extensions": ["./dist/pi-ui/index.js"] },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "0.99.2",
+    "@earendil-works/pi-coding-agent": "0.99.2",
+    "@earendil-works/pi-tui": "0.99.2",
+    "@types/node": "24.10.1",
+    "esbuild": "0.28.2",
+    "tsx": "4.23.12",
+    "typescript": "5.9.3"
+  }
+}

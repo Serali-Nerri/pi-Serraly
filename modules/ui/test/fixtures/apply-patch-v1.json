@@ -1,0 +1,65 @@
+{
+  "format": "apply_patch.v1",
+  "changes": [
+    {
+      "kind": "add",
+      "path": "src/added.ts",
+      "views": [{
+        "role": "file",
+        "before": { "exists": false, "bytes": 0, "lines": 0, "bom": false, "endings": { "lf": 0, "crlf": 0, "cr": 0 }, "finalNewline": false },
+        "after": { "exists": true, "bytes": 122, "lines": 4, "bom": false, "endings": { "lf": 4, "crlf": 0, "cr": 0 }, "finalNewline": true },
+        "lineEndingsChanged": false,
+        "added": 4,
+        "removed": 0,
+        "availability": "complete",
+        "diff": "+1 export const added = true;\n+2 export const value = 41;\n+3 export const isReady = added && value === 41;\n+4 export default isReady;",
+        "diffTotalLines": 4
+      }]
+    },
+    {
+      "kind": "update",
+      "path": "src/updated.ts",
+      "views": [{
+        "role": "file",
+        "before": { "exists": true, "bytes": 36, "lines": 2, "bom": false, "endings": { "lf": 2, "crlf": 0, "cr": 0 }, "finalNewline": true },
+        "after": { "exists": true, "bytes": 36, "lines": 2, "bom": false, "endings": { "lf": 2, "crlf": 0, "cr": 0 }, "finalNewline": true },
+        "lineEndingsChanged": false,
+        "added": 1,
+        "removed": 1,
+        "availability": "complete",
+        "diff": " 1 const keep = true;\n-2 const value = 1;\n+2 const value = 2;",
+        "diffTotalLines": 3
+      }]
+    },
+    {
+      "kind": "update",
+      "path": "docs/new-name.md",
+      "moveFrom": "docs/old-name.md",
+      "contentChanged": true,
+      "views": [
+        {
+          "role": "source-delete",
+          "before": { "exists": true, "bytes": 39, "lines": 3, "bom": false, "endings": { "lf": 3, "crlf": 0, "cr": 0 }, "finalNewline": true },
+          "after": { "exists": false, "bytes": 0, "lines": 0, "bom": false, "endings": { "lf": 0, "crlf": 0, "cr": 0 }, "finalNewline": false },
+          "lineEndingsChanged": false,
+          "added": 0,
+          "removed": 3,
+          "availability": "complete",
+          "diff": "-1 # Old name\n-2 Moved content.\n-3 Second line.",
+          "diffTotalLines": 3
+        },
+        {
+          "role": "destination",
+          "before": { "exists": true, "bytes": 28, "lines": 2, "bom": false, "endings": { "lf": 2, "crlf": 0, "cr": 0 }, "finalNewline": true },
+          "after": { "exists": true, "bytes": 39, "lines": 3, "bom": false, "endings": { "lf": 3, "crlf": 0, "cr": 0 }, "finalNewline": true },
+          "lineEndingsChanged": false,
+          "added": 2,
+          "removed": 1,
+          "availability": "complete",
+          "diff": " 1 # New name\n-2 Old target line.\n+2 Moved content.\n+3 Second line.",
+          "diffTotalLines": 4
+        }
+      ]
+    }
+  ]
+}
