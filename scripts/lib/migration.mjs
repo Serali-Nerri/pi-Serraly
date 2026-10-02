@@ -179,7 +179,7 @@ async function approvalFor(options, paths) {
 	if (new Set(approval.removals.map((entry) => canonical([entry.array, entry.value]))).size !== approval.removals.length) fail("Duplicate approved resource removal");
 	return { approval, directories };
 }
-// Pi 0.99.2 package-manager.resolvePathFromBase / utils/paths.normalizePath:
+// Pi 1.0.0 package-manager.resolvePathFromBase / utils/paths.normalizePath:
 // trim local sources and decode file:// before resolving from the agent. Identity
 // normalization never changes the original value recorded in the settings delta.
 function resourcePath(value, array, paths) {
@@ -263,7 +263,7 @@ function classifySettings(settings, journal, paths) {
 	fail("Settings conflict: migration entries are missing, duplicated, replaced, or only partially restored");
 }
 
-// Pi 0.99.2 uses proper-lockfile's default 10s stale / 5s heartbeat protocol.
+// Pi 1.0.0 uses proper-lockfile's default 10s stale / 5s heartbeat protocol.
 // Keep that protocol, but yield during expensive work and independently verify
 // ownership before mutations. The guarded fs adapter also prevents heartbeat,
 // finally, and proper-lockfile's exit handler from touching a replacement lock.

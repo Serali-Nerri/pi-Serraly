@@ -29,7 +29,7 @@ export type DefaultModeHooks = { isOwner(): boolean; shutdown(): void };
 
 function requireMethods(proto: any, methods: readonly string[]): void {
 	for (const name of methods) if (typeof proto?.[name] !== "function") {
-		throw new Error(`Pi 0.99.2 tool component lacks ${name}; native rendering retained`);
+		throw new Error(`Pi 1.0.0 tool component lacks ${name}; native rendering retained`);
 	}
 }
 function syncShell(component: any, shell: "default" | "self"): void {

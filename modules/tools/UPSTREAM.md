@@ -36,7 +36,7 @@ The package's original BSD-3-Clause license is retained in [licenses/diff-BSD-3-
 ## Intentional workspace deviations
 
 1. Only leading indentation and single-quoted TypeScript literals were normalized to tabs/double quotes. All seven production ASTs and literal values were checked against the source; template-string data, including the Lark grammar and description, remains unchanged. No patch algorithm, file lock, preflight, abort/partial-commit diagnostic, size budget, report contract, tool schema, exposure, namespace or prompt metadata changed.
-2. The private module manifest has exact `diff: "8.0.4"` and optional host-provided peers `@earendil-works/pi-coding-agent: "*"` and `typebox: "*"`. No module-local development host copies or lockfile were imported. Root development tooling supplies Pi 0.99.2, TypeBox 1.3.27, TypeScript and tsx.
+2. The private module manifest has exact `diff: "8.0.4"` and optional host-provided peers `@earendil-works/pi-coding-agent: "*"` and `typebox: "*"`. No module-local development host copies or lockfile were imported. Root development tooling supplies Pi 1.0.0, TypeBox 1.3.27, TypeScript and tsx.
 3. The strict NodeNext/no-emit/erasable-syntax TypeScript boundary covers `src/` and `test/`. Legacy JavaScript deployment checking was removed because the deployment implementation itself was intentionally excluded.
 4. The old loader/execution extension test now loads the explicit workspace entry with a temporary agent directory rather than invoking `deploy()`. Its real add/update/no-op byte/identity assertions are retained.
 5. The README source-text schema/snippet comparison test was excluded: reading Markdown fragments is not behavior verification. The real registered-tool schema/grammar tests are retained, and the new SDK test checks that prompt metadata actually reaches the initial prompt.
@@ -59,18 +59,18 @@ The package's original BSD-3-Clause license is retained in [licenses/diff-BSD-3-
 
 ## Validation and root handoff
 
-Validation uses temporary HOME/agent/cwd directories, an allowlisted environment, the root's existing TypeScript/tsx, Pi 0.99.2 and a temporary extraction of the exact `diff@8.0.4` npm archive. No real auth/settings/session/project `.pi` data is read, and no deploy script or provider request is run.
+Migration validation used temporary HOME/agent/cwd directories, an allowlisted environment, the root's existing TypeScript/tsx, Pi 0.99.2 and a temporary extraction of the exact `diff@8.0.4` npm archive. No real auth/settings/session/project `.pi` data is read, and no deploy script or provider request is run.
 
 Recorded migration checks:
 
 - **RED:** before production import, `test/migration.test.ts` failed its real-loader assertion with expected `["apply_patch"]`, actual `[]` (exit 1).
 - **GREEN:** the same regression passed after import (exit 0). The final strict TypeScript check passed, and the complete module suite passed **173/173**, no failures/cancellations/skips.
 - The SDK prompt test also failed against a temporary mutation removing snippet/guidelines, proving it catches loss of model-facing metadata; the unmodified production copy passed.
-- The existing root `npm test` passed **801/801** (the current UI-only runner; not yet the integrated stage-two runner). The first launcher attempt failed before tests because npm rejected the same `/dev/null` config path for both user/global configuration; retrying with distinct empty temporary config files passed.
+- The existing root `npm test` passed **801/801** (the then UI-only runner; not yet the integrated stage-two runner). The first launcher attempt failed before tests because npm rejected the same `/dev/null` config path for both user/global configuration; retrying with distinct empty temporary config files passed.
 - Logs remain under `/tmp/pi-serraly-apply-patch-validation-m5VYft/`: `red.log`, `green.log`, `prompt-mutation-red.log`, `types.log`, `test.log`, `root-test.log`. Production AST/literal equivalence and byte-identical fixtures/LICENSE/NOTICE were verified independently; all source baseline hashes still match.
 
 ## Workspace addition: same-name search tools
 
-`src/index.ts` also registers `grep`, `find` and `ls` as `exposure: "codemode"` replacements for the built-in tools. They import the host's public `createGrepToolDefinition`/`createFindToolDefinition`/`createLsToolDefinition` and override only exposure, namespace and the renderer fields. No Pi source was copied, so no additional license payload is required; behavior tracks the pinned Pi 0.99.2 release.
+`src/index.ts` also registers `grep`, `find` and `ls` as `exposure: "codemode"` replacements for the built-in tools. They import the host's public `createGrepToolDefinition`/`createFindToolDefinition`/`createLsToolDefinition` and override only exposure, namespace and the renderer fields. No Pi source was copied, so no additional license payload is required; behavior tracks the pinned Pi 1.0.0 release.
 
 The root owner must include this workspace in shared checks/tests and bundle `src/index.ts` to `dist/pi-tools/index.js`. Keep host imports external, bundle `diff@8.0.4`, and retain this module's LICENSE, NOTICE, source record and BSD license. Do not install physical host peers into the isolated runtime tree. Full compiled-loader/module-identity, six-entry discovery/filtering/coexistence and release-switch/rollback tests are root integration responsibilities, not evidence implied by the source-loader tests here.

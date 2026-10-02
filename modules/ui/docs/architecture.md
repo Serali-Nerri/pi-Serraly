@@ -1,4 +1,4 @@
-# pi-ui architecture — Pi 0.99.2
+# pi-ui architecture — Pi 1.0.0
 
 ## Ownership
 
@@ -9,6 +9,11 @@ loading has no UI timers or prototype patches.
 one `pi-ui-bridge`, the current context/generation, presentation commands and
 resource cleanup. TUI resources require both `ctx.mode === "tui"` and `hasUI`.
 Print, JSON and RPC retain their native prototypes and protocol output.
+
+Fullscreen is the host default. Explicit `tuiMode: "regular"` or
+`--tui-mode regular` selects regular mode; UI presentation supports both.
+Fullscreen mouse routing belongs to the host, while regular mode leaves mouse
+input and scrollback to the terminal.
 
 `src/scheduler.ts` is the single keyed scheduler. Thinking, tool/group loading,
 footer elapsed time, query coalescing and deferred rebuilds share one timer.

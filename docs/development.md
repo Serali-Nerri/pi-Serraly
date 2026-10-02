@@ -2,7 +2,7 @@
 
 ## 环境与命令
 
-基线：Node ≥22.19、Pi **0.99.2**、TypeBox **1.3.27**。仅在本工作区安装开发依赖：
+基线：Node ≥22.19、Pi **1.0.0**、TypeBox **1.3.27**。仅在本工作区安装开发依赖：
 
 ```sh
 npm ci --ignore-scripts --include=optional --legacy-peer-deps
@@ -28,6 +28,9 @@ node scripts/test.mjs --module background-shell --list
 
 模块选择只用于调试，不代替完成前的 `npm run verify`。
 入口路径和构建策略见[架构](architecture.md)。
+后台 shell 的源码或人类文档变更经审阅后，先运行
+`npm run docs:generate --workspace pi-background-shell` 更新哈希管控产物，
+再运行完整验证；生成哈希不替代行为审阅。
 
 ## 测试层级与质量要求
 
@@ -58,7 +61,7 @@ GREEN。测试名说明破坏的行为。不得用源码字符串匹配代替执
 不得读真实 auth、sessions 或 settings；不得发送真实模型请求。原生文档
 fixture 关闭 OCR，不安装系统包。模块 tests 自己拥有进程/worker 清理。
 
-实际 CLI 基线来自开发树外的全局 **0.99.2** host；必要时可显式指定另一份
+实际 CLI 基线来自开发树外的全局 **1.0.0** host；必要时可显式指定另一份
 同版本安装：
 
 ```sh

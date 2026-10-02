@@ -19,7 +19,7 @@ test("release manifest exposes only six compiled extensions, never companion ski
 });
 
 for (let index = 0; index < entries.length; index++) {
-	test(`compiled ${entries[index]} loads independently through Pi 0.99.2`, { timeout: 30000 }, async () => {
+	test(`compiled ${entries[index]} loads independently through Pi 1.0.0`, { timeout: 30000 }, async () => {
 		await sdkScenario(stage, "inventory", { indices: [index] });
 	});
 }
@@ -77,13 +77,19 @@ for (const mode of ["print", "json", "rpc"]) {
 	});
 }
 
-for (const mode of ["regular", "fullscreen"]) {
-	test(`final release under bundled CLI ${mode}: host-owned TUI/tool rows protect question/bg and explicit Agent/StopAgent renderers`,
+// Break caught: loading the package must not force regular mode when the host
+// defaults to fullscreen; explicit regular/fullscreen selections still work.
+for (const [selection, mode] of [["default", "fullscreen"], ["regular", "regular"], ["fullscreen", "fullscreen"]]) {
+	test(`final release under bundled CLI ${selection}: host-owned TUI/tool rows protect question/bg and explicit Agent/StopAgent renderers`,
 		{ timeout: 40000, skip: ptyAvailability() }, async () => {
 			const sandbox = await sandboxFixture(stage.release, { tui: true });
 			try {
-				const result = await captureReleasePty(sandbox, cliArgs(sandbox, stage.host, ["--tui-mode", mode, "Local fixture tool sequence"]));
+				const settings = JSON.parse(await readFile(join(sandbox.env.PI_CODING_AGENT_DIR, "settings.json"), "utf8"));
+				assert.equal(settings.tuiMode, undefined, "isolated settings do not override the host default");
+				const modeArgs = selection === "default" ? [] : ["--tui-mode", selection];
+				const result = await captureReleasePty(sandbox, cliArgs(sandbox, stage.host, [...modeArgs, "Local fixture tool sequence"]));
 				assert.ok(result.reports.some((report) => report.phase === "host-identity" && report.tuiMode === mode), JSON.stringify(result.reports));
+				assert.ok(result.reports.some((report) => report.phase === "host-identity" && report.fullscreen === (mode === "fullscreen")));
 				assert.ok(result.reports.some((report) => report.phase === "settled" && report.providerCalls === 7));
 				assert.ok(result.reports.some((report) => report.phase === "shutdown"));
 				assert.ok(!result.reports.some((report) => ["network-denied", "fixture-error"].includes(report.phase)));

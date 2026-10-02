@@ -50,7 +50,7 @@ test("runtime lock keeps nested and optional resolutions but drops unrelated dev
 		"node_modules/runtime/node_modules/nested": { version: "2.0.0", resolved: "https://registry.invalid/nested.tgz", integrity: "sha512-fixture" },
 		"node_modules/nested": { version: "3.0.0", dev: true },
 		"node_modules/platform": { version: "1.0.0", resolved: "https://registry.invalid/platform.tgz", integrity: "sha512-fixture", optional: true, os: ["linux"] },
-		"node_modules/@earendil-works/pi-tui": { version: "0.99.2", dev: true },
+		"node_modules/@earendil-works/pi-tui": { version: "1.0.0", dev: true },
 	} }, { name: "runtime-fixture", version: "1.0.0", dependencies: { runtime: "1.0.0" }, peerDependencies: { "typebox": "*" }, engines: { node: ">=22.19.0" } });
 	assert.deepEqual(Object.keys(projected.packages), ["", "node_modules/platform", "node_modules/runtime", "node_modules/runtime/node_modules/nested"]);
 	assert.equal(projected.packages["node_modules/runtime"].dev, undefined);

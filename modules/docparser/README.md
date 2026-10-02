@@ -18,7 +18,11 @@ This package registers three tools:
 
 Use `document_parse` for extraction, `document_search` for citations/source locations, and `document_screenshot` when visual layout, charts, signatures, dense tables, or page appearance matter.
 
-All three tools register with `deferred` exposure: they are not declared to the model until the built-in `tool_search` tool loads them for a matching request. Enable it with `"defaultTools": ["+tool_search"]` in the Pi settings or with `--tools tool_search`. After a successful search the tools stay declared on that session branch; a codemode script can call them as well. Without `tool_search` (or codemode) the deferred tools are unreachable for the model. The tools register no `promptSnippet` and no `promptGuidelines`, so they add nothing to the system prompt even after loading; the tool `description` and schema are the only model-facing text.
+All three tools register with `deferred` exposure and are not activated on registration. The built-in `tool_search` can discover and activate them for a matching request; enable it with `"defaultTools": ["+tool_search"]` in Pi settings. After a successful search the tools stay declared on that session branch. A codemode script can call them without activation, and explicit activation is also supported. The module does not change the host loadout.
+
+`--tools` is a registry allowlist: `--tools tool_search` alone filters out the document tools instead of making them discoverable.
+
+The tools register no `promptSnippet` and no `promptGuidelines`, so they add nothing to the system prompt even after loading; the tool `description` and schema are the only model-facing text.
 
 ### Skill
 
@@ -35,7 +39,7 @@ The workspace disables skill discovery, and the root runtime package declares on
 ## Requirements and compatibility
 
 - Node.js 22.19 or newer
-- Pi installed and working; Pi 0.99.2 is the development and test baseline
+- Pi installed and working; Pi 1.0.0 is the development and test baseline
 - local machine access to readable regular files you want to parse
 - LibreOffice for many Office, presentation, and spreadsheet conversion paths
 

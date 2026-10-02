@@ -28,7 +28,7 @@ docs/                 跨模块设计与开发
 dist/                 已验证的开发构建输出；不可直接用于真实安装
 ```
 
-工作区统一 npm 锁定。开发宿主是精确 Pi 0.99.2、TypeBox 1.3.27。
+工作区统一 npm 锁定。开发宿主是精确 Pi 1.0.0、TypeBox 1.3.27。
 宿主提供的包以 `peerDependencies: "*"` 声明并 external，不能作为正式包的
 物理运行依赖。workspace 内的开发宿主副本不得延伸到正式运行树。
 
@@ -69,6 +69,9 @@ deferred questions/background/document 工具仍通过内置 `tool_search` 发�
 `defaultTools: ["+tool_search"]` 是用户选择，不由安装脚本隐式重写。
 tools 模块以同名扩展覆盖内置 `grep`/`find`/`ls`，exposure 为 `codemode`：
 默认不直接声明给模型，启用内置 `codemode` 后由脚本调用，显式激活仍然有效。
+CLI 加载内置 codemode/tool_search 扩展，但默认不激活这些工具；SDK 会话
+不自动加载它们，嵌入宿主需通过 `DefaultResourceLoader.extensionFactories`
+显式提供 `createCodemodeExtension()` / `createToolSearchExtension()`。
 
 ## 文档职责
 

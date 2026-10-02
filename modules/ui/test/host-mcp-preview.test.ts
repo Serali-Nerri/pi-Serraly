@@ -10,7 +10,7 @@ import { ToolGroupComponent } from "../src/compat/grouping.ts";
 import { resolveRendererPolicy } from "../src/compat/policy.ts";
 import { harness, strip, theme } from "./harness.ts";
 
-// Test-only Pi 0.99.2 internal imports: this factory only builds a definition;
+// Test-only Pi 1.0.0 internal imports: this factory only builds a definition;
 // conversion uses an injected, in-memory saver. Never construct createMcpExtension
 // (config/credential discovery), connect a client, or execute the tool.
 // Native instanceof checks must use coding-agent's own physical TUI closure.
@@ -23,8 +23,8 @@ function plain(lines: string[]): string {
 	return lines.map((line) => strip(line).trim()).join("");
 }
 
-test("Pi 0.99.2 native MCP visual previews, notices and shell survive modes and exclusions", async () => {
-	assert.equal(VERSION, "0.99.2", "internal renderer fixture is pinned to this host version");
+test("Pi 1.0.0 native MCP visual previews, notices and shell survive modes and exclusions", async () => {
+	assert.equal(VERSION, "1.0.0", "internal renderer fixture is pinned to this host version");
 	const name = "mcp__preview_fixture__long_line";
 	const server = "preview_fixture";
 	const toolName = "long_line";

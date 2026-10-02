@@ -236,7 +236,7 @@ export function checkManifest(pkg) {
   sortedSame(Object.keys(pkg.peerDependencies ?? {}), HOST_PEERS, 'host peers');
   for (const peer of HOST_PEERS) {
     check(pkg.peerDependencies[peer] === '*', `${peer} must be host-provided peer '*'`);
-    check(pkg.devDependencies[peer] === (peer === 'typebox' ? '1.3.27' : '0.99.2'), `${peer} verified dev version drift`);
+    check(pkg.devDependencies[peer] === (peer === 'typebox' ? '1.3.27' : '1.0.0'), `${peer} verified dev version drift`);
   }
 }
 function interfaceFields(sf, name) {
@@ -282,7 +282,7 @@ export function extractCodeFacts({ packageRoot = PACKAGE_ROOT } = {}) {
   sortedSame(sources, Object.keys(SOURCE_OWNERS), 'pure shell source inventory');
   check(read(packageRoot, 'extensions/background-tasks.ts').trim() === "export { default } from '../src/extension.js';", 'source entry must reexport src/extension.ts');
   const common = sourceFile(packageRoot, 'src/core/common.ts'), constants = declarations(common);
-  // Pi 0.99.2's exported DEFAULT_MAX_BYTES is 50 * 1024. Data-only extraction;
+  // Pi 1.0.0's exported DEFAULT_MAX_BYTES is 50 * 1024. Data-only extraction;
   // actual registered schema parity is additionally tested against the host.
   constants.set('DEFAULT_MAX_BYTES', ts.factory.createNumericLiteral(50 * 1024));
   const logConstants = Object.fromEntries(['MAX_LOG_BYTES', 'DEFAULT_LOG_BYTES'].map((name) => [name, literal(constants.get(name), common, constants)]));
@@ -313,7 +313,7 @@ export function extractCodeFacts({ packageRoot = PACKAGE_ROOT } = {}) {
   check(literal(declarations(owner).get('RELOAD_SHELL_OWNER_PROTOCOL'), owner) === 'pi-background-shell.reload-shell-owner.v1', 'reload owner fork identity drift');
   check(read(packageRoot, 'src/core/common.ts').includes("schemaVersion: 'pi-background-shell.reload-shell.v1'"), 'reload audit fork identity drift');
   return {
-    package: { name: pkg.name, version: pkg.version, entry: pkg.pi.extensions[0], node: pkg.engines.node, verified_host: '0.99.2', typebox: '1.3.27' },
+    package: { name: pkg.name, version: pkg.version, entry: pkg.pi.extensions[0], node: pkg.engines.node, verified_host: '1.0.0', typebox: '1.3.27' },
     public_surfaces,
     public_surface_ids: Object.values(public_surfaces).flat().map((item) => item.id).sort(),
     eventbus: eventBus(packageRoot),
@@ -361,7 +361,7 @@ export function generateDocTexts(facts, model) {
   const inventory = [...model.docs.map((doc) => doc.path), ...Object.keys(output), 'docs/read-before-edit.md', 'docs/reference/runtime-contracts.md'].sort();
   output['docs/INDEX.md'] = `${banner}# Background shell documentation\n\nLocal fork \`${facts.package.name}@${facts.package.version}\`; verified host Pi ${facts.package.verified_host} only.\n\n${inventory.map((path) => `- [${path.slice(5, -3)}](${path.slice(5)})`).join('\n')}\n\n## Public registrations\n\n${table(['Surface', 'Availability', 'Source'], Object.values(facts.public_surfaces).flat().map((item) => [`\`${item.id}\``, item.availability, `\`${item.source}\``]))}\nDock \`off\` registers no dock shortcut; tools and commands remain available.\n`;
   output['docs/read-before-edit.md'] = `${banner}# Read before editing\n\nRead the source owner's page and the relevant generated tool schema before changing runtime contracts. Regenerate after reviewing source/prose changes; byte freshness is not semantic certification. No archived attestation receipts are used.\n\n${table(['Source', 'Primary documentation'], facts.governed_sources.map(({ path, owner }) => [`\`${path}\``, `[${owner.slice(5, -3)}](${owner.slice(5)})`]))}\nRun \`npm run docs:generate\`, \`npm run docs:verify\`, \`npm run test:docs\`, and the targeted runtime tests. See [gate design](subsystems/docs-freshness-gate.md).\n`;
-  output['docs/reference/runtime-contracts.md'] = `${banner}# Extracted runtime contracts\n\nThese are source facts, not an environment snapshot. Only Pi 0.99.2 has been verified; wildcard peers do not promise other versions.\n\n\`\`\`json\n${pretty({ package: facts.package, contracts: facts.contracts, eventbus: facts.eventbus })}\`\`\`\n\nSource hashes and ownership: [manifest](../manifest.json). Behavior: [runtime](../subsystems/background-task-runtime.md), [configuration](../operations/configuration.md), [EventBus v2](../api/eventbus-v2.md).\n`;
+  output['docs/reference/runtime-contracts.md'] = `${banner}# Extracted runtime contracts\n\nThese are source facts, not an environment snapshot. Only Pi 1.0.0 has been verified; wildcard peers do not promise other versions.\n\n\`\`\`json\n${pretty({ package: facts.package, contracts: facts.contracts, eventbus: facts.eventbus })}\`\`\`\n\nSource hashes and ownership: [manifest](../manifest.json). Behavior: [runtime](../subsystems/background-task-runtime.md), [configuration](../operations/configuration.md), [EventBus v2](../api/eventbus-v2.md).\n`;
   output['docs/manifest.json'] = pretty({ schema_version: MANIFEST_SCHEMA_VERSION, ...facts, authored_docs: [...model.docs.map(({ path, sha256 }) => ({ path, sha256 })), ...model.root_docs] });
   return output;
 }

@@ -1,6 +1,6 @@
 # pi-ui
 
-Pi 0.99.2 的展示模块，将 Claude 风格转写与会话 shell 合并为一个独立入口。
+Pi 1.0.0 的展示模块，将 Claude 风格转写与会话 shell 合并为一个独立入口。
 本模块不注册或执行业务工具。工具自带 renderer 优先；真实内置工具以
 `sourceInfo` 区分，同名扩展覆盖不会被误接管。
 
@@ -25,6 +25,10 @@ UI 只展示已经返回或保存的数据；不读当前磁盘补全历史 diff
 截断提示，也不减少模型收到的结果。
 
 ## 配置
+
+Pi 默认使用 fullscreen；宿主设置 `"tuiMode": "regular"` 或
+`--tui-mode regular` 可选择 regular。fullscreen 由宿主路由鼠标事件；
+regular 的鼠标与滚动历史由终端管理，工具展开仍可使用键盘。
 
 继续使用 `$PI_CODING_AGENT_DIR/claude-style-tools.json`。启动只读且不创建文件。
 显式保存时原子写入，保留未知字段，清理三个已废弃字段。
@@ -62,7 +66,7 @@ UI 只展示已经返回或保存的数据；不读当前磁盘补全历史 diff
 ## 维护索引
 
 - [UI 架构和所有权](docs/architecture.md)
-- [隔离预览、第一阶段执行证据与人工验收边界](docs/acceptance.md)
+- [隔离验证、预览与人工验收边界](docs/acceptance.md)
 - [完整来源与许可证](licenses/README.md)
 - [仓库开发指南](../../docs/development.md)
 

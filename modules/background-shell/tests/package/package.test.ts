@@ -493,10 +493,10 @@ void describe('package', { concurrency: false }, () => {
     assert.deepEqual(p.dependencies ?? {}, {});
     assert.deepEqual(p.files, ['dist/', 'extensions/', 'src/', 'README.md', 'TESTING.md', 'LICENSE', 'UPSTREAM.md', 'CHANGELOG.md', 'docs/']);
     assert.equal(p.peerDependencies['@earendil-works/pi-ai'], undefined, 'pi-ai is scripted-provider development-only');
-    assert.equal(p.devDependencies?.['@earendil-works/pi-ai'], '0.99.2');
+    assert.equal(p.devDependencies?.['@earendil-works/pi-ai'], '1.0.0');
     for (const peer of ['@earendil-works/pi-coding-agent', '@earendil-works/pi-tui', 'typebox']) {
       assert.equal(p.peerDependencies[peer], '*');
-      assert.equal(p.devDependencies?.[peer], peer === 'typebox' ? '1.3.27' : '0.99.2');
+      assert.equal(p.devDependencies?.[peer], peer === 'typebox' ? '1.3.27' : '1.0.0');
     }
     assert.equal(p.scripts['build:runtime'], 'node scripts/build-runtime.mjs');
     for (const gate of ['build:runtime', 'docs:verify', 'check-package-payload']) assert.ok(p.scripts['prepack']?.includes(gate));

@@ -9,7 +9,7 @@ import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-export const expectedVersion = "0.99.2";
+export const expectedVersion = "1.0.0";
 
 export function hostPackage() {
 	// Read package metadata only; never invoke npm/resolve a source-workspace host.
@@ -18,7 +18,7 @@ export function hostPackage() {
 	assert.ok(!directory.startsWith(root + sep), "CLI host must be outside the development dependency tree");
 	const manifest = JSON.parse(readFileSync(join(directory, "package.json"), "utf8"));
 	assert.equal(manifest.name, "@earendil-works/pi-coding-agent");
-	assert.equal(manifest.version, expectedVersion, "acceptance is pinned to Pi 0.99.2");
+	assert.equal(manifest.version, expectedVersion, "acceptance is pinned to Pi 1.0.0");
 	assert.equal(manifest.bin.pi, "dist/bundle/cli.js", "use the actual bundled CLI, not dist/cli.js");
 	const cli = join(directory, manifest.bin.pi);
 	assert.ok(existsSync(cli));
@@ -238,7 +238,7 @@ function walk(root) {
 export default function (pi) {
 	const state = globalThis[key];
 	assert.ok(state, "guard extension must precede UI");
-	assert.equal(VERSION, "0.99.2");
+	assert.equal(VERSION, "1.0.0");
 	assert.equal(state.timers, 0, "UI factory starts no timers");
 	unpatched(state);
 	state.report("factory", { version: VERSION });

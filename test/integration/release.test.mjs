@@ -21,6 +21,8 @@ test("release installs a locked runtime-only tree outside the workspace", { time
 		assert.equal(manifest.devDependencies, undefined);
 		assert.equal(manifest.workspaces, undefined);
 		assert.deepEqual(manifest.dependencies, { "@llamaindex/liteparse": "2.10.1" });
+		const record = JSON.parse(await readFile(join(output, "release.json"), "utf8"));
+		assert.equal(record.host, "1.0.0", "release metadata names the qualified Pi host, not an obsolete baseline");
 		const lock = JSON.parse(await readFile(join(output, "package-lock.json"), "utf8"));
 		assert.ok(Object.keys(lock.packages).some((path) => path.endsWith("liteparse-linux-x64-gnu")),
 			"platform optional dependencies remain locked for native execution");

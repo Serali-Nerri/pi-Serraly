@@ -1,6 +1,6 @@
 # pi-background-shell
 
-Private `pi-Serraly` workspace module, retaining the pure-shell fork of `pi-background-tasks`: named background processes, bounded logs, completion notifications, task UI, and opt-in **same-process** reload handoff. Development verification targets Pi **0.99.2**, TypeBox **1.3.27** and Node >=22.19.0; platform limits and actual results are in [TESTING.md](TESTING.md).
+Private `pi-Serraly` workspace module, retaining the pure-shell fork of `pi-background-tasks`: named background processes, bounded logs, completion notifications, task UI, and opt-in **same-process** reload handoff. Development verification targets Pi **1.0.0**, TypeBox **1.3.27** and Node >=22.19.0; validation commands and platform limits are in [TESTING.md](TESTING.md).
 
 This module owns background execution and its dock/renderers, independently of the UI module. The `background-tasks` status and `background-task-notification` custom message remain stable. Installation, releases and migration belong to the repository root documentation, not this module. Do not load the old fork or upstream together with this entry: names overlap, and the fork cannot adopt upstream processes. No global deployment is performed by module scripts.
 
@@ -26,7 +26,7 @@ Commands: `/bg`, `/jobs`, `/logs`, `/kill`, `/tasks`, `/bg-tasks`, `/bg-clear`.
 
 `bg_run` defaults to notification **and** automatic follow-up; `/bg` defaults to notification without follow-up. After a tool launch, do independent work or end the turn—do not sleep/poll just to wait. With notification disabled, the trigger flag has no effect. See [completion delivery](docs/concepts/completion-delivery.md).
 
-The TUI task dock is a **centered floating panel**, using the full allocated width without a 118-column cap and adapting its height up to 80% of the terminal with a one-cell margin. Wide layouts pair a task sidebar with the selected task's log preview; narrow layouts start with the list, then Enter opens logs. `f` selects a log-only view; `i` toggles scrollable full task info, with compact metadata otherwise. The focused overlay captures keyboard input while background processes continue; it is not an always-on passive panel.
+The TUI task dock supports fullscreen (Pi's default) and explicit regular mode (`"tuiMode": "regular"` or `--tui-mode regular`). It is a **centered floating panel**, using the full allocated width without a 118-column cap and adapting its height up to 80% of the terminal with a one-cell margin. Wide layouts pair a task sidebar with the selected task's log preview; narrow layouts start with the list, then Enter opens logs. `f` selects a log-only view; `i` toggles scrollable full task info, with compact metadata otherwise. The focused overlay captures keyboard input while background processes continue; it is not an always-on passive panel.
 
 Logs soft-wrap by default; `w` toggles no-wrap mode, where Shift+Left/Right pans horizontally, `0` resets the pan and `$` goes to the last column. The UI follows a **128 KiB recent tail**, refreshed once per second: scrolling up freezes that reservoir, and reaching the bottom or `r`/`G` resumes follow. Wrapping does not provide full-file history or change the **50 KiB** tool/model log cap. See [dock controls and limits](docs/reference/shortcuts-and-dock.md) for task/log focus, scrolling and notice acknowledgement.
 

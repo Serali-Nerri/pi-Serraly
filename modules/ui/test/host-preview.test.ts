@@ -16,7 +16,7 @@ function walk(value: any): any[] {
 	return [value, ...(value?.children ?? []).flatMap(walk)];
 }
 
-test("Pi 0.99.2 bash VisualLinePreview survives exclusion and off/on transitions", async () => {
+test("Pi 1.0.0 bash VisualLinePreview survives exclusion and off/on transitions", async () => {
 	const h = await harness();
 	const originalExclusions = config.excludeRenderers;
 	const result = { content: [{ type: "text", text: "界".repeat(2_000) }], details: {} };
@@ -39,7 +39,7 @@ test("Pi 0.99.2 bash VisualLinePreview survives exclusion and off/on transitions
 	} finally { config.excludeRenderers = originalExclusions; await h.close(); }
 });
 
-test("Pi 0.99.2 dedicated codemode Container/visual previews remain native through all modes", async () => {
+test("Pi 1.0.0 dedicated codemode Container/visual previews remain native through all modes", async () => {
 	let definition: any;
 	await createCodemodeExtension({ models: false })({
 		registerTool: (tool: any) => { definition = tool; },

@@ -62,11 +62,11 @@ runtime package's physical dependency tree. Never link old source node_modules.
 
 Runtime dependency: `@llamaindex/liteparse` exactly `2.10.1`, retaining installed
 platform optional bindings. Development tooling needed at root: esbuild, tsx,
-TypeScript, Node types, oxfmt (`^0.49.0`), oxlint (`^1.76.0`), Pi `0.99.2` (including
+TypeScript, Node types, oxfmt (`^0.49.0`), oxlint (`^1.76.0`), Pi `1.0.0` (including
 pi-ai) and host typebox `1.3.27`. Module host peers: pi-ai and pi-coding-agent only.
 
 Carry `LICENSE`, `THIRD_PARTY_NOTICES.md`, and `licenses/LiteParse-APACHE-2.0.txt`
 into root's runtime legal closure. The companion skill remains source-only and is
 not a runtime resource. No global deployment or source repository changes were
-performed by this migration. See [VALIDATION.md](./VALIDATION.md) for red/green
-regressions, safe validation results and environment limits.
+performed by this migration. See [VALIDATION.md](./VALIDATION.md) for current
+validation commands, coverage and environment limits.

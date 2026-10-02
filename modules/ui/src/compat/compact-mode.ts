@@ -622,7 +622,7 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 	const assistantPrototype = AssistantMessageComponent.prototype as any;
 	const toolPrototype = ToolExecutionComponent.prototype as any;
 	for (const [proto, name] of [[assistantPrototype, "updateContent"], [toolPrototype, "render"], [toolPrototype, "updateDisplay"]] as const) {
-		if (typeof proto?.[name] !== "function") throw new Error(`Pi 0.99.2 compact component lacks ${name}`);
+		if (typeof proto?.[name] !== "function") throw new Error(`Pi 1.0.0 compact component lacks ${name}`);
 	}
 	const steps: Array<ReturnType<typeof installMethodStep>> = [];
 	const patch: CompactModePatch = {

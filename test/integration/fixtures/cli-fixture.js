@@ -19,7 +19,7 @@ function walk(root) {
 }
 export default function (pi) {
 	const state = globalThis[Symbol.for("serraly.runtime-fixture")];
-	assert.ok(state); assert.equal(VERSION, "0.99.2");
+	assert.ok(state); assert.equal(VERSION, "1.0.0");
 	const config = JSON.parse(readFileSync(process.env.SERRALY_CONFIG, "utf8"));
 	const fixtureTools = config.tui ? ["Agent", "StopAgent"] : [];
 	for (const name of fixtureTools) pi.registerTool({
@@ -81,6 +81,7 @@ export default function (pi) {
 			assert.equal(read[Symbol.for("claude-style-tools.component-tool-render-mode")], true, "positive control: built-in read is styled");
 			assert.equal(readFileSync(join(ctx.cwd, "boundary.txt"), "utf8"), "first\nsecond\n");
 			report("host-identity", { names, tuiClass: state.tui.constructor.name, tuiMode: state.tui.mode,
+				fullscreen: state.tui instanceof TuiAltScreen,
 				fixtureScope: "Agent/StopAgent are explicit synthetic tools, not npm package acceptance" });
 		} else { state.unpatched(); assert.equal(state.timers, 0); }
 	});

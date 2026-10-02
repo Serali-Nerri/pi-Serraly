@@ -1,7 +1,7 @@
 # pi-Serraly
 
 私有本地 Pi package：六个可独立启停的入口，一个维护仓库。
-支持基线为 **Pi 0.99.2 / Node ≥22.19**。不发布 npm，不提供总 factory 再次注册能力。
+支持基线为 **Pi 1.0.0 / Node ≥22.19**。不发布 npm，不提供总 factory 再次注册能力。
 
 ## 六个入口
 
@@ -17,6 +17,9 @@
 根 `pi.extensions` 只声明以上六入口，安装后可在 `pi config` 分别启停。
 docparser companion skill 作为来源保留，但**不自动启用**；其他 skills、
 prompts、themes 和 npm 扩展不属于本仓库。
+
+Pi 默认使用 fullscreen；需要终端原生滚动历史时，可显式设置
+`"tuiMode": "regular"` 或使用 `--tui-mode regular`。
 
 ## 开发
 

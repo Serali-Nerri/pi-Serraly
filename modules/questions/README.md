@@ -1,6 +1,6 @@
 # questions
 
-Interactive `AskUserQuestion` clarification for Pi 0.99.2. This module owns its
+Interactive `AskUserQuestion` clarification for Pi 1.0.0. This module owns its
 question dialog and transcript renderers independently of the UI module.
 
 ## Tool contract

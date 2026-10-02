@@ -19,6 +19,6 @@ The original [ISC LICENSE](LICENSE) is retained unchanged. Upstream authorship r
 - Runtime business source and source-fork structure are unchanged, including the existing `.js` ESM specifiers used by NodeNext compilation and both reload ownership symbols. No stylistic rewrite or forced bundle.
 - Intentional adaptations: private workspace manifest and Pi 0.99.2 dev pins; runtime peers limited to coding-agent/TUI/TypeBox (pi-ai is test-only); isolated test-script runner; hoisted dependency resolution in package fixtures; shipping CHANGELOG with its provenance links; refreshed source/docs/package gates. Root scripts own release staging and the thin entry wrapper. No global deployment, live requests or source-reference edits.
 
-The historical source-tree `PLAN.md` records the fork's original Pi 0.99.1 results; current workspace verification and limitations are in [TESTING.md](TESTING.md).
+The historical source-tree `PLAN.md` records the fork's original Pi 0.99.1 results; current validation commands, coverage and limitations are in [TESTING.md](TESTING.md).
 
 See [README](README.md) and [documentation](docs/INDEX.md).

@@ -30,7 +30,7 @@ void describe('shell docs package contract', () => {
   void it('publishes exactly four tools/seven commands and only dock availability variants', () => {
     const manifest = JSON.parse(text('docs/manifest.json')) as Manifest;
     assert.equal(manifest.schema_version, 'pi-background-shell.docs-manifest.v1');
-    assert.equal(manifest.package.verified_host, '0.99.2');
+    assert.equal(manifest.package.verified_host, '1.0.0');
     assert.deepEqual(manifest.public_surfaces.tools.map((tool) => tool.id), ['tool:bg_kill', 'tool:bg_logs', 'tool:bg_run', 'tool:bg_status']);
     assert.deepEqual(manifest.public_surfaces.commands.map((cmd) => cmd.id), ['command:bg', 'command:bg-clear', 'command:bg-tasks', 'command:jobs', 'command:kill', 'command:logs', 'command:tasks']);
     for (const surface of [...manifest.public_surfaces.tools, ...manifest.public_surfaces.commands]) assert.equal(surface.availability, 'always');

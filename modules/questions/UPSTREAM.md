@@ -25,7 +25,7 @@
   with `"*"` ranges: `@earendil-works/pi-coding-agent`,
   `@earendil-works/pi-tui`, and `typebox`. No host runtime copies or module-local
   development dependencies are shipped.
-- Development/testing targets root-pinned Pi 0.99.2 and TypeBox 1.3.27 instead of
+- Development/testing targets root-pinned Pi 1.0.0 and TypeBox 1.3.27 instead of
   the reference’s Pi 0.99.1 / TypeBox development range. Source behavior and
   every existing test are unchanged. Added `test/afk.test.ts` exercises the
   documented literal AFK environment names through timeout outcomes and countdown

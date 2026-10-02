@@ -205,7 +205,7 @@ export async function sealRelease(directory, { buildId } = {}) {
 	buildId ??= data.digest.slice(0, 16);
 	if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}$/.test(buildId)) throw new Error("Invalid build id");
 	await writeFile(join(directory, "release.json"), JSON.stringify({
-		format: 1, buildId, digest: data.digest, host: "0.99.2", createdAt: new Date().toISOString(),
+		format: 1, buildId, digest: data.digest, host: "1.0.0", createdAt: new Date().toISOString(),
 	}, null, 2) + "\n", { flag: "wx" });
 	return { buildId, digest: data.digest };
 }
@@ -216,7 +216,7 @@ export async function validateRelease(directory) {
 	await requireRegularFile(join(directory, "release.json"));
 	const data = await releaseData(directory);
 	const record = JSON.parse(await readFile(join(directory, "release.json"), "utf8"));
-	if (record.format !== 1 || record.host !== "0.99.2" || record.digest !== data.digest ||
+	if (record.format !== 1 || record.host !== "1.0.0" || record.digest !== data.digest ||
 		typeof record.buildId !== "string" ||
 		!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}$/.test(record.buildId)) {
 		throw new Error("Release digest or metadata integrity mismatch");
