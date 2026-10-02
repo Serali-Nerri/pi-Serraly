@@ -1,0 +1,11 @@
+{
+	"name": "pi-loop",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"description": "Session-local fixed-interval /loop scheduling.",
+	"engines": { "node": ">=22.19.0" },
+	"scripts": { "check": "tsc -p tsconfig.json" },
+	"peerDependencies": { "@earendil-works/pi-coding-agent": "*" },
+	"peerDependenciesMeta": { "@earendil-works/pi-coding-agent": { "optional": true } }
+}
