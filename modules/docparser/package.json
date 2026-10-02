@@ -1,0 +1,48 @@
+{
+  "name": "pi-docparser",
+  "version": "4.0.0",
+  "private": true,
+  "description": "Private pi-Serraly document tools workspace; companion skill retained as source only.",
+  "license": "MIT",
+  "files": [
+    "assets",
+    "extensions",
+    "skills",
+    "licenses",
+    "README.md",
+    "CHANGELOG.md",
+    "UPSTREAM.md",
+    "VALIDATION.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "type": "module",
+  "scripts": {
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix .",
+    "typecheck": "tsc -p tsconfig.json",
+    "check": "npm run format:check && npm run lint && npm run typecheck",
+    "test": "node scripts/test.mjs",
+    "test:unit": "node scripts/test.mjs unit",
+    "test:native": "node scripts/test.mjs native",
+    "test:package": "node scripts/test.mjs package",
+    "test:packed": "node scripts/test.mjs package",
+    "check:runtime": "node scripts/test.mjs runtime",
+    "verify": "npm run check && npm test && npm run check:runtime"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/docparser/index.ts"
+    ],
+    "skills": []
+  }
+}
