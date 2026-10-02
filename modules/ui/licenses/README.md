@@ -16,4 +16,5 @@ imports. The old direct grok-mermaid dependency and renderer were removed;
 standard Mermaid rendering uses the host implementation.
 
 The build copies this entire directory next to `index.js`. Source revisions and
-intentional changes are documented in the workspace's `docs/provenance.md`.
+intentional changes are recorded in `UPSTREAM.md` files next to each module's
+license, not in a single workspace index.

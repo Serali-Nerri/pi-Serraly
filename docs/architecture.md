@@ -1,93 +1,75 @@
-# pi-ui architecture — Pi 0.99.2
+# 仓库架构
 
-## Ownership
+## 六个维护边界
 
-`src/index.ts` registers Markdown, `/context`, and the UI lifecycle. Factory
-loading has no UI timers or prototype patches.
+根 package 是资源清单和开发工作区，不是第七个 extension factory。
+每个模块仅注册自己的能力；关闭一个入口不会通过总工厂间接重新启用它。
 
-`src/lifecycle.ts` owns one host subscription per event, a local domain router,
-one `pi-ui-bridge`, the current context/generation, presentation commands and
-resource cleanup. TUI resources require both `ctx.mode === "tui"` and `hasUI`.
-Print, JSON and RPC retain their native prototypes and protocol output.
+| 模块 | 拥有的资源 | 不拥有 |
+| --- | --- | --- |
+| `ui` | 展示生命周期、私有兼容补丁、shell、Markdown、Thinking、`/context` | 业务工具定义、执行和后台进程 |
+| `questions` | `AskUserQuestion` schema、对话框、AFK、答案/results、专用 renderer | UI 总体刷新或其他 overlay |
+| `loop` | `/loop` 解析、内存任务、忙闲调度、`local-loop` | UI scheduler、持久化恢复 |
+| `apply-patch` | 补丁算法、文件锁、预检、提交、`apply_patch.v1` 报告 | UI 历史 diff 重建 |
+| `background-shell` | 进程/日志、dock、通知、状态、同进程 reload handoff | 跨进程恢复或 UI 工具卡接管 |
+| `docparser` | 三个 document 工具、FIFO、worker、取消/超时/崩溃清理和预算 | OCR 服务安装或其他模块的生命周期 |
 
-`src/scheduler.ts` is the single keyed scheduler. Thinking, tool/group loading,
-footer elapsed time, query coalescing and deferred rebuilds share one timer.
-Replacement cancellation is identity-safe; errors in one callback do not prevent
-other jobs from running. Shutdown stops scheduling before resources are released.
+工具契约和详细算法留在各模块 README/子系统文档。UI 的私有宿主访问只在
+`modules/ui/src/compat/`；其 host 事件只由 `src/lifecycle.ts` 注册。
+UI 的共享 scheduler 不管理 loop 定时器、后台进程或文档 worker。
 
-## Boundaries
+## 源码与运行树
 
-| Directory | Responsibility |
-| --- | --- |
-| `compat/` | Private host fields, prototype capability checks, source-aware renderer policy, ownership, grouping/compact/message/mouse integration |
-| `state/` | Billing/context snapshots and Thinking timing/persistence controller |
-| `shell/` | Header/footer views, statuses, bounded Git/runtime queries and generation guards |
-| `transcript/` | Thinking and tool/file/diff/Input-Output views over captured data |
-| `overlays/` | Context and text-preview dialogs, hover/TUI state |
-| `markdown/` | One display-only transformer; native Mermaid/ordinary URLs plus narrow CJK-punctuation URL-boundary compatibility |
-| `config/` | Twelve effective settings, atomic explicit saves, panel and `/context` registration |
+```text
+modules/              六个 private npm workspace；源码、测试、模块文档/许可
+scripts/              工作区命令、构建和独立运行包
+test/integration/     产物、实际 loader 和六入口共存
+docs/                 跨模块设计与开发
+dist/                 已验证的开发构建输出；不可直接用于真实安装
+```
 
-## Compatibility pipeline
+工作区统一 npm 锁定。开发宿主是精确 Pi 0.99.2、TypeBox 1.3.27。
+宿主提供的包以 `peerDependencies: "*"` 声明并 external，不能作为正式包的
+物理运行依赖。workspace 内的开发宿主副本不得延伸到正式运行树。
 
-Display patches preserve legacy `Symbol.for("claude-style-tools.*")` ownership
-slots. `compat/method-pipeline.ts` mounts one dispatcher per host method and
-composes ordered steps. Captured downstream methods cannot re-enter that mutable
-dispatcher; disposed steps become inert even if a foreign wrapper captured them.
-Only an owned prototype value is restored.
+正式运行包位于开发依赖树之外的不可变 release 目录，只有运行 manifest、
+投影自统一 npm lock 的运行锁、dist、许可及 LiteParse 运行依赖。
+它没有 workspace 链接、开发工具、技能/模板/主题资源声明。
 
-Thinking decorates hidden native runs after Pi builds its message content. Visible
-reasoning, per-run overrides, native Markdown and errors stay with Pi. Compact
-then composes the process presentation. Tool background and compact display steps
-share the same tool update dispatcher. No rendering tool is re-registered.
+## 构建闭包
 
-Domain installation retains reverse-order cleanup and capability failure
-reporting. Git/runtime subprocesses keep bounded timeouts; disposed sessions ignore
-late results rather than updating newer installations.
+- UI、questions、loop、apply-patch 是独立 ESM bundle；`diff@8.0.4` 打入补丁
+  bundle 并携带其 BSD 文本。
+- background-shell 用 tsc 编译完整 `extensions/` + `src/`，保留 lazy import；
+  根入口只是同目录转发，不另行注册能力。
+- docparser 的主入口 bundle，三个 worker/protocol/output `.mjs` 保持相对位置；
+  LiteParse 2.10.1 及平台 optional binding 是外部运行依赖。
+- 在非发现暂存目录构建，检查 emitted import 图、必要 worker/许可和文件哈希后
+  才发布开发 dist。许可检查使用完整的必需文件清单，不以目录存在代替法律闭包。
+- 分析所有 emitted JS/MJS/CJS（含 fork worker），仅允许读取同一已遍历的
+  常规文件集及声明的 externals。编译后文件 import 使用普通显式路径；
+  URL 编码、query/fragment、反斜杠和控制字符 specifier 均保守拒绝，避免
+  文件系统路径与原生 ESM URL 指向不同实现。
+- release 只安装锁定运行依赖，检查自身及所有祖先的物理宿主、拒绝路径中的
+  符号链接；manifest、运行锁和 dist 完整性记录共同绑定 release digest。
+  npm 的 `.bin` 链接仅可指向该运行依赖树内的常规文件。digest 用于漂移检测，
+  不构成来源真实性签名。
+- 发布及候选验证都在有期限的隔离子进程中，从 worker 的实际依赖树解析
+  LiteParse，关闭 OCR 解析一个合成 PDF，验证 addon 和 PDFium 真实可用。
+- 正式更新创建新目录，不能覆写旧 release。在途 worker 不会读到半更新产物。
 
-## Renderer decisions
+## 跨模块交互
 
-All tooling presentation domains use `compat/policy.ts`:
+UI 读取公共工具元数据和已有结果。questions、background-shell 及第三方
+Agent/StopAgent 的专用 renderer 保持优先，不因属于私有包而被接管。
+footer 消费宿主提供的 extension statuses，不清理其他模块的状态键。
 
-1. `off` or exclusion preserves native/tool-owned presentation.
-2. A third-party dedicated call/result/self renderer is protected.
-3. Public builtin source metadata permits the ccstyle renderer for real builtins.
-4. Valid `apply_patch.v1` reports receive file/diff views; other reports use generic
-   captured Input/Output.
+后台通知、`.pi/tasks` 元数据和补丁报告由对应能力维护，UI 不改写格式。
+deferred questions/background/document 工具仍通过内置 `tool_search` 发现；
+`defaultTools: ["+tool_search"]` 是用户选择，不由安装脚本隐式重写。
 
-Definitions, execution, tool discovery, schemas, prompts and returned content are
-outside UI ownership.
+## 文档职责
 
-Only source-confirmed builtin write/edit definitions receive file adapters.
-Renderer-less same-name overrides use generic Input/Output and its matching
-group/compact/background decisions.
-
-## Data
-
-Billing scans all session entries, including off-branch usage and every independent
-usage kind. A session/revision cache uses cheap entry-count/leaf checks before the
-next render; cache warming can therefore update idle totals without inventing a
-public usage event.
-
-Context uses the active projected history, invalidates anchors after edits or
-compaction, and distinguishes actual usage anchors, mixed estimates, estimates
-and unknown. Footer and inspector share the snapshot contract. Billing entries
-do not enter the context projection or latest-assistant cache ratio.
-
-Thinking duration entries keep `claude-style-tools-thinking-duration` and
-`{messageTimestamp, contentIndex, durationMs}`. Restoration reads `getEntries()`
-across the full session and does not write historical session data.
-
-Compaction watches mounted native transcript identities from the bridge. This
-places the refresh after the host rebuild even if another compaction handler
-awaits across timer turns. No extra animation timer is introduced.
-
-## Build and acceptance
-
-Development versions are locked in the root workspace. Bundles externalize all
-Pi/TypeBox imports and retain source-license records. Actual CLI acceptance loads
-an ESM stage outside that dependency tree and checks live host class identity.
-The scripted provider and network guard make acceptance independent of real
-credentials, sessions and endpoints.
-
-Stage one ends with user acceptance. The other five modules and formal runtime
-installation remain behind that gate.
+根 README 负责定位、入口索引和安全边界；本文负责跨模块职责与依赖/产物结构；
+`development.md` 负责构建、测试、隔离和发布流程；模块 README 与
+`LICENSE`/`UPSTREAM.md` 负责单能力用法及继承代码的来源与许可。
