@@ -1,6 +1,6 @@
 # Stage-one UI acceptance
 
-**Stage-one UI accepted by the user.** The requested repository rename and footer-source-label removal are complete. Only `modules/ui` is covered; stage two and global deployment have not started.
+**Stage-one UI accepted by the user.** The requested repository rename and footer-source-label removal are complete. This record covers only `modules/ui`; whole-package validation is covered by the root integration suites and release qualification. No formal global deployment was made by these tests.
 
 ## Run the isolated integration suite
 

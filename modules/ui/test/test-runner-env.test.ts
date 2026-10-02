@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
@@ -23,7 +24,31 @@ test("root test environment allowlists controls and replaces all user directorie
 	assert.equal(env.PI_UI_HOST_PACKAGE, canaries.PI_UI_HOST_PACKAGE);
 	assert.equal(env.PI_OFFLINE, "1");
 	assert.equal(env.PI_HYPERLINKS, "1");
-	const source = readFileSync(new URL("../../../scripts/test.mjs", import.meta.url), "utf8");
-	assert.doesNotMatch(source, /\.\.\.\s*process\.env/);
-	assert.match(source, /testEnvironment\(base/);
+});
+
+test("the workspace process launcher excludes inherited credentials and session pointers", async () => {
+	const { isolatedRun } = await import(new URL("../../../scripts/lib/workspace.mjs", import.meta.url).href);
+	const base = await mkdtemp(join(tmpdir(), "serraly-env-observation-"));
+	const canaries = {
+		ANTHROPIC_API_KEY: "synthetic-canary", PI_SESSION_FILE: "/synthetic/session.jsonl",
+		HTTPS_PROXY: "https://synthetic.invalid", NODE_OPTIONS: "--require=synthetic-missing-module",
+	};
+	const previous = new Map(Object.keys(canaries).map((key) => [key, process.env[key]]));
+	try {
+		Object.assign(process.env, canaries);
+		const output = join(base, "environment.json");
+		await isolatedRun(process.execPath, ["--input-type=module", "-e",
+			'import { writeFileSync } from "node:fs"; writeFileSync(process.argv[1], JSON.stringify(process.env));', output], base);
+		const env = JSON.parse(await readFile(output, "utf8"));
+		for (const key of Object.keys(canaries)) assert.equal(env[key], undefined, key);
+		assert.notEqual(env.HOME, process.env.HOME);
+		assert.equal(env.PI_OFFLINE, "1");
+		assert.equal(env.PI_HYPERLINKS, "1");
+	} finally {
+		for (const [key, value] of previous) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
+		await rm(base, { recursive: true, force: true });
+	}
 });
