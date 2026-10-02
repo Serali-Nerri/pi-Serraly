@@ -1,5 +1,11 @@
 # Repository Guidelines
 
+## Engineering Standards
+
+- Keep code readable, structure and dependency direction explicit, and the repository maintainable. Add abstraction only for a current need, never for a speculative one.
+- Each document owns exactly one concern: README positions the repository and its entry points; `docs/architecture.md` covers module boundaries and artifacts; `docs/development.md` covers commands, testing, isolation and release; module docs and `LICENSE`/`UPSTREAM.md` cover that module's usage, contracts and provenance.
+- State the current contract only. Do not accumulate work logs, stage narratives, evidence dumps, or obsolete instructions in repository documents; delete what is no longer true instead of annotating it.
+
 ## Project Structure & Module Organization
 
 `pi-Serraly` is a private npm workspace with six independent Pi extensions. Target Node ≥22.19 and Pi 0.99.2.
@@ -47,8 +53,8 @@ Tests use Node’s `node:test` runner, with `tsx` for TypeScript. Name module te
 
 ## Commit & Pull Request Guidelines
 
-History contains only `Initial commit: accepted pi-ui for Pi 0.99.2`; no broader convention is established. Use concise, descriptive subjects. PRs should explain affected modules, link relevant issues, report validation results, and include screenshots for UI changes. Preserve upstream licenses and provenance.
+Use concise, descriptive subjects with conventional prefixes where they fit. PRs should explain affected modules, link relevant issues, report validation results, and include screenshots for UI changes. Preserve upstream licenses and provenance.
 
 ## Security & Configuration
 
-Use isolated HOME/config/session fixtures; never access real credentials or send real model requests. Do not run `pi install .` or load development `dist/` into real settings. Deployment requires the separate release/migration workflow.
+Use isolated HOME/config/session fixtures; never access real credentials or send real model requests. Do not run `pi install .` or load development `dist/` into real settings. Deployment uses the versioned release directories, not the source tree.
