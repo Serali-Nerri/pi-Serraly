@@ -11,7 +11,7 @@ export const modules = [
 	] },
 	{ directory: "questions", runtime: "pi-ask-user-question", entry: "src/index.ts", licenses: ["LICENSE", "UPSTREAM.md"] },
 	{ directory: "loop", runtime: "pi-loop", entry: "src/index.ts", licenses: ["UPSTREAM.md"] },
-	{ directory: "apply-patch", runtime: "pi-apply-patch", entry: "src/index.ts", licenses: ["LICENSE", "NOTICE", "UPSTREAM.md"],
+	{ directory: "tools", runtime: "pi-tools", entry: "src/index.ts", licenses: ["LICENSE", "NOTICE", "UPSTREAM.md"],
 		generatedLicenses: ["licenses/diff-BSD.txt"] },
 	{ directory: "background-shell", runtime: "pi-background-shell", entry: "extensions/background-tasks.ts",
 		compile: true, licenses: ["LICENSE", "UPSTREAM.md"] },

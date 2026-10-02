@@ -1,6 +1,24 @@
-# apply_patch
+# pi-tools
 
-在 Pi 中注册一个独立的 **`apply_patch`** 文件修改工具；不替换或禁用现有工具，不改变工具选择策略，不注册 UI renderer。`exposure: "direct"`，命名空间为 `patches`；宿主默认从首轮激活该工具，其他工具或 codemode 也可在激活时调用它。
+在 Pi 中注册四个工具：独立的 **`apply_patch`**，以及同名替换内置 `grep`、`find`、`ls` 的 **codemode 工具**。不改变工具选择策略，不注册 UI renderer。
+
+`apply_patch` 的 `exposure: "direct"`，命名空间为 `patches`；宿主默认从首轮激活该工具，其他工具或 codemode 也可在激活时调用它。
+
+三个搜索工具复用 `@earendil-works/pi-coding-agent` 公共 `createGrepToolDefinition`/`createFindToolDefinition`/`createLsToolDefinition` 的 name、参数、执行与结果契约，覆盖同名内置定义，`exposure: "codemode"`，共用命名空间 `filesystem`，并去掉宿主 renderer（交互模式仍按名称补回内置卡片）。它们注册时不会进入活动工具集：默认不声明给模型，但可通过启用 `codemode` 后的脚本（`tools.grep`、`tools.find`、`tools.ls`）调用；显式激活（如 `defaultTools`）同样有效。
+
+`codemode` 工具默认不启用；建议配置 `{"defaultTools": ["+codemode"]}`。`--tools codemode` 是注册表 allowlist，会同时过滤掉其他扩展工具，不能用来“只启用 codemode”。
+
+## grep、find、ls
+
+三者的参数、默认限制、忽略规则和截断行为与 Pi 0.99.2 的内置实现一致，执行使用调用时的 `ctx.cwd`：
+
+| 工具 | 参数 | 默认限制 |
+| --- | --- | --- |
+| `grep` | `pattern` 必填；`path`、`glob`、`ignoreCase`、`literal`、`context`、`limit` 可选 | 100 个匹配、50 KiB，长行截断到 500 字符 |
+| `find` | `pattern` 必填；`path`、`limit` 可选 | 1000 个结果、50 KiB |
+| `ls` | `path`、`limit` 可选 | 500 个条目、50 KiB，含 dotfiles，目录带 `/` |
+
+`grep` 依赖 ripgrep（`rg`），`find` 依赖 fd；缺失时宿主按 Pi 的既有策略查找或下载。三者没有 `outputSchema`，codemode 脚本获得文本输出而不是结构化对象。
 
 支持 UTF-8 文本文件的新增、修改、删除和移动，以及一份补丁的多个文件操作。保留已有文件的 BOM、各行换行符和普通权限位。支持 grammar 的模型/接口接收 Codex Lark 语法；其他接口使用相同工具的 JSON 参数。
 
@@ -8,7 +26,7 @@
 
 ## 模型可见工具定义
 
-定义集中在 `src/tool.ts` 的 `createApplyPatchTool()`；入口 `src/index.ts` 只负责注册。
+定义集中在 `src/tool.ts` 的 `createApplyPatchTool()`；入口 `src/index.ts` 注册四个工具，三个搜索工具直接复用宿主工厂并覆写 exposure/namespace。
 
 - 模型调用名 `name`：`apply_patch`。
 - 界面标签 `label`：`apply_patch`（标签不是另一个工具）。

@@ -21,8 +21,8 @@ test("a modified compiled tool is rejected rather than sealed as a release", asy
 	const base = await mkdtemp(join(tmpdir(), "serraly-modified-tool-"));
 	try {
 		await cp(join(root, "dist"), join(base, "dist"), { recursive: true });
-		await writeFile(join(base, "dist/pi-apply-patch/index.js"), "export default () => {};\n");
-		await assert.rejects(verifyDist(join(base, "dist")), /pi-apply-patch\/index\.js/);
+		await writeFile(join(base, "dist/pi-tools/index.js"), "export default () => {};\n");
+		await assert.rejects(verifyDist(join(base, "dist")), /pi-tools\/index\.js/);
 	} finally { await rm(base, { recursive: true, force: true }); }
 });
 
@@ -30,7 +30,7 @@ for (const legalFile of [
 	"pi-ui/licenses/LICENSES/pi-compact-thinking.txt",
 	"pi-ui/licenses/LICENSES/marked.txt",
 	"pi-docparser/licenses/LiteParse-APACHE-2.0.txt",
-	"pi-apply-patch/licenses/diff-BSD.txt",
+	"pi-tools/licenses/diff-BSD.txt",
 ]) {
 	test(`sealing requires inherited legal payload: ${legalFile}`, async () => {
 		const base = await mkdtemp(join(tmpdir(), "serraly-missing-license-"));

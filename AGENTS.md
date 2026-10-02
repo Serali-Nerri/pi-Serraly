@@ -16,7 +16,7 @@
 │   ├── ui/                # src/index.ts, test/
 │   ├── questions/         # src/, test/
 │   ├── loop/              # src/, test/
-│   ├── apply-patch/       # src/, test/fixtures/
+│   ├── tools/             # src/, test/fixtures/
 │   ├── background-shell/ # src/, extensions/, tests/
 │   └── docparser/         # extensions/docparser/, tests/, assets/
 ├── scripts/              # build.mjs, test.mjs, preview.mjs
@@ -45,7 +45,7 @@ See `docs/development.md` for release preparation and additional commands.
 
 ## Coding Style & Naming Conventions
 
-Use strict TypeScript and ESM. Preserve local formatting: tabs in UI/questions/loop/apply-patch; two spaces in background-shell/docparser. Retain neighboring quote styles and import extensions. Use camelCase functions/variables, PascalCase types/classes, and descriptive kebab-case filenames. Docparser uses `oxfmt` and `oxlint`; other workspaces primarily enforce TypeScript checks.
+Use strict TypeScript and ESM. Preserve local formatting: tabs in UI/questions/loop/tools; two spaces in background-shell/docparser. Retain neighboring quote styles and import extensions. Use camelCase functions/variables, PascalCase types/classes, and descriptive kebab-case filenames. Docparser uses `oxfmt` and `oxlint`; other workspaces primarily enforce TypeScript checks.
 
 ## Testing Guidelines
 

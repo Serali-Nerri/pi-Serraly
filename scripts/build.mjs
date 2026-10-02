@@ -48,8 +48,8 @@ try {
 		}
 	}
 	const require = createRequire(import.meta.url);
-	await mkdir(join(stage, "pi-apply-patch/licenses"), { recursive: true });
-	await cp(join(dirname(require.resolve("diff/package.json")), "LICENSE"), join(stage, "pi-apply-patch/licenses/diff-BSD.txt"));
+	await mkdir(join(stage, "pi-tools/licenses"), { recursive: true });
+	await cp(join(dirname(require.resolve("diff/package.json")), "LICENSE"), join(stage, "pi-tools/licenses/diff-BSD.txt"));
 	await sealDist(stage);
 	// Development dist is never a live runtime. Publish only a validated complete
 	// tree, retaining the last build if the final rename fails.

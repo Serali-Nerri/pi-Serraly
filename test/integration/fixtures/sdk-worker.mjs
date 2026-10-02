@@ -35,9 +35,10 @@ async function open(indices = config.indices ?? [0, 1, 2, 3, 4, 5], packageFilte
 	const eventBus = SDK.createEventBus();
 	const loader = new SDK.DefaultResourceLoader({ cwd, agentDir, settingsManager, eventBus,
 		noExtensions: packageFilter === undefined, noSkills: false, noPromptTemplates: true, noThemes: true, noContextFiles: true,
-		additionalExtensionPaths: [join(import.meta.dirname, "sdk-provider.js"), "builtin:tool-search",
+		additionalExtensionPaths: [join(import.meta.dirname, "sdk-provider.js"), "builtin:tool-search", "builtin:codemode",
 			...(packageFilter === undefined ? indices.map((index) => join(release, entries[index])) : [])],
-		extensionFactories: [{ name: "tool-search", builtin: true, factory: SDK.createToolSearchExtension() }],
+		extensionFactories: [{ name: "tool-search", builtin: true, factory: SDK.createToolSearchExtension() },
+			{ name: "codemode", builtin: true, factory: SDK.createCodemodeExtension() }],
 	});
 	await loader.reload();
 	const loaded = loader.getExtensions();
@@ -51,7 +52,7 @@ async function open(indices = config.indices ?? [0, 1, 2, 3, 4, 5], packageFilte
 	const errors = [];
 	await session.bindExtensions({ mode: "print", onError: (error) => errors.push(error) });
 	assert.deepEqual(errors, []);
-	return { session, loader, eventBus, errors, async close() {
+	return { session, loader, eventBus, errors, model, async close() {
 		await session.extensionRunner.emit({ type: "session_shutdown", reason: "quit" });
 		session.dispose();
 		assert.deepEqual(errors, []);
@@ -72,9 +73,10 @@ function inventory(h, indices) {
 	const active = h.session.getActiveToolNames();
 	assert.ok(active.includes("tool_search"), "builtin discovery remains enabled by +tool_search");
 	for (const name of ["read", "bash", "edit", "write"]) assert.ok(active.includes(name), "+tool_search retains default built-ins");
+	const exposures = { apply_patch: "direct", grep: "codemode", find: "codemode", ls: "codemode" };
 	for (const tool of h.session.getAllTools().filter((tool) => expectedTools.includes(tool.name))) {
-		assert.equal(tool.exposure, tool.name === "apply_patch" ? "direct" : "deferred");
-		assert.equal(active.includes(tool.name), tool.name === "apply_patch", "deferred tool not made direct by UI");
+		assert.equal(tool.exposure, exposures[tool.name] ?? "deferred");
+		assert.equal(active.includes(tool.name), tool.name === "apply_patch", "codemode and deferred tools not made direct by UI");
 	}
 	for (const [name, method] of Object.entries(baseline)) assert.equal(SDK.ToolExecutionComponent.prototype[name], method, "non-TUI remains unpatched");
 }
@@ -137,6 +139,29 @@ async function contracts(h) {
 	assert.equal(result.details.changes[0].views[0].removed, 0);
 	const frozen = structuredClone(result);
 	await writeFile(join(cwd, "boundary.txt"), "newer content must not change historical diff\n");
+	// Same-name search replacements stay inactive but codemode-callable.
+	const codemode = h.session.getToolDefinition("codemode");
+	assert.ok(codemode, "codemode extension is loaded");
+	const codemodeDescription = h.session.agent.state.tools.find((tool) => tool.name === "codemode").description;
+	for (const name of ["grep", "find", "ls"]) {
+		assert.equal(h.session.getToolDefinition(name).exposure, "codemode");
+		assert.ok(!h.session.getActiveToolNames().includes(name));
+		assert.ok(h.session.getCallableToolNames().includes(name));
+		assert.match(codemodeDescription, new RegExp("### `" + name + "`"));
+	}
+	await writeFile(join(cwd, "codemode-listing.txt"), "codemode listing marker\n");
+	// Nested tool calls require the assistant message that would have issued them.
+	h.session.agent.state.messages.push({ role: "assistant", content: [], api: h.model.api, provider: h.model.provider, model: h.model.id,
+		usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+		stopReason: "toolUse", timestamp: Date.now() });
+	const listing = await execute(h, "codemode", { code: `const [ls, grep] = await Promise.all([
+		tools.ls({}), tools.grep({pattern: "codemode listing marker"})]);
+	const find = ALL_TOOLS.find((tool) => tool.name === "find");
+	text({ls, grep, find: find && find.name});` });
+	const listingText = listing.content.map((part) => part.type === "text" ? part.text : "").join("\n");
+	assert.match(listingText, /codemode-listing\.txt/);
+	assert.match(listingText, /codemode-listing\.txt:1: codemode listing marker/);
+	assert.match(listingText, /"find":"find"/);
 	const q = h.session.getToolDefinition("AskUserQuestion");
 	assert.equal(q.executionMode, "sequential");
 	assert.equal(q.namespace.name, "questions");

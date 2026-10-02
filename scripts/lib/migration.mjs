@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import lockfile from "proper-lockfile";
 
 const OLD_DIRECTORIES = ["claude-style-tools", "pi-session-ui", "pi-ask-user-question", "pi-loop", "pi-apply-patch", "pi-background-shell", "pi-docparser"];
-const ENTRIES = ["pi-ui", "pi-ask-user-question", "pi-loop", "pi-apply-patch", "pi-background-shell", "pi-docparser"].map((name) => `./dist/${name}/index.js`);
+const ENTRIES = ["pi-ui", "pi-ask-user-question", "pi-loop", "pi-tools", "pi-background-shell", "pi-docparser"].map((name) => `./dist/${name}/index.js`);
 const ARRAYS = ["packages", "extensions", "skills", "prompts", "themes"];
 const HOSTS = ["@earendil-works/pi-ai", "@earendil-works/pi-agent-core", "@earendil-works/pi-coding-agent", "@earendil-works/pi-tui", "typebox"];
 const WORKSPACE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");

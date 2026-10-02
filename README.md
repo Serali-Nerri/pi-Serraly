@@ -10,7 +10,7 @@
 | UI | `dist/pi-ui/index.js` | [工具卡、Thinking、shell、`/ccstyle`、`/context`](modules/ui/README.md) |
 | 提问 | `dist/pi-ask-user-question/index.js` | [`AskUserQuestion`、对话框、AFK](modules/questions/README.md) |
 | 循环 | `dist/pi-loop/index.js` | [`/loop`、内存任务和忙闲调度](modules/loop/README.md) |
-| 补丁 | `dist/pi-apply-patch/index.js` | [`apply_patch`、文件锁和 v1 报告](modules/apply-patch/README.md) |
+| 基础工具 | `dist/pi-tools/index.js` | [`apply_patch` 与 codemode 专用的 `grep`/`find`/`ls`](modules/tools/README.md) |
 | 后台 shell | `dist/pi-background-shell/index.js` | [`bg_*`、任务 UI、通知和同进程 reload](modules/background-shell/README.md) |
 | 文档解析 | `dist/pi-docparser/index.js` | [`document_*`、native worker、doctor](modules/docparser/README.md) |
 

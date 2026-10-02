@@ -1,10 +1,10 @@
 {
-	"name": "pi-apply-patch",
+	"name": "pi-tools",
 	"version": "0.1.0",
 	"private": true,
 	"type": "module",
 	"scripts": { "check": "tsc -p tsconfig.json" },
-	"description": "Codex-format apply_patch tool for the private pi-Serraly workspace",
+	"description": "apply_patch plus codemode-only grep/find/ls replacements for the private pi-Serraly workspace",
 	"license": "Apache-2.0",
 	"engines": { "node": ">=22.19.0" },
 	"dependencies": { "diff": "8.0.4" },

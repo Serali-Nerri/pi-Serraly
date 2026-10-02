@@ -32,9 +32,13 @@ export default function (pi) {
 	pi.on("session_start", async (_event, ctx) => {
 		assert.deepEqual(pi.getCommands().map((command) => command.name).sort(), commandsByEntry.flat().sort());
 		const ours = pi.getAllTools().filter((tool) => toolsByEntry.flat().includes(tool.name));
-		assert.equal(ours.length, 9);
+		assert.equal(ours.length, 12);
 		assert.ok(pi.getActiveTools().includes("tool_search"));
-		for (const tool of ours) assert.equal(tool.exposure, tool.name === "apply_patch" ? "direct" : "deferred");
+		const exposures = { apply_patch: "direct", grep: "codemode", find: "codemode", ls: "codemode" };
+		for (const tool of ours) {
+			assert.equal(tool.exposure, exposures[tool.name] ?? "deferred");
+			assert.equal(pi.getActiveTools().includes(tool.name), tool.name === "apply_patch", "codemode and deferred tools stay inactive");
+		}
 		if (ctx.mode !== "tui") {
 			state.unpatched(); assert.equal(state.timers, 0); assert.deepEqual(state.uiCalls, []);
 		} else {

@@ -7,7 +7,7 @@ import { hostPackage, isolatedEnvironment, runChild } from "../../../scripts/pre
 
 export const entries = [
 	"./dist/pi-ui/index.js", "./dist/pi-ask-user-question/index.js", "./dist/pi-loop/index.js",
-	"./dist/pi-apply-patch/index.js", "./dist/pi-background-shell/index.js", "./dist/pi-docparser/index.js",
+	"./dist/pi-tools/index.js", "./dist/pi-background-shell/index.js", "./dist/pi-docparser/index.js",
 ];
 export const fixtures = resolve(import.meta.dirname, "../fixtures");
 
@@ -35,7 +35,7 @@ export async function sandboxFixture(release, config = {}) {
 		env.SERRALY_CONFIG = join(base, "config.json");
 		await writeFile(env.SERRALY_CONFIG, JSON.stringify(config));
 		await writeFile(join(env.PI_CODING_AGENT_DIR, "settings.json"), JSON.stringify({
-			theme: "dark", hideThinkingBlock: true, defaultTools: ["+tool_search"],
+			theme: "dark", hideThinkingBlock: true, defaultTools: ["+tool_search", "+codemode"],
 			defaultProvider: "serraly-fixture", defaultModel: "fixture", cacheWarming: "off",
 			compaction: { enabled: false }, retry: { enabled: false },
 			enableInstallTelemetry: false, enableAnalytics: false, defaultProjectTrust: "never",

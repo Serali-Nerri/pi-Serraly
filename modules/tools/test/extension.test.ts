@@ -5,17 +5,22 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { discoverAndLoadExtensions, type ExtensionAPI, type ExtensionToolContext, type ToolDefinition } from "@earendil-works/pi-coding-agent";
-import applyPatchExtension from "../src/index.ts";
+import toolsExtension from "../src/index.ts";
 import { PATCH_GRAMMAR } from "../src/grammar.ts";
 import type { ApplyPatchReport } from "../src/report.ts";
 
-function registeredTool(): ToolDefinition<any, any> {
+function registeredTools(): ToolDefinition<any, any>[] {
 	const tools: ToolDefinition<any, any>[] = [];
 	// Any accidental calls to setActiveTools/registerFlag/on would fail here.
 	const api: Pick<ExtensionAPI, "registerTool"> = { registerTool: (tool) => { tools.push(tool); } };
-	applyPatchExtension(api as ExtensionAPI);
-	assert.equal(tools.length, 1);
-	return tools[0];
+	toolsExtension(api as ExtensionAPI);
+	return tools;
+}
+
+function registeredTool(name = "apply_patch"): ToolDefinition<any, any> {
+	const tool = registeredTools().find((candidate) => candidate.name === name);
+	assert.ok(tool, name);
+	return tool;
 }
 
 interface FileSnapshot {
@@ -39,7 +44,7 @@ function summary(details: ApplyPatchReport) {
 	return details.changes.map(({ views: _views, ...change }) => change);
 }
 
-test("registers only apply_patch, with one string input and grammar fallback schema", () => {
+test("registers apply_patch first, with one string input and grammar fallback schema", () => {
 	const tool = registeredTool();
 	assert.equal(tool.name, "apply_patch");
 	assert.equal(tool.exposure, "direct");
@@ -53,6 +58,35 @@ test("registers only apply_patch, with one string input and grammar fallback sch
 	assert.equal(tool.renderResult, undefined);
 	// This description must work for both custom grammar tools and JSON fallback.
 	assert.doesNotMatch(tool.description, /do not wrap.*JSON|NEVER.*JSON/i);
+});
+
+test("registers grep, find and ls as codemode replacements for the built-in tools", () => {
+	const tools = registeredTools();
+	assert.deepEqual(tools.map((tool) => tool.name), ["apply_patch", "grep", "find", "ls"]);
+	for (const tool of tools.slice(1)) {
+		assert.equal(tool.exposure, "codemode");
+		assert.equal(tool.namespace?.name, "filesystem");
+		assert.equal(tool.renderCall, undefined);
+		assert.equal(tool.renderResult, undefined);
+		assert.equal(tool.renderShell, undefined);
+	}
+	const [grep, find, ls] = tools.slice(1);
+	assert.deepEqual(Object.keys(grep.parameters.properties), ["pattern", "path", "glob", "ignoreCase", "literal", "context", "limit"]);
+	assert.deepEqual(grep.parameters.required, ["pattern"]);
+	assert.deepEqual(Object.keys(find.parameters.properties), ["pattern", "path", "limit"]);
+	assert.deepEqual(find.parameters.required, ["pattern"]);
+	assert.deepEqual(Object.keys(ls.parameters.properties), ["path", "limit"]);
+});
+
+test("executes ls against ctx.cwd instead of the registration directory", async (t) => {
+	const root = await mkdtemp(join(tmpdir(), "pi-tools-filesystem-"));
+	t.after(() => rm(root, { recursive: true, force: true }));
+	await writeFile(join(root, "visible.txt"), "x\n");
+	await mkdir(join(root, "nested"));
+	const result = await registeredTool("ls").execute("id", { path: "." }, undefined, undefined, { cwd: root } as ExtensionToolContext);
+	const output = result.content[0]?.type === "text" ? result.content[0].text : "";
+	assert.match(output, /nested\//);
+	assert.match(output, /visible\.txt/);
 });
 
 test("executes in ctx.cwd and reports the changed files", async (t) => {
@@ -299,7 +333,7 @@ test("loads the workspace source through Pi's real loader and preserves no-op by
 	assert.deepEqual(loaded.errors, []);
 	assert.equal(loaded.extensions.length, 1);
 	const extension = loaded.extensions[0];
-	assert.deepEqual([...extension.tools.keys()], ["apply_patch"]);
+	assert.deepEqual([...extension.tools.keys()], ["apply_patch", "grep", "find", "ls"]);
 	const added = await extension.tools.get("apply_patch")!.definition.execute("loader-test", {
 		input: "*** Begin Patch\n*** Add File: loaded.txt\n+loaded\n*** End Patch",
 	}, undefined, undefined, { cwd: root } as ExtensionToolContext);

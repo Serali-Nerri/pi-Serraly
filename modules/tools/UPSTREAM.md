@@ -1,4 +1,4 @@
-# apply-patch source and migration record
+# pi-tools source and migration record
 
 ## Baseline
 
@@ -6,7 +6,7 @@
 - Source HEAD: `2b2d877c04796cf70401f22cab48d5a7eeca6b5a`.
 - The **current working tree**, not only HEAD, was imported. Modified tracked files were `README.md`, `package.json`, `package-lock.json`, `src/tool.ts`, `test/deploy.test.ts`, and `test/extension.test.ts`. The untracked `.pi/` was excluded without reading its contents.
 - Safe pre-migration archive, diff and full SHA-256 manifest: `/tmp/pi-serraly-stage-two-sources-20261002-000556/{tools.tar.gz,tools.patch,manifest.json}`. The module-local [UPSTREAM.SOURCE.json](./UPSTREAM.SOURCE.json) preserves this source's complete file-hash record and archive/diff hashes. Every one of the 106 recorded source files matched that manifest during migration; no source files were changed.
-- New maintenance boundary: `modules/apply-patch/`; the old repository remains historical/read-only.
+- New maintenance boundary: `modules/tools/`; the old repository remains historical/read-only.
 
 ## Original Codex attribution
 
@@ -69,4 +69,8 @@ Recorded migration checks:
 - The existing root `npm test` passed **801/801** (the current UI-only runner; not yet the integrated stage-two runner). The first launcher attempt failed before tests because npm rejected the same `/dev/null` config path for both user/global configuration; retrying with distinct empty temporary config files passed.
 - Logs remain under `/tmp/pi-serraly-apply-patch-validation-m5VYft/`: `red.log`, `green.log`, `prompt-mutation-red.log`, `types.log`, `test.log`, `root-test.log`. Production AST/literal equivalence and byte-identical fixtures/LICENSE/NOTICE were verified independently; all source baseline hashes still match.
 
-The root owner must include this workspace in shared checks/tests and bundle `src/index.ts` to `dist/pi-apply-patch/index.js`. Keep host imports external, bundle `diff@8.0.4`, and retain this module's LICENSE, NOTICE, source record and BSD license. Do not install physical host peers into the isolated runtime tree. Full compiled-loader/module-identity, six-entry discovery/filtering/coexistence and release-switch/rollback tests are root integration responsibilities, not evidence implied by the source-loader tests here.
+## Workspace addition: same-name search tools
+
+`src/index.ts` also registers `grep`, `find` and `ls` as `exposure: "codemode"` replacements for the built-in tools. They import the host's public `createGrepToolDefinition`/`createFindToolDefinition`/`createLsToolDefinition` and override only exposure, namespace and the renderer fields. No Pi source was copied, so no additional license payload is required; behavior tracks the pinned Pi 0.99.2 release.
+
+The root owner must include this workspace in shared checks/tests and bundle `src/index.ts` to `dist/pi-tools/index.js`. Keep host imports external, bundle `diff@8.0.4`, and retain this module's LICENSE, NOTICE, source record and BSD license. Do not install physical host peers into the isolated runtime tree. Full compiled-loader/module-identity, six-entry discovery/filtering/coexistence and release-switch/rollback tests are root integration responsibilities, not evidence implied by the source-loader tests here.

@@ -10,7 +10,7 @@
 | `ui` | 展示生命周期、私有兼容补丁、shell、Markdown、Thinking、`/context` | 业务工具定义、执行和后台进程 |
 | `questions` | `AskUserQuestion` schema、对话框、AFK、答案/results、专用 renderer | UI 总体刷新或其他 overlay |
 | `loop` | `/loop` 解析、内存任务、忙闲调度、`local-loop` | UI scheduler、持久化恢复 |
-| `apply-patch` | 补丁算法、文件锁、预检、提交、`apply_patch.v1` 报告 | UI 历史 diff 重建 |
+| `tools` | `apply_patch` 补丁算法、文件锁、预检、提交、`apply_patch.v1` 报告；`grep`/`find`/`ls` 同名替换的 codemode 注册 | UI 历史 diff 重建 |
 | `background-shell` | 进程/日志、dock、通知、状态、同进程 reload handoff | 跨进程恢复或 UI 工具卡接管 |
 | `docparser` | 三个 document 工具、FIFO、worker、取消/超时/崩溃清理和预算 | OCR 服务安装或其他模块的生命周期 |
 
@@ -38,7 +38,7 @@ dist/                 已验证的开发构建输出；不可直接用于真实�
 
 ## 构建闭包
 
-- UI、questions、loop、apply-patch 是独立 ESM bundle；`diff@8.0.4` 打入补丁
+- UI、questions、loop、tools 是独立 ESM bundle；`diff@8.0.4` 打入补丁
   bundle 并携带其 BSD 文本。
 - background-shell 用 tsc 编译完整 `extensions/` + `src/`，保留 lazy import；
   根入口只是同目录转发，不另行注册能力。
@@ -67,6 +67,8 @@ footer 消费宿主提供的 extension statuses，不清理其他模块的状态
 后台通知、`.pi/tasks` 元数据和补丁报告由对应能力维护，UI 不改写格式。
 deferred questions/background/document 工具仍通过内置 `tool_search` 发现；
 `defaultTools: ["+tool_search"]` 是用户选择，不由安装脚本隐式重写。
+tools 模块以同名扩展覆盖内置 `grep`/`find`/`ls`，exposure 为 `codemode`：
+默认不直接声明给模型，启用内置 `codemode` 后由脚本调用，显式激活仍然有效。
 
 ## 文档职责
 

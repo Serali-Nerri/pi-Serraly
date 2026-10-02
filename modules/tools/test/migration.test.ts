@@ -7,8 +7,8 @@ import test from "node:test";
 import { discoverAndLoadExtensions, type ExtensionToolContext } from "@earendil-works/pi-coding-agent";
 
 // Catches a missing/wrong workspace entry or an entry that no longer registers
-// an executable apply_patch. The actual Pi loader is the boundary, not source text.
-test("workspace entry registers an executable patch through Pi's real loader", async (t) => {
+// the four executable tools. The actual Pi loader is the boundary, not source text.
+test("workspace entry registers the four executable tools through Pi's real loader", async (t) => {
 	const root = await mkdtemp(join(tmpdir(), "pi-serraly-patch-migration-"));
 	t.after(() => rm(root, { recursive: true, force: true }));
 	const agentDir = join(root, "agent");
@@ -17,7 +17,7 @@ test("workspace entry registers an executable patch through Pi's real loader", a
 	await mkdir(cwd);
 	const entry = fileURLToPath(new URL("../src/index.ts", import.meta.url));
 	const loaded = await discoverAndLoadExtensions([entry], cwd, agentDir);
-	assert.deepEqual(loaded.extensions.flatMap((extension) => [...extension.tools.keys()]), ["apply_patch"]);
+	assert.deepEqual(loaded.extensions.flatMap((extension) => [...extension.tools.keys()]), ["apply_patch", "grep", "find", "ls"]);
 	assert.deepEqual(loaded.errors, []);
 	const tool = loaded.extensions[0].tools.get("apply_patch")!.definition;
 	const result = await tool.execute("migration", {

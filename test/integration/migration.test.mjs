@@ -17,7 +17,7 @@ try {
 	lockfile = createRequire(require.resolve("@earendil-works/pi-coding-agent"))("proper-lockfile");
 }
 const names = ["claude-style-tools", "pi-session-ui", "pi-ask-user-question", "pi-loop", "pi-apply-patch", "pi-background-shell", "pi-docparser"];
-const entries = ["pi-ui", "pi-ask-user-question", "pi-loop", "pi-apply-patch", "pi-background-shell", "pi-docparser"].map((name) => `./dist/${name}/index.js`);
+const entries = ["pi-ui", "pi-ask-user-question", "pi-loop", "pi-tools", "pi-background-shell", "pi-docparser"].map((name) => `./dist/${name}/index.js`);
 const script = fileURLToPath(new URL("../../scripts/migrate.mjs", import.meta.url));
 
 async function api() {

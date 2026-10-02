@@ -10,11 +10,12 @@ import {
 	SessionManager,
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
-import applyPatchExtension from "../src/index.ts";
+import toolsExtension from "../src/index.ts";
 
-// Catches loss of default direct activation or prompt metadata during migration.
-// Inspect the actual SDK prompt/loadout; no provider request is made.
-test("direct patch metadata reaches the initial SDK prompt without replacing built-ins", async (t) => {
+// Catches loss of apply_patch direct activation, wrong exposure for the
+// same-name search tools, or their prompt metadata during migration. Inspect
+// the actual SDK prompt/loadout; no provider request is made.
+test("patch metadata stays direct while grep/find/ls become codemode-only", async (t) => {
 	const root = await mkdtemp(join(tmpdir(), "pi-serraly-patch-prompt-"));
 	t.after(() => rm(root, { recursive: true, force: true }));
 	const agentDir = join(root, "agent");
@@ -40,7 +41,7 @@ test("direct patch metadata reaches the initial SDK prompt without replacing bui
 		noPromptTemplates: true,
 		noThemes: true,
 		noContextFiles: true,
-		extensionFactories: [applyPatchExtension],
+		extensionFactories: [toolsExtension],
 	});
 	await resourceLoader.reload();
 	const { session } = await createAgentSession({
@@ -55,7 +56,15 @@ test("direct patch metadata reaches the initial SDK prompt without replacing bui
 	t.after(() => session.dispose());
 	const active = session.getActiveToolNames();
 	for (const name of ["read", "bash", "edit", "write", "apply_patch"]) assert.ok(active.includes(name), name);
-	assert.ok(session.getCallableToolNames().includes("apply_patch"));
+	const callable = session.getCallableToolNames();
+	assert.ok(callable.includes("apply_patch"));
+	for (const name of ["grep", "find", "ls"]) {
+		assert.ok(!active.includes(name), `${name} is not declared by default`);
+		assert.ok(callable.includes(name), `${name} is callable from codemode`);
+		assert.equal(session.getToolDefinition(name)!.exposure, "codemode");
+	}
+	// The built-in snippets disappear because the same-name replacements are not declared.
+	assert.doesNotMatch(session.systemPrompt, /Search file contents for patterns/);
 	assert.match(session.systemPrompt, /apply_patch: Apply patches to add, update, delete, or move files/);
 	assert.match(session.systemPrompt, /Use apply_patch for file changes; inspect existing text before constructing update chunks\./);
 	assert.match(session.systemPrompt, /apply_patch: @@ context anchors are text, not line numbers\. Keep chunks in source order and include enough context to target the intended occurrence\./);
