@@ -2,6 +2,7 @@
 node_modules/
 dist/
 .stage/
+.codegraph/
 *.tsbuildinfo
 
 # Test output, caches and temporary work
