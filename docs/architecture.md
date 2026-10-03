@@ -33,6 +33,37 @@ dist/                 已验证的开发构建输出；不可直接用于真实�
 宿主提供的包以 `peerDependencies: "*"` 声明并 external，不能作为正式包的
 物理运行依赖。workspace 内的开发宿主副本不得延伸到正式运行树。
 
+### 工作区清单
+
+根 `workspaces` 只声明本项目的一级 glob（`extensions/*`、`packages/*`）；
+未匹配的 glob 视为空，不报错。包目录名与 npm 包名解耦，包的身份来自自身
+manifest。每个 workspace 包必须是真实目录（非链接）、`private`、`type: module`、
+`engines.node: ">=22.19.0"`，并声明非空 `files` allowlist。
+
+包元数据只有 manifest 的 `serraly` 一处：
+
+```ts
+type BuildRecipe =
+  | { kind: "bundle"; entry: string; cjsRequire?: boolean }
+  | { kind: "tsc"; project: string }
+  | { kind: "script"; script: string; bundles?: Record<string, string>; verifyArtifact?: string };
+interface SerralyMetadata {
+  build: BuildRecipe;
+  licenses: string[];
+  bundledLicenses?: { package: string; file: string; from?: string; to: string }[];
+  test?: { directory: "test" | "tests"; command?: string; denyNetwork?: boolean; concurrency?: number; exclude?: string[] };
+}
+```
+
+依赖方向：扩展（`extensions/*`）只能依赖库（`packages/*`），库不依赖扩展，
+库之间目前无依赖。内部依赖必须用精确版本写在 `devDependencies` 并随产物
+bundle；`dependencies` 必须为空，`peerDependencies` 只列宿主。构建顺序来自
+该依赖图（先依赖后使用者），拒绝缺依赖、版本不符、循环、跨扩展依赖、越界入口
+和符号链接 workspace。
+
+`pi.extensions` 入口必须是包内 `./dist/` 下的 `.js` 路径；扩展必须声明至少
+一个入口，库不声明 Pi 资源。
+
 正式运行包位于开发依赖树之外的不可变 release 目录，只有运行 manifest、
 dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace 链接或
 开发工具，也不声明技能/模板/主题资源。
