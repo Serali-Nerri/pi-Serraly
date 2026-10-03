@@ -21,7 +21,7 @@ try {
 		const testsRoot = join(cwd, existsSync(join(cwd, "test")) ? "test" : "tests");
 		const tests = (await discoverTests(testsRoot)).filter((path) =>
 			module.directory !== "background-shell" || !path.includes("/tests/windows/"));
-		groups.push({ name: module.directory, cwd, tests });
+		groups.push({ name: module.directory, cwd, tests, testCommand: module.testCommand, denyNetwork: module.denyNetwork });
 	}
 	if (!selected || selected === "integration") {
 		groups.push({ name: "integration", cwd: root, tests: await discoverTests(join(root, "test/integration")) });
@@ -33,11 +33,11 @@ try {
 		await isolatedRun(process.execPath, [join(root, "scripts/build.mjs")]);
 		for (const group of groups) {
 			console.log(`\n=== ${group.name} ===`);
-			if (group.name === "background-shell") {
-				// Its package tests intentionally delete module-local dist. Preserve
-				// upstream suite ordering and rebuild boundaries before compiled SDK
-				// tests instead of concatenating every file into one sorted run.
-				await isolatedRun("npm", ["run", "test:full", "--workspace", "modules/background-shell"]);
+				if (group.testCommand) {
+					// Preserve the module's framework and suite ordering. Background
+					// shell also rebuilds its local dist between compiled SDK suites.
+					await isolatedRun("npm", ["run", group.testCommand, "--workspace", `modules/${group.name}`],
+						root, { denyNetwork: group.denyNetwork });
 				continue;
 			}
 			const flags = group.name === "ui" ? [] : ["--test-concurrency=1"];

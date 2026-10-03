@@ -6,8 +6,8 @@ export function report(phase, extra = {}) {
 	appendFileSync(process.env.SERRALY_REPORT, JSON.stringify({ phase, ...extra }) + "\n");
 }
 
-// Explicit fixture Agent/StopAgent tools are registered by cli-fixture.js. This
-// proves renderer coexistence, NOT compatibility with an unavailable npm agent.
+// All calls use compiled tools. Invalid Agent/StopAgent calls exercise their
+// real schema/error/rendering boundaries without creating child sessions.
 export function registerScriptedProvider(pi, state) {
 	const config = JSON.parse(readFileSync(process.env.SERRALY_CONFIG, "utf8"));
 	pi.registerProvider("serraly-fixture", {
@@ -34,8 +34,8 @@ export function registerScriptedProvider(pi, state) {
 						{ name: "read", arguments: { path: "seed.txt" } },
 						{ name: "AskUserQuestion", arguments: questionArgs },
 						{ name: "bg_status", arguments: {} },
-						{ name: "Agent", arguments: {} },
-						{ name: "StopAgent", arguments: {} },
+						{ name: "Agent", arguments: { prompt: "fixture", agent: "no-such-agent" } },
+						{ name: "StopAgent", arguments: { agent_id: "missing" } },
 						{ name: "apply_patch", arguments: { input: patchInput } },
 					] : [];
 					const next = plan[results.length];

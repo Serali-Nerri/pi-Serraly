@@ -23,7 +23,7 @@ const credentials = AuthStorage.inMemory();
 const modelRuntime = await SDK.ModelRuntime.create({ credentials, modelsPath: null,
 	modelsStorePath: join(process.env.TMPDIR, "models-cache.json"), allowModelNetwork: false, refreshOnCreate: false });
 
-async function open(indices = config.indices ?? allIndices, packageFilter = config.packageFilter) {
+async function open(indices = config.indices ?? allIndices, packageFilter = config.packageFilter, discoverSettings = false) {
 	if (packageFilter !== undefined) {
 		// PackageManager reads persisted global/project resource settings, not
 		// SettingsManager's transient merged overrides. Exercise real settings.
@@ -35,9 +35,9 @@ async function open(indices = config.indices ?? allIndices, packageFilter = conf
 	const settingsManager = SDK.SettingsManager.create(cwd, agentDir);
 	const eventBus = SDK.createEventBus();
 	const loader = new SDK.DefaultResourceLoader({ cwd, agentDir, settingsManager, eventBus,
-		noExtensions: packageFilter === undefined, noSkills: false, noPromptTemplates: true, noThemes: true, noContextFiles: true,
+		noExtensions: !discoverSettings && packageFilter === undefined, noSkills: false, noPromptTemplates: true, noThemes: true, noContextFiles: true,
 		additionalExtensionPaths: [join(import.meta.dirname, "sdk-provider.js"), "builtin:tool-search", "builtin:codemode",
-			...(packageFilter === undefined ? indices.map((index) => join(release, entries[index])) : [])],
+			...(!discoverSettings && packageFilter === undefined ? indices.map((index) => join(release, entries[index])) : [])],
 		extensionFactories: [{ name: "tool-search", builtin: true, factory: SDK.createToolSearchExtension() },
 			{ name: "codemode", builtin: true, factory: SDK.createCodemodeExtension() }],
 	});
@@ -74,11 +74,18 @@ function inventory(h, indices) {
 	const active = h.session.getActiveToolNames();
 	assert.ok(active.includes("tool_search"), "builtin discovery remains enabled by +tool_search");
 	for (const name of ["read", "bash", "edit", "write"]) assert.ok(active.includes(name), "+tool_search retains default built-ins");
-	const exposures = { apply_patch: "direct", grep: "codemode", find: "codemode", ls: "codemode" };
+	const exposures = { apply_patch: "direct", grep: "codemode", find: "codemode", ls: "codemode",
+		Agent: "direct", StopAgent: "direct", AgentStatus: "direct" };
 	for (const tool of h.session.getAllTools().filter((tool) => expectedTools.includes(tool.name))) {
-		assert.equal(tool.exposure, exposures[tool.name] ?? "deferred");
-		assert.equal(active.includes(tool.name), tool.name === "apply_patch", "codemode and deferred tools not made direct by UI");
+		const exposure = exposures[tool.name] ?? "deferred";
+		assert.equal(tool.exposure, exposure);
+		assert.equal(active.includes(tool.name), exposure === "direct", "only direct tools are initially active");
 	}
+	const subagents = extensions.find((extension) => extension.path.endsWith("/pi-subagents/index.js"));
+	assert.equal(extensions.filter((extension) => extension.messageRenderers.has("subagent-result")).length, subagents ? 1 : 0,
+		"only the enabled subagents entry registers subagent-result");
+	assert.equal(h.session.extensionRunner.getMessageRenderer("subagent-result"), subagents?.messageRenderers.get("subagent-result"),
+		"subagents owns its dedicated message renderer, independently of root UI");
 	for (const [name, method] of Object.entries(baseline)) assert.equal(SDK.ToolExecutionComponent.prototype[name], method, "non-TUI remains unpatched");
 }
 
@@ -482,7 +489,50 @@ async function addDir(h) {
 	} finally { ui.dispose(); }
 }
 
-if (scenario === "filters") {
+if (scenario === "cutover") {
+	const settingsPath = join(agentDir, "settings.json");
+	const initial = JSON.parse(await readFile(settingsPath, "utf8"));
+	const legacy = join(import.meta.dirname, "legacy-subagents");
+	initial.packages = [legacy];
+	initial.extensions = ["-builtin:mcp"];
+	await writeFile(settingsPath, JSON.stringify(initial, null, 2) + "\n");
+	const original = await readFile(settingsPath);
+	const backupPath = join(agentDir, "settings.before-cutover.json");
+	await writeFile(backupPath, original);
+	const configPath = join(agentDir, "subagents-lite.json");
+	const promptPath = join(agentDir, "subagents-lite-prompt.md");
+	await writeFile(configPath, '{"agent":{"loadExtensionsImplicitly":false}}\n');
+	await writeFile(promptPath, "Retained custom prompt fixture.\n");
+	const retained = [await readFile(configPath), await readFile(promptPath)];
+	const legacyLoads = async () => (await readFile(process.env.SERRALY_REPORT, "utf8")).trim().split("\n")
+		.filter(Boolean).map(JSON.parse).filter((event) => event.phase === "legacy-subagents-factory").length;
+	const old = await open([], undefined, true);
+	try {
+		assert.deepEqual(old.session.extensionRunner.getRegisteredCommands().map((command) => command.invocationName), ["agents"]);
+		assert.deepEqual(old.session.getAllTools().filter((tool) => ["Agent", "StopAgent", "AgentStatus"].includes(tool.name))
+			.map((tool) => tool.name).sort(), ["Agent", "AgentStatus", "StopAgent"]);
+		assert.equal((await execute(old, "AgentStatus", {})).content[0].text, "Legacy fixture only");
+	} finally { await old.close(); }
+	assert.equal(await legacyLoads(), 1);
+	await writeFile(settingsPath, JSON.stringify({ ...initial, packages: [release] }, null, 2) + "\n");
+	const candidate = await open([], undefined, true);
+	try {
+		inventory(candidate, allIndices);
+		assert.match((await execute(candidate, "AgentStatus", {})).content[0].text, /^No agents running or completed\./);
+		await assert.rejects(execute(candidate, "Agent", { prompt: "fixture", agent: "no-such-agent" }), /Unknown agent type: no-such-agent/);
+		assert.equal(await legacyLoads(), 1, "removed legacy source is not executed alongside the candidate");
+	} finally { await candidate.close(); }
+	await writeFile(settingsPath, await readFile(backupPath));
+	assert.deepEqual(await readFile(settingsPath), original, "rollback restores exact settings bytes");
+	const restored = await open([], undefined, true);
+	try {
+		assert.equal((await execute(restored, "AgentStatus", {})).content[0].text, "Legacy fixture only");
+		assert.equal(restored.session.extensionRunner.getMessageRenderer("subagent-result"), undefined, "candidate is no longer loaded");
+		assert.ok(!restored.loader.getExtensions().extensions.some((extension) => extension.path.startsWith(release)));
+	} finally { await restored.close(); }
+	assert.equal(await legacyLoads(), 2);
+	assert.deepEqual([await readFile(configPath), await readFile(promptPath)], retained, "cutover does not migrate or delete agent configuration");
+} else if (scenario === "filters") {
 	for (let disabled = 0; disabled < entries.length; disabled++) {
 		const indices = allIndices.filter((index) => index !== disabled);
 		const h = await open(indices, ["-" + entries[disabled].slice(2)]);
@@ -504,6 +554,28 @@ if (scenario === "filters") {
 	const h = await open();
 	try {
 		if (scenario === "inventory") inventory(h, config.indices ?? allIndices);
+		else if (scenario === "subagents-contracts") {
+			inventory(h, config.indices ?? allIndices);
+			await assert.rejects(execute(h, "Agent", { prompt: "fixture", agent: "no-such-agent" }), /Unknown agent type: no-such-agent/);
+			await assert.rejects(execute(h, "StopAgent", { agent_id: "missing" }), /Agent missing not found/);
+			const status = await execute(h, "AgentStatus", {});
+			assert.equal(status.content[0].text, "No agents running or completed.\n\nDon't poll — you'll receive notifications when agents complete.");
+			assert.deepEqual(h.session.messages, [], "validation errors and empty status do not spawn a child or a provider turn");
+			const ui = await mount(h);
+			try {
+				const renderer = h.session.extensionRunner.getMessageRenderer("subagent-result");
+				assert.equal(typeof renderer, "function");
+				const row = new SDK.CustomMessageComponent({ role: "custom", customType: "subagent-result",
+					content: "Local synthetic completion", display: true, timestamp: Date.now(),
+					details: { type: "general-purpose", description: "Dedicated local completion card" } }, renderer);
+				for (const width of [40, 80, 120]) {
+					const lines = row.render(width);
+					assert.match(lines.join("\n"), /Subagent Result/);
+					assert.match(lines.join("\n"), /Dedicated local completion card/);
+					for (const line of lines) assert.ok(TUI.visibleWidth(line) <= width);
+				}
+			} finally { ui.dispose(); }
+		}
 		else if (scenario === "contracts") await contracts(h);
 		else if (scenario === "background") await background(h);
 		else if (scenario === "documents") await documents(h);

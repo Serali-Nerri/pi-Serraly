@@ -22,10 +22,28 @@ npm run verify
 ```sh
 node scripts/test.mjs --module loop
 node scripts/test.mjs --module docparser
+node scripts/test.mjs --module subagents
 node scripts/test.mjs --module integration
 node scripts/test.mjs --module background-shell --list
+node scripts/test.mjs --module subagents --list
 ```
 
+subagents 保留 Vitest 4.1.10 的原有 mocking/fake-timer 套件；其他模块及根集成
+使用 node:test。根 runner 分派各模块的 testCommand，并为 subagents 启用网络拒绝；
+`--list` 只发现测试文件，不执行 Vitest 或写构建产物。定向调试同样复用隔离：
+
+```sh
+node --input-type=module -e '
+  import { isolatedRun } from "./scripts/lib/workspace.mjs";
+  await isolatedRun("npm", ["exec", "--workspace=modules/subagents", "--", "vitest", "run", ...process.argv.slice(1)], undefined, { denyNetwork: true });
+' -- test/agents/extension-selection.test.ts
+node --input-type=module -e '
+  import { isolatedRun } from "./scripts/lib/workspace.mjs";
+  await isolatedRun(process.execPath, ["--test", ...process.argv.slice(1)]);
+' -- test/integration/runtime.test.mjs test/integration/subagents-cutover.test.mjs
+```
+
+定向根测试需要已有完整的 `npm run build` 产物；根 runner 自动重建。
 模块选择只用于调试，不代替完成前的 `npm run verify`。
 入口路径和构建策略见[架构](architecture.md)。
 后台 shell 的源码或人类文档变更经审阅后，先运行
@@ -39,7 +57,7 @@ node scripts/test.mjs --module background-shell --list
 2. **模块边界测试**：实际注册定义、renderer、文件/进程/worker 和宿主 SDK。
    外部或慢操作才允许 test double；保留真正影响断言的副作用。
 3. **产物集成**：实际编译入口、runtime-only 安装、新路径 worker/lazy import、
-   宿主 loader 和类身份、资源过滤、七入口共存。
+   宿主 loader 和类身份、资源过滤、八入口共存、脚本化 child 与合成 stdio MCP。
 4. **操作演练**：临时目录内真实文件锁、原子发布和故障中断恢复。
 5. **人工交互**：目标终端的视觉、快捷键、鼠标和焦点；自动渲染宽度检查不替代它。
 
@@ -56,7 +74,9 @@ GREEN。测试名说明破坏的行为。不得用源码字符串匹配代替执
 根 runner 为每个 suite 创建临时 HOME/agent/config/cache；环境为 allowlist，
 不继承真实 provider keys、session pointers、NODE_OPTIONS 或代理端点。
 运行时测试使用空工作目录/本地合成 fixture、内存会话及脚本化 provider。
-实际 CLI 使用离线模式和网络拒绝 preload；离线模式本身不禁止模型请求。
+实际 CLI/SDK worker 使用离线模式和网络拒绝 preload；拒绝环境继承到每个
+运行时子进程，包括合成 MCP 和 native worker。离线模式本身不禁止模型请求。
+即使测试捕获了网络异常，guard 记录仍使该场景失败。
 
 不得读真实 auth、sessions 或 settings；不得发送真实模型请求。原生文档
 fixture 关闭 OCR，不安装系统包。模块 tests 自己拥有进程/worker 清理。
@@ -80,7 +100,9 @@ node scripts/capture.mjs /tmp/pi-ui-captures
 ```
 
 仅临时数据；覆盖范围见 [UI 验收说明](../modules/ui/docs/acceptance.md)。
-自动化结果不替代人工视觉验收。
+编译 release 的 CLI 集成使用真实宿主 PTY，覆盖 regular/fullscreen 的 40/80/120
+列、专用子代理 renderer 和 host class identity。自动宽度/ANSI 断言不替代人工
+视觉、输入和焦点验收；无 PTY 或未人工查看时必须如实报告。
 
 ## 运行包
 
@@ -101,3 +123,48 @@ release 投影统一锁的运行依赖图，执行
 
 已安装的 Pi 通过 `packages` 引用 release 绝对路径。更新时发布新的版本目录并在
 Pi 锁下切换引用，不覆写正在使用的目录，也不用 `pi install .` 加载源码根。
+
+## 子代理替换与回滚
+
+代码计划或候选验证**不授权真实 settings/npm 切换**。以下流程在再次获准后由
+操作者执行；集成测试只在临时 HOME/agentDir 中演练同样的 source 替换与回滚。
+
+1. 递增根版本，在开发依赖树外创建唯一的新版本目录，完成 verify、release
+   validation、runtime-only 安装/外部宿主检查和 CLI/SDK 验收。Node 最低版本
+   22.19 未实跑、平台 skip 或未人工查看的 PTY 必须列为资格缺口，不能用较新
+   Node 的成功替代最低基线。
+2. 停止所有引用旧/新入口的 Pi 实例，确认 child 与 MCP/后台资源已关闭。备份
+   user settings、相关已信任项目 settings 和当前 release/source 引用；保留备份
+   的精确内容，勿只抄 package 名称。
+3. 从相关 `packages`/`extensions` 移除或禁用旧 `npm:pi-subagents-lite`（含固定
+   版本、项目级声明、显式 `-e` 及本地旧入口），仅保留新 release 的子代理入口。
+   不同时启用两个注册源，不依赖加载顺序覆盖；新包可通过 `pi config` 独立启停。
+   保留 `<agentDir>/subagents-lite.json`、`subagents-lite-prompt.md`、`agents/*.md`
+   和项目中的对应文件，不删除或重命名配置。
+4. 启动后核对 `Agent`、`StopAgent`、`AgentStatus` 与 `/agents` 各一份、无冲突
+   诊断；检查 native-only 默认、宿主禁用设置与专用展示，再恢复正常工作。
+5. 如需回滚，再次停止实例，恢复备份 settings 并引用旧已知版本/source；需要
+   重新安装时使用已记录的固定旧版本。保留候选目录供检查，**不覆写**它或旧
+   release，不把新任务的内存会话假定为可跨重启恢复。
+
+历史 `scripts/migrate.mjs` 只处理原来批准的七个源码目录及精确设置删除项；
+新 release 有八入口不扩大该目录协议，也不使它成为任意 npm source 删除 API。
+子代理 npm 替换使用上面的显式设置备份/切换，不追加第八目录 approval。
+
+候选在临时安装环境准备的示例（不修改真实 Pi 配置）：
+
+```sh
+CANDIDATE_PARENT="$(mktemp -d)"
+VERSION="$(node -p 'JSON.parse(require("fs").readFileSync("package.json","utf8")).version')"
+node --input-type=module -e '
+  import { isolatedRun } from "./scripts/lib/workspace.mjs";
+  await isolatedRun("npm", ["run", "release", "--", "--output", process.argv[1], "--build-id", process.argv[2]]);
+' "$CANDIDATE_PARENT/pi-serraly-$VERSION" "candidate-$VERSION"
+node --input-type=module -e '
+  import { validateRelease } from "./scripts/lib/package.mjs";
+  await validateRelease(process.argv[1]);
+' "$CANDIDATE_PARENT/pi-serraly-$VERSION"
+```
+
+该安装步骤只允许获取锁定运行依赖；CLI/SDK 验收另用上述隔离 runner 和网络拒绝，
+不把候选安装的 registry 访问误当成模型请求资格。

@@ -17,7 +17,7 @@ try {
 	lockfile = createRequire(require.resolve("@earendil-works/pi-coding-agent"))("proper-lockfile");
 }
 const names = ["claude-style-tools", "pi-session-ui", "pi-ask-user-question", "pi-loop", "pi-apply-patch", "pi-background-shell", "pi-docparser"];
-const entries = ["pi-ui", "pi-ask-user-question", "pi-loop", "pi-tools", "pi-background-shell", "pi-docparser", "pi-add-dir"].map((name) => `./dist/${name}/index.js`);
+const entries = ["pi-ui", "pi-ask-user-question", "pi-loop", "pi-tools", "pi-background-shell", "pi-docparser", "pi-add-dir", "pi-subagents"].map((name) => `./dist/${name}/index.js`);
 const script = fileURLToPath(new URL("../../scripts/migrate.mjs", import.meta.url));
 
 async function api() {
@@ -119,33 +119,33 @@ test("requires explicit paths and shutdown acknowledgment, including dry-run", a
 });
 
 // Break caught: rollback must not re-validate the release, so an operator whose
-// installed release predates the seventh entry can still recover an old journal.
+// installed release predates the current entries can still recover an old journal.
 test("a legacy six-entry release journal rolls back completely", async (t) => {	const { migrate, rollback } = await api();
 	const f = setup(t);
 	const original = f.read();
 	await migrate(f.options, f.dependencies);
 	fs.writeFileSync(path.join(f.options.release, "package.json"), JSON.stringify({
 		name: "pi-serraly", private: true, type: "module",
-		pi: { extensions: entries.filter((entry) => !entry.includes("pi-add-dir")) },
+		pi: { extensions: entries.slice(0, 6) },
 		dependencies: {}, peerDependencies: { "@earendil-works/pi-coding-agent": "*" },
 	}));
-	await assert.rejects(migrate(f.options, f.dependencies), /seven dist entries/, "a new migration refuses a six-entry release");
+	await assert.rejects(migrate(f.options, f.dependencies), /current dist entries/, "a new migration refuses a six-entry release");
 	await rollback(rollbackOptions(f));
 	assert.deepEqual(f.read(), original);
 	assertOriginalDirectories(f);
 });
 
-// Break caught: a release without the seventh entry must be refused before anything moves.
+// Break caught: a release without the current entries is refused before anything moves.
 test("a first migration refuses a six-entry release before touching settings or directories", async (t) => {
 	const { migrate } = await api();
 	const f = setup(t);
 	const original = f.read();
 	fs.writeFileSync(path.join(f.options.release, "package.json"), JSON.stringify({
 		name: "pi-serraly", private: true, type: "module",
-		pi: { extensions: entries.filter((entry) => !entry.includes("pi-add-dir")) },
+		pi: { extensions: entries.slice(0, 6) },
 		dependencies: {}, peerDependencies: { "@earendil-works/pi-coding-agent": "*" },
 	}));
-	await assert.rejects(migrate(f.options, f.dependencies), /seven dist entries/);
+	await assert.rejects(migrate(f.options, f.dependencies), /current dist entries/);
 	assert.deepEqual(f.read(), original);
 	assertOriginalDirectories(f);
 	assert.equal(fs.existsSync(f.options.backupDir), false, "refusal precedes any backup");

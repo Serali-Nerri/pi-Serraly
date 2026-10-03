@@ -1,9 +1,9 @@
 {
   "name": "pi-serraly",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "type": "module",
-  "description": "Seven independently selectable private Pi extensions.",
+  "description": "Independently selectable private Pi extensions.",
   "engines": { "node": ">=22.19.0" },
   "workspaces": ["modules/*"],
   "scripts": {
@@ -22,7 +22,8 @@
       "./dist/pi-tools/index.js",
       "./dist/pi-background-shell/index.js",
       "./dist/pi-docparser/index.js",
-      "./dist/pi-add-dir/index.js"
+      "./dist/pi-add-dir/index.js",
+      "./dist/pi-subagents/index.js"
     ]
   },
   "dependencies": { "@llamaindex/liteparse": "2.10.1" },

@@ -1,0 +1,27 @@
+{
+  "name": "pi-subagents",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Independent SDK subagents for Pi.",
+  "engines": { "node": ">=22.19.0" },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-ai": { "optional": true },
+    "@earendil-works/pi-coding-agent": { "optional": true },
+    "@earendil-works/pi-tui": { "optional": true },
+    "typebox": { "optional": true }
+  },
+  "devDependencies": {
+    "vitest": "4.1.10"
+  }
+}

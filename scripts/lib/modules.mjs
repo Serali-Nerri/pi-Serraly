@@ -14,13 +14,15 @@ export const modules = [
 	{ directory: "tools", runtime: "pi-tools", entry: "src/index.ts", licenses: ["LICENSE", "NOTICE", "UPSTREAM.md"],
 		generatedLicenses: ["licenses/diff-BSD.txt"] },
 	{ directory: "background-shell", runtime: "pi-background-shell", entry: "extensions/background-tasks.ts",
-		compile: true, licenses: ["LICENSE", "UPSTREAM.md"] },
+		compile: true, licenses: ["LICENSE", "UPSTREAM.md"], testCommand: "test:full" },
 	{ directory: "docparser", runtime: "pi-docparser", entry: "extensions/docparser/index.ts",
 		assets: ["native-worker.mjs", "native-protocol.mjs", "parse-output.mjs"],
 		licenses: ["LICENSE", "THIRD_PARTY_NOTICES.md", "licenses/LiteParse-APACHE-2.0.txt", "UPSTREAM.md"] },
 	{ directory: "add-dir", runtime: "pi-add-dir", entry: "src/index.ts", cjsRequire: true, licenses: ["LICENSE", "UPSTREAM.md"],
 		generatedLicenses: ["licenses/pi-config-store-MIT.txt", "licenses/proper-lockfile-MIT.txt",
 			"licenses/graceful-fs-ISC.txt", "licenses/retry-MIT.txt", "licenses/signal-exit-ISC.txt"] },
+	{ directory: "subagents", runtime: "pi-subagents", entry: "src/index.ts",
+		licenses: ["LICENSE", "UPSTREAM.md"], testCommand: "test", denyNetwork: true },
 ];
 
 export const extensionEntries = modules.map(({ runtime }) => `./dist/${runtime}/index.js`);

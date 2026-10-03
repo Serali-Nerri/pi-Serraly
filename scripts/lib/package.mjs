@@ -119,7 +119,7 @@ async function releaseData(directory) {
 	const manifest = JSON.parse(await readFile(join(directory, "package.json"), "utf8"));
 	if (manifest.private !== true || manifest.type !== "module" || manifest.devDependencies || manifest.workspaces ||
 		JSON.stringify(manifest.pi) !== JSON.stringify({ extensions: extensionEntries })) {
-		throw new Error("Not a seven-entry runtime-only Pi package");
+		throw new Error("Not a current-entry runtime-only Pi package");
 	}
 	if (JSON.stringify(manifest.dependencies) !== JSON.stringify({ "@llamaindex/liteparse": "2.10.1" })) {
 		throw new Error("Runtime dependency contract changed");

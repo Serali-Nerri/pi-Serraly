@@ -1,9 +1,9 @@
 # pi-Serraly
 
-私有本地 Pi package：七个可独立启停的入口，一个维护仓库。
+私有本地 Pi package：八个可独立启停的入口，一个维护仓库。
 支持基线为 **Pi 1.0.0 / Node ≥22.19**。不发布 npm，不提供总 factory 再次注册能力。
 
-## 七个入口
+## 八个入口
 
 | 能力 | 运行入口 | 使用与契约 |
 | --- | --- | --- |
@@ -14,10 +14,12 @@
 | 后台 shell | `dist/pi-background-shell/index.js` | [`bg_*`、任务 UI、通知和同进程 reload](modules/background-shell/README.md) |
 | 文档解析 | `dist/pi-docparser/index.js` | [`document_*`、native worker、doctor](modules/docparser/README.md) |
 | 外部目录 | `dist/pi-add-dir/index.js` | [`/dir-add`、`/dir-ls`、外部指令与 skills](modules/add-dir/README.md) |
+| 子代理 | `dist/pi-subagents/index.js` | [`Agent`、`StopAgent`、`AgentStatus`、`/agents` 与独立原生 SDK 会话](modules/subagents/README.md) |
 
-根 `pi.extensions` 只声明以上七入口，安装后可在 `pi config` 分别启停。
+根 `pi.extensions` 只声明以上八入口，安装后可在 `pi config` 分别启停。
 docparser companion skill 作为来源保留，但**不自动启用**；其他 skills、
-prompts、themes 和 npm 扩展不属于本仓库。
+prompts、themes 和外部 npm 扩展不属于本仓库。同包发布不意味着子代理自动加载
+所有入口；子代理默认能力与配置见其模块文档。
 
 Pi 默认使用 fullscreen；需要终端原生滚动历史时，可显式设置
 `"tuiMode": "regular"` 或使用 `--tui-mode regular`。
@@ -31,7 +33,8 @@ npm run verify
 
 验证使用临时 HOME/agent/cwd、合成会话、离线脚本化 provider 和本地 fixture，
 不读取真实 auth/session/settings，也不发送真实模型请求。
-命令、测试层级和 release 流程见[开发指南](docs/development.md)。
+命令、测试层级、release 和旧 `pi-subagents-lite` 的替换/回滚流程见
+[开发指南](docs/development.md)。真实配置切换须另行授权。
 
 ## 运行与安全边界
 

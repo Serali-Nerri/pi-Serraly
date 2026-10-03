@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { diagnostics } from "./runtime.mjs";
+import { commandsByEntry } from "../fixtures/contracts.mjs";
 
 export async function runRpc(sandbox, args) {
 	const child = spawn(process.execPath, args, { cwd: sandbox.cwd, env: sandbox.env, stdio: "pipe" });
@@ -40,23 +41,26 @@ export async function runRpc(sandbox, args) {
 	try {
 		const state = await request("state", "get_state"); assert.equal(state.sessionFile, undefined);
 		const commands = await request("commands", "get_commands");
-		assert.deepEqual(commands.commands.map((item) => item.name).sort(), ["bg", "bg-clear", "bg-tasks", "ccstyle", "context", "dir-add", "dir-ls", "docparser:doctor", "jobs", "kill", "logs", "loop", "tasks"]);
+		assert.deepEqual(commands.commands.map((item) => item.name).sort(), commandsByEntry.flat().sort());
 		const settled = waitFor((record) => record.type === "agent_settled");
 		await request("prompt", "prompt", { message: "Local synthetic reply" }); await settled;
 		child.stdin.end(); assert.equal(await closed, 0, stderr);
 		assert.equal(stderr, ""); assert.equal(parseError, undefined); assert.equal(stdout, "", "strict LF-terminated JSONL");
-		assert.ok(!records.some((record) => record.type === "extension_ui_request" && ["setWidget", "setHeader", "setFooter"].includes(record.method)), "no UI-owned bridge in RPC");
+		// Loop's existing local-loop domain status is part of the RPC contract.
+		// No terminal widget/custom UI or new subagents UI bridge may be added.
+		assert.deepEqual(records.filter((record) => record.type === "extension_ui_request" &&
+			!(record.method === "setStatus" && record.statusKey === "local-loop")), [], "no UI-owned bridge in this noninteractive RPC scenario");
 		return records;
 	} finally { clearTimeout(timer); if (child.exitCode === null) child.kill("SIGKILL"); await closed.catch(() => {}); }
 }
 
-// Same Python/POSIX technique as scripts/capture.mjs, but with the final seven
+// Same Python/POSIX technique as scripts/capture.mjs, but with the final eight
 // compiled entries and fixture arguments rather than its stage-one UI bundle.
 const ptyDriver = String.raw`
 import os,sys,json,pty,termios,fcntl,struct,subprocess,select,time,errno,signal
 config=json.loads(sys.argv[1])
 master,slave=pty.openpty()
-fcntl.ioctl(slave,termios.TIOCSWINSZ,struct.pack("HHHH",44,80,0,0))
+fcntl.ioctl(slave,termios.TIOCSWINSZ,struct.pack("HHHH",44,config["width"],0,0))
 def setup():
     os.setsid()
     fcntl.ioctl(0,termios.TIOCSCTTY,0)
@@ -65,7 +69,7 @@ os.close(slave)
 output=bytearray(); deadline=time.monotonic()+30; sent=False
 try:
     while True:
-        if time.monotonic()>deadline: raise RuntimeError("Seven-entry PTY fixture deadline")
+        if time.monotonic()>deadline: raise RuntimeError("Release PTY fixture deadline")
         ready,_,_=select.select([master],[],[],0.05)
         if ready:
             try:
@@ -92,11 +96,11 @@ finally:
     with open(config["output"],"wb") as capture: capture.write(output)
 `;
 
-export async function captureReleasePty(sandbox, args) {
+export async function captureReleasePty(sandbox, args, width = 80) {
 	await writeFile(join(sandbox.cwd, "seed.txt"), "Independent release synthetic read fixture.\n");
 	const output = join(sandbox.base, "capture.ansi");
 	const child = spawn("/usr/bin/python3", ["-c", ptyDriver, JSON.stringify({
-		argv: [process.execPath, ...args], cwd: sandbox.cwd, env: sandbox.env, output,
+		argv: [process.execPath, ...args], cwd: sandbox.cwd, env: sandbox.env, output, width,
 	})], { cwd: sandbox.cwd, env: sandbox.env, stdio: ["ignore", "ignore", "pipe"] });
 	let stderr = "";
 	child.stderr.setEncoding("utf8").on("data", (chunk) => { stderr += chunk; });

@@ -25,7 +25,7 @@ const cjsRequireBridge =
 
 const manifest = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
 if (JSON.stringify(manifest.pi) !== JSON.stringify({ extensions: extensionEntries })) {
-	throw new Error("Root manifest must declare exactly the seven independent extension entries");
+	throw new Error("Root manifest must declare exactly the independent extension entries");
 }
 const stageRoot = join(root, ".stage");
 await mkdir(stageRoot, { recursive: true });
@@ -80,7 +80,7 @@ try {
 	try { await rename(stage, join(root, "dist")); }
 	catch (error) { if (hasRetired) await rename(retired, join(root, "dist")); throw error; }
 	await rm(retired, { recursive: true, force: true });
-	console.log("Built seven independent entries; host packages external, worker/lazy closure and licenses verified.");
+	console.log(`Built ${extensionEntries.length} independent entries; host packages external, worker/lazy closure and licenses verified.`);
 } finally {
 	await rm(stage, { recursive: true, force: true });
 }

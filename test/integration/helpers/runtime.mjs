@@ -5,11 +5,8 @@ import { join, resolve } from "node:path";
 import { createRelease, validateRelease } from "../../../scripts/lib/package.mjs";
 import { hostPackage, isolatedEnvironment, runChild } from "../../../scripts/preview.mjs";
 
-export const entries = [
-	"./dist/pi-ui/index.js", "./dist/pi-ask-user-question/index.js", "./dist/pi-loop/index.js",
-	"./dist/pi-tools/index.js", "./dist/pi-background-shell/index.js", "./dist/pi-docparser/index.js",
-	"./dist/pi-add-dir/index.js",
-];
+import { entries } from "../fixtures/contracts.mjs";
+export { entries };
 export const fixtures = resolve(import.meta.dirname, "../fixtures");
 
 export async function releaseFixture() {
@@ -29,6 +26,7 @@ export async function sandboxFixture(release, config = {}) {
 	try {
 		await Promise.all([cwd, env.HOME, env.PI_CODING_AGENT_DIR].map((path) => mkdir(path, { recursive: true })));
 		await cp(fixtures, join(base, "fixtures"), { recursive: true });
+		await writeFile(join(base, "fixtures/cli-safety.js"), 'export { installGuard as default } from "./cli-fixture.js";\n');
 		await writeFile(join(base, "package.json"), '{"type":"module"}\n');
 		env.NODE_OPTIONS = `--import=${join(base, "fixtures/network-guard.mjs")}`;
 		env.SERRALY_REPORT = join(base, "report.jsonl");
@@ -67,7 +65,7 @@ export async function sdkScenario(stage, scenario, config = {}, timeout = 30000)
 
 export function cliArgs(sandbox, host, extra = []) {
 	return [host.cli, "--offline", "--no-session", "--no-skills", "--no-prompt-templates", "--no-themes", "--no-context-files", "--no-approve",
-		"--no-extensions", "-e", join(sandbox.base, "fixtures/cli-guard.js"),
+		"--no-extensions", "-e", join(sandbox.base, "fixtures/cli-guard.js"), "-e", join(sandbox.base, "fixtures/cli-safety.js"),
 		...entries.flatMap((entry) => ["-e", join(sandbox.env.SERRALY_RELEASE, entry)]),
 		"-e", "builtin:tool-search", "-e", join(sandbox.base, "fixtures/cli-fixture.js"),
 		"--provider", "serraly-fixture", "--model", "fixture", "--thinking", "off", ...extra];

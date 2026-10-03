@@ -37,6 +37,8 @@ for (const legalFile of [
 	"pi-add-dir/licenses/graceful-fs-ISC.txt",
 	"pi-add-dir/licenses/retry-MIT.txt",
 	"pi-add-dir/licenses/signal-exit-ISC.txt",
+	"pi-subagents/LICENSE",
+	"pi-subagents/UPSTREAM.md",
 ]) {
 	test(`sealing requires inherited legal payload: ${legalFile}`, async () => {
 		const base = await mkdtemp(join(tmpdir(), "serraly-missing-license-"));

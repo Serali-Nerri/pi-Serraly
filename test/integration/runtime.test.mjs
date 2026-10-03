@@ -13,7 +13,7 @@ after(async () => { await stage?.cleanup(); });
 
 // Break caught: a missing compiled entry/worker or a release that still loads
 // through workspace dependencies cannot reach any real loader scenario.
-test("release manifest exposes only seven compiled extensions, never companion skills", async () => {
+test("release manifest exposes only eight compiled extensions, never companion skills", async () => {
 	const manifest = JSON.parse(await readFile(join(stage.release, "package.json"), "utf8"));
 	assert.deepEqual(manifest.pi, { extensions: entries });
 });
@@ -25,10 +25,14 @@ for (let index = 0; index < entries.length; index++) {
 }
 
 for (const [order, indices] of [["manifest", entries.map((_, index) => index)], ["reversed", entries.map((_, index) => index).reverse()]]) {
-	test(`seven compiled entries coexist without duplicate tools/commands (${order} order)`, { timeout: 30000 }, async () => {
+	test(`eight compiled entries coexist without duplicate tools/commands (${order} order)`, { timeout: 30000 }, async () => {
 		await sdkScenario(stage, "inventory", { indices });
 	});
 }
+
+test("compiled subagents alone validates real control tools without spawning and retains its dedicated message renderer", { timeout: 30000 }, async () => {
+	await sdkScenario(stage, "subagents-contracts", { indices: [7] });
+});
 
 test("actual package settings can disable each compiled entry independently, including UI", { timeout: 60000 }, async () => {
 	await sdkScenario(stage, "filters", {}, 55000);
@@ -53,7 +57,7 @@ test("mounted package footer preserves local-loop/background statuses and dock/U
 });
 
 for (const mode of ["print", "json", "rpc"]) {
-	test(`compiled seven-entry package in bundled CLI ${mode} has no UI-owned stdout/timer/prototype pollution`, { timeout: 30000 }, async () => {
+	test(`compiled eight-entry package in bundled CLI ${mode} has no UI-owned stdout/timer/prototype pollution`, { timeout: 30000 }, async () => {
 		const sandbox = await sandboxFixture(stage.release);
 		try {
 			let records;
@@ -83,20 +87,23 @@ for (const mode of ["print", "json", "rpc"]) {
 // Break caught: loading the package must not force regular mode when the host
 // defaults to fullscreen; explicit regular/fullscreen selections still work.
 for (const [selection, mode] of [["default", "fullscreen"], ["regular", "regular"], ["fullscreen", "fullscreen"]]) {
-	test(`final release under bundled CLI ${selection}: host-owned TUI/tool rows protect question/bg and explicit Agent/StopAgent renderers`,
-		{ timeout: 40000, skip: ptyAvailability() }, async () => {
-			const sandbox = await sandboxFixture(stage.release, { tui: true });
-			try {
-				const settings = JSON.parse(await readFile(join(sandbox.env.PI_CODING_AGENT_DIR, "settings.json"), "utf8"));
-				assert.equal(settings.tuiMode, undefined, "isolated settings do not override the host default");
-				const modeArgs = selection === "default" ? [] : ["--tui-mode", selection];
-				const result = await captureReleasePty(sandbox, cliArgs(sandbox, stage.host, [...modeArgs, "Local fixture tool sequence"]));
-				assert.ok(result.reports.some((report) => report.phase === "host-identity" && report.tuiMode === mode), JSON.stringify(result.reports));
-				assert.ok(result.reports.some((report) => report.phase === "host-identity" && report.fullscreen === (mode === "fullscreen")));
-				assert.ok(result.reports.some((report) => report.phase === "settled" && report.providerCalls === 7));
-				assert.ok(result.reports.some((report) => report.phase === "shutdown"));
-				assert.ok(!result.reports.some((report) => ["network-denied", "fixture-error"].includes(report.phase)));
-				assert.match(result.ansi, /DEDICATED/);
-			} finally { await sandbox.cleanup(); }
-		});
+	for (const width of selection === "default" ? [80] : [40, 80, 120]) {
+		test(`final release under bundled CLI ${selection}/${width}: host-owned TUI rows protect question/bg and real subagents renderers`,
+			{ timeout: 40000, skip: ptyAvailability() }, async () => {
+				const sandbox = await sandboxFixture(stage.release, { tui: true });
+				try {
+					const settings = JSON.parse(await readFile(join(sandbox.env.PI_CODING_AGENT_DIR, "settings.json"), "utf8"));
+					assert.equal(settings.tuiMode, undefined, "isolated settings do not override the host default");
+					const modeArgs = selection === "default" ? [] : ["--tui-mode", selection];
+					const result = await captureReleasePty(sandbox, cliArgs(sandbox, stage.host, [...modeArgs, "Local fixture tool sequence"]), width);
+					assert.ok(result.reports.some((report) => report.phase === "host-identity" && report.tuiMode === mode), JSON.stringify(result.reports));
+					assert.ok(result.reports.some((report) => report.phase === "host-identity" && report.fullscreen === (mode === "fullscreen")));
+					assert.ok(result.reports.some((report) => report.phase === "settled" && report.providerCalls === 7));
+					assert.ok(result.reports.some((report) => report.phase === "shutdown"));
+					assert.ok(!result.reports.some((report) => ["network-denied", "fixture-error"].includes(report.phase)));
+					assert.match(result.ansi, /Subagent Result/);
+					assert.ok(result.reports.some((report) => report.phase === "host-identity" && report.renderer === "subagent-result"));
+				} finally { await sandbox.cleanup(); }
+			});
+	}
 }

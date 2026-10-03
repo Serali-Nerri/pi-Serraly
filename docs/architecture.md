@@ -1,8 +1,8 @@
 # 仓库架构
 
-## 七个维护边界
+## 八个维护边界
 
-根 package 是资源清单和开发工作区，不是第八个 extension factory。
+根 package 是资源清单和开发工作区，不是总 extension factory。
 每个模块仅注册自己的能力；关闭一个入口不会通过总工厂间接重新启用它。
 
 | 模块 | 拥有的资源 | 不拥有 |
@@ -14,17 +14,18 @@
 | `background-shell` | 进程/日志、dock、通知、状态、同进程 reload handoff | 跨进程恢复或 UI 工具卡接管 |
 | `docparser` | 三个 document 工具、FIFO、worker、取消/超时/崩溃清理和预算 | OCR 服务安装或其他模块的生命周期 |
 | `add-dir` | 目录作用域与存储、外部指令 prompt section、skill 路径发现、`@` 补全包装、目录 widget | 模型工具、自动 reload、cwd 切换或工具权限 |
+| `subagents` | `Agent`/`StopAgent`/`AgentStatus`、`/agents`、子会话选择/准入/可信状态、调度与关闭、专用展示 | 父工具闭包、兄弟模块私有实现、共享 MCP 连接池或跨进程任务恢复 |
 
 工具契约和详细算法留在各模块 README/子系统文档。UI 的私有宿主访问只在
 `modules/ui/src/compat/`；其 host 事件只由 `src/lifecycle.ts` 注册。
-UI 的共享 scheduler 不管理 loop 定时器、后台进程或文档 worker。
+UI 的共享 scheduler 不管理 loop 定时器、后台进程、文档 worker 或子会话资源。
 
 ## 源码与运行树
 
 ```text
-modules/              七个 private npm workspace；源码、测试、模块文档/许可
+modules/              八个 private npm workspace；源码、测试、模块文档/许可
 scripts/              工作区命令、构建和独立运行包
-test/integration/     产物、实际 loader 和七入口共存
+test/integration/     产物、实际 loader、原生子会话和八入口共存
 docs/                 跨模块设计与开发
 dist/                 已验证的开发构建输出；不可直接用于真实安装
 ```
@@ -47,6 +48,8 @@ dist/                 已验证的开发构建输出；不可直接用于真实�
   LiteParse 2.10.1 及平台 optional binding 是外部运行依赖。
 - add-dir 的主入口 bundle 将 `@henryqw/pi-config-store@2.0.2` 及其 CJS 锁依赖
   全部打入产物，保持根运行依赖仅 LiteParse 的现有合同。
+- subagents 是独立 ESM bundle，保留上游 MIT 许可及固定来源；Pi SDK、pi-ai、
+  pi-tui 和 TypeBox external，不增加运行依赖或额外 worker。
 - 在非发现暂存目录构建，检查 emitted import 图、必要 worker/许可和文件哈希后
   才发布开发 dist。许可检查使用完整的必需文件清单，不以目录存在代替法律闭包。
 - 分析所有 emitted JS/MJS/CJS（含 fork worker），仅允许读取同一已遍历的
@@ -63,8 +66,9 @@ dist/                 已验证的开发构建输出；不可直接用于真实�
 
 ## 跨模块交互
 
-UI 读取公共工具元数据和已有结果。questions、background-shell 及第三方
-Agent/StopAgent 的专用 renderer 保持优先，不因属于私有包而被接管。
+UI 读取公共工具元数据和已有结果。questions、background-shell、subagents 的
+工具 renderer 及 `subagent-result` 消息 renderer 保持专用展示；第三方
+Agent/StopAgent 的专用 renderer 同样保持优先，不因属于私有包而被接管。
 footer 消费宿主提供的 extension statuses，不清理其他模块的状态键。
 
 后台通知、`.pi/tasks` 元数据和补丁报告由对应能力维护，UI 不改写格式。
@@ -75,6 +79,31 @@ tools 模块以同名扩展覆盖内置 `grep`/`find`/`ls`，exposure 为 `codem
 CLI 加载内置 codemode/tool_search 扩展，但默认不激活这些工具；SDK 会话
 不自动加载它们，嵌入宿主需通过 `DefaultResourceLoader.extensionFactories`
 显式提供 `createCodemodeExtension()` / `createToolSearchExtension()`。
+
+## 子会话边界
+
+subagents 使用进程内 SDK 为每个子代理创建独立 `AgentSession`，以目标 cwd、
+agentDir 和可信状态创建同一 `SettingsManager`，共同驱动资源 loader 与会话。
+不可信目标不加载受保护的项目配置/扩展/skills/MCP；用户级配置仍生效。
+AGENTS.md 按宿主 context 合同处理，不把项目可信状态等同于完全隔绝所有文本。
+
+子会话显式提供 Pi 的 `createCodemodeExtension()`、`createToolSearchExtension()`、
+`createMcpExtension()`，身份分别是 `builtin:codemode`、`builtin:tool-search`、
+`builtin:mcp`。PackageManager 先发现已启用的候选，模块在工厂执行前选择；
+loader 不再隐式加载其他候选，宿主禁用和 replaceable 语义仍然有效。
+无显式配置的 general-purpose 默认只选择这三原生扩展，而非全包入口。
+
+工具准入与 active 展示分开：继承模式不向 SDK 传静态 registry 快照；exact
+allow/exclude 限制作用于注册与直接/嵌套调用。`Agent` 系列始终排除于子会话，
+跨编译实例的 AsyncLocalStorage 子调用标记另行避免递归注册。
+MCP 延迟工具由宿主处理，搜索激活与 codemode store 只保留在该子会话内。
+每个子会话拥有自己的 MCP 连接，不共享父/其他子会话的客户端或工具闭包。
+
+普通完成和 Stop 保留 session，允许 continuation；widget 行过期只隐藏展示，
+不释放连接。Clear 或父 reload/quit/new/resume/fork 关闭其所有权：发出 abort、
+等待初始化边界、发 `session_shutdown`、dispose 并解除引用；关闭入口幂等且可等待，
+不因无限等待模型 idle 而阻塞清理。运行并发上限不限制 retained session/MCP
+进程总数，长会话需要显式 Clear。详见[模块契约](../modules/subagents/README.md)。
 
 ## 文档职责
 
