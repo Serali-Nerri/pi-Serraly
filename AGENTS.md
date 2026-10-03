@@ -50,7 +50,11 @@ Use strict TypeScript and ESM. Preserve local formatting: tabs in UI/questions/l
 
 ## Testing Guidelines
 
-Tests use Node’s `node:test` runner, with `tsx` for TypeScript. Name module tests `*.test.ts` and root integration tests `*.test.mjs`. Write behavior-focused regression tests before implementation; observe failure, then success. No numeric coverage threshold is configured. Preserve boundary/compiled-artifact tests, deterministic timing, and process/worker cleanup. Run `npm run verify` before submitting; document platform skips and manually verify visual changes.
+- Tautological tests considered harmful.
+- Change-detector tests considered harmful.
+- Do not create regression tests for bug fixes without a genuine gap in behavior testing.
+
+Tests use Node’s `node:test` runner, with `tsx` for TypeScript. Name module tests `*.test.ts` and root integration tests `*.test.mjs`. When a regression test is warranted, write a behavior-focused test before implementation; observe failure, then success. No numeric coverage threshold is configured. Preserve boundary/compiled-artifact tests, deterministic timing, and process/worker cleanup. Run `npm run verify` before submitting; document platform skips and manually verify visual changes.
 
 ## Commit & Pull Request Guidelines
 
