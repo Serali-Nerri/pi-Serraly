@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { readFile, writeFile, realpath, stat } from "node:fs/promises";
+import { mkdir, readFile, writeFile, realpath, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { createRequire, syncBuiltinESMExports } from "node:module";
 import childProcess from "node:child_process";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { entries, toolsByEntry, commandsByEntry, questionArgs, patchInput } from "./contracts.mjs";
 
@@ -16,13 +16,14 @@ const TUI = await import(pathToFileURL(require.resolve("@earendil-works/pi-tui")
 const { AuthStorage } = await import(pathToFileURL(join(host, "dist/core/auth-storage.js")).href);
 const config = JSON.parse(await readFile(process.env.SERRALY_CONFIG, "utf8"));
 const cwd = process.cwd(), agentDir = process.env.PI_CODING_AGENT_DIR, release = process.env.SERRALY_RELEASE;
+const allIndices = entries.map((_, index) => index);
 const baseline = Object.fromEntries(["getCallRenderer", "getResultRenderer", "getRenderShell", "updateDisplay"].map((name) => [name, SDK.ToolExecutionComponent.prototype[name]]));
 const report = (phase, extra = {}) => import("node:fs").then(({ appendFileSync }) => appendFileSync(process.env.SERRALY_REPORT, JSON.stringify({ phase, ...extra }) + "\n"));
 const credentials = AuthStorage.inMemory();
 const modelRuntime = await SDK.ModelRuntime.create({ credentials, modelsPath: null,
 	modelsStorePath: join(process.env.TMPDIR, "models-cache.json"), allowModelNetwork: false, refreshOnCreate: false });
 
-async function open(indices = config.indices ?? [0, 1, 2, 3, 4, 5], packageFilter = config.packageFilter) {
+async function open(indices = config.indices ?? allIndices, packageFilter = config.packageFilter) {
 	if (packageFilter !== undefined) {
 		// PackageManager reads persisted global/project resource settings, not
 		// SettingsManager's transient merged overrides. Exercise real settings.
@@ -391,9 +392,99 @@ async function footerAndFocus(h) {
 	} finally { ui.dispose(); }
 }
 
+async function addDir(h) {
+	const external = join(dirname(cwd), "external");
+	const skillPath = join(external, ".pi", "skills", "demo", "SKILL.md");
+	const validPath = join(external, ".pi", "skills", "ok", "SKILL.md");
+	const brokenPath = join(external, ".pi", "skills", "broken", "SKILL.md");
+	const defaultSkillPath = join(agentDir, "skills", "demo", "SKILL.md");
+	await mkdir(join(external, ".pi", "skills", "demo"), { recursive: true });
+	await mkdir(join(external, ".pi", "skills", "ok"), { recursive: true });
+	await mkdir(join(external, ".pi", "skills", "broken"), { recursive: true });
+	await mkdir(join(agentDir, "skills", "demo"), { recursive: true });
+	// A default skill with the same name, a valid external skill, and an invalid candidate.
+	await writeFile(defaultSkillPath, "---\nname: demo\ndescription: Default fixture skill\n---\n\nDefault body.\n");
+	await writeFile(skillPath, "---\nname: demo\ndescription: External fixture skill\n---\n\nDemo skill body.\n");
+	await writeFile(validPath, "---\nname: ok\ndescription: Valid external fixture skill\n---\n\nOk body.\n");
+	await writeFile(brokenPath, "# Broken skill\n\nNo frontmatter description.\n");
+	await writeFile(join(external, "AGENTS.md"), "External AGENTS marker for pi-add-dir.\n");
+	const global = join(dirname(cwd), "global-external");
+	const configPath = join(agentDir, "config", "pi-add-dir", "config.json");
+	assert.equal(existsSync(join(agentDir, "config", "pi-add-dir")), false, "startup creates no configuration before the first persistent write");
+	await mkdir(global, { recursive: true });
+	const ctx = h.session.extensionRunner.createCommandContext();
+	await command(h, "dir-add").handler(external, ctx);
+	const states = h.session.sessionManager.getEntries().filter((entry) => entry.type === "custom" && entry.customType === "add-dir:state");
+	assert.equal(states.length, 1, "session scope persists exactly one state entry");
+	assert.deepEqual(states[0].data.dirs, [{ absolutePath: external, label: "external" }]);
+	// Global scope exercises the bundled config store and its CJS lock closure.
+	await command(h, "dir-add").handler(`--global ${global}`, ctx);
+	assert.deepEqual(JSON.parse(await readFile(configPath, "utf8")), { directories: [global] });
+	assert.equal((await stat(configPath)).mode & 0o777, 0o600, "global configuration is private");
+	for (const name of ["add_directory", "search_external_files"]) {
+		assert.equal(h.session.getToolDefinition(name), undefined, "no model tool was migrated: " + name);
+	}
+	assert.ok(!h.session.extensionRunner.getRegisteredCommands().some((item) => item.invocationName === "dir-reload"), "/dir-reload is not registered");
+	assert.ok(!h.loader.getSkills().skills.some((skill) => skill.name === "demo"), "external skills wait for the host reload boundary");
+	await h.session.reload();
+	const skillState = h.loader.getSkills();
+	assert.deepEqual(skillState.skills.map((skill) => skill.name).sort(), ["demo", "ok"], "the invalid candidate is dropped");
+	const demo = skillState.skills.find((skill) => skill.name === "demo");
+	assert.equal(await realpath(demo.filePath), await realpath(defaultSkillPath), "the default skill wins the name collision");
+	assert.equal(await realpath(skillState.skills.find((skill) => skill.name === "ok").filePath), await realpath(validPath));
+	const diagnostics = JSON.stringify(skillState.diagnostics);
+	assert.match(diagnostics, /demo/, "the host reports the collision it resolved");
+	assert.match(diagnostics, /broken/, "the host reports the invalid external skill");
+	// A real synthetic turn proves the external instructions reach the model prompt.
+	await h.session.prompt("Local synthetic reply");
+	const promptState = globalThis[Symbol.for("serraly.sdk-fixture")];
+	assert.match(promptState.lastSystemPrompt, /External AGENTS marker for pi-add-dir\./);
+	assert.match(promptState.lastSystemPrompt, /External Directories \(added via pi-add-dir\)/);
+	assert.deepEqual(promptState.skillCommands, [
+		{ name: "skill:demo", path: await realpath(defaultSkillPath) },
+		{ name: "skill:ok", path: await realpath(validPath) },
+	], "the module reconciles against the host's real skill command inventory");
+	// Only a real TUI context owns the widget; print/RPC bindings must stay silent.
+	const ui = await mount(h);
+	try {
+		assert.ok(ui.mounted.has("add-dir"), "external directories own a widget in the TUI");
+		const widget = ui.mounted.get("add-dir");
+		assert.match(widget.render(120).join("\n"), /external/);
+		// Selecting a directory removes it from its own scope, through the real host context.
+		const tuiCtx = h.session.extensionRunner.createCommandContext();
+		const selecting = Object.defineProperty(Object.create(tuiCtx), "ui", {
+			value: { ...tuiCtx.ui, select: async (_title, choices) => choices.find((choice) => choice.includes(global)) },
+		});
+		await command(h, "dir-ls").handler("", selecting);
+		assert.deepEqual(JSON.parse(await readFile(configPath, "utf8")), { directories: [] });
+		const afterRemoval = ui.mounted.get("add-dir")?.render(120).join("\n") ?? "";
+		assert.match(afterRemoval, /1 external dir/);
+		assert.match(afterRemoval, /external/);
+		assert.ok(!afterRemoval.includes("global-external"), "the removed directory leaves the live widget");
+		// The host rejected one candidate and loaded the rest, so no reload is owed.
+		const plain = join(dirname(cwd), "plain-external");
+		await mkdir(plain, { recursive: true });
+		const tuiCtx2 = h.session.extensionRunner.createCommandContext();
+		await command(h, "dir-add").handler(plain, tuiCtx2);
+		assert.ok(
+			!(ui.mounted.get("add-dir")?.render(200).join("\n") ?? "").includes("/reload pending"),
+			"rejected candidates never keep asking for a reload",
+		);
+		const fresh = join(dirname(cwd), "fresh-external");
+		await mkdir(join(fresh, ".pi", "skills", "fresh"), { recursive: true });
+		await writeFile(join(fresh, ".pi", "skills", "fresh", "SKILL.md"), "---\nname: fresh\ndescription: Newly added fixture skill\n---\n\nFresh body.\n");
+		await command(h, "dir-add").handler(fresh, tuiCtx2);
+		assert.match(
+			ui.mounted.get("add-dir")?.render(200).join("\n") ?? "",
+			/\/reload pending/,
+			"a genuinely new skill still asks for a reload",
+		);
+	} finally { ui.dispose(); }
+}
+
 if (scenario === "filters") {
 	for (let disabled = 0; disabled < entries.length; disabled++) {
-		const indices = [0, 1, 2, 3, 4, 5].filter((index) => index !== disabled);
+		const indices = allIndices.filter((index) => index !== disabled);
 		const h = await open(indices, ["-" + entries[disabled].slice(2)]);
 		let mounted;
 		try {
@@ -412,13 +503,14 @@ if (scenario === "filters") {
 } else {
 	const h = await open();
 	try {
-		if (scenario === "inventory") inventory(h, config.indices ?? [0, 1, 2, 3, 4, 5]);
+		if (scenario === "inventory") inventory(h, config.indices ?? allIndices);
 		else if (scenario === "contracts") await contracts(h);
 		else if (scenario === "background") await background(h);
 		else if (scenario === "documents") await documents(h);
 		else if (scenario === "footer-focus") await footerAndFocus(h);
+		else if (scenario === "add-dir") await addDir(h);
 		else if (scenario === "discovery") {
-			inventory(h, [0, 1, 2, 3, 4, 5]);
+			inventory(h, allIndices);
 			const searched = await execute(h, "tool_search", { query: "+AskUserQuestion +bg_run +document_parse" });
 			assert.ok(searched.content[0].text.includes("AskUserQuestion"));
 			for (const name of ["AskUserQuestion", "bg_run", "document_parse"]) assert.ok(h.session.getActiveToolNames().includes(name), "tool_search discovers and activates " + name);

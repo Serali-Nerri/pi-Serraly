@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import lockfile from "proper-lockfile";
 
 const OLD_DIRECTORIES = ["claude-style-tools", "pi-session-ui", "pi-ask-user-question", "pi-loop", "pi-apply-patch", "pi-background-shell", "pi-docparser"];
-const ENTRIES = ["pi-ui", "pi-ask-user-question", "pi-loop", "pi-tools", "pi-background-shell", "pi-docparser"].map((name) => `./dist/${name}/index.js`);
+const ENTRIES = ["pi-ui", "pi-ask-user-question", "pi-loop", "pi-tools", "pi-background-shell", "pi-docparser", "pi-add-dir"].map((name) => `./dist/${name}/index.js`);
 const ARRAYS = ["packages", "extensions", "skills", "prompts", "themes"];
 const HOSTS = ["@earendil-works/pi-ai", "@earendil-works/pi-agent-core", "@earendil-works/pi-coding-agent", "@earendil-works/pi-tui", "typebox"];
 const WORKSPACE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -131,7 +131,7 @@ async function validateRuntime(release, dependencies) {
 		if (ancestor === path.dirname(ancestor)) break;
 	}
 	const manifest = await readObject(path.join(release, "package.json"));
-	if (manifest.private !== true || manifest.type !== "module" || !equal(manifest.pi?.extensions, ENTRIES)) fail("Release requires a private ESM runtime manifest with exactly six dist entries");
+	if (manifest.private !== true || manifest.type !== "module" || !equal(manifest.pi?.extensions, ENTRIES)) fail("Release requires a private ESM runtime manifest with exactly seven dist entries");
 	if (Object.keys(manifest.devDependencies ?? {}).length) fail("Release must not contain development dependencies");
 	for (const host of HOSTS) if (manifest.dependencies?.[host] || manifest.optionalDependencies?.[host]) fail(`Host dependency in runtime manifest: ${host}`);
 	for (const resource of ["skills", "prompts", "themes"]) if (manifest.pi?.[resource]?.length) fail(`Runtime must not automatically enable ${resource}`);

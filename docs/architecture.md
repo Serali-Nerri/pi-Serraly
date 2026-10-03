@@ -1,8 +1,8 @@
 # 仓库架构
 
-## 六个维护边界
+## 七个维护边界
 
-根 package 是资源清单和开发工作区，不是第七个 extension factory。
+根 package 是资源清单和开发工作区，不是第八个 extension factory。
 每个模块仅注册自己的能力；关闭一个入口不会通过总工厂间接重新启用它。
 
 | 模块 | 拥有的资源 | 不拥有 |
@@ -13,6 +13,7 @@
 | `tools` | `apply_patch` 补丁算法、文件锁、预检、提交、`apply_patch.v1` 报告；`grep`/`find`/`ls` 同名替换的 codemode 注册 | UI 历史 diff 重建 |
 | `background-shell` | 进程/日志、dock、通知、状态、同进程 reload handoff | 跨进程恢复或 UI 工具卡接管 |
 | `docparser` | 三个 document 工具、FIFO、worker、取消/超时/崩溃清理和预算 | OCR 服务安装或其他模块的生命周期 |
+| `add-dir` | 目录作用域与存储、外部指令 prompt section、skill 路径发现、`@` 补全包装、目录 widget | 模型工具、自动 reload、cwd 切换或工具权限 |
 
 工具契约和详细算法留在各模块 README/子系统文档。UI 的私有宿主访问只在
 `modules/ui/src/compat/`；其 host 事件只由 `src/lifecycle.ts` 注册。
@@ -21,9 +22,9 @@ UI 的共享 scheduler 不管理 loop 定时器、后台进程或文档 worker�
 ## 源码与运行树
 
 ```text
-modules/              六个 private npm workspace；源码、测试、模块文档/许可
+modules/              七个 private npm workspace；源码、测试、模块文档/许可
 scripts/              工作区命令、构建和独立运行包
-test/integration/     产物、实际 loader 和六入口共存
+test/integration/     产物、实际 loader 和七入口共存
 docs/                 跨模块设计与开发
 dist/                 已验证的开发构建输出；不可直接用于真实安装
 ```
@@ -44,6 +45,8 @@ dist/                 已验证的开发构建输出；不可直接用于真实�
   根入口只是同目录转发，不另行注册能力。
 - docparser 的主入口 bundle，三个 worker/protocol/output `.mjs` 保持相对位置；
   LiteParse 2.10.1 及平台 optional binding 是外部运行依赖。
+- add-dir 的主入口 bundle 将 `@henryqw/pi-config-store@2.0.2` 及其 CJS 锁依赖
+  全部打入产物，保持根运行依赖仅 LiteParse 的现有合同。
 - 在非发现暂存目录构建，检查 emitted import 图、必要 worker/许可和文件哈希后
   才发布开发 dist。许可检查使用完整的必需文件清单，不以目录存在代替法律闭包。
 - 分析所有 emitted JS/MJS/CJS（含 fork worker），仅允许读取同一已遍历的

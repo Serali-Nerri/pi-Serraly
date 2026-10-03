@@ -1,9 +1,9 @@
 # pi-Serraly
 
-私有本地 Pi package：六个可独立启停的入口，一个维护仓库。
+私有本地 Pi package：七个可独立启停的入口，一个维护仓库。
 支持基线为 **Pi 1.0.0 / Node ≥22.19**。不发布 npm，不提供总 factory 再次注册能力。
 
-## 六个入口
+## 七个入口
 
 | 能力 | 运行入口 | 使用与契约 |
 | --- | --- | --- |
@@ -13,8 +13,9 @@
 | 基础工具 | `dist/pi-tools/index.js` | [`apply_patch` 与 codemode 专用的 `grep`/`find`/`ls`](modules/tools/README.md) |
 | 后台 shell | `dist/pi-background-shell/index.js` | [`bg_*`、任务 UI、通知和同进程 reload](modules/background-shell/README.md) |
 | 文档解析 | `dist/pi-docparser/index.js` | [`document_*`、native worker、doctor](modules/docparser/README.md) |
+| 外部目录 | `dist/pi-add-dir/index.js` | [`/dir-add`、`/dir-ls`、外部指令与 skills](modules/add-dir/README.md) |
 
-根 `pi.extensions` 只声明以上六入口，安装后可在 `pi config` 分别启停。
+根 `pi.extensions` 只声明以上七入口，安装后可在 `pi config` 分别启停。
 docparser companion skill 作为来源保留，但**不自动启用**；其他 skills、
 prompts、themes 和 npm 扩展不属于本仓库。
 

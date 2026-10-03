@@ -8,7 +8,7 @@
 
 ## Project Structure & Module Organization
 
-`pi-Serraly` is a private npm workspace with six independent Pi extensions. Target Node ≥22.19 and Pi 1.0.0.
+`pi-Serraly` is a private npm workspace with seven independent Pi extensions. Target Node ≥22.19 and Pi 1.0.0.
 
 ```text
 .
@@ -18,7 +18,8 @@
 │   ├── loop/              # src/, test/
 │   ├── tools/             # src/, test/fixtures/
 │   ├── background-shell/ # src/, extensions/, tests/
-│   └── docparser/         # extensions/docparser/, tests/, assets/
+│   ├── docparser/         # extensions/docparser/, tests/, assets/
+│   └── add-dir/           # src/, test/
 ├── scripts/              # build.mjs, test.mjs, preview.mjs
 ├── test/integration/     # *.test.mjs, fixtures/
 ├── docs/                 # architecture.md, development.md
@@ -35,7 +36,7 @@ Run from the repository root:
 
 - `npm ci --ignore-scripts --include=optional --legacy-peer-deps` — install locked dependencies.
 - `npm run check` — run workspace checks and root-script syntax checks.
-- `npm run build` — produce and validate six compiled entries in `dist/`.
+- `npm run build` — produce and validate seven compiled entries in `dist/`.
 - `npm test` — rebuild, then run module and integration suites.
 - `npm run verify` — run checks and the complete test/build pipeline.
 - `node scripts/test.mjs --module loop` — debug one suite; does not replace full verification.

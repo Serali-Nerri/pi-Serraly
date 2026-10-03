@@ -13,7 +13,7 @@ after(async () => { await stage?.cleanup(); });
 
 // Break caught: a missing compiled entry/worker or a release that still loads
 // through workspace dependencies cannot reach any real loader scenario.
-test("release manifest exposes only six compiled extensions, never companion skills", async () => {
+test("release manifest exposes only seven compiled extensions, never companion skills", async () => {
 	const manifest = JSON.parse(await readFile(join(stage.release, "package.json"), "utf8"));
 	assert.deepEqual(manifest.pi, { extensions: entries });
 });
@@ -24,8 +24,8 @@ for (let index = 0; index < entries.length; index++) {
 	});
 }
 
-for (const [order, indices] of [["manifest", [0, 1, 2, 3, 4, 5]], ["reversed", [5, 4, 3, 2, 1, 0]]]) {
-	test(`six compiled entries coexist without duplicate tools/commands (${order} order)`, { timeout: 30000 }, async () => {
+for (const [order, indices] of [["manifest", entries.map((_, index) => index)], ["reversed", entries.map((_, index) => index).reverse()]]) {
+	test(`seven compiled entries coexist without duplicate tools/commands (${order} order)`, { timeout: 30000 }, async () => {
 		await sdkScenario(stage, "inventory", { indices });
 	});
 }
@@ -35,6 +35,9 @@ test("actual package settings can disable each compiled entry independently, inc
 });
 test("builtin tool_search discovers still-deferred questions/background/document tools", { timeout: 30000 }, async () => {
 	await sdkScenario(stage, "discovery");
+});
+test("compiled external-directory commands load context, skills, and widget through the real host reload boundary", { timeout: 30000 }, async () => {
+	await sdkScenario(stage, "add-dir");
 });
 test("compiled apply_patch contract and immutable report survive UI modes; real question dialog answers/cancels", { timeout: 30000 }, async () => {
 	await sdkScenario(stage, "contracts");
@@ -50,7 +53,7 @@ test("mounted package footer preserves local-loop/background statuses and dock/U
 });
 
 for (const mode of ["print", "json", "rpc"]) {
-	test(`compiled six-entry package in bundled CLI ${mode} has no UI-owned stdout/timer/prototype pollution`, { timeout: 30000 }, async () => {
+	test(`compiled seven-entry package in bundled CLI ${mode} has no UI-owned stdout/timer/prototype pollution`, { timeout: 30000 }, async () => {
 		const sandbox = await sandboxFixture(stage.release);
 		try {
 			let records;

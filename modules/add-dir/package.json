@@ -1,0 +1,19 @@
+{
+  "name": "pi-add-dir",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "check": "tsc -p tsconfig.json" },
+  "description": "External directory instructions, skills, and @ completion for the private pi-Serraly workspace",
+  "license": "MIT",
+  "engines": { "node": ">=22.19.0" },
+  "dependencies": { "@henryqw/pi-config-store": "2.0.2" },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-coding-agent": { "optional": true },
+    "@earendil-works/pi-tui": { "optional": true }
+  }
+}

@@ -16,6 +16,9 @@ export function registerScriptedProvider(pi, state) {
 			contextWindow: 32768, maxTokens: 2048, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }],
 		streamSimple(model, context, options) {
 			state.providerCalls = (state.providerCalls || 0) + 1;
+			// Pi keeps the rendered system prompt as the leading system message.
+			const system = context.messages?.find((message) => message.role === "system");
+			state.lastSystemPrompt = context.systemPrompt || (system ? JSON.stringify(system) : "");
 			const stream = createAssistantMessageEventStream();
 			const message = { role: "assistant", api: model.api, provider: model.provider, model: model.id,
 				timestamp: Date.now(), content: [], stopReason: "pending",

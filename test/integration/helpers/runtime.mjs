@@ -8,6 +8,7 @@ import { hostPackage, isolatedEnvironment, runChild } from "../../../scripts/pre
 export const entries = [
 	"./dist/pi-ui/index.js", "./dist/pi-ask-user-question/index.js", "./dist/pi-loop/index.js",
 	"./dist/pi-tools/index.js", "./dist/pi-background-shell/index.js", "./dist/pi-docparser/index.js",
+	"./dist/pi-add-dir/index.js",
 ];
 export const fixtures = resolve(import.meta.dirname, "../fixtures");
 

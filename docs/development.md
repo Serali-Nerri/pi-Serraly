@@ -39,7 +39,7 @@ node scripts/test.mjs --module background-shell --list
 2. **模块边界测试**：实际注册定义、renderer、文件/进程/worker 和宿主 SDK。
    外部或慢操作才允许 test double；保留真正影响断言的副作用。
 3. **产物集成**：实际编译入口、runtime-only 安装、新路径 worker/lazy import、
-   宿主 loader 和类身份、资源过滤、六入口共存。
+   宿主 loader 和类身份、资源过滤、七入口共存。
 4. **操作演练**：临时目录内真实文件锁、原子发布和故障中断恢复。
 5. **人工交互**：目标终端的视觉、快捷键、鼠标和焦点；自动渲染宽度检查不替代它。
 

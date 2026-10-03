@@ -40,7 +40,7 @@ export async function runRpc(sandbox, args) {
 	try {
 		const state = await request("state", "get_state"); assert.equal(state.sessionFile, undefined);
 		const commands = await request("commands", "get_commands");
-		assert.deepEqual(commands.commands.map((item) => item.name).sort(), ["bg", "bg-clear", "bg-tasks", "ccstyle", "context", "docparser:doctor", "jobs", "kill", "logs", "loop", "tasks"]);
+		assert.deepEqual(commands.commands.map((item) => item.name).sort(), ["bg", "bg-clear", "bg-tasks", "ccstyle", "context", "dir-add", "dir-ls", "docparser:doctor", "jobs", "kill", "logs", "loop", "tasks"]);
 		const settled = waitFor((record) => record.type === "agent_settled");
 		await request("prompt", "prompt", { message: "Local synthetic reply" }); await settled;
 		child.stdin.end(); assert.equal(await closed, 0, stderr);
@@ -50,7 +50,7 @@ export async function runRpc(sandbox, args) {
 	} finally { clearTimeout(timer); if (child.exitCode === null) child.kill("SIGKILL"); await closed.catch(() => {}); }
 }
 
-// Same Python/POSIX technique as scripts/capture.mjs, but with the final six
+// Same Python/POSIX technique as scripts/capture.mjs, but with the final seven
 // compiled entries and fixture arguments rather than its stage-one UI bundle.
 const ptyDriver = String.raw`
 import os,sys,json,pty,termios,fcntl,struct,subprocess,select,time,errno,signal
@@ -65,7 +65,7 @@ os.close(slave)
 output=bytearray(); deadline=time.monotonic()+30; sent=False
 try:
     while True:
-        if time.monotonic()>deadline: raise RuntimeError("Six-entry PTY fixture deadline")
+        if time.monotonic()>deadline: raise RuntimeError("Seven-entry PTY fixture deadline")
         ready,_,_=select.select([master],[],[],0.05)
         if ready:
             try:

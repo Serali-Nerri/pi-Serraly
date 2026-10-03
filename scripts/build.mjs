@@ -1,14 +1,31 @@
 import { build } from "esbuild";
 import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import { cp, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { sealDist } from "./lib/artifacts.mjs";
-import { extensionEntries, hostExternal, modules, root } from "./lib/modules.mjs";
+import { extensionEntries, generatedLicenseSources, hostExternal, modules, root } from "./lib/modules.mjs";
+
+/** Locate a dependency root the way Node resolves it, without an exports subpath. */
+function packageDirectory(moduleDirectory, name) {
+	for (let directory = moduleDirectory; ; directory = dirname(directory)) {
+		const candidate = join(directory, "node_modules", name);
+		const manifest = join(candidate, "package.json");
+		if (existsSync(manifest) && JSON.parse(readFileSync(manifest, "utf8")).name === name) return candidate;
+		if (dirname(directory) === directory) throw new Error(`Cannot locate package directory: ${name}`);
+	}
+}
+
+// esbuild's CJS interop keeps a lexical `require`; native ESM guarantees no such binding,
+// so the bundled CJS closure (proper-lockfile and friends) needs an explicit bridge.
+const cjsRequireBridge =
+	'import { createRequire as __piSerralyCreateRequire } from "node:module";\n' +
+	"const require = __piSerralyCreateRequire(import.meta.url);\n";
 
 const manifest = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
 if (JSON.stringify(manifest.pi) !== JSON.stringify({ extensions: extensionEntries })) {
-	throw new Error("Root manifest must declare exactly the six independent extension entries");
+	throw new Error("Root manifest must declare exactly the seven independent extension entries");
 }
 const stageRoot = join(root, ".stage");
 await mkdir(stageRoot, { recursive: true });
@@ -33,6 +50,7 @@ try {
 				bundle: true, platform: "node", format: "esm", target: "node22",
 				external: [...hostExternal, "@llamaindex/liteparse"],
 				legalComments: "eof", metafile: true,
+				...(module.cjsRequire ? { banner: { js: cjsRequireBridge } } : {}),
 			});
 			if (Object.keys(result.metafile.inputs).some((path) => /node_modules[/\\](?:@earendil-works|typebox|grok-mermaid)[/\\]/.test(path))) {
 				throw new Error(`${module.runtime} bundled a host or retired Mermaid dependency`);
@@ -46,10 +64,14 @@ try {
 			await mkdir(join(output, dirname(license)), { recursive: true });
 			await cp(join(source, license), join(output, license), { recursive: true });
 		}
+		for (const license of module.generatedLicenses ?? []) {
+			const origin = generatedLicenseSources[license];
+			if (!origin) throw new Error(`Unknown generated license source: ${license}`);
+			const importer = origin.from ? packageDirectory(source, origin.from) : source;
+			await mkdir(join(output, dirname(license)), { recursive: true });
+			await cp(join(packageDirectory(importer, origin.package), origin.file), join(output, license));
+		}
 	}
-	const require = createRequire(import.meta.url);
-	await mkdir(join(stage, "pi-tools/licenses"), { recursive: true });
-	await cp(join(dirname(require.resolve("diff/package.json")), "LICENSE"), join(stage, "pi-tools/licenses/diff-BSD.txt"));
 	await sealDist(stage);
 	// Development dist is never a live runtime. Publish only a validated complete
 	// tree, retaining the last build if the final rename fails.
@@ -58,7 +80,7 @@ try {
 	try { await rename(stage, join(root, "dist")); }
 	catch (error) { if (hasRetired) await rename(retired, join(root, "dist")); throw error; }
 	await rm(retired, { recursive: true, force: true });
-	console.log("Built six independent entries; host packages external, worker/lazy closure and licenses verified.");
+	console.log("Built seven independent entries; host packages external, worker/lazy closure and licenses verified.");
 } finally {
 	await rm(stage, { recursive: true, force: true });
 }
