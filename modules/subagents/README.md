@@ -211,9 +211,9 @@ session TTL**。长会话中 retained MCP 连接/进程可增长，即使运行�
 晚到连接；普通 Stop 不等于资源已关闭。移除显示行也不等于异步清理已完成。
 任务在内存中维护，不提供后台任务跨进程恢复或共享 MCP 连接池。
 
-## 替换旧安装
+## 安装与更新
 
-保持 `subagents-lite.json`、agent 文件和 custom prompt 的原命名。不要同时启用
-旧 `npm:pi-subagents-lite` 与新入口。使用不可变版本化 release、备份 settings，
-停止实例后显式切换；回滚恢复备份/旧已知版本，不覆写 release。
-真实机器切换需单独授权，详见[操作流程](../../docs/development.md#子代理替换与回滚)。
+通过 settings `packages` 引用不可变版本化 release。配置保持
+`subagents-lite.json`、`subagents-lite-prompt.md` 和 `agents/*.md` 的命名，
+更新与回滚都不删除或重命名这些文件。真实 settings 切换需单独授权，步骤见
+[更新与回滚](../../docs/development.md#更新与回滚)。

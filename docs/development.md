@@ -40,7 +40,7 @@ node --input-type=module -e '
 node --input-type=module -e '
   import { isolatedRun } from "./scripts/lib/workspace.mjs";
   await isolatedRun(process.execPath, ["--test", ...process.argv.slice(1)]);
-' -- test/integration/runtime.test.mjs test/integration/subagents-cutover.test.mjs
+' -- test/integration/runtime.test.mjs test/integration/subagents-runtime.test.mjs
 ```
 
 定向根测试需要已有完整的 `npm run build` 产物；根 runner 自动重建。
@@ -121,50 +121,21 @@ release 投影统一锁的运行依赖图，执行
 祖先的物理宿主；manifest、运行锁、dist digest 和 OCR-off native PDF 探测
 必须通过。既有目录拒绝覆盖，这一步**不**修改 Pi settings 或 extensions。
 
-已安装的 Pi 通过 `packages` 引用 release 绝对路径。更新时发布新的版本目录并在
-Pi 锁下切换引用，不覆写正在使用的目录，也不用 `pi install .` 加载源码根。
+## 更新与回滚
 
-## 子代理替换与回滚
+已安装的 Pi 通过 settings `packages` 引用 release 绝对路径；更新发布新的版本
+目录并切换引用，不覆写正在使用的目录，也不用 `pi install .` 加载源码根。真实
+settings 切换需要单独授权，并满足以下约束：
 
-代码计划或候选验证**不授权真实 settings/npm 切换**。以下流程在再次获准后由
-操作者执行；集成测试只在临时 HOME/agentDir 中演练同样的 source 替换与回滚。
-
-1. 递增根版本，在开发依赖树外创建唯一的新版本目录，完成 verify、release
-   validation、runtime-only 安装/外部宿主检查和 CLI/SDK 验收。Node 最低版本
-   22.19 未实跑、平台 skip 或未人工查看的 PTY 必须列为资格缺口，不能用较新
-   Node 的成功替代最低基线。
-2. 停止所有引用旧/新入口的 Pi 实例，确认 child 与 MCP/后台资源已关闭。备份
-   user settings、相关已信任项目 settings 和当前 release/source 引用；保留备份
-   的精确内容，勿只抄 package 名称。
-3. 从相关 `packages`/`extensions` 移除或禁用旧 `npm:pi-subagents-lite`（含固定
-   版本、项目级声明、显式 `-e` 及本地旧入口），仅保留新 release 的子代理入口。
-   不同时启用两个注册源，不依赖加载顺序覆盖；新包可通过 `pi config` 独立启停。
-   保留 `<agentDir>/subagents-lite.json`、`subagents-lite-prompt.md`、`agents/*.md`
-   和项目中的对应文件，不删除或重命名配置。
-4. 启动后核对 `Agent`、`StopAgent`、`AgentStatus` 与 `/agents` 各一份、无冲突
-   诊断；检查 native-only 默认、宿主禁用设置与专用展示，再恢复正常工作。
-5. 如需回滚，再次停止实例，恢复备份 settings 并引用旧已知版本/source；需要
-   重新安装时使用已记录的固定旧版本。保留候选目录供检查，**不覆写**它或旧
-   release，不把新任务的内存会话假定为可跨重启恢复。
-
-历史 `scripts/migrate.mjs` 只处理原来批准的七个源码目录及精确设置删除项；
-新 release 有八入口不扩大该目录协议，也不使它成为任意 npm source 删除 API。
-子代理 npm 替换使用上面的显式设置备份/切换，不追加第八目录 approval。
-
-候选在临时安装环境准备的示例（不修改真实 Pi 配置）：
-
-```sh
-CANDIDATE_PARENT="$(mktemp -d)"
-VERSION="$(node -p 'JSON.parse(require("fs").readFileSync("package.json","utf8")).version')"
-node --input-type=module -e '
-  import { isolatedRun } from "./scripts/lib/workspace.mjs";
-  await isolatedRun("npm", ["run", "release", "--", "--output", process.argv[1], "--build-id", process.argv[2]]);
-' "$CANDIDATE_PARENT/pi-serraly-$VERSION" "candidate-$VERSION"
-node --input-type=module -e '
-  import { validateRelease } from "./scripts/lib/package.mjs";
-  await validateRelease(process.argv[1]);
-' "$CANDIDATE_PARENT/pi-serraly-$VERSION"
-```
-
-该安装步骤只允许获取锁定运行依赖；CLI/SDK 验收另用上述隔离 runner 和网络拒绝，
-不把候选安装的 registry 访问误当成模型请求资格。
+1. 递增根版本并发布新目录，完成 verify、release validation、runtime-only
+   安装/外部宿主检查和 CLI/SDK 验收。Node 最低版本 22.19 未实跑、平台 skip 或
+   未人工查看的 PTY 必须列为资格缺口，不能用较新 Node 的成功替代最低基线。
+2. 停止所有相关 Pi 实例，确认 child 与 MCP/后台资源已关闭；备份 user settings
+   与相关已信任项目 settings 的精确内容。
+3. 切换只改 `packages`：先校验目标 release 的 manifest 与 digest，再按 Pi 的
+   settings 锁协议原子写入，写入后确认引用恰好一条且不影响其他条目。
+4. 启动后核对受影响入口各注册一次、无冲突诊断，再恢复正常工作。
+5. 回滚恢复备份 settings 并指回旧版本目录；新旧 release 和备份都保留供检查，
+   **不覆写**，不把内存会话假定为可跨重启恢复。配置保留
+   `<agentDir>/subagents-lite.json`、`subagents-lite-prompt.md`、`agents/*.md`
+   及项目中的对应文件，不删除或重命名。

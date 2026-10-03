@@ -412,7 +412,7 @@
     },
     {
       "path": "docs/getting-started.md",
-      "sha256": "587eb3991d7f84c8d3c4b1a531fa3f53ac492b2fd0faeeb19564d6513cfe4772"
+      "sha256": "edd5af88c2e7ff1669e8ca7b2afab41c73a503a75e7c29c1b8643543c8b7d43f"
     },
     {
       "path": "docs/operations/configuration.md",
@@ -436,7 +436,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "cd94798e2cefb70744115782b8e61981bb5072fa0ee7916e7de62d83eab565a9"
+      "sha256": "58cac7ce7048a8b8c7afab1399b7420a8351642be825b9400db20636ae727e71"
     },
     {
       "path": "TESTING.md",
@@ -444,11 +444,11 @@
     },
     {
       "path": "UPSTREAM.md",
-      "sha256": "9c15e75f341ffad5dc25e9d72f885d973954b8deb38af39bd6323762e5655d02"
+      "sha256": "a0076c4dcae91ebf1d9e09c71f4fee0c69e7a8d8835a88b87c2323aa97b94664"
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "0a42ff1557d389efd01d70fe87a8d8ab0b23b0b014688e3051405af2a5d5dbc8"
+      "sha256": "ada948dd71e5a4cb699f92d4a345a4d748b6fcef0cad5230e57e0cd2d80e9cef"
     }
   ]
 }

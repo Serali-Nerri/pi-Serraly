@@ -33,8 +33,8 @@ npm run verify
 
 验证使用临时 HOME/agent/cwd、合成会话、离线脚本化 provider 和本地 fixture，
 不读取真实 auth/session/settings，也不发送真实模型请求。
-命令、测试层级、release 和旧 `pi-subagents-lite` 的替换/回滚流程见
-[开发指南](docs/development.md)。真实配置切换须另行授权。
+命令、测试层级、release 和更新/回滚流程见[开发指南](docs/development.md)。
+真实配置切换须另行授权。
 
 ## 运行与安全边界
 
@@ -46,7 +46,8 @@ npm run verify
 ```
 
 该目录只含运行 manifest、锁定运行依赖、dist 和许可，没有物理 Pi host 副本或
-workspace 链接。更新时发布新的版本目录并切换引用，不覆写正在使用的目录。
+workspace 链接。已安装的 Pi 通过 settings `packages` 引用 release 绝对路径；
+更新时发布新的版本目录并切换引用，不覆写正在使用的目录。
 
 ## 维护导航
 

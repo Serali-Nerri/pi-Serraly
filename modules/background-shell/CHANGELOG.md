@@ -1,10 +1,10 @@
 # Changelog
 
-## Workspace migration (unreleased)
+## Workspace import
 
 - Imported the clean local pure-shell fork at `86c52d3b5d9f9ab92b843868293495d17ec5d878` into private `pi-Serraly` as `modules/background-shell`, retaining business source, full tests and ISC provenance.
-- Development verification targets Pi 0.99.2 and TypeBox 1.3.27; workspace scripts isolate HOME/agent/cwd and resolve hoisted development dependencies.
-- Kept tsc runtime closure and lazy UI; root scripts own installation, release staging and migration. CHANGELOG now ships with the module payload so provenance links remain valid. No global deployment or new runtime contract.
+- Development verification targets Pi 1.0.0 and TypeBox 1.3.27; workspace scripts isolate HOME/agent/cwd and resolve hoisted development dependencies.
+- Kept tsc runtime closure and lazy UI; root scripts own installation and release staging. CHANGELOG now ships with the module payload so provenance links remain valid. No global deployment or new runtime contract.
 
 ## 0.1.0
 

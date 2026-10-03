@@ -6,6 +6,17 @@
 - Each document owns exactly one concern: README positions the repository and its entry points; `docs/architecture.md` covers module boundaries and artifacts; `docs/development.md` covers commands, testing, isolation and release; module docs and `LICENSE`/`UPSTREAM.md` cover that module's usage, contracts and provenance.
 - State the current contract only. Do not accumulate work logs, stage narratives, evidence dumps, or obsolete instructions in repository documents; delete what is no longer true instead of annotating it.
 
+## Development Cycle
+
+This is an internal, in-progress project: no backward compatibility and no data migration. Rewrite legacy formats, interfaces and behavior into the current ideal KISS implementation instead of adding compatibility layers, transition paths or migration code for this repository's own code and state. The operator safeguards in "Security & Configuration" and the upstream conventions in module docs still apply.
+
+Each change follows this order:
+
+1. **Update documents first.** Update the owning document before the code, and confirm it holds no contradiction or stale statement.
+2. **Write the test first.** Follow TDD: write the behavior-focused test, observe it fail, then implement. See "Testing Guidelines" for what not to test.
+3. **Implement the minimum.** Write only what the current contract requires; no speculative abstraction.
+4. **Close the loop.** Confirm there is no leftover code, no duplicated source of truth and no document/implementation contradiction, then run `npm run verify`.
+
 ## Project Structure & Module Organization
 
 `pi-Serraly` is a private npm workspace with eight independent Pi extensions. Target Node ≥22.19 and Pi 1.0.0.
@@ -21,7 +32,7 @@
 │   ├── docparser/         # extensions/docparser/, tests/, assets/
 │   ├── add-dir/           # src/, test/
 │   └── subagents/         # src/, test/ (Vitest)
-├── scripts/              # build.mjs, test.mjs, preview.mjs
+├── scripts/              # check, build, test, release entry points and lib/
 ├── test/integration/     # *.test.mjs, fixtures/
 ├── docs/                 # architecture.md, development.md
 ├── package.json
@@ -63,4 +74,4 @@ Use concise, descriptive subjects with conventional prefixes where they fit. PRs
 
 ## Security & Configuration
 
-Use isolated HOME/config/session fixtures; never access real credentials or send real model requests. Do not run `pi install .` or load development `dist/` into real settings. Deployment uses the versioned release directories, not the source tree. Replacing an existing `pi-subagents-lite` installation requires separate authorization, a settings backup, removal/disablement of the old registration source, and an immutable release; preserve agent/config filenames and restore the backup for rollback.
+Use isolated HOME/config/session fixtures; never access real credentials or send real model requests. Do not run `pi install .` or load development `dist/` into real settings. Deployment references one immutable versioned release directory. Keep the `subagents-lite.json`, `subagents-lite-prompt.md` and `agents/*.md` config filenames. Changing real settings requires explicit authorization, a verified settings backup and a restore-based rollback.

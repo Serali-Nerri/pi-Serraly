@@ -2,8 +2,8 @@
 
 ## Workspace migration (current)
 
-- migrated into the private pi-Serraly npm workspace, with root-owned development dependencies and Pi `0.99.2` as the validation baseline; LiteParse `2.10.1` and the document/native-worker contracts are unchanged
-- retired the standalone `deploy` / `undeploy` scripts and pnpm workflow; use the [root installation guidance](../../README.md) and [release preparation](../../docs/development.md); first switch and rollback run through `scripts/migrate.mjs`
+- migrated into the private pi-Serraly npm workspace, with root-owned development dependencies and the workspace Pi `1.0.0` dev host; LiteParse `2.10.1` and the document/native-worker contracts are unchanged
+- retired the standalone `deploy` / `undeploy` scripts and pnpm workflow; use the [root installation guidance](../../README.md) and [release preparation](../../docs/development.md)
 
 ## Historical standalone record
 

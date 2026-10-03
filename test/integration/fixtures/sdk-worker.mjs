@@ -489,50 +489,7 @@ async function addDir(h) {
 	} finally { ui.dispose(); }
 }
 
-if (scenario === "cutover") {
-	const settingsPath = join(agentDir, "settings.json");
-	const initial = JSON.parse(await readFile(settingsPath, "utf8"));
-	const legacy = join(import.meta.dirname, "legacy-subagents");
-	initial.packages = [legacy];
-	initial.extensions = ["-builtin:mcp"];
-	await writeFile(settingsPath, JSON.stringify(initial, null, 2) + "\n");
-	const original = await readFile(settingsPath);
-	const backupPath = join(agentDir, "settings.before-cutover.json");
-	await writeFile(backupPath, original);
-	const configPath = join(agentDir, "subagents-lite.json");
-	const promptPath = join(agentDir, "subagents-lite-prompt.md");
-	await writeFile(configPath, '{"agent":{"loadExtensionsImplicitly":false}}\n');
-	await writeFile(promptPath, "Retained custom prompt fixture.\n");
-	const retained = [await readFile(configPath), await readFile(promptPath)];
-	const legacyLoads = async () => (await readFile(process.env.SERRALY_REPORT, "utf8")).trim().split("\n")
-		.filter(Boolean).map(JSON.parse).filter((event) => event.phase === "legacy-subagents-factory").length;
-	const old = await open([], undefined, true);
-	try {
-		assert.deepEqual(old.session.extensionRunner.getRegisteredCommands().map((command) => command.invocationName), ["agents"]);
-		assert.deepEqual(old.session.getAllTools().filter((tool) => ["Agent", "StopAgent", "AgentStatus"].includes(tool.name))
-			.map((tool) => tool.name).sort(), ["Agent", "AgentStatus", "StopAgent"]);
-		assert.equal((await execute(old, "AgentStatus", {})).content[0].text, "Legacy fixture only");
-	} finally { await old.close(); }
-	assert.equal(await legacyLoads(), 1);
-	await writeFile(settingsPath, JSON.stringify({ ...initial, packages: [release] }, null, 2) + "\n");
-	const candidate = await open([], undefined, true);
-	try {
-		inventory(candidate, allIndices);
-		assert.match((await execute(candidate, "AgentStatus", {})).content[0].text, /^No agents running or completed\./);
-		await assert.rejects(execute(candidate, "Agent", { prompt: "fixture", agent: "no-such-agent" }), /Unknown agent type: no-such-agent/);
-		assert.equal(await legacyLoads(), 1, "removed legacy source is not executed alongside the candidate");
-	} finally { await candidate.close(); }
-	await writeFile(settingsPath, await readFile(backupPath));
-	assert.deepEqual(await readFile(settingsPath), original, "rollback restores exact settings bytes");
-	const restored = await open([], undefined, true);
-	try {
-		assert.equal((await execute(restored, "AgentStatus", {})).content[0].text, "Legacy fixture only");
-		assert.equal(restored.session.extensionRunner.getMessageRenderer("subagent-result"), undefined, "candidate is no longer loaded");
-		assert.ok(!restored.loader.getExtensions().extensions.some((extension) => extension.path.startsWith(release)));
-	} finally { await restored.close(); }
-	assert.equal(await legacyLoads(), 2);
-	assert.deepEqual([await readFile(configPath), await readFile(promptPath)], retained, "cutover does not migrate or delete agent configuration");
-} else if (scenario === "filters") {
+if (scenario === "filters") {
 	for (let disabled = 0; disabled < entries.length; disabled++) {
 		const indices = allIndices.filter((index) => index !== disabled);
 		const h = await open(indices, ["-" + entries[disabled].slice(2)]);
