@@ -135,6 +135,21 @@ consumer 目录里以 `--offline --ignore-scripts --legacy-peer-deps` 安装本�
 再由开发树外的真实宿主 loader 加载。该 fixture 证明包的独立性与 bundled 闭包，
 不投影 registry 依赖图，也不安装宿主 peer。
 
+## 版本门禁
+
+每个包独立版本。发布面（包内源码、构建配方、manifest、打包 payload 与随包文档）
+变化后必须提高该包版本；只有包内测试或仓库根人类文档变化时可以不动版本。
+被 bundle 的库升版时，必须同时更新消费者的精确依赖并提高消费者版本，因为它的
+封印 payload 已变。根 release-set 版本独立于各包。
+
+```sh
+npm run check:package-versions -- --base <git-ref> [--head <git-ref>]
+```
+
+基线只读取 Git 中的包身份（名称/版本/依赖名），因此旧提交不需要当前的
+`serraly` schema；不查询远端分支或 npm。共享构建脚本的产物影响由审阅判断，
+门禁不声称自动推断语义。包移动目录后仍按名称识别原版本。
+
 ## 更新与回滚
 
 已安装的 Pi 通过 settings `packages` 引用 release 绝对路径；更新发布新的版本

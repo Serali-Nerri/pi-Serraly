@@ -74,8 +74,11 @@ test("release validation rejects a member manifest version that no longer matche
 	const candidate = await copy("tampered-member-version");
 	const manifest = JSON.parse(await readFile(join(member(candidate), "package.json"), "utf8"));
 	manifest.version = "9.9.9";
-	await writeFile(join(member(candidate), "package.json"), JSON.stringify(manifest, null, 2) + "\n");
+	const rewritten = JSON.stringify(manifest, null, 2) + "\n";
+	await writeFile(join(member(candidate), "package.json"), rewritten);
 	await assert.rejects(validateRelease(candidate), /identity mismatch/);
+	assert.equal(await readFile(join(member(candidate), "package.json"), "utf8"), rewritten,
+		"a rejected release is reported, never repaired or overwritten in place");
 });
 
 test("release validation rejects a rewritten member identity record", async () => {

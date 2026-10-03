@@ -4,14 +4,25 @@
   "private": true,
   "type": "module",
   "description": "Independently selectable private Pi extensions.",
-  "engines": { "node": ">=22.19.0" },
-  "workspaces": ["extensions/*", "packages/*"],
-  "pi": { "extensions": [], "skills": [], "prompts": [], "themes": [] },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "workspaces": [
+    "extensions/*",
+    "packages/*"
+  ],
+  "pi": {
+    "extensions": [],
+    "skills": [],
+    "prompts": [],
+    "themes": []
+  },
   "scripts": {
     "check": "node scripts/check.mjs",
     "build": "node scripts/build.mjs",
     "test": "node scripts/test.mjs",
     "pack:check": "node scripts/pack-check.mjs",
+    "check:package-versions": "node scripts/check-package-versions.mjs",
     "verify": "npm run check && npm test && npm run pack:check",
     "release": "node scripts/release.mjs"
   },
