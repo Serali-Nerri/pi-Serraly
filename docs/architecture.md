@@ -78,12 +78,24 @@ dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace
   全部打入产物，不增加根运行依赖。
 - subagents 是独立 ESM bundle，保留上游 MIT 许可及固定来源；Pi SDK、pi-ai、
   pi-tui 和 TypeBox external，不增加运行依赖或额外 worker。
-- 在非发现暂存目录构建，检查 emitted import 图、必要 worker/许可和文件哈希后
-  才发布开发 dist。许可检查使用完整的必需文件清单，不以目录存在代替法律闭包。
-- 分析所有 emitted JS/MJS/CJS（含 fork worker），仅允许读取同一已遍历的
-  常规文件集及声明的 externals。编译后文件 import 使用普通显式路径；
-  URL 编码、query/fragment、反斜杠和控制字符 specifier 均保守拒绝，避免
-  文件系统路径与原生 ESM URL 指向不同实现。
+- 在非发现暂存目录构建，检查 emitted import 图、必要许可和文件哈希后才发布
+  开发 dist。许可检查使用完整的必需文件清单，不以目录存在代替法律闭包。
+- 每个包先在自己的 `.build-*` 暂存目录准备候选 payload：从真实 pack 清单复制
+  非 dist 的 allowlisted 文件，再生成新 dist 并置入封印占位。重新运行
+  `npm pack --dry-run --json --ignore-scripts --offline` 确认实际清单包含封印后，
+  封印（`dist/artifacts.json`）记录该清单除自身外的每个文件的 SHA-256。
+  全部检查（含包自带的 artifact 校验器和通用候选校验）通过才替换本包 dist；
+  失败保留旧的完整 dist，暂存目录不留残余。
+- 封印校验分两侧：构建侧对本次真实 pack 清单逐个比对，部署侧按全部物理文件
+  严格比对，拒绝额外文件、symlink、非普通文件和逃逸 import。
+- bundle 输入归属按 realpath 检查实际输入：包内源码、第三方 devDependency 与
+  经 `exports` 解析的内部库 dist 允许；宿主包、退役依赖、兄弟扩展、库私有
+  源码和包外相对路径均拒绝。被 bundle 的内部库按其 `serraly.licenses` 复制到
+  消费者的 `dist/licenses/<library>/`。
+- 分析所有 emitted JS/MJS/CJS，仅允许读取同一已遍历的常规文件集及声明的
+  externals。编译后文件 import 使用普通显式路径；URL 编码、query/fragment、
+  反斜杠和控制字符 specifier 均保守拒绝，避免文件系统路径与原生 ESM URL
+  指向不同实现。
 - release 不执行任何依赖安装，检查自身及所有祖先的物理宿主、拒绝路径中的
   符号链接，并要求运行树不含 `node_modules`、链接或非普通文件；manifest 与
   dist 完整性记录共同绑定 release digest。digest 用于漂移检测，不构成来源
