@@ -6,7 +6,8 @@ import test from "node:test";
 import { generateDiffString } from "@earendil-works/pi-coding-agent";
 import { generateBoundedDiff } from "../src/diff.ts";
 import { applyPatchWithSnapshots, type Change, type ChangeSnapshot, type PatchOutcome } from "../src/files.ts";
-import { buildPatchReport, TOTAL_DIFF_MAX_BYTES, TOTAL_DIFF_MAX_LINES, type ApplyPatchReport, type FileFacts } from "../src/report.ts";
+import { TOTAL_DIFF_MAX_BYTES, TOTAL_DIFF_MAX_LINES, type ApplyPatchFileFacts, type ApplyPatchReport } from "pi-apply-patch-protocol";
+import { buildPatchReport } from "../src/report.ts";
 
 function snapshot(change: Change, before: string | null, after: string | null, sourceBefore?: string): ChangeSnapshot {
 	return sourceBefore === undefined ? { ...change, before, after } : { ...change, before, after, sourceBefore };
@@ -35,7 +36,7 @@ function remove(path: string, before: string): ChangeSnapshot {
 	return snapshot({ kind: "delete", path }, before, null);
 }
 
-function absent(): FileFacts {
+function absent(): ApplyPatchFileFacts {
 	return { exists: false, bytes: 0, lines: 0, bom: false, endings: { lf: 0, crlf: 0, cr: 0 }, finalNewline: false };
 }
 

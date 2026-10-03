@@ -1,0 +1,26 @@
+{
+  "name": "pi-apply-patch-protocol",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared apply_patch.v1 wire types and output budgets for the private pi-Serraly workspace",
+  "license": "Apache-2.0",
+  "engines": { "node": ">=22.19.0" },
+  "files": ["dist/", "README.md"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-package.mjs",
+    "check": "tsc -p tsconfig.json",
+    "pack:check": "node ../../scripts/build-package.mjs --check",
+    "prepack": "npm run build && npm run pack:check"
+  },
+  "serraly": {
+    "build": { "kind": "tsc", "project": "./tsconfig.build.json" },
+    "licenses": ["LICENSE", "UPSTREAM.md"]
+  }
+}

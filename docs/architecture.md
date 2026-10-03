@@ -15,6 +15,12 @@
 | `add-dir` | 目录作用域与存储、外部指令 prompt section、skill 路径发现、`@` 补全包装、目录 widget | 模型工具、自动 reload、cwd 切换或工具权限 |
 | `subagents` | `Agent`/`StopAgent`/`AgentStatus`、`/agents`、子会话选择/准入/可信状态、调度与关闭、专用展示 | 父工具闭包、兄弟模块私有实现、共享 MCP 连接池或跨进程任务恢复 |
 
+共享库只承载两侧都必须逐字一致的构建期契约，不承载任一方的策略：
+
+| 库 | 拥有的契约 | 不拥有 |
+| --- | --- | --- |
+| `pi-apply-patch-protocol` | `apply_patch.v1` 格式标识、四项输出预算、`ApplyPatch*` wire 类型 | 生产者的 diff 算法/工作量预算/截断策略，消费者的防御阈值/清洗/降级 |
+
 工具契约和详细算法留在各模块 README/子系统文档。UI 的私有宿主访问只在
 `extensions/pi-ui/src/compat/`；其 host 事件只由 `src/lifecycle.ts` 注册。
 UI 的共享 scheduler 不管理 loop 定时器、后台进程或子会话资源。
@@ -78,6 +84,9 @@ dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace
   全部打入产物，不增加根运行依赖。
 - subagents 是独立 ESM bundle，保留上游 MIT 许可及固定来源；Pi SDK、pi-ai、
   pi-tui 和 TypeBox external，不增加运行依赖或额外 worker。
+- tools 与 ui 各自 bundle 同一份 `pi-apply-patch-protocol`：wire 常量与类型只有
+  该库一处定义，两侧只保留各自的算法、阈值与展示策略。契约一致性由根
+  一致性套件用真实生产者输出与真实消费者解析器互验，不做常量自证。
 - 在非发现暂存目录构建，检查 emitted import 图、必要许可和文件哈希后才发布
   开发 dist。许可检查使用完整的必需文件清单，不以目录存在代替法律闭包。
 - 每个包先在同级 `.build-dist-*` 候选目录编译（与 live `dist` 同深度，保证

@@ -57,5 +57,8 @@
     "test": {
       "directory": "test"
     }
+  },
+  "devDependencies": {
+    "pi-apply-patch-protocol": "0.1.0"
   }
 }

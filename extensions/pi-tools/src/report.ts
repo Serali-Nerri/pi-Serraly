@@ -35,17 +35,22 @@
  * it is known.
  */
 import { truncateHead } from "@earendil-works/pi-coding-agent";
+import {
+	APPLY_PATCH_FORMAT,
+	PER_VIEW_DIFF_MAX_BYTES,
+	PER_VIEW_DIFF_MAX_LINES,
+	TOTAL_DIFF_MAX_BYTES,
+	TOTAL_DIFF_MAX_LINES,
+	type ApplyPatchChange,
+	type ApplyPatchFileFacts,
+	type ApplyPatchReason,
+	type ApplyPatchReport,
+	type ApplyPatchRole,
+	type ApplyPatchView,
+} from "pi-apply-patch-protocol";
 import { generateBoundedDiff, type BoundedDiff } from "./diff.ts";
 import type { Change, ChangeSnapshot, PatchOutcome } from "./files.ts";
 
-/** Maximum rows of diff text kept for a single view. */
-export const PER_VIEW_DIFF_MAX_LINES = 200;
-/** Maximum bytes of diff text kept for a single view. */
-export const PER_VIEW_DIFF_MAX_BYTES = 16 * 1024;
-/** Maximum diff rows kept across one report. */
-export const TOTAL_DIFF_MAX_LINES = 600;
-/** Maximum diff bytes kept across one report. */
-export const TOTAL_DIFF_MAX_BYTES = 64 * 1024;
 /** Largest combined normalized text for which a diff search may run. */
 export const MAX_NORMALIZED_DIFF_BYTES = 2 * 1024 * 1024;
 /** Largest combined logical line count for which a diff search may run. */
@@ -58,47 +63,14 @@ export const TOTAL_DIFF_EDIT_BUDGET = 4_000;
 export const MAX_DIFF_SEARCH_MS = 250;
 export const TOTAL_DIFF_SEARCH_MS = 1_000;
 
-const FORMAT = "apply_patch.v1";
+const FORMAT = APPLY_PATCH_FORMAT;
 
-export interface FileFacts {
-	exists: boolean;
-	bytes: number;
-	lines: number;
-	bom: boolean;
-	endings: { lf: number; crlf: number; cr: number };
-	finalNewline: boolean;
-}
-
-export type ViewRole = "file" | "move" | "source-delete" | "destination";
-
-export interface ReportView {
-	role: ViewRole;
-	before: FileFacts;
-	after: FileFacts;
-	added: number | null;
-	removed: number | null;
-	diff?: string;
-	availability: "complete" | "truncated" | "omitted";
-	reason?: "work-limit" | "result-limit" | "diff-error" | "cancelled";
-	diffTotalLines?: number;
-	lineEndingsChanged: boolean;
-}
-
-export interface ReportChange extends Change {
-	/**
-	 * Move metadata: whether the captured destination text differs from the
-	 * captured source text. Present only for moves whose snapshots are known,
-	 * including byte-format-only differences (BOM, terminators, final newline).
-	 */
-	contentChanged?: boolean;
-	views: ReportView[];
-}
-
-export interface ApplyPatchReport {
-	format: "apply_patch.v1";
-	changes: ReportChange[];
-	reportUnavailable?: "diff-error";
-}
+/** Wire names used throughout this producer; the contract lives in the protocol library. */
+type FileFacts = ApplyPatchFileFacts;
+type ViewRole = ApplyPatchRole;
+type ReportView = ApplyPatchView;
+type ReportChange = ApplyPatchChange;
+type Reason = ApplyPatchReason;
 
 interface TextInfo {
 	raw: string;

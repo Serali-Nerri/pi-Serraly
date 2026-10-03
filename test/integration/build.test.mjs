@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { isolatedEnvironment } from "../../scripts/lib/environment.mjs";
-import { discoverPackages } from "../../scripts/lib/packages.mjs";
+import { discoverPackages, selectExtensions } from "../../scripts/lib/packages.mjs";
 
 const root = resolve(import.meta.dirname, "../..");
 
@@ -18,7 +18,7 @@ test("build produces executable ESM for every entry allowed by the package manif
 			cwd: root, env, encoding: "utf8", timeout: 280000,
 		});
 		assert.equal(built.status, 0, built.stderr || built.stdout);
-		const packages = await discoverPackages();
+		const packages = selectExtensions(await discoverPackages());
 		assert.deepEqual(packages.map((pkg) => pkg.name), [
 			"pi-add-dir", "pi-ask-user-question", "pi-background-shell", "pi-loop", "pi-subagents", "pi-tools", "pi-ui",
 		]);

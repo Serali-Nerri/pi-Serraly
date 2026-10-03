@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 import { checkPackageVersions, compareVersions } from "../../scripts/check-package-versions.mjs";
-import { discoverPackages } from "../../scripts/lib/packages.mjs";
+import { discoverPackages, selectExtensions } from "../../scripts/lib/packages.mjs";
 
 /** A real Git repository so the gate is exercised against actual trees. */
 async function gitFixture(t) {
@@ -137,7 +137,11 @@ test("the current repository satisfies the gate against its own baseline shape",
 	// The real workspace is only compared against itself here: identity must be
 	// readable from the current tree without the legacy module layout.
 	const packages = await discoverPackages();
-	assert.deepEqual(packages.map((pkg) => pkg.manifest.version), packages.map(() => "0.2.0"));
+	const extensions = selectExtensions(packages);
+	assert.deepEqual(extensions.map((pkg) => pkg.manifest.version), extensions.map(() => "0.2.0"));
+	for (const library of packages.filter((pkg) => pkg.kind === "library")) {
+		assert.match(library.manifest.version, /^\d+\.\d+\.\d+$/, `${library.name} declares a readable version`);
+	}
 	assert.ok(compareVersions("0.2.0", "0.1.0") > 0);
 	assert.ok(compareVersions("1.0.0", "1.0.1") < 0);
 	assert.equal(compareVersions("1.0.0", "1.0.0"), 0);

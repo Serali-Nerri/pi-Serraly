@@ -7,7 +7,7 @@ import test from "node:test";
 import { discoverAndLoadExtensions, type ExtensionAPI, type ExtensionToolContext, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 import toolsExtension from "../src/index.ts";
 import { PATCH_GRAMMAR } from "../src/grammar.ts";
-import type { ApplyPatchReport } from "../src/report.ts";
+import type { ApplyPatchReport } from "pi-apply-patch-protocol";
 
 function registeredTools(): ToolDefinition<any, any>[] {
 	const tools: ToolDefinition<any, any>[] = [];

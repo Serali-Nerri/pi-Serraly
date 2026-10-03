@@ -1,6 +1,19 @@
 // apply_patch 结果视图：只校验工具返回的版本化 details 契约，并组合文件卡组件。
 // 本模块不解析输入补丁生成 diff、不读取文件、不执行或重放补丁。
 import { visibleWidth, wrapTextWithAnsi, type Component } from "@earendil-works/pi-tui";
+import {
+	APPLY_PATCH_FORMAT,
+	PER_VIEW_DIFF_MAX_BYTES,
+	PER_VIEW_DIFF_MAX_LINES,
+	TOTAL_DIFF_MAX_BYTES,
+	TOTAL_DIFF_MAX_LINES,
+	type ApplyPatchAvailability,
+	type ApplyPatchChange,
+	type ApplyPatchFileFacts,
+	type ApplyPatchReason,
+	type ApplyPatchRole,
+	type ApplyPatchView,
+} from "pi-apply-patch-protocol";
 import { config } from "../../config/config.ts";
 import { oneLine } from "../../utils/format.ts";
 import { sanitizeToolResultText } from "../../utils/tool-result-sanitize.ts";
@@ -23,48 +36,25 @@ import {
 import { describePatchTitle, fitPatchPaths, formatPatchTitle, patchDisplayPath, type PatchTitle } from "./apply-patch-title.ts";
 import { scheduleAnimation } from "./result.ts";
 
-const FORMAT = "apply_patch.v1";
+const FORMAT = APPLY_PATCH_FORMAT;
+// Defence thresholds of the presentation parser; the wire budgets come from the
+// shared protocol contract.
 const MAX_CHANGES = 128;
 const MAX_VIEWS_PER_CHANGE = 2;
-const MAX_DIFF_BYTES_PER_VIEW = 16 * 1024;
-const MAX_DIFF_BYTES_TOTAL = 64 * 1024;
-const MAX_DIFF_ROWS_PER_VIEW = 200;
-const MAX_DIFF_ROWS_TOTAL = 600;
+const MAX_DIFF_BYTES_PER_VIEW = PER_VIEW_DIFF_MAX_BYTES;
+const MAX_DIFF_BYTES_TOTAL = TOTAL_DIFF_MAX_BYTES;
+const MAX_DIFF_ROWS_PER_VIEW = PER_VIEW_DIFF_MAX_LINES;
+const MAX_DIFF_ROWS_TOTAL = TOTAL_DIFF_MAX_LINES;
 const MAX_NOTICE_ROWS = 8;
 
-export type ApplyPatchRole = "file" | "move" | "source-delete" | "destination";
-export type ApplyPatchAvailability = "complete" | "truncated" | "omitted";
-export type ApplyPatchReason = "work-limit" | "result-limit" | "diff-error" | "cancelled";
-
-export interface ApplyPatchFileFacts {
-	exists: boolean;
-	bytes: number;
-	lines: number;
-	bom: boolean;
-	endings: { lf: number; crlf: number; cr: number };
-	finalNewline: boolean;
-}
-
-export interface ApplyPatchView {
-	role: ApplyPatchRole;
-	before: ApplyPatchFileFacts;
-	after: ApplyPatchFileFacts;
-	added: number | null;
-	removed: number | null;
-	diff?: string;
-	availability: ApplyPatchAvailability;
-	reason?: ApplyPatchReason;
-	diffTotalLines?: number;
-	lineEndingsChanged: boolean;
-}
-
-export interface ApplyPatchChange {
-	kind: "add" | "update" | "delete";
-	path: string;
-	moveFrom?: string;
-	contentChanged?: boolean;
-	views: ApplyPatchView[];
-}
+export type {
+	ApplyPatchAvailability,
+	ApplyPatchChange,
+	ApplyPatchFileFacts,
+	ApplyPatchReason,
+	ApplyPatchRole,
+	ApplyPatchView,
+} from "pi-apply-patch-protocol";
 
 export interface ApplyPatchDetails {
 	format: typeof FORMAT;
