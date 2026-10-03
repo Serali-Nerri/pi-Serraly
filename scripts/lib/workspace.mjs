@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { root } from "./modules.mjs";
-import { testEnvironment } from "../test-environment.mjs";
+import { testEnvironment } from "./environment.mjs";
 
 export async function discoverTests(directory) {
 	const paths = [];

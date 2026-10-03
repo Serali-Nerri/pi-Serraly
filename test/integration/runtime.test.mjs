@@ -3,7 +3,7 @@ import { after, before, test } from "node:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { entries, releaseFixture, sdkScenario, sandboxFixture, cliArgs, diagnostics } from "./helpers/runtime.mjs";
-import { runChild } from "../../scripts/preview.mjs";
+import { runChild } from "../../scripts/lib/process.mjs";
 import { runRpc, captureReleasePty } from "./helpers/host-cli.mjs";
 import { ptyAvailability } from "../../scripts/capture.mjs";
 

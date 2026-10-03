@@ -72,6 +72,10 @@ GREEN。测试名说明破坏的行为。不得用源码字符串匹配代替执
 
 根 runner 为每个 suite 创建临时 HOME/agent/config/cache；环境为 allowlist，
 不继承真实 provider keys、session pointers、NODE_OPTIONS 或代理端点。
+`scripts/lib/environment.mjs` 拥有该 allowlist 与测试控制转发，
+`scripts/lib/host.mjs` 拥有固定 1.0.0 宿主的查找，`scripts/lib/process.mjs`
+拥有有期限的子进程执行；UI 预览与捕获在这之上显式设置自己的 stage/report
+路径，通用环境不携带预览字段。
 运行时测试使用空工作目录/本地合成 fixture、内存会话及脚本化 provider。
 实际 CLI/SDK worker 使用离线模式和网络拒绝 preload；拒绝环境继承到每个
 运行时子进程，包括合成 MCP。离线模式本身不禁止模型请求。

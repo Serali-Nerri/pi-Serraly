@@ -3,7 +3,8 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
 
-const { createSandbox, runChild } = await import(new URL("../../../scripts/preview.mjs", import.meta.url).href);
+const { createSandbox } = await import(new URL("../../../scripts/preview.mjs", import.meta.url).href);
+const { runChild } = await import(new URL("../../../scripts/lib/process.mjs", import.meta.url).href);
 
 const worker = String.raw`
 import assert from "node:assert/strict";

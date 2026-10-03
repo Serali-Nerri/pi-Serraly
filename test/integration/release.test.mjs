@@ -4,7 +4,7 @@ import { chmod, lstat, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/p
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
-import { isolatedEnvironment } from "../../scripts/preview.mjs";
+import { isolatedEnvironment } from "../../scripts/lib/environment.mjs";
 import { entries } from "./fixtures/contracts.mjs";
 
 const root = resolve(import.meta.dirname, "../..");

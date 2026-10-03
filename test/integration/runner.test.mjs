@@ -4,7 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
-import { isolatedEnvironment } from "../../scripts/preview.mjs";
+import { isolatedEnvironment } from "../../scripts/lib/environment.mjs";
 import { isolatedRun } from "../../scripts/lib/workspace.mjs";
 
 const root = resolve(import.meta.dirname, "../..");

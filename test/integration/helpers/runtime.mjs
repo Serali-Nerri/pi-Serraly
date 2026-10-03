@@ -3,7 +3,9 @@ import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createRelease, validateRelease } from "../../../scripts/lib/package.mjs";
-import { hostPackage, isolatedEnvironment, runChild } from "../../../scripts/preview.mjs";
+import { hostPackage } from "../../../scripts/lib/host.mjs";
+import { isolatedEnvironment } from "../../../scripts/lib/environment.mjs";
+import { runChild } from "../../../scripts/lib/process.mjs";
 
 import { entries } from "../fixtures/contracts.mjs";
 export { entries };

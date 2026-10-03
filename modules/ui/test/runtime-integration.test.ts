@@ -11,7 +11,13 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 // can originate in a real session. Only the allowlisted children load Pi/UI.
 const previewPath = fileURLToPath(new URL("../../../scripts/preview.mjs", import.meta.url));
 const capturePath = fileURLToPath(new URL("../../../scripts/capture.mjs", import.meta.url));
-const { createSandbox, cliArguments, runChild, reports, expectedVersion, isolatedEnvironment } = await import(pathToFileURL(previewPath).href);
+const environmentPath = fileURLToPath(new URL("../../../scripts/lib/environment.mjs", import.meta.url));
+const hostPath = fileURLToPath(new URL("../../../scripts/lib/host.mjs", import.meta.url));
+const processPath = fileURLToPath(new URL("../../../scripts/lib/process.mjs", import.meta.url));
+const { createSandbox, cliArguments, reports } = await import(pathToFileURL(previewPath).href);
+const { isolatedEnvironment } = await import(pathToFileURL(environmentPath).href);
+const { expectedVersion } = await import(pathToFileURL(hostPath).href);
+const { runChild } = await import(pathToFileURL(processPath).href);
 const { capturePty, ptyAvailability } = await import(pathToFileURL(capturePath).href);
 type Diagnostic = { phase: string; starts: number; timers: number; activeTimers: number; providerCalls: number;
 	mode?: string; hasUI?: boolean; columns?: number; tuiMode?: string; toolCount?: number;

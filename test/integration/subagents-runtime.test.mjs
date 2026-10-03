@@ -3,7 +3,7 @@ import { after, before, test } from "node:test";
 import { join } from "node:path";
 import { writeFile } from "node:fs/promises";
 import { releaseFixture, sandboxFixture, diagnostics } from "./helpers/runtime.mjs";
-import { runChild } from "../../scripts/preview.mjs";
+import { runChild } from "../../scripts/lib/process.mjs";
 
 let stage;
 before(async () => { stage = await releaseFixture(); }, { timeout: 180000 });

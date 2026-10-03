@@ -2,45 +2,17 @@
 /** Stage-one acceptance sandbox. Nothing here installs or changes the user's Pi. */
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+import { isolatedEnvironment } from "./lib/environment.mjs";
+import { expectedVersion, hostPackage } from "./lib/host.mjs";
+import { runChild } from "./lib/process.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-export const expectedVersion = "1.0.0";
 
-export function hostPackage() {
-	// Read package metadata only; never invoke npm/resolve a source-workspace host.
-	const candidate = process.env.PI_UI_HOST_PACKAGE || resolve(dirname(process.execPath), "../lib/node_modules/@earendil-works/pi-coding-agent");
-	const directory = realpathSync(candidate);
-	assert.ok(!directory.startsWith(root + sep), "CLI host must be outside the development dependency tree");
-	const manifest = JSON.parse(readFileSync(join(directory, "package.json"), "utf8"));
-	assert.equal(manifest.name, "@earendil-works/pi-coding-agent");
-	assert.equal(manifest.version, expectedVersion, "acceptance is pinned to Pi 1.0.0");
-	assert.equal(manifest.bin.pi, "dist/bundle/cli.js", "use the actual bundled CLI, not dist/cli.js");
-	const cli = join(directory, manifest.bin.pi);
-	assert.ok(existsSync(cli));
-	return { directory, cli };
-}
-
-export function isolatedEnvironment(base) {
-	// Allowlist, not secret-name heuristics: no credentials, NODE_OPTIONS, session
-	// pointers, provider endpoints, proxy settings, or original HOME survive.
-	return {
-		PATH: `${dirname(process.execPath)}:/usr/bin:/bin`,
-		HOME: join(base, "home"), XDG_CONFIG_HOME: join(base, "home/.config"),
-		XDG_CACHE_HOME: join(base, "home/.cache"), TMPDIR: base,
-		LANG: "C.UTF-8", TERM: "xterm-256color", COLORTERM: "truecolor",
-		PI_CODING_AGENT_DIR: join(base, "agent"), PI_OFFLINE: "1",
-		PI_SKIP_VERSION_CHECK: "1", PI_TELEMETRY: "0",
-		PI_IMAGE_PROTOCOL: "none", PI_HYPERLINKS: "0", PI_TRUE_COLOR: "1",
-		GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: "/dev/null", GIT_CEILING_DIRECTORIES: base,
-		NODE_COMPILE_CACHE: join(base, "compile-cache"),
-		PI_UI_REPORT: join(base, "report.jsonl"), PI_UI_STAGE: join(base, "pi-ui/index.js"),
-	};
-}
 
 // A preload before the bundled CLI rejects accidental networking. Offline mode
 // alone disables automatic activity, not model requests. Diagnostics stay off stdout.
@@ -397,6 +369,10 @@ export async function createSandbox({ scenario = "default" } = {}) {
 	const host = hostPackage();
 	const base = await mkdtemp(join(tmpdir(), "pi-ui-acceptance-"));
 	const env = isolatedEnvironment(base);
+	// The preview owns its external stage and diagnostics paths; the generic
+	// environment must stay free of preview-specific redirection.
+	env.PI_UI_STAGE = join(base, "pi-ui/index.js");
+	env.PI_UI_REPORT = join(base, "report.jsonl");
 	if (scenario === "rich") env.PI_HYPERLINKS = "1"; // Native OSC8 inspection; targets use reserved example.invalid.
 	const cwd = join(base, "cwd");
 	try {
@@ -446,23 +422,6 @@ export function cliArguments(sandbox, extra = []) {
 export async function reports(sandbox) {
 	try { return (await readFile(sandbox.env.PI_UI_REPORT, "utf8")).trim().split("\n").filter(Boolean).map((line) => JSON.parse(line)); }
 	catch (error) { if (error.code === "ENOENT") return []; throw error; }
-}
-
-export async function runChild(sandbox, args, input = "", timeout = 20000) {
-	const child = spawn(process.execPath, args, { cwd: sandbox.cwd, env: sandbox.env, stdio: "pipe" });
-	let stdout = "", stderr = "";
-	child.stdout.setEncoding("utf8").on("data", (chunk) => { stdout += chunk; });
-	child.stderr.setEncoding("utf8").on("data", (chunk) => { stderr += chunk; });
-	const timer = setTimeout(() => child.kill("SIGKILL"), timeout);
-	try {
-		child.stdin.end(input);
-		const { code, signal } = await new Promise((done, reject) => {
-			child.once("error", reject);
-			child.once("close", (code, signal) => done({ code, signal }));
-		});
-		assert.equal(signal, null, `child exceeded ${timeout}ms or was killed: ${stderr}`);
-		return { code, stdout, stderr };
-	} finally { clearTimeout(timer); if (child.exitCode === null) child.kill("SIGKILL"); }
 }
 
 async function main() {

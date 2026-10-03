@@ -5,7 +5,8 @@ import { spawn, spawnSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { cliArguments, createSandbox, expectedVersion, reports } from "./preview.mjs";
+import { cliArguments, createSandbox, reports } from "./preview.mjs";
+import { expectedVersion } from "./lib/host.mjs";
 
 export function ptyAvailability() {
 	const result = spawnSync("/usr/bin/python3", ["-c", "import pty, termios, fcntl"], { env: { PATH: "/usr/bin:/bin" }, encoding: "utf8" });
