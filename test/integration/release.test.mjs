@@ -1,38 +1,56 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { isolatedEnvironment } from "../../scripts/preview.mjs";
+import { entries } from "./fixtures/contracts.mjs";
 
 const root = resolve(import.meta.dirname, "../..");
 
-test("release installs a locked runtime-only tree outside the workspace", { timeout: 180000 }, async () => {
+const present = async (path) => {
+	try { await lstat(path); return true; }
+	catch (error) { if (error.code === "ENOENT") return false; throw error; }
+};
+
+/**
+ * The release must be reproducible without any install step. A package-manager
+ * invocation finds this shim first, records it and fails, so "no install" is
+ * observed rather than assumed.
+ */
+async function poisonPackageManager(base) {
+	const bin = join(base, "poison-bin");
+	const marker = join(base, "install-attempt");
+	await mkdir(bin, { recursive: true });
+	await writeFile(join(bin, "npm"), `#!/bin/sh\nprintf '%s' "$*" >> ${JSON.stringify(marker)}\nexit 1\n`);
+	await chmod(join(bin, "npm"), 0o755);
+	return { env: { ...isolatedEnvironment(base), PATH: bin }, marker };
+}
+
+test("release is a runtime-only tree prepared without a package manager", { timeout: 60000 }, async () => {
 	const base = await mkdtemp(join(tmpdir(), "serraly-release-test-"));
 	try {
 		const output = join(base, "release");
+		const { env, marker } = await poisonPackageManager(base);
 		const result = spawnSync(process.execPath, [
 			join(root, "scripts/release.mjs"), "--output", output, "--build-id", "integration-fixture",
-		], { cwd: root, env: isolatedEnvironment(base), encoding: "utf8", timeout: 150000 });
+		], { cwd: root, env, encoding: "utf8", timeout: 55000 });
 		assert.equal(result.status, 0, result.stderr || result.stdout);
+		assert.equal(await present(marker), false, "release preparation never shells out to a package manager");
 		const manifest = JSON.parse(await readFile(join(output, "package.json"), "utf8"));
 		assert.equal(manifest.private, true);
 		assert.equal(manifest.devDependencies, undefined);
 		assert.equal(manifest.workspaces, undefined);
-		assert.deepEqual(manifest.dependencies, { "@llamaindex/liteparse": "2.10.1" });
+		assert.deepEqual(manifest.dependencies, {}, "release manifest declares no installable runtime dependencies");
+		assert.deepEqual(manifest.pi.extensions, entries);
+		assert.equal(await present(join(output, "package-lock.json")), false);
+		assert.equal(await present(join(output, "node_modules")), false);
 		const record = JSON.parse(await readFile(join(output, "release.json"), "utf8"));
 		assert.equal(record.host, "1.0.0", "release metadata names the qualified Pi host, not an obsolete baseline");
-		const lock = JSON.parse(await readFile(join(output, "package-lock.json"), "utf8"));
-		assert.ok(Object.keys(lock.packages).some((path) => path.endsWith("liteparse-linux-x64-gnu")),
-			"platform optional dependencies remain locked for native execution");
-		assert.ok(Object.keys(lock.packages).every((path) =>
-			!/(?:@earendil-works|typebox|typescript|esbuild|tsx|(?:^|\/)modules\/)/.test(path)), "no physical host or development closure");
-		const dep = JSON.parse(await readFile(join(output, "node_modules/@llamaindex/liteparse/package.json"), "utf8"));
-		assert.equal(dep.version, "2.10.1");
 		const attemptedOverwrite = spawnSync(process.execPath, [
 			join(root, "scripts/release.mjs"), "--output", output, "--build-id", "replacement",
-		], { cwd: root, env: isolatedEnvironment(base), encoding: "utf8", timeout: 15000 });
+		], { cwd: root, env, encoding: "utf8", timeout: 15000 });
 		assert.notEqual(attemptedOverwrite.status, 0, "a live release must never be overwritten");
 		assert.match(attemptedOverwrite.stderr, /already exists/i);
 		assert.equal(JSON.parse(await readFile(join(output, "release.json"), "utf8")).buildId, "integration-fixture");

@@ -48,7 +48,7 @@ try {
 			const result = await build({
 				entryPoints: [join(source, module.entry)], outfile: join(output, "index.js"),
 				bundle: true, platform: "node", format: "esm", target: "node22",
-				external: [...hostExternal, "@llamaindex/liteparse"],
+				external: hostExternal,
 				legalComments: "eof", metafile: true,
 				...(module.cjsRequire ? { banner: { js: cjsRequireBridge } } : {}),
 			});
@@ -57,9 +57,6 @@ try {
 			}
 		}
 		await writeFile(join(output, "package.json"), '{"type":"module"}\n');
-		for (const asset of module.assets ?? []) {
-			await cp(join(source, dirname(module.entry), asset), join(output, asset));
-		}
 		for (const license of module.licenses) {
 			await mkdir(join(output, dirname(license)), { recursive: true });
 			await cp(join(source, license), join(output, license), { recursive: true });
@@ -80,7 +77,7 @@ try {
 	try { await rename(stage, join(root, "dist")); }
 	catch (error) { if (hasRetired) await rename(retired, join(root, "dist")); throw error; }
 	await rm(retired, { recursive: true, force: true });
-	console.log(`Built ${extensionEntries.length} independent entries; host packages external, worker/lazy closure and licenses verified.`);
+	console.log(`Built ${extensionEntries.length} independent entries; host packages external and licenses verified.`);
 } finally {
 	await rm(stage, { recursive: true, force: true });
 }

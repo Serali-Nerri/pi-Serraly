@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test, { after, before } from "node:test";
 import { createRelease, sealRelease, validateRelease } from "../../scripts/lib/package.mjs";
-import { filesIn } from "../../scripts/lib/artifacts.mjs";
 
 let base, release;
 before(async () => {
@@ -42,44 +41,25 @@ test("an existing release cannot inherit a duplicate host registry from its pare
 	await assert.rejects(validateRelease(candidate), /host|dependency tree/i);
 });
 
-test("validation rejects a missing LiteParse implementation instead of trusting its package version", async () => {
-	const candidate = await copy("missing-native-js");
-	await rm(join(candidate, "node_modules/@llamaindex/liteparse/dist/lib.js"));
-	await assert.rejects(validateRelease(candidate), /native|LiteParse/i);
+test("release validation rejects an injected dependency tree instead of installing it", async () => {
+	const candidate = await copy("injected-dependencies");
+	const injected = join(candidate, "node_modules/foreign-package");
+	await mkdir(injected, { recursive: true });
+	await writeFile(join(injected, "package.json"), '{"name":"foreign-package","version":"1.0.0"}\n');
+	await writeFile(join(injected, "index.js"), "export default 1;\n");
+	await assert.rejects(validateRelease(candidate), /node_modules|dependency/i);
+	assert.equal(await readFile(join(injected, "package.json"), "utf8"), '{"name":"foreign-package","version":"1.0.0"}\n',
+		"validation reports the injected tree instead of deleting or repairing it");
 });
 
-test("validation rejects missing platform bindings and LiteParse's shipped local fallback", async () => {
-	const candidate = await copy("missing-binding");
-	const scope = join(candidate, "node_modules/@llamaindex");
-	for (const name of await readdir(scope)) {
-		if (name.startsWith("liteparse-")) await rm(join(scope, name), { recursive: true });
-	}
-	for (const file of await filesIn(join(scope, "liteparse"))) {
-		if (file.endsWith(".node")) await rm(file);
-	}
-	await assert.rejects(validateRelease(candidate), /native|LiteParse/i);
-});
-
-test("validation exercises PDFium loading with OCR disabled, not merely native addon import", async () => {
-	const candidate = await copy("missing-pdfium");
-	const scope = join(candidate, "node_modules/@llamaindex");
-	let removed = 0;
-	for (const name of await readdir(scope)) {
-		if (!name.startsWith("liteparse-")) continue;
-		for (const file of await readdir(join(scope, name))) {
-			if (/pdfium.*\.(?:so(?:\.\d+)*|dylib|dll)$/i.test(file)) {
-				await rm(join(scope, name, file)); removed++;
-			}
-		}
-	}
-	assert.ok(removed > 0, "fixture removes the current platform's PDFium payload");
-	await assert.rejects(validateRelease(candidate), /native|LiteParse|PDFium/i);
-});
-
-test("validation rejects a truncated runtime lock", async () => {
-	const candidate = await copy("damaged-lock");
-	await writeFile(join(candidate, "package-lock.json"), '{"lockfileVersion":3}\n');
-	await assert.rejects(validateRelease(candidate), /lock|integrity/i);
+// Break caught: a runtime manifest that still declares installable dependencies
+// cannot be validated as a self-contained release.
+test("release validation rejects declared runtime dependencies", async () => {
+	const candidate = await copy("declared-dependency");
+	const manifest = JSON.parse(await readFile(join(candidate, "package.json"), "utf8"));
+	manifest.dependencies = { "foreign-package": "1.0.0" };
+	await writeFile(join(candidate, "package.json"), JSON.stringify(manifest, null, 2) + "\n");
+	await assert.rejects(validateRelease(candidate), /runtime-only|dependenc/i);
 });
 
 test("validation verifies the recorded release digest", async () => {
@@ -97,7 +77,7 @@ test("sealing cannot replace an existing release identity", async () => {
 	assert.equal(await readFile(join(candidate, "release.json"), "utf8"), original);
 });
 
-for (const name of ["package.json", "package-lock.json", "release.json"]) {
+for (const name of ["package.json", "release.json"]) {
 	test(`release metadata must be physical, not an external ${name} link`, async () => {
 		const candidate = await copy(`linked-${name}`);
 		const external = join(base, `external-${name}`);
@@ -117,11 +97,10 @@ test("an identical external dist link cannot escape the immutable runtime tree",
 	await assert.rejects(validateRelease(candidate), /symlink|real directory/i);
 });
 
-test("npm executable links may not point outside the release dependency tree", async () => {
-	const candidate = await copy("external-bin");
-	const external = join(base, "external-executable.js");
-	await writeFile(external, "// synthetic executable, never run\n");
-	await mkdir(join(candidate, "node_modules/.bin"), { recursive: true });
-	await symlink(external, join(candidate, "node_modules/.bin/foreign"));
-	await assert.rejects(validateRelease(candidate), /executable|link/i);
+test("release validation rejects a symlinked payload instead of following it", async () => {
+	const candidate = await copy("linked-payload");
+	const external = join(base, "external-payload.js");
+	await writeFile(external, "export default 1;\n");
+	await symlink(external, join(candidate, "dist/pi-ui/linked-payload.js"));
+	await assert.rejects(validateRelease(candidate), /symlink|regular|node_modules/i);
 });

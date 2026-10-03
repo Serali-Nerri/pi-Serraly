@@ -19,7 +19,7 @@ Each change follows this order:
 
 ## Project Structure & Module Organization
 
-`pi-Serraly` is a private npm workspace with eight independent Pi extensions. Target Node ≥22.19 and Pi 1.0.0.
+`pi-Serraly` is a private npm workspace with seven independent Pi extensions. Target Node ≥22.19 and Pi 1.0.0.
 
 ```text
 .
@@ -29,7 +29,6 @@ Each change follows this order:
 │   ├── loop/              # src/, test/
 │   ├── tools/             # src/, test/fixtures/
 │   ├── background-shell/ # src/, extensions/, tests/
-│   ├── docparser/         # extensions/docparser/, tests/, assets/
 │   ├── add-dir/           # src/, test/
 │   └── subagents/         # src/, test/ (Vitest)
 ├── scripts/              # check, build, test, release entry points and lib/
@@ -48,7 +47,7 @@ Run from the repository root:
 
 - `npm ci --ignore-scripts --include=optional --legacy-peer-deps` — install locked dependencies.
 - `npm run check` — run workspace checks and root-script syntax checks.
-- `npm run build` — produce and validate eight compiled entries in `dist/`.
+- `npm run build` — produce and validate seven compiled entries in `dist/`.
 - `npm test` — rebuild, then run module and integration suites.
 - `npm run verify` — run checks and the complete test/build pipeline.
 - `node scripts/test.mjs --module loop` — debug one suite; does not replace full verification.
@@ -58,7 +57,7 @@ See `docs/development.md` for release preparation and additional commands.
 
 ## Coding Style & Naming Conventions
 
-Use strict TypeScript and ESM. Preserve local formatting: tabs in UI/questions/loop/tools; two spaces in background-shell/docparser/subagents. Retain neighboring quote styles and import extensions. Use camelCase functions/variables, PascalCase types/classes, and descriptive kebab-case filenames. Docparser uses `oxfmt` and `oxlint`; other workspaces primarily enforce TypeScript checks.
+Use strict TypeScript and ESM. Preserve local formatting: tabs in UI/questions/loop/tools; two spaces in background-shell/subagents. Retain neighboring quote styles and import extensions. Use camelCase functions/variables, PascalCase types/classes, and descriptive kebab-case filenames.
 
 ## Testing Guidelines
 

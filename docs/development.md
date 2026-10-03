@@ -14,14 +14,13 @@ npm run verify
 
 `check` 调用各 workspace 的严格检查并检查根脚本语法；`npm test` 先构建完整产物，
 再执行分模块套件及根集成测试；`verify` 组合两者。任一步骤失败即失败，
-不以重试隐藏结果。release 安装边界测试执行真实 `npm ci`，需要可用 registry
-或缓存，只获取锁定包。
+不以重试隐藏结果。集成测试使用真实宿主 loader 与临时 release 目录，不需要
+registry。
 
 调试单个 suite：
 
 ```sh
 node scripts/test.mjs --module loop
-node scripts/test.mjs --module docparser
 node scripts/test.mjs --module subagents
 node scripts/test.mjs --module integration
 node scripts/test.mjs --module background-shell --list
@@ -56,8 +55,8 @@ node --input-type=module -e '
    fixture 或契约推导，不调用被测 helper 计算另一侧“期望”。
 2. **模块边界测试**：实际注册定义、renderer、文件/进程/worker 和宿主 SDK。
    外部或慢操作才允许 test double；保留真正影响断言的副作用。
-3. **产物集成**：实际编译入口、runtime-only 安装、新路径 worker/lazy import、
-   宿主 loader 和类身份、资源过滤、八入口共存、脚本化 child 与合成 stdio MCP。
+3. **产物集成**：实际编译入口、release 树、新路径 lazy import、宿主 loader
+   和类身份、资源过滤、七入口共存、脚本化 child 与合成 stdio MCP。
 4. **操作演练**：临时目录内真实文件锁、原子发布和故障中断恢复。
 5. **人工交互**：目标终端的视觉、快捷键、鼠标和焦点；自动渲染宽度检查不替代它。
 
@@ -75,11 +74,11 @@ GREEN。测试名说明破坏的行为。不得用源码字符串匹配代替执
 不继承真实 provider keys、session pointers、NODE_OPTIONS 或代理端点。
 运行时测试使用空工作目录/本地合成 fixture、内存会话及脚本化 provider。
 实际 CLI/SDK worker 使用离线模式和网络拒绝 preload；拒绝环境继承到每个
-运行时子进程，包括合成 MCP 和 native worker。离线模式本身不禁止模型请求。
+运行时子进程，包括合成 MCP。离线模式本身不禁止模型请求。
 即使测试捕获了网络异常，guard 记录仍使该场景失败。
 
-不得读真实 auth、sessions 或 settings；不得发送真实模型请求。原生文档
-fixture 关闭 OCR，不安装系统包。模块 tests 自己拥有进程/worker 清理。
+不得读真实 auth、sessions 或 settings；不得发送真实模型请求。
+模块 tests 自己拥有进程/worker 清理。
 
 实际 CLI 基线来自开发树外的全局 **1.0.0** host；必要时可显式指定另一份
 同版本安装：
@@ -115,11 +114,10 @@ npm run release                                  # → ~/.local/share/pi-Serraly
 npm run release -- --build-id <id> --output /absolute/path/to/new-release
 ```
 
-release 投影统一锁的运行依赖图，执行
-`npm ci --omit=dev --legacy-peer-deps --include=optional --ignore-scripts`，
-保留 LiteParse 平台 binding。目标路径不能包含符号链接或发现目录，也不能继承
-祖先的物理宿主；manifest、运行锁、dist digest 和 OCR-off native PDF 探测
-必须通过。既有目录拒绝覆盖，这一步**不**修改 Pi settings 或 extensions。
+release 不安装运行依赖、不携带 lock 或 `node_modules`，只复制已验证的 dist
+和许可。目标路径不能包含符号链接或发现目录，也不能继承祖先的物理宿主；
+manifest 与 dist digest 必须通过。既有目录拒绝覆盖，这一步**不**修改 Pi
+settings 或 extensions。
 
 ## 更新与回滚
 
@@ -127,8 +125,8 @@ release 投影统一锁的运行依赖图，执行
 目录并切换引用，不覆写正在使用的目录，也不用 `pi install .` 加载源码根。真实
 settings 切换需要单独授权，并满足以下约束：
 
-1. 递增根版本并发布新目录，完成 verify、release validation、runtime-only
-   安装/外部宿主检查和 CLI/SDK 验收。Node 最低版本 22.19 未实跑、平台 skip 或
+1. 递增根版本并发布新目录，完成 verify、release validation、外部宿主启动
+   检查和 CLI/SDK 验收。Node 最低版本 22.19 未实跑、平台 skip 或
    未人工查看的 PTY 必须列为资格缺口，不能用较新 Node 的成功替代最低基线。
 2. 停止所有相关 Pi 实例，确认 child 与 MCP/后台资源已关闭；备份 user settings
    与相关已信任项目 settings 的精确内容。

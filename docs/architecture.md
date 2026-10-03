@@ -1,6 +1,6 @@
 # 仓库架构
 
-## 八个维护边界
+## 七个维护边界
 
 根 package 是资源清单和开发工作区，不是总 extension factory。
 每个模块仅注册自己的能力；关闭一个入口不会通过总工厂间接重新启用它。
@@ -12,20 +12,19 @@
 | `loop` | `/loop` 解析、内存任务、忙闲调度、`local-loop` | UI scheduler、持久化恢复 |
 | `tools` | `apply_patch` 补丁算法、文件锁、预检、提交、`apply_patch.v1` 报告；`grep`/`find`/`ls` 同名替换的 codemode 注册 | UI 历史 diff 重建 |
 | `background-shell` | 进程/日志、dock、通知、状态、同进程 reload handoff | 跨进程恢复或 UI 工具卡接管 |
-| `docparser` | 三个 document 工具、FIFO、worker、取消/超时/崩溃清理和预算 | OCR 服务安装或其他模块的生命周期 |
 | `add-dir` | 目录作用域与存储、外部指令 prompt section、skill 路径发现、`@` 补全包装、目录 widget | 模型工具、自动 reload、cwd 切换或工具权限 |
 | `subagents` | `Agent`/`StopAgent`/`AgentStatus`、`/agents`、子会话选择/准入/可信状态、调度与关闭、专用展示 | 父工具闭包、兄弟模块私有实现、共享 MCP 连接池或跨进程任务恢复 |
 
 工具契约和详细算法留在各模块 README/子系统文档。UI 的私有宿主访问只在
 `modules/ui/src/compat/`；其 host 事件只由 `src/lifecycle.ts` 注册。
-UI 的共享 scheduler 不管理 loop 定时器、后台进程、文档 worker 或子会话资源。
+UI 的共享 scheduler 不管理 loop 定时器、后台进程或子会话资源。
 
 ## 源码与运行树
 
 ```text
-modules/              八个 private npm workspace；源码、测试、模块文档/许可
+modules/              七个 private npm workspace；源码、测试、模块文档/许可
 scripts/              工作区命令、构建和独立运行包
-test/integration/     产物、实际 loader、原生子会话和八入口共存
+test/integration/     产物、实际 loader、子会话和七入口共存
 docs/                 跨模块设计与开发
 dist/                 已验证的开发构建输出；不可直接用于真实安装
 ```
@@ -35,8 +34,8 @@ dist/                 已验证的开发构建输出；不可直接用于真实�
 物理运行依赖。workspace 内的开发宿主副本不得延伸到正式运行树。
 
 正式运行包位于开发依赖树之外的不可变 release 目录，只有运行 manifest、
-投影自统一 npm lock 的运行锁、dist、许可及 LiteParse 运行依赖。
-它没有 workspace 链接、开发工具、技能/模板/主题资源声明。
+dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace 链接或
+开发工具，也不声明技能/模板/主题资源。
 
 ## 构建闭包
 
@@ -44,10 +43,8 @@ dist/                 已验证的开发构建输出；不可直接用于真实�
   bundle 并携带其 BSD 文本。
 - background-shell 用 tsc 编译完整 `extensions/` + `src/`，保留 lazy import；
   根入口只是同目录转发，不另行注册能力。
-- docparser 的主入口 bundle，三个 worker/protocol/output `.mjs` 保持相对位置；
-  LiteParse 2.10.1 及平台 optional binding 是外部运行依赖。
 - add-dir 的主入口 bundle 将 `@henryqw/pi-config-store@2.0.2` 及其 CJS 锁依赖
-  全部打入产物，保持根运行依赖仅 LiteParse 的现有合同。
+  全部打入产物，不增加根运行依赖。
 - subagents 是独立 ESM bundle，保留上游 MIT 许可及固定来源；Pi SDK、pi-ai、
   pi-tui 和 TypeBox external，不增加运行依赖或额外 worker。
 - 在非发现暂存目录构建，检查 emitted import 图、必要 worker/许可和文件哈希后
@@ -56,12 +53,10 @@ dist/                 已验证的开发构建输出；不可直接用于真实�
   常规文件集及声明的 externals。编译后文件 import 使用普通显式路径；
   URL 编码、query/fragment、反斜杠和控制字符 specifier 均保守拒绝，避免
   文件系统路径与原生 ESM URL 指向不同实现。
-- release 只安装锁定运行依赖，检查自身及所有祖先的物理宿主、拒绝路径中的
-  符号链接；manifest、运行锁和 dist 完整性记录共同绑定 release digest。
-  npm 的 `.bin` 链接仅可指向该运行依赖树内的常规文件。digest 用于漂移检测，
-  不构成来源真实性签名。
-- 发布及候选验证都在有期限的隔离子进程中，从 worker 的实际依赖树解析
-  LiteParse，关闭 OCR 解析一个合成 PDF，验证 addon 和 PDFium 真实可用。
+- release 不执行任何依赖安装，检查自身及所有祖先的物理宿主、拒绝路径中的
+  符号链接，并要求运行树不含 `node_modules`、链接或非普通文件；manifest 与
+  dist 完整性记录共同绑定 release digest。digest 用于漂移检测，不构成来源
+  真实性签名。
 - 正式更新创建新目录，不能覆写旧 release。在途 worker 不会读到半更新产物。
 
 ## 跨模块交互
@@ -72,7 +67,7 @@ Agent/StopAgent 的专用 renderer 同样保持优先，不因属于私有包而
 footer 消费宿主提供的 extension statuses，不清理其他模块的状态键。
 
 后台通知、`.pi/tasks` 元数据和补丁报告由对应能力维护，UI 不改写格式。
-deferred questions/background/document 工具仍通过内置 `tool_search` 发现；
+deferred questions/background 工具仍通过内置 `tool_search` 发现；
 `defaultTools: ["+tool_search"]` 是用户选择，不由安装脚本隐式重写。
 tools 模块以同名扩展覆盖内置 `grep`/`find`/`ls`，exposure 为 `codemode`：
 默认不直接声明给模型，启用内置 `codemode` 后由脚本调用，显式激活仍然有效。

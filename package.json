@@ -20,12 +20,11 @@
       "./dist/pi-loop/index.js",
       "./dist/pi-tools/index.js",
       "./dist/pi-background-shell/index.js",
-      "./dist/pi-docparser/index.js",
       "./dist/pi-add-dir/index.js",
       "./dist/pi-subagents/index.js"
     ]
   },
-  "dependencies": { "@llamaindex/liteparse": "2.10.1" },
+  "dependencies": {},
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",
     "@earendil-works/pi-coding-agent": "*",
@@ -40,8 +39,6 @@
     "@types/node": "24.10.1",
     "esbuild": "0.28.2",
     "diff": "8.0.4",
-    "oxfmt": "0.49.0",
-    "oxlint": "1.76.0",
     "proper-lockfile": "4.1.2",
     "tsx": "4.23.12",
     "typescript": "5.9.3",

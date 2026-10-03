@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile, realpath, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { createRequire, syncBuiltinESMExports } from "node:module";
-import childProcess from "node:child_process";
+import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { entries, toolsByEntry, commandsByEntry, questionArgs, patchInput } from "./contracts.mjs";
@@ -44,7 +43,7 @@ async function open(indices = config.indices ?? allIndices, packageFilter = conf
 	await loader.reload();
 	const loaded = loader.getExtensions();
 	assert.deepEqual(loaded.errors, [], "actual loader resolves compiled entry and lazy/native closure");
-	assert.deepEqual(loader.getSkills().skills, [], "package does not activate the docparser companion skill");
+	assert.deepEqual(loader.getSkills().skills, [], "packaged release declares no skills, so no companion skill activates");
 	for (const { name, config } of loaded.runtime.pendingProviderRegistrations) modelRuntime.registerProvider(name, config);
 	const model = modelRuntime.getModel("serraly-fixture", "fixture");
 	assert.ok(model);
@@ -309,54 +308,6 @@ async function background(h) {
 	await until(() => !pidExists(cleanup.pid), "session_shutdown released default child");
 }
 
-async function documents(h) {
-	const path = join(import.meta.dirname, "minimal.pdf");
-	// Instrument the OS boundary, not LiteParse or the production executor. Every
-	// successful result below is produced by the real installed native binding.
-	const originalSpawn = childProcess.spawn;
-	const workers = []; let intervention;
-	childProcess.spawn = function (...args) {
-		const child = originalSpawn.apply(this, args);
-		if (args[1]?.some((argument) => argument.endsWith("/native-worker.mjs"))) {
-			workers.push(args[1].find((argument) => argument.endsWith("/native-worker.mjs")));
-			const action = intervention; intervention = undefined;
-			if (action) child.once("spawn", () => action(child));
-		}
-		return child;
-	};
-	syncBuiltinESMExports();
-	try {
-		const parsed = await execute(h, "document_parse", { path, format: "json", ocr: "off", maxPages: 1, numWorkers: 1, dpi: 72 });
-		assert.equal(parsed.details.pageCount, 1);
-		assert.equal(JSON.parse(await readFile(parsed.details.outputPath, "utf8")).text, "Hello Pi");
-		assert.ok(parsed.details.outputPath.startsWith(process.env.TMPDIR + "/"));
-		const found = await execute(h, "document_search", { path, phrase: "Hello", ocr: "off", maxPages: 1, maxResults: 1, numWorkers: 1, dpi: 72 });
-		assert.equal(found.details.hits.length, 1); assert.equal(found.details.hits[0].text, "Hello");
-		assert.equal(found.details.hits[0].pageNum, 1); assert.equal(found.details.truncatedByCount, false);
-		const screenshot = await execute(h, "document_screenshot", { path, pages: "1", dpi: 72 });
-		assert.equal(screenshot.details.screenshots.length, 1);
-		const image = screenshot.content.find((item) => item.type === "image");
-		assert.equal(image.mimeType, "image/png");
-		assert.deepEqual(Buffer.from(image.data, "base64").subarray(0, 8), Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
-		assert.ok((await stat(screenshot.details.screenshots[0].outputPath)).size > 8);
-		const aborted = new AbortController(); intervention = () => aborted.abort();
-		await assert.rejects(execute(h, "document_parse", { path, ocr: "off" }, aborted.signal), /cancel|abort/i);
-		intervention = (child) => child.kill("SIGKILL");
-		await assert.rejects(execute(h, "document_parse", { path, ocr: "off" }), /worker|signal|crash/i);
-		const recovered = await execute(h, "document_search", { path, phrase: "Pi", ocr: "off", dpi: 72 });
-		assert.equal(recovered.details.hits[0].text, "Pi", "worker failure does not terminate Pi or poison FIFO executor");
-		assert.ok(workers.length >= 6, "native cancellation/crash were active-worker tests, not pre-aborted shortcuts");
-		for (const worker of workers) assert.equal(await realpath(worker), join(release, "dist/pi-docparser/native-worker.mjs"));
-		// LiteParse is import-only (no CommonJS require export). Resolve with
-		// Node's actual ESM resolver from the staged worker's module directory.
-		const liteparse = childProcess.execFileSync(process.execPath, ["--input-type=module", "-e",
-			'process.stdout.write(import.meta.resolve("@llamaindex/liteparse"))'],
-			{ cwd: join(release, "dist/pi-docparser"), env: process.env, encoding: "utf8" });
-		assert.ok((await realpath(new URL(liteparse))).startsWith(join(release, "node_modules") + "/"), "worker resolves NEW release dependency tree");
-		assert.equal(existsSync(join(release, "node_modules/@earendil-works")), false);
-	} finally { childProcess.spawn = originalSpawn; syncBuiltinESMExports(); }
-}
-
 async function footerAndFocus(h) {
 	const ui = await mount(h);
 	try {
@@ -535,14 +486,13 @@ if (scenario === "filters") {
 		}
 		else if (scenario === "contracts") await contracts(h);
 		else if (scenario === "background") await background(h);
-		else if (scenario === "documents") await documents(h);
 		else if (scenario === "footer-focus") await footerAndFocus(h);
 		else if (scenario === "add-dir") await addDir(h);
 		else if (scenario === "discovery") {
 			inventory(h, allIndices);
-			const searched = await execute(h, "tool_search", { query: "+AskUserQuestion +bg_run +document_parse" });
+			const searched = await execute(h, "tool_search", { query: "+AskUserQuestion +bg_run" });
 			assert.ok(searched.content[0].text.includes("AskUserQuestion"));
-			for (const name of ["AskUserQuestion", "bg_run", "document_parse"]) assert.ok(h.session.getActiveToolNames().includes(name), "tool_search discovers and activates " + name);
+			for (const name of ["AskUserQuestion", "bg_run"]) assert.ok(h.session.getActiveToolNames().includes(name), "tool_search discovers and activates " + name);
 		} else assert.fail("Unknown worker scenario " + scenario);
 	} finally { await h.close(); }
 }

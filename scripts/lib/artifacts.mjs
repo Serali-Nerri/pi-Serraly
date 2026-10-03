@@ -22,14 +22,14 @@ export async function validateDist(directory) {
 	const inputs = new Set(files); // Reject linked roots/children before opening executable text.
 	for (const module of modules) {
 		const output = join(directory, module.runtime);
-		for (const path of ["index.js", ...(module.assets ?? []), ...module.licenses, ...(module.generatedLicenses ?? [])]) {
+		for (const path of ["index.js", ...module.licenses, ...(module.generatedLicenses ?? [])]) {
 			try {
 				const stat = await lstat(join(output, path));
 				if (!stat.isFile() || stat.size === 0) throw new Error("Expected a nonempty regular file");
 			} catch (error) { throw new Error(`Incomplete artifact: ${module.runtime}/${path}`, { cause: error }); }
 		}
 	}
-	const externalImport = (path) => path.startsWith("node:") || path === "@llamaindex/liteparse" || hostExternal.some((pattern) =>
+	const externalImport = (path) => path.startsWith("node:") || hostExternal.some((pattern) =>
 		pattern.endsWith("*") ? path.startsWith(pattern.slice(0, -1)) : path === pattern);
 	// Analyze every emitted executable, including forked workers and lazy chunks.
 	// Resolution must not read another tree and silently bundle it only in memory.
@@ -37,7 +37,7 @@ export async function validateDist(directory) {
 		entryPoints: files.filter((path) => /\.[cm]?js$/.test(path)), outbase: resolve(directory),
 		outdir: join(directory, ".validation-only"), write: false, bundle: true,
 		platform: "node", format: "esm", target: "node22", metafile: true,
-		external: [...hostExternal, "@llamaindex/liteparse"],
+		external: hostExternal,
 		plugins: [{
 			name: "sealed-artifact-closure",
 			setup(analyzer) {
@@ -67,7 +67,7 @@ export async function validateDist(directory) {
 	}
 	for (const output of Object.values(analyzed.metafile.outputs)) {
 		for (const entry of output.imports) {
-			if (entry.external && !/^(?:node:|@earendil-works\/|typebox(?:\/|$)|@llamaindex\/liteparse$)/.test(entry.path)) {
+			if (entry.external && !/^(?:node:|@earendil-works\/|typebox(?:\/|$))/.test(entry.path)) {
 				throw new Error(`Undeclared runtime import: ${entry.path}`);
 			}
 		}
