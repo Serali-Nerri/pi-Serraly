@@ -211,3 +211,29 @@ test("save refuses malformed or non-object files without data loss or runtime ch
 		assert.deepEqual(readdirSync(directory), ["claude-style-tools.json"]);
 	}
 });
+
+test("a valid configuration larger than the bound is refused instead of loaded", () => {
+	// Valid JSON that a bounded reader must reject: the padding alone is over 64 KiB.
+	const oversized = `${JSON.stringify({ mode: "off", padding: "x".repeat(64 * 1024) })}`;
+	writeFileSync(configPath(), oversized);
+	assert.deepEqual(loadInChild().config, expected);
+	assert.throws(() => updateConfig({ mode: "off" }), /exceeds 65536 bytes/);
+	assert.equal(readFileSync(configPath(), "utf8"), oversized);
+	assert.deepEqual(config, expected);
+	assert.deepEqual(readdirSync(directory), ["claude-style-tools.json"]);
+});
+
+test("a save that would write more than the bound keeps the previous file and memory", () => {
+	// A stored file just under the bound is readable; merging the retained fields
+	// pushes the serialized result over it, so the save must be refused before any
+	// temporary file is created.
+	const stored = (size: number) => `{\n  "unknown": "${"x".repeat(size)}"\n}`;
+	let size = 64 * 1024;
+	while (Buffer.byteLength(stored(size)) >= 64 * 1024) size -= 8;
+	writeFileSync(configPath(), stored(size));
+	assert.ok(statSync(configPath()).size < 64 * 1024);
+	assert.throws(() => updateConfig({ editPreviewLines: 24 }), /exceed 65536 bytes/);
+	assert.equal(readFileSync(configPath(), "utf8"), stored(size));
+	assert.deepEqual(config, expected);
+	assert.deepEqual(readdirSync(directory), ["claude-style-tools.json"]);
+});

@@ -20,6 +20,7 @@
 | 库 | 拥有的契约 | 不拥有 |
 | --- | --- | --- |
 | `pi-apply-patch-protocol` | `apply_patch.v1` 格式标识、四项输出预算、`ApplyPatch*` wire 类型 | 生产者的 diff 算法/工作量预算/截断策略，消费者的防御阈值/清洗/降级 |
+| `pi-config-core` | 有界 JSON 读取与原子写入机制（大小/UTF-8/权限/并发语义） | 缺失/损坏/不可信文件的错误与信任策略、字段合并、路径与文件名 |
 
 工具契约和详细算法留在各模块 README/子系统文档。UI 的私有宿主访问只在
 `extensions/pi-ui/src/compat/`；其 host 事件只由 `src/lifecycle.ts` 注册。
@@ -87,6 +88,10 @@ dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace
 - tools 与 ui 各自 bundle 同一份 `pi-apply-patch-protocol`：wire 常量与类型只有
   该库一处定义，两侧只保留各自的算法、阈值与展示策略。契约一致性由根
   一致性套件用真实生产者输出与真实消费者解析器互验，不做常量自证。
+- ui 与 subagents 各自 bundle 同一份 `pi-config-core`：读取上限 64 KiB、严格
+  UTF-8、`0600` 文件、`0700` 新父目录和 `<pid>.<uuid>` 临时名只在该库一处实现；
+  加载失败回退、保存前重读合并、项目层信任状态和 log/throw 语义仍各自保留。
+  add-dir 继续使用自己的异步锁定 store，不迁移到该库。
 - 在非发现暂存目录构建，检查 emitted import 图、必要许可和文件哈希后才发布
   开发 dist。许可检查使用完整的必需文件清单，不以目录存在代替法律闭包。
 - 每个包先在同级 `.build-dist-*` 候选目录编译（与 live `dist` 同深度，保证

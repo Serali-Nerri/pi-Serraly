@@ -1,7 +1,9 @@
-import { randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
+import { readJsonFileBoundedSync, writeTextFileAtomicSync } from "pi-config-core";
+
+/** The stored configuration must stay readable by the same bound on the next start. */
+const CONFIG_MAX_BYTES = 64 * 1024;
 
 export type CompactStyleMode = "on" | "compact" | "off";
 export interface Config {
@@ -72,20 +74,18 @@ export function configPath(): string {
 }
 
 function loadConfig(): Config {
-	try { return normalizeConfig(JSON.parse(readFileSync(configPath(), "utf8"))); }
-	catch { return normalizeConfig(undefined); }
+	// A missing, malformed or oversized file loads defaults; nothing is created.
+	try {
+		const read = readJsonFileBoundedSync(configPath(), CONFIG_MAX_BYTES);
+		return normalizeConfig(read.source === "file" ? read.value : undefined);
+	} catch { return normalizeConfig(undefined); }
 }
 
 function readStoredConfig(path: string): Record<string, unknown> {
-	let contents: string;
-	try { contents = readFileSync(path, "utf8"); }
-	catch (cause) {
-		if ((cause as NodeJS.ErrnoException).code === "ENOENT") return {};
-		throw cause;
-	}
-	const stored: unknown = JSON.parse(contents);
-	if (!isRecord(stored)) throw new Error("Style configuration must be a JSON object");
-	return stored;
+	const read = readJsonFileBoundedSync(path, CONFIG_MAX_BYTES);
+	if (read.source === "missing") return {};
+	if (!isRecord(read.value)) throw new Error("Style configuration must be a JSON object");
+	return read.value;
 }
 
 // Loading is read-only: migration happens only when the user explicitly saves.
@@ -101,14 +101,8 @@ export function updateConfig(next: Partial<Config>): void {
 	// Re-read at save time so unrelated fields written since startup survive.
 	const stored: Record<string, unknown> = { ...readStoredConfig(path), ...normalized };
 	for (const key of discardedKeys) delete stored[key];
-	mkdirSync(dirname(path), { recursive: true });
-	const temporary = `${path}.${process.pid}.${randomUUID()}.tmp`;
-	try {
-		writeFileSync(temporary, `${JSON.stringify(stored, null, 2)}\n`, { mode: 0o600, flag: "wx" });
-		renameSync(temporary, path);
-	} finally {
-		try { unlinkSync(temporary); } catch { /* Already renamed, or never created. */ }
-	}
+	// Refuse before touching the file system: memory only changes after the write lands.
+	writeTextFileAtomicSync(path, `${JSON.stringify(stored, null, 2)}\n`, CONFIG_MAX_BYTES);
 	Object.assign(config, normalized);
 }
 

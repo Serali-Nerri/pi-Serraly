@@ -1,7 +1,9 @@
 /**
  * config-io.ts — Config persistence (read/write) with override layers.
  *
- * Atomic writes: write to .tmp then rename.
+ * Reads are bounded and writes are atomic through pi-config-core: a file larger
+ * than the bound is refused rather than partially loaded, and a save whose bytes
+ * exceed the bound leaves the previous file untouched.
  * Loaded at session_start; saved on every /agents menu mutation.
  *
  * Two layers: the global file <agentDir>/subagents-lite.json and a
@@ -12,15 +14,17 @@
  * warning (and preserved for write-back); a malformed project file is never
  * overwritten. See docs/adr/0008-project-config-as-override-layer.md.
  */
-import * as fs from "node:fs";
 import * as path from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
+import { readJsonFileBoundedSync, writeTextFileAtomicSync } from "pi-config-core";
 import type { SubagentsConfig } from "../models/model-precedence.js";
 import { CONFIG_AGENT_NON_MODEL_KEYS } from "./types.js";
 import { isPlainObject, validateRawLayer } from "./config-validation.js";
 
 /** File name of the config in both the global agent dir and a project's .pi dir. */
 const CONFIG_FILE_NAME = "subagents-lite.json";
+/** A configuration file must stay readable by the same bound that wrote it. */
+const CONFIG_MAX_BYTES = 64 * 1024;
 /** Resolve at use time so a custom Pi agent directory is never cached on import. */
 export function resolveConfigPath(agentDir?: string): string {
   return path.join(agentDir ?? getAgentDir(), CONFIG_FILE_NAME);
@@ -254,7 +258,9 @@ function readGlobalRaw(agentDir?: string): RawConfig {
   const configPath = resolveConfigPath(agentDir);
   let parsed: unknown;
   try {
-    parsed = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    const read = readJsonFileBoundedSync(configPath, CONFIG_MAX_BYTES);
+    if (read.source === "missing") return {};
+    parsed = read.value;
   } catch {
     return {};
   }
@@ -264,10 +270,11 @@ function readGlobalRaw(agentDir?: string): RawConfig {
 
 /** Read the project file; missing = absent, unreadable/invalid = malformed + warning. */
 function readProjectRaw(projectPath: string): ProjectRead {
-  if (!fs.existsSync(projectPath)) return null;
   let parsed: unknown;
   try {
-    parsed = JSON.parse(fs.readFileSync(projectPath, "utf-8"));
+    const read = readJsonFileBoundedSync(projectPath, CONFIG_MAX_BYTES);
+    if (read.source === "missing") return null;
+    parsed = read.value;
   } catch (err) {
     console.warn(`[subagents] Ignoring malformed project config ${projectPath}: ${err}`);
     return "malformed";
@@ -302,13 +309,10 @@ function malformedSection(projectPath: string, section: string): "malformed" {
 
 // ── Save ─────────────────────────────────────────────────────────────
 
-/** Write JSON atomically: tmp file in the same directory, then rename. */
+/** Write JSON atomically through the shared mechanism; serialization stays local. */
 function writeJsonAtomic(filePath: string, config: unknown): void {
-  const tmpPath = filePath + ".tmp";
   try {
-    fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    fs.writeFileSync(tmpPath, JSON.stringify(config, null, 2), "utf-8");
-    fs.renameSync(tmpPath, filePath);
+    writeTextFileAtomicSync(filePath, JSON.stringify(config, null, 2), CONFIG_MAX_BYTES);
   } catch (err) {
     console.error(`[subagents] Failed to save config: ${err}`);
   }

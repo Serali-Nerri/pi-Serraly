@@ -343,3 +343,48 @@ describe("createConfigIO save — per-layer writes", () => {
     expect(existsSync(join(projectDir, "subagents-lite.json"))).toBe(false);
   });
 });
+
+describe("bounded configuration files", () => {
+  const OVERSIZED = JSON.stringify({ agent: { default: "global" }, padding: "x".repeat(64 * 1024) });
+
+  it("an oversized global file reads as empty instead of being loaded", () => {
+    writeFileSync(GLOBAL_CONFIG_PATH, OVERSIZED);
+    const io = createConfigIO(projectDir);
+    const loaded = io.load();
+
+    expect(loaded.global.agent?.default).toBeUndefined();
+    expect(loaded.projectStatus).toBe("absent");
+    expect(readFileSync(GLOBAL_CONFIG_PATH, "utf-8")).toBe(OVERSIZED);
+  });
+
+  it("an oversized project file is malformed, warns once and is never written", () => {
+    writeFileSync(join(projectDir, "subagents-lite.json"), OVERSIZED);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const io = createConfigIO(projectDir);
+      io.load();
+      io.saveProject({ agent: { default: "p" } });
+
+      expect(warn.mock.calls.filter(([message]) => String(message).includes("malformed")).length).toBe(2);
+      expect(readFileSync(join(projectDir, "subagents-lite.json"), "utf-8")).toBe(OVERSIZED);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("a save whose serialized result exceeds the bound keeps the previous bytes", () => {
+    writeGlobal({ agent: { graceTurns: 5 } });
+    const original = readFileSync(GLOBAL_CONFIG_PATH, "utf-8");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const io = createConfigIO(projectDir);
+      io.load();
+      io.saveGlobal({ agent: { default: "x".repeat(64 * 1024) } });
+
+      expect(error.mock.calls.some(([message]) => String(message).includes("Failed to save config"))).toBe(true);
+      expect(readFileSync(GLOBAL_CONFIG_PATH, "utf-8")).toBe(original);
+    } finally {
+      error.mockRestore();
+    }
+  });
+});
