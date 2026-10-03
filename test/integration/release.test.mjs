@@ -72,13 +72,15 @@ test("release target defaults to the package version, not a digest", async () =>
 	const { releaseTarget } = await import("../../scripts/release.mjs");
 	const home = join(tmpdir(), "serraly-release-home");
 	assert.deepEqual(releaseTarget([], { version: "0.1.0", home }),
-		{ output: join(home, ".local/share/pi-Serraly/releases/0.1.0"), buildId: "0.1.0" });
+		{ output: join(home, ".local/share/pi-Serraly/releases/0.1.0"), buildId: "0.1.0", packages: [] });
 	assert.deepEqual(releaseTarget(["--build-id", "1.2.3"], { version: "0.1.0", home }),
-		{ output: join(home, ".local/share/pi-Serraly/releases/1.2.3"), buildId: "1.2.3" });
+		{ output: join(home, ".local/share/pi-Serraly/releases/1.2.3"), buildId: "1.2.3", packages: [] });
 	assert.deepEqual(releaseTarget(["--output", "relative/out"], { version: "0.1.0", home }),
-		{ output: resolve("relative/out"), buildId: "0.1.0" });
+		{ output: resolve("relative/out"), buildId: "0.1.0", packages: [] });
 	assert.deepEqual(releaseTarget(["--output", join(home, "elsewhere"), "--build-id", "2.0.0"], { version: "0.1.0", home }),
-		{ output: join(home, "elsewhere"), buildId: "2.0.0" });
+		{ output: join(home, "elsewhere"), buildId: "2.0.0", packages: [] });
+	assert.deepEqual(releaseTarget(["--package", "pi-ui", "--package", "pi-loop"], { version: "0.1.0", home }),
+		{ output: join(home, ".local/share/pi-Serraly/releases/0.1.0"), buildId: "0.1.0", packages: ["pi-ui", "pi-loop"] });
 	assert.throws(() => releaseTarget(["--nope"], { version: "0.1.0", home }), /Usage/);
 	assert.throws(() => releaseTarget(["--build-id"], { version: "0.1.0", home }), /Usage/);
 });

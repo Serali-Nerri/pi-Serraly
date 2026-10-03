@@ -31,7 +31,7 @@ function isHostPath(path) {
 const matchesExternal = (path, patterns) => patterns.some((pattern) =>
 	pattern.endsWith("/*") ? path.startsWith(pattern.slice(0, -1)) : path === pattern);
 
-function resolveNpmCli() {
+export function npmCliPath() {
 	const candidates = [process.env.npm_execpath,
 		resolve(dirname(process.execPath), "node_modules/npm/bin/npm-cli.js"),
 		resolve(dirname(process.execPath), "../lib/node_modules/npm/bin/npm-cli.js")].filter(Boolean);
@@ -76,7 +76,7 @@ export async function packFiles(directory) {
 		await mkdir(project);
 		await writeFile(join(project, "package.json"), '{"name":"pack-probe","private":true}\n');
 		const env = await isolatedNpmEnvironment(scratch);
-		const result = await run(process.execPath, [resolveNpmCli(), "pack", "--dry-run", "--ignore-scripts", "--offline", "--json", directory],
+		const result = await run(process.execPath, [npmCliPath(), "pack", "--dry-run", "--ignore-scripts", "--offline", "--json", directory],
 			{ cwd: project, env });
 		if (result.code !== 0) throw new Error(`npm pack dry-run failed: ${result.stderr || result.stdout}`);
 		let entries;

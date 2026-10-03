@@ -13,21 +13,26 @@ import { createRelease } from "./lib/package.mjs";
  */
 export function releaseTarget(args, { version, home = homedir() } = {}) {
 	let output, buildId;
+	const packages = [];
 	for (let index = 0; index < args.length; index++) {
 		if (args[index] === "--output" && args[index + 1]) output = args[++index];
 		else if (args[index] === "--build-id" && args[index + 1]) buildId = args[++index];
-		else throw new Error("Usage: npm run release -- [--build-id <id>] [--output <absolute-path>]");
+		else if (args[index] === "--package" && args[index + 1]) packages.push(args[++index]);
+		else throw new Error("Usage: npm run release -- [--package <npm-name>]... [--build-id <id>] [--output <absolute-path>]");
 	}
 	buildId ??= version;
 	if (!buildId) throw new Error("No version available; pass --build-id or set package.json version");
 	output ??= join(home, ".local/share/pi-Serraly/releases", buildId);
-	return { output: resolve(output), buildId };
+	return { output: resolve(output), buildId, packages };
 }
 
 async function main() {
 	const version = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")).version;
 	const target = releaseTarget(process.argv.slice(2), { version });
-	const result = await createRelease(target.output, { buildId: target.buildId });
+	const result = await createRelease(target.output, {
+		buildId: target.buildId,
+		packages: target.packages.length ? target.packages : undefined,
+	});
 	console.log(`Prepared immutable runtime package: ${result.path}\nNo settings or global extensions were changed.`);
 }
 

@@ -114,14 +114,26 @@ node scripts/capture.mjs /tmp/pi-ui-captures
 
 ```sh
 npm run release                                  # → ~/.local/share/pi-Serraly/releases/<version>
+# 只交付部分扩展；重复 --package 选择子集，默认七个全部
+npm run release -- --package pi-ui
+npm run release -- --package pi-ask-user-question --package pi-subagents
 # 显式覆盖（临时验收目录或特殊 build id）
 npm run release -- --build-id <id> --output /absolute/path/to/new-release
 ```
 
-release 不安装运行依赖、不携带 lock 或 `node_modules`，只复制已验证的 dist
-和许可。目标路径不能包含符号链接或发现目录，也不能继承祖先的物理宿主；
-manifest 与 dist digest 必须通过。既有目录拒绝覆盖，这一步**不**修改 Pi
-settings 或 extensions。
+选择在创建目标目录、构建或启动任何子进程之前校验：空名称、重复、未知名称和库
+名称都会直接失败。release 默认包含七个扩展；聚合 manifest 只声明被选中的入口，
+`release.json` 记录每个成员的路径与封印摘要。
+
+release 不安装运行依赖、不携带 lock 或 `node_modules`，只复制已验证的 payload。
+目标路径不能包含符号链接或发现目录，也不能继承祖先的物理宿主；聚合 manifest、
+成员封印和整体 digest 必须通过。既有目录拒绝覆盖，这一步**不**修改 Pi settings
+或 extensions。
+
+每个扩展同时是独立 npm 包：集成测试对每个包执行真实 `npm pack`，在开发树外的
+consumer 目录里以 `--offline --ignore-scripts --legacy-peer-deps` 安装本地 tarball，
+再由开发树外的真实宿主 loader 加载。该 fixture 证明包的独立性与 bundled 闭包，
+不投影 registry 依赖图，也不安装宿主 peer。
 
 ## 更新与回滚
 
