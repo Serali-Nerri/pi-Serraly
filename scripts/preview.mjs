@@ -382,7 +382,7 @@ export async function createSandbox({ scenario = "default" } = {}) {
 		// build output. Runtime loads only this external ESM stage, never source.
 		// Even esbuild's compiler service inherits only the isolated allowlist.
 		await writeFile(join(base, "safety.mjs"), safetySource);
-		const options = { entryPoints: [join(root, "modules/ui/src/index.ts")], outfile: env.PI_UI_STAGE,
+		const options = { entryPoints: [join(root, "extensions/pi-ui/src/index.ts")], outfile: env.PI_UI_STAGE,
 			bundle: true, platform: "node", format: "esm", target: "node22", legalComments: "eof", metafile: true,
 			external: ["@earendil-works/*", "typebox", "typebox/*"] };
 		const compiler = join(base, "compile.mjs");
@@ -394,7 +394,7 @@ export async function createSandbox({ scenario = "default" } = {}) {
 		assert.ok(!existsSync(join(base, "node_modules")));
 		await writeFile(join(base, "package.json"), '{"type":"module"}\n');
 		await writeFile(join(base, "pi-ui/package.json"), '{"type":"module"}\n');
-		await cp(join(root, "modules/ui/licenses"), join(base, "pi-ui/licenses"), { recursive: true });
+		await cp(join(root, "extensions/pi-ui/licenses"), join(base, "pi-ui/licenses"), { recursive: true });
 		await writeFile(join(base, "guard.js"), guardSource);
 		await writeFile(join(base, "fixture.js"), `const richFixture = ${JSON.stringify(scenario === "rich" ? richFixture : null)};\n` + fixtureSource);
 		if (scenario === "rich") await writeFile(join(cwd, richFixture.seedName), richFixture.seed);

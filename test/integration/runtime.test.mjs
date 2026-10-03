@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { entries, releaseFixture, sdkScenario, sandboxFixture, cliArgs, diagnostics } from "./helpers/runtime.mjs";
+import { names, releaseEntries, releaseFixture, sdkScenario, sandboxFixture, cliArgs, diagnostics } from "./helpers/runtime.mjs";
 import { runChild } from "../../scripts/lib/process.mjs";
 import { runRpc, captureReleasePty } from "./helpers/host-cli.mjs";
 import { ptyAvailability } from "../../scripts/capture.mjs";
@@ -11,27 +11,27 @@ let stage;
 before(async () => { stage = await releaseFixture(); }, { timeout: 180000 });
 after(async () => { await stage?.cleanup(); });
 
-// Break caught: a missing compiled entry/worker or a release that still loads
+// Break caught: a missing compiled entry/lazy module or a release that still loads
 // through workspace dependencies cannot reach any real loader scenario.
 test("release manifest exposes only seven compiled extensions, never companion skills", async () => {
 	const manifest = JSON.parse(await readFile(join(stage.release, "package.json"), "utf8"));
-	assert.deepEqual(manifest.pi, { extensions: entries });
+	assert.deepEqual(manifest.pi, { extensions: releaseEntries });
 });
 
-for (let index = 0; index < entries.length; index++) {
-	test(`compiled ${entries[index]} loads independently through Pi 1.0.0`, { timeout: 30000 }, async () => {
-		await sdkScenario(stage, "inventory", { indices: [index] });
+for (const name of names) {
+	test(`compiled ${name} loads independently through Pi 1.0.0`, { timeout: 30000 }, async () => {
+		await sdkScenario(stage, "inventory", { names: [name] });
 	});
 }
 
-for (const [order, indices] of [["manifest", entries.map((_, index) => index)], ["reversed", entries.map((_, index) => index).reverse()]]) {
+for (const [order, selection] of [["manifest", [...names]], ["reversed", [...names].reverse()]]) {
 	test(`seven compiled entries coexist without duplicate tools/commands (${order} order)`, { timeout: 30000 }, async () => {
-		await sdkScenario(stage, "inventory", { indices });
+		await sdkScenario(stage, "inventory", { names: selection });
 	});
 }
 
 test("compiled subagents alone validates real control tools without spawning and retains its dedicated message renderer", { timeout: 30000 }, async () => {
-	await sdkScenario(stage, "subagents-contracts", { indices: [6] });
+	await sdkScenario(stage, "subagents-contracts", { names: ["pi-subagents"] });
 });
 
 test("actual package settings can disable each compiled entry independently, including UI", { timeout: 60000 }, async () => {

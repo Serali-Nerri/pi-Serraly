@@ -7,7 +7,7 @@
 import { resolve } from "node:path";
 import { buildPackage } from "./lib/build-package.mjs";
 import { discoverPackages, buildOrder } from "./lib/packages.mjs";
-import { verifyPackageArtifact } from "./lib/package-artifacts.mjs";
+import { verifySourcePackage } from "./lib/package-artifacts.mjs";
 
 async function main() {
 	const args = process.argv.slice(2);
@@ -18,7 +18,7 @@ async function main() {
 	const pkg = packages.find((candidate) => candidate.directory === directory);
 	if (!pkg) throw new Error(`Not a discovered workspace package: ${directory}`);
 	if (check) {
-		await verifyPackageArtifact(pkg.directory);
+		await verifySourcePackage(pkg.directory);
 		console.log(`Verified ${pkg.name}@${pkg.manifest.version} artifact`);
 		return;
 	}

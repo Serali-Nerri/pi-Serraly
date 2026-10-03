@@ -10,7 +10,7 @@ before(async () => {
 	base = await mkdtemp(join(tmpdir(), "serraly-release-safety-"));
 	release = join(base, "qualified");
 	await createRelease(release, { buildId: "safety-fixture" });
-});
+}, { timeout: 300000 });
 after(async () => { if (base) await rm(base, { recursive: true, force: true }); });
 
 async function copy(name) {
@@ -18,6 +18,8 @@ async function copy(name) {
 	await cp(release, candidate, { recursive: true, verbatimSymlinks: true });
 	return candidate;
 }
+
+const member = (candidate, name = "pi-ui") => join(candidate, "extensions", name);
 
 test("release preparation refuses a symlink alias into extension discovery before publication", async () => {
 	const discovery = join(base, "agent/extensions");
@@ -62,6 +64,34 @@ test("release validation rejects declared runtime dependencies", async () => {
 	await assert.rejects(validateRelease(candidate), /runtime-only|dependenc/i);
 });
 
+test("release validation rejects a member whose payload was modified", async () => {
+	const candidate = await copy("tampered-member");
+	await writeFile(join(member(candidate), "dist/index.js"), "export default () => {};\n");
+	await assert.rejects(validateRelease(candidate), /integrity mismatch|pi-ui/);
+});
+
+test("release validation rejects a member manifest version that no longer matches its seal", async () => {
+	const candidate = await copy("tampered-member-version");
+	const manifest = JSON.parse(await readFile(join(member(candidate), "package.json"), "utf8"));
+	manifest.version = "9.9.9";
+	await writeFile(join(member(candidate), "package.json"), JSON.stringify(manifest, null, 2) + "\n");
+	await assert.rejects(validateRelease(candidate), /identity mismatch/);
+});
+
+test("release validation rejects a rewritten member identity record", async () => {
+	const candidate = await copy("tampered-record");
+	const record = JSON.parse(await readFile(join(candidate, "release.json"), "utf8"));
+	record.packages["pi-ui"].digest = "0".repeat(64);
+	await writeFile(join(candidate, "release.json"), JSON.stringify(record, null, 2) + "\n");
+	await assert.rejects(validateRelease(candidate), /member identity mismatch/);
+});
+
+test("release validation rejects a member directory that is not part of the manifest", async () => {
+	const candidate = await copy("extra-member");
+	await cp(member(candidate), join(candidate, "extensions", "pi-extra"), { recursive: true });
+	await assert.rejects(validateRelease(candidate), /duplicate release member|pi-extra|pi-ui/i);
+});
+
 test("validation verifies the recorded release digest", async () => {
 	const candidate = await copy("damaged-digest");
 	const record = JSON.parse(await readFile(join(candidate, "release.json"), "utf8"));
@@ -88,19 +118,19 @@ for (const name of ["package.json", "release.json"]) {
 	});
 }
 
-test("an identical external dist link cannot escape the immutable runtime tree", async () => {
-	const candidate = await copy("linked-dist");
-	const external = join(base, "external-dist");
-	await cp(join(candidate, "dist"), external, { recursive: true });
-	await rm(join(candidate, "dist"), { recursive: true });
-	await symlink(external, join(candidate, "dist"), "dir");
-	await assert.rejects(validateRelease(candidate), /symlink|real directory/i);
+test("an identical external member link cannot escape the immutable runtime tree", async () => {
+	const candidate = await copy("linked-member");
+	const external = join(base, "external-member");
+	await cp(member(candidate), external, { recursive: true });
+	await rm(member(candidate), { recursive: true });
+	await symlink(external, member(candidate), "dir");
+	await assert.rejects(validateRelease(candidate), /symlink|real directory|regular/i);
 });
 
 test("release validation rejects a symlinked payload instead of following it", async () => {
 	const candidate = await copy("linked-payload");
 	const external = join(base, "external-payload.js");
 	await writeFile(external, "export default 1;\n");
-	await symlink(external, join(candidate, "dist/pi-ui/linked-payload.js"));
-	await assert.rejects(validateRelease(candidate), /symlink|regular|node_modules/i);
+	await symlink(external, join(member(candidate), "dist/linked-payload.js"));
+	await assert.rejects(validateRelease(candidate), /symlink|regular/i);
 });

@@ -16,17 +16,17 @@
 | `subagents` | `Agent`/`StopAgent`/`AgentStatus`、`/agents`、子会话选择/准入/可信状态、调度与关闭、专用展示 | 父工具闭包、兄弟模块私有实现、共享 MCP 连接池或跨进程任务恢复 |
 
 工具契约和详细算法留在各模块 README/子系统文档。UI 的私有宿主访问只在
-`modules/ui/src/compat/`；其 host 事件只由 `src/lifecycle.ts` 注册。
+`extensions/pi-ui/src/compat/`；其 host 事件只由 `src/lifecycle.ts` 注册。
 UI 的共享 scheduler 不管理 loop 定时器、后台进程或子会话资源。
 
 ## 源码与运行树
 
 ```text
-modules/              七个 private npm workspace；源码、测试、模块文档/许可
-scripts/              工作区命令、构建和独立运行包
+extensions/pi-*/      七个 private npm workspace；源码、测试、包文档/许可、dist/
+packages/pi-*/        构建期共享库；无 Pi 资源入口
+scripts/              工作区命令、单包构建/封印和 release 组装
 test/integration/     产物、实际 loader、子会话和七入口共存
 docs/                 跨模块设计与开发
-dist/                 已验证的开发构建输出；不可直接用于真实安装
 ```
 
 工作区统一 npm 锁定。开发宿主是精确 Pi 1.0.0、TypeBox 1.3.27。
@@ -80,12 +80,11 @@ dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace
   pi-tui 和 TypeBox external，不增加运行依赖或额外 worker。
 - 在非发现暂存目录构建，检查 emitted import 图、必要许可和文件哈希后才发布
   开发 dist。许可检查使用完整的必需文件清单，不以目录存在代替法律闭包。
-- 每个包先在自己的 `.build-*` 暂存目录准备候选 payload：从真实 pack 清单复制
-  非 dist 的 allowlisted 文件，再生成新 dist 并置入封印占位。重新运行
-  `npm pack --dry-run --json --ignore-scripts --offline` 确认实际清单包含封印后，
-  封印（`dist/artifacts.json`）记录该清单除自身外的每个文件的 SHA-256。
-  全部检查（含包自带的 artifact 校验器和通用候选校验）通过才替换本包 dist；
-  失败保留旧的完整 dist，暂存目录不留残余。
+- 每个包先在同级 `.build-dist-*` 候选目录编译（与 live `dist` 同深度，保证
+  emitted source map 在最终位置仍解析回包内源码），再原子替换 live dist；
+  替换后写入封印并运行包自带的 artifact 校验器和通用 source 校验，任一步失败
+  都恢复旧的完整 dist，不留下候选或封印残余。封印（`dist/artifacts.json`）
+  记录本次真实 pack 清单除自身外的每个文件及其 SHA-256。
 - 封印校验分两侧：构建侧对本次真实 pack 清单逐个比对，部署侧按全部物理文件
   严格比对，拒绝额外文件、symlink、非普通文件和逃逸 import。
 - bundle 输入归属按 realpath 检查实际输入：包内源码、第三方 devDependency 与
@@ -141,7 +140,7 @@ MCP 延迟工具由宿主处理，搜索激活与 codemode store 只保留在该
 不释放连接。Clear 或父 reload/quit/new/resume/fork 关闭其所有权：发出 abort、
 等待初始化边界、发 `session_shutdown`、dispose 并解除引用；关闭入口幂等且可等待，
 不因无限等待模型 idle 而阻塞清理。运行并发上限不限制 retained session/MCP
-进程总数，长会话需要显式 Clear。详见[模块契约](../modules/subagents/README.md)。
+进程总数，长会话需要显式 Clear。详见[模块契约](../extensions/pi-subagents/README.md)。
 
 ## 文档职责
 

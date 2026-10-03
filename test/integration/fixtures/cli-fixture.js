@@ -4,7 +4,7 @@ import { TuiMainScreen, TuiAltScreen, visibleWidth } from "@earendil-works/pi-tu
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { registerScriptedProvider, report } from "./scripted-provider.js";
-import { toolsByEntry, commandsByEntry } from "./contracts.mjs";
+import { toolsByName, commandsByName } from "./contracts.mjs";
 function walk(root) {
 	const seen = new Set(), queue = [root];
 	while (queue.length) {
@@ -53,9 +53,9 @@ export default function (pi) {
 	const config = JSON.parse(readFileSync(process.env.SERRALY_CONFIG, "utf8"));
 	registerScriptedProvider(pi, state);
 	pi.on("session_start", async (_event, ctx) => {
-		assert.deepEqual(pi.getCommands().map((command) => command.name).sort(), commandsByEntry.flat().sort());
-		const ours = pi.getAllTools().filter((tool) => toolsByEntry.flat().includes(tool.name));
-		assert.deepEqual(ours.map((tool) => tool.name).sort(), toolsByEntry.flat().sort());
+		assert.deepEqual(pi.getCommands().map((command) => command.name).sort(), Object.values(commandsByName).flat().sort());
+		const ours = pi.getAllTools().filter((tool) => Object.values(toolsByName).flat().includes(tool.name));
+		assert.deepEqual(ours.map((tool) => tool.name).sort(), Object.values(toolsByName).flat().sort());
 		assert.ok(pi.getActiveTools().includes("tool_search"));
 		const exposures = { apply_patch: "direct", grep: "codemode", find: "codemode", ls: "codemode",
 			Agent: "direct", StopAgent: "direct", AgentStatus: "direct" };

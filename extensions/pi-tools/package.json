@@ -1,0 +1,62 @@
+{
+  "name": "pi-tools",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "apply_patch plus codemode-only grep/find/ls replacements for the private pi-Serraly workspace",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./dist/index.js"
+    ]
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-package.mjs",
+    "check": "tsc -p tsconfig.json",
+    "pack:check": "node ../../scripts/build-package.mjs --check",
+    "prepack": "npm run build && npm run pack:check"
+  },
+  "devDependencies": {
+    "diff": "8.0.4"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-coding-agent": {
+      "optional": true
+    },
+    "typebox": {
+      "optional": true
+    }
+  },
+  "serraly": {
+    "build": {
+      "kind": "bundle",
+      "entry": "./src/index.ts"
+    },
+    "licenses": [
+      "LICENSE",
+      "NOTICE",
+      "UPSTREAM.md"
+    ],
+    "bundledLicenses": [
+      {
+        "package": "diff",
+        "file": "LICENSE",
+        "to": "licenses/diff-BSD.txt"
+      }
+    ],
+    "test": {
+      "directory": "test"
+    }
+  }
+}

@@ -5,6 +5,8 @@ import { isAbsolute, join, resolve, sep } from "node:path";
 export const root = resolve(import.meta.dirname, "../..");
 
 const WORKSPACE_KINDS = { extensions: "extension", packages: "library" };
+// Internal libraries are unscoped `pi-*` workspaces; anything else is external tooling.
+export const INTERNAL_PACKAGE_NAME = /^pi-[a-z0-9-]+$/;
 const SEMVER = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 
 function reject(message) { throw new Error(message); }
@@ -91,7 +93,7 @@ function validateGraph(packages) {
 			for (const [name, range] of Object.entries(entries ?? {})) {
 				const dependency = byName.get(name);
 				if (!dependency) {
-					if (source === "devDependencies" && !name.startsWith("@")) reject(`${pkg.name}: dependency ${name} is not part of the workspace`);
+					if (INTERNAL_PACKAGE_NAME.test(name)) reject(`${pkg.name}: dependency ${name} is not part of the workspace`);
 					continue;
 				}
 				if (source === "peerDependencies") reject(`${pkg.name}: bundled library ${name} must be a devDependency, not a peer`);

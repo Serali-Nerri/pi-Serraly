@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { root } from "./modules.mjs";
+import { root } from "./packages.mjs";
 import { testEnvironment } from "./environment.mjs";
 
 export async function discoverTests(directory) {

@@ -1,0 +1,46 @@
+{
+  "name": "pi-loop",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Session-local fixed-interval /loop scheduling.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./dist/index.js"
+    ]
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-package.mjs",
+    "check": "tsc -p tsconfig.json",
+    "pack:check": "node ../../scripts/build-package.mjs --check",
+    "prepack": "npm run build && npm run pack:check"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-coding-agent": {
+      "optional": true
+    }
+  },
+  "serraly": {
+    "build": {
+      "kind": "bundle",
+      "entry": "./src/index.ts"
+    },
+    "licenses": [
+      "UPSTREAM.md"
+    ],
+    "test": {
+      "directory": "test"
+    }
+  }
+}

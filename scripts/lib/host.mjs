@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
-import { root } from "./modules.mjs";
+import { root } from "./packages.mjs";
 
 /** Acceptance is pinned to the qualified host; an explicit override must match. */
 export const expectedVersion = "1.0.0";

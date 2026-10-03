@@ -1,0 +1,454 @@
+{
+  "schema_version": "pi-background-shell.docs-manifest.v1",
+  "package": {
+    "name": "pi-background-shell",
+    "version": "0.2.0",
+    "entry": "./dist/extensions/background-tasks.js",
+    "node": ">=22.19.0",
+    "verified_host": "1.0.0",
+    "typebox": "1.3.27"
+  },
+  "public_surfaces": {
+    "tools": [
+      {
+        "id": "tool:bg_kill",
+        "name": "bg_kill",
+        "label": "Background Kill",
+        "description": "Stop a running background task by ID. Fails loudly if the task is unknown or already finished.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "taskId": {
+              "type": "string",
+              "description": "Task ID or unambiguous prefix to stop"
+            }
+          },
+          "required": [
+            "taskId"
+          ]
+        },
+        "availability": "always",
+        "source": "src/extension.ts:974"
+      },
+      {
+        "id": "tool:bg_logs",
+        "name": "bg_logs",
+        "label": "Background Logs",
+        "description": "Read bounded output from a background task for deliberate inspection; this is not a waiting primitive. Output is capped at 50.0KB for model safety and points to the full output file when truncated.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "taskId": {
+              "type": "string",
+              "description": "Task ID or unambiguous prefix"
+            },
+            "maxBytes": {
+              "type": "number",
+              "description": "Maximum bytes to return, capped at 50.0KB. Default: 50.0KB."
+            },
+            "tail": {
+              "type": "boolean",
+              "description": "Read the tail of the log when true, head when false. Default: true."
+            }
+          },
+          "required": [
+            "taskId"
+          ]
+        },
+        "availability": "always",
+        "source": "src/extension.ts:933"
+      },
+      {
+        "id": "tool:bg_run",
+        "name": "bg_run",
+        "label": "Background Run",
+        "description": "Start a named long-running shell command in the background; returns immediately with task ID, PID, and output path. Default terminal notification starts a follow-up turn; do not poll or sleep merely to wait. Output is stored in .pi/tasks, with model-visible log reads capped at 50 KiB. Commands run with local permissions, not in a sandbox.",
+        "description_suffix": "BG_RUN_DESCRIPTION + shellPolicyDescription(shellPolicy): append the activation-selected executable, argv and command syntax; never extract a local shell path or execute extension code.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Short human-readable task name shown in the bg footer dock. Required; use 2-6 words, not the raw command."
+            },
+            "command": {
+              "type": "string",
+              "description": "Required shell command; runs in the session working directory."
+            },
+            "description": {
+              "type": "string",
+              "description": "Longer human-readable task context. Default: none."
+            },
+            "timeoutSeconds": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 2147483,
+              "description": "Timeout in seconds, rounded down to whole seconds; task fails and is killed when exceeded. Default: no timeout."
+            },
+            "notifyOnCompletion": {
+              "type": "boolean",
+              "description": "Deliver a terminal notification. Default: true. When false, triggerOnCompletion has no effect."
+            },
+            "triggerOnCompletion": {
+              "type": "boolean",
+              "description": "Automatically start a follow-up agent turn on terminal notification. Default: true; inactive when notifyOnCompletion is false."
+            },
+            "surviveReload": {
+              "type": "boolean",
+              "description": "Retain this exact shell execution across a real same-process Pi reload. Default: false. Does not survive exit, restart, or session replacement."
+            }
+          },
+          "required": [
+            "name",
+            "command"
+          ],
+          "additionalProperties": false
+        },
+        "availability": "always",
+        "source": "src/extension.ts:864"
+      },
+      {
+        "id": "tool:bg_status",
+        "name": "bg_status",
+        "label": "Background Status",
+        "description": "Inspect one background task or list all running/recent background tasks. This is a point-in-time inspection tool, not a waiting primitive.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "taskId": {
+              "type": "string",
+              "description": "Optional task ID or unambiguous prefix. If omitted, all running/recent tasks are returned."
+            }
+          }
+        },
+        "availability": "always",
+        "source": "src/extension.ts:907"
+      }
+    ],
+    "commands": [
+      {
+        "id": "command:bg",
+        "name": "bg",
+        "availability": "always",
+        "source": "src/extension.ts:711",
+        "description": "Start a tracked shell command: /bg [--survive-reload] [--name \"Task name\"] <command>"
+      },
+      {
+        "id": "command:bg-clear",
+        "name": "bg-clear",
+        "availability": "always",
+        "source": "src/extension.ts:753",
+        "description": "Clear finished background task footer notices"
+      },
+      {
+        "id": "command:bg-tasks",
+        "name": "bg-tasks",
+        "availability": "always",
+        "source": "src/extension.ts:745",
+        "description": "Open the background task manager UI"
+      },
+      {
+        "id": "command:jobs",
+        "name": "jobs",
+        "availability": "always",
+        "source": "src/extension.ts:787",
+        "description": "List running and recent background tasks"
+      },
+      {
+        "id": "command:kill",
+        "name": "kill",
+        "availability": "always",
+        "source": "src/extension.ts:831",
+        "description": "Stop a running background task: /kill <id>"
+      },
+      {
+        "id": "command:logs",
+        "name": "logs",
+        "availability": "always",
+        "source": "src/extension.ts:800",
+        "description": "Show bounded output from a background task: /logs <id> [maxBytes]"
+      },
+      {
+        "id": "command:tasks",
+        "name": "tasks",
+        "availability": "always",
+        "source": "src/extension.ts:737",
+        "description": "Open the background task manager UI"
+      }
+    ],
+    "shortcuts": [
+      {
+        "id": "shortcut:ctrl+alt+b",
+        "name": "ctrl+alt+b",
+        "availability": "dock:ctrl+alt+b",
+        "source": "src/extension.ts:771",
+        "description": "Open focused background task footer dock"
+      },
+      {
+        "id": "shortcut:ctrl+alt+c",
+        "name": "ctrl+alt+c",
+        "availability": "always",
+        "source": "src/extension.ts:779",
+        "description": "Clear finished background task footer notices (terminal-dependent fallback for /bg-clear)"
+      },
+      {
+        "id": "shortcut:shift+down",
+        "name": "shift+down",
+        "availability": "dock:shift+down",
+        "source": "src/extension.ts:762",
+        "description": "Open focused background task footer dock"
+      }
+    ],
+    "renderers": [
+      {
+        "id": "renderer:background-task-notification",
+        "name": "background-task-notification",
+        "availability": "always",
+        "source": "src/extension.ts:613"
+      }
+    ]
+  },
+  "public_surface_ids": [
+    "command:bg",
+    "command:bg-clear",
+    "command:bg-tasks",
+    "command:jobs",
+    "command:kill",
+    "command:logs",
+    "command:tasks",
+    "renderer:background-task-notification",
+    "shortcut:ctrl+alt+b",
+    "shortcut:ctrl+alt+c",
+    "shortcut:shift+down",
+    "tool:bg_kill",
+    "tool:bg_logs",
+    "tool:bg_run",
+    "tool:bg_status"
+  ],
+  "eventbus": {
+    "BG_REQUEST_CHANNEL": "pi-background-shell:request:v2",
+    "BG_RESPONSE_CHANNEL": "pi-background-shell:response:v2",
+    "BG_TERMINAL_CHANNEL": "pi-background-shell:terminal:v2",
+    "BG_REQUEST_SCHEMA": "pi-background-shell.extension-request.v2",
+    "BG_RESPONSE_SCHEMA": "pi-background-shell.extension-response.v2",
+    "BG_TERMINAL_SCHEMA": "pi-background-shell.extension-terminal.v2",
+    "capabilities": {
+      "api_version": 2,
+      "run": true,
+      "run_completion_trigger": true,
+      "status": true,
+      "logs": true,
+      "logs_bounded": true,
+      "kill": true
+    },
+    "run": [
+      {
+        "name": "name",
+        "type": "string",
+        "required": true
+      },
+      {
+        "name": "command",
+        "type": "string",
+        "required": true
+      },
+      {
+        "name": "timeoutSeconds",
+        "type": "number | undefined",
+        "required": false
+      },
+      {
+        "name": "notifyOnCompletion",
+        "type": "boolean",
+        "required": true
+      },
+      {
+        "name": "triggerOnCompletion",
+        "type": "boolean",
+        "required": true
+      }
+    ]
+  },
+  "contracts": {
+    "statuses": [
+      "running",
+      "completed",
+      "failed",
+      "killed"
+    ],
+    "log_bytes": {
+      "MAX_LOG_BYTES": 51200,
+      "DEFAULT_LOG_BYTES": 51200
+    },
+    "max_timeout_seconds": 2147483,
+    "dock_shortcuts": [
+      "shift+down",
+      "ctrl+alt+b",
+      "off"
+    ],
+    "default_dock_shortcut": "shift+down",
+    "environment": [
+      "ComSpec",
+      "PATH",
+      "PI_BG_DOCK_SHORTCUT",
+      "PI_BG_MAX_OUTPUT_BYTES",
+      "PI_BG_POSIX_SHELL",
+      "PI_BG_POSIX_SHELL_PATH",
+      "PI_BG_SHELL",
+      "PI_BG_SHELL_PATH",
+      "Path",
+      "SHELL",
+      "SystemRoot",
+      "WINDIR",
+      "path"
+    ],
+    "reload_owner": "pi-background-shell.reload-shell-owner.v1",
+    "reload_audit": "pi-background-shell.reload-shell.v1"
+  },
+  "governed_sources": [
+    {
+      "path": "extensions/background-tasks.ts",
+      "owner": "docs/subsystems/extension-lifecycle.md",
+      "sha256": "b221129d3a1449606de6e7c04bd8989c6b7feee3eaf5122339c2d45cffadf74f"
+    },
+    {
+      "path": "src/core/common.ts",
+      "owner": "docs/subsystems/background-task-runtime.md",
+      "sha256": "66caa9f74924e572ad49c19f182748ac739ce152d0ec5078d1ad87c3a6b2169d"
+    },
+    {
+      "path": "src/core/config.ts",
+      "owner": "docs/operations/configuration.md",
+      "sha256": "504b4978696535a0bf1a1328696260614030b704c7937a5ce0e7fdcf92815539"
+    },
+    {
+      "path": "src/core/durable-fs.ts",
+      "owner": "docs/subsystems/background-task-runtime.md",
+      "sha256": "93d5481d5dce8830ebbfb7cfd8af3047a2939b4a144f3b9c3bfaeca67cfbe690"
+    },
+    {
+      "path": "src/core/extension-api.ts",
+      "owner": "docs/api/eventbus-v2.md",
+      "sha256": "c153769d967d9113e5e94f2ebefdcb439e7462c3560221976cd586ab71f43882"
+    },
+    {
+      "path": "src/core/lazy-module.ts",
+      "owner": "docs/subsystems/extension-lifecycle.md",
+      "sha256": "cc58caaa48b734134574683f2eceba980885b9c98cefd689c87df5f42bccd82a"
+    },
+    {
+      "path": "src/core/registry.ts",
+      "owner": "docs/subsystems/background-task-runtime.md",
+      "sha256": "d2b25a61149fec37e4946e3fe72b409c102cb9f3ca3f1ea539c5fdc4ae58fbc9"
+    },
+    {
+      "path": "src/core/reload-shell-owner.ts",
+      "owner": "docs/subsystems/background-task-runtime.md",
+      "sha256": "708faecd5ef5604b000e34b1190921c21140494aceda4895c83d90cb99f11e47"
+    },
+    {
+      "path": "src/core/shell-policy.ts",
+      "owner": "docs/operations/configuration.md",
+      "sha256": "3848ac8d0bf70701e742833fcbfccba04ae503b6ff87fe264d29da50cc7e313c"
+    },
+    {
+      "path": "src/core/task-durable.ts",
+      "owner": "docs/subsystems/background-task-runtime.md",
+      "sha256": "488aa9b946468c8418af8ccfcd4a4f461ef31c7e09a1aad91dd7156010fea67a"
+    },
+    {
+      "path": "src/core/windows-taskkill.ts",
+      "owner": "docs/subsystems/background-task-runtime.md",
+      "sha256": "d8e21e077720f408a5b181b200924363ad75fd7b3acbafeabb6a2662a9d1fad1"
+    },
+    {
+      "path": "src/extension.ts",
+      "owner": "docs/subsystems/extension-lifecycle.md",
+      "sha256": "77a03753111d467478ecbe9abb9a20c0d49868f01a1b4f1c392dd925b72caf39"
+    },
+    {
+      "path": "src/ui/background-tasks-manager.ts",
+      "owner": "docs/reference/shortcuts-and-dock.md",
+      "sha256": "8f981917d0df95de4305d9971bf26f9e111945b348734aac7a54ca66bfb66940"
+    },
+    {
+      "path": "src/ui/task-log-viewport.ts",
+      "owner": "docs/reference/shortcuts-and-dock.md",
+      "sha256": "6876eaf197bb17b29c23c558edd45af709533489802f8cb528838cab5bceb4e7"
+    }
+  ],
+  "authored_docs": [
+    {
+      "path": "docs/api/eventbus-v2.md",
+      "sha256": "3c70cca5569a24bb1509d3785d3d5ce8a5e34871d3c26a3e7c4169007fcac30a"
+    },
+    {
+      "path": "docs/commands/bg-clear.md",
+      "sha256": "c63e5c80179b8ff59b23a682b2aac0d19fceaaa57c2182699b628b392fcc49ff"
+    },
+    {
+      "path": "docs/commands/bg.md",
+      "sha256": "22036c2f706641314435a602aeb0874700d40e0fadcb5bfcfa5de91266d4196a"
+    },
+    {
+      "path": "docs/commands/jobs.md",
+      "sha256": "ffea2df93826f390c5cb8cf18ca87a593edace36d32dc5bae6e64dfe562146b7"
+    },
+    {
+      "path": "docs/commands/kill.md",
+      "sha256": "e38d7ad4866622bd0e8c19309e9a987c4837403d43e71ea763dcbb58c54c0605"
+    },
+    {
+      "path": "docs/commands/logs.md",
+      "sha256": "db28d40c4f78ceb956187ba62cf51adfc11c57d4aade4c7e4e68a84a1566fbb4"
+    },
+    {
+      "path": "docs/commands/task-manager.md",
+      "sha256": "03a51ba0c345a2f436c917e930288b4521e7ef335780a693c7026933453b02e0"
+    },
+    {
+      "path": "docs/concepts/completion-delivery.md",
+      "sha256": "ffa8a1a9f346982defb00016396571265ee8b2edb534215b9e94a8856078cbd1"
+    },
+    {
+      "path": "docs/getting-started.md",
+      "sha256": "edd5af88c2e7ff1669e8ca7b2afab41c73a503a75e7c29c1b8643543c8b7d43f"
+    },
+    {
+      "path": "docs/operations/configuration.md",
+      "sha256": "2ba963e4c730fa5a4185932bb38532957d80cf4fe358a80857dc92e44612a356"
+    },
+    {
+      "path": "docs/reference/shortcuts-and-dock.md",
+      "sha256": "039ba6e68b4f63df22aa4670f4149ed71772eadf590371d9416364a69a95919b"
+    },
+    {
+      "path": "docs/subsystems/background-task-runtime.md",
+      "sha256": "718f55cc38172b08b81cc89a2b71a0e6856958fd11c8bc05b99dbfd2de5f3719"
+    },
+    {
+      "path": "docs/subsystems/docs-freshness-gate.md",
+      "sha256": "900271624a20021bb2f0718b04dfbd775388cda62d31e87e15124afaba79f194"
+    },
+    {
+      "path": "docs/subsystems/extension-lifecycle.md",
+      "sha256": "f3ef944a922e4ed258989d5ac9078339fcb84a0d1733100a903aab007718af2d"
+    },
+    {
+      "path": "README.md",
+      "sha256": "58cac7ce7048a8b8c7afab1399b7420a8351642be825b9400db20636ae727e71"
+    },
+    {
+      "path": "TESTING.md",
+      "sha256": "a719f0f1bb59cb3d6174790778ff7fcaa87d17694800ef13ec9de53134202cd3"
+    },
+    {
+      "path": "UPSTREAM.md",
+      "sha256": "a0076c4dcae91ebf1d9e09c71f4fee0c69e7a8d8835a88b87c2323aa97b94664"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ada948dd71e5a4cb699f92d4a345a4d748b6fcef0cad5230e57e0cd2d80e9cef"
+    }
+  ]
+}

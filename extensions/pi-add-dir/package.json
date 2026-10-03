@@ -1,0 +1,83 @@
+{
+  "name": "pi-add-dir",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "External directory instructions, skills, and @ completion for the private pi-Serraly workspace",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./dist/index.js"
+    ]
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-package.mjs",
+    "check": "tsc -p tsconfig.json",
+    "pack:check": "node ../../scripts/build-package.mjs --check",
+    "prepack": "npm run build && npm run pack:check"
+  },
+  "devDependencies": {
+    "@henryqw/pi-config-store": "2.0.2"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-coding-agent": {
+      "optional": true
+    },
+    "@earendil-works/pi-tui": {
+      "optional": true
+    }
+  },
+  "serraly": {
+    "build": {
+      "kind": "bundle",
+      "entry": "./src/index.ts",
+      "cjsRequire": true
+    },
+    "licenses": [
+      "LICENSE",
+      "UPSTREAM.md"
+    ],
+    "bundledLicenses": [
+      {
+        "package": "@henryqw/pi-config-store",
+        "file": "LICENSE",
+        "to": "licenses/pi-config-store-MIT.txt"
+      },
+      {
+        "package": "proper-lockfile",
+        "file": "LICENSE",
+        "to": "licenses/proper-lockfile-MIT.txt"
+      },
+      {
+        "package": "graceful-fs",
+        "file": "LICENSE",
+        "to": "licenses/graceful-fs-ISC.txt"
+      },
+      {
+        "package": "retry",
+        "file": "License",
+        "from": "proper-lockfile",
+        "to": "licenses/retry-MIT.txt"
+      },
+      {
+        "package": "signal-exit",
+        "file": "LICENSE.txt",
+        "to": "licenses/signal-exit-ISC.txt"
+      }
+    ],
+    "test": {
+      "directory": "test"
+    }
+  }
+}

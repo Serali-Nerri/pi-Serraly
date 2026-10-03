@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { isolatedEnvironment } from "../../scripts/lib/environment.mjs";
-import { entries } from "./fixtures/contracts.mjs";
+import { names, releaseEntries } from "./fixtures/contracts.mjs";
 
 const root = resolve(import.meta.dirname, "../..");
 
@@ -28,14 +28,14 @@ async function poisonPackageManager(base) {
 	return { env: { ...isolatedEnvironment(base), PATH: bin }, marker };
 }
 
-test("release is a runtime-only tree prepared without a package manager", { timeout: 60000 }, async () => {
+test("release carries seven independent members prepared without a package manager", { timeout: 300000 }, async () => {
 	const base = await mkdtemp(join(tmpdir(), "serraly-release-test-"));
 	try {
 		const output = join(base, "release");
 		const { env, marker } = await poisonPackageManager(base);
 		const result = spawnSync(process.execPath, [
 			join(root, "scripts/release.mjs"), "--output", output, "--build-id", "integration-fixture",
-		], { cwd: root, env, encoding: "utf8", timeout: 55000 });
+		], { cwd: root, env, encoding: "utf8", timeout: 290000 });
 		assert.equal(result.status, 0, result.stderr || result.stdout);
 		assert.equal(await present(marker), false, "release preparation never shells out to a package manager");
 		const manifest = JSON.parse(await readFile(join(output, "package.json"), "utf8"));
@@ -43,11 +43,20 @@ test("release is a runtime-only tree prepared without a package manager", { time
 		assert.equal(manifest.devDependencies, undefined);
 		assert.equal(manifest.workspaces, undefined);
 		assert.deepEqual(manifest.dependencies, {}, "release manifest declares no installable runtime dependencies");
-		assert.deepEqual(manifest.pi.extensions, entries);
+		assert.deepEqual(manifest.pi, { extensions: releaseEntries });
 		assert.equal(await present(join(output, "package-lock.json")), false);
 		assert.equal(await present(join(output, "node_modules")), false);
+		for (const name of names) {
+			assert.equal(await present(join(output, "extensions", name, "package.json")), true, name);
+			assert.equal(await present(join(output, "extensions", name, "dist/artifacts.json")), true, `${name} seal`);
+		}
 		const record = JSON.parse(await readFile(join(output, "release.json"), "utf8"));
 		assert.equal(record.host, "1.0.0", "release metadata names the qualified Pi host, not an obsolete baseline");
+		assert.deepEqual(Object.keys(record.packages).sort(), names);
+		for (const [name, member] of Object.entries(record.packages)) {
+			assert.equal(member.path, `extensions/${name}`);
+			assert.match(member.digest, /^[0-9a-f]{64}$/);
+		}
 		const attemptedOverwrite = spawnSync(process.execPath, [
 			join(root, "scripts/release.mjs"), "--output", output, "--build-id", "replacement",
 		], { cwd: root, env, encoding: "utf8", timeout: 15000 });

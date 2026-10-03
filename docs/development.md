@@ -17,24 +17,24 @@ npm run verify
 不以重试隐藏结果。集成测试使用真实宿主 loader 与临时 release 目录，不需要
 registry。
 
-调试单个 suite：
+调试单个包或套件：
 
 ```sh
-node scripts/test.mjs --module loop
-node scripts/test.mjs --module subagents
-node scripts/test.mjs --module integration
-node scripts/test.mjs --module background-shell --list
-node scripts/test.mjs --module subagents --list
+node scripts/test.mjs --package pi-loop
+node scripts/test.mjs --package pi-background-shell
+node scripts/test.mjs --package pi-subagents
+node scripts/test.mjs --suite integration
+node scripts/test.mjs --package pi-subagents --list
 ```
 
-subagents 保留 Vitest 4.1.10 的原有 mocking/fake-timer 套件；其他模块及根集成
-使用 node:test。根 runner 分派各模块的 testCommand，并为 subagents 启用网络拒绝；
+subagents 保留 Vitest 4.1.10 的原有 mocking/fake-timer 套件；其他包及根集成
+使用 node:test。根 runner 按 `serraly.test` 分派各包的 testCommand，并为 subagents 启用网络拒绝；
 `--list` 只发现测试文件，不执行 Vitest 或写构建产物。定向调试同样复用隔离：
 
 ```sh
 node --input-type=module -e '
   import { isolatedRun } from "./scripts/lib/workspace.mjs";
-  await isolatedRun("npm", ["exec", "--workspace=modules/subagents", "--", "vitest", "run", ...process.argv.slice(1)], undefined, { denyNetwork: true });
+  await isolatedRun("npm", ["exec", "--workspace=extensions/pi-subagents", "--", "vitest", "run", ...process.argv.slice(1)], undefined, { denyNetwork: true });
 ' -- test/agents/extension-selection.test.ts
 node --input-type=module -e '
   import { isolatedRun } from "./scripts/lib/workspace.mjs";
@@ -102,7 +102,7 @@ node scripts/preview.mjs fullscreen rich
 node scripts/capture.mjs /tmp/pi-ui-captures
 ```
 
-仅临时数据；覆盖范围见 [UI 验收说明](../modules/ui/docs/acceptance.md)。
+仅临时数据；覆盖范围见 [UI 验收说明](../extensions/pi-ui/docs/acceptance.md)。
 编译 release 的 CLI 集成使用真实宿主 PTY，覆盖 regular/fullscreen 的 40/80/120
 列、专用子代理 renderer 和 host class identity。自动宽度/ANSI 断言不替代人工
 视觉、输入和焦点验收；无 PTY 或未人工查看时必须如实报告。

@@ -12,27 +12,39 @@ const root = resolve(import.meta.dirname, "../..");
 test("test selection discovers loop regressions without running UI or fixture helpers", { timeout: 120000 }, async () => {
 	const base = await mkdtemp(join(tmpdir(), "serraly-runner-test-"));
 	try {
-		const listed = spawnSync(process.execPath, [join(root, "scripts/test.mjs"), "--module", "loop", "--list"], {
+		const listed = spawnSync(process.execPath, [join(root, "scripts/test.mjs"), "--package", "pi-loop", "--list"], {
 			cwd: root, env: isolatedEnvironment(base), encoding: "utf8", timeout: 110000,
 		});
 		assert.equal(listed.status, 0, listed.stderr);
 		const paths = listed.stdout.trim().split("\n");
-		assert.ok(paths.length > 0 && paths.every((path) => /modules\/loop\/test\/.+\.test\.ts$/.test(path)), listed.stdout.slice(-1500));
+		assert.ok(paths.length > 0 && paths.every((path) => /extensions\/pi-loop\/test\/.+\.test\.ts$/.test(path)), listed.stdout.slice(-1500));
 	} finally { await rm(base, { recursive: true, force: true }); }
 });
 
 test("test selection lists subagents suites without executing fixtures or building dist", { timeout: 120000 }, async () => {
 	const base = await mkdtemp(join(tmpdir(), "serraly-subagents-runner-"));
 	try {
-		const listed = spawnSync(process.execPath, [join(root, "scripts/test.mjs"), "--module", "subagents", "--list"], {
+		const listed = spawnSync(process.execPath, [join(root, "scripts/test.mjs"), "--package", "pi-subagents", "--list"], {
 			cwd: root, env: isolatedEnvironment(base), encoding: "utf8", timeout: 110000,
 		});
 		assert.equal(listed.status, 0, listed.stderr);
 		const paths = listed.stdout.trim().split("\n");
-		assert.ok(paths.length > 0 && paths.every((path) => /modules\/subagents\/test\/.+\.test\.ts$/.test(path)),
+		assert.ok(paths.length > 0 && paths.every((path) => /extensions\/pi-subagents\/test\/.+\.test\.ts$/.test(path)),
 			listed.stdout.slice(-1500));
 		assert.ok(paths.some((path) => path.endsWith("/agent-manager.test.ts")));
 		assert.ok(paths.some((path) => path.endsWith("/output-file.test.ts")));
+	} finally { await rm(base, { recursive: true, force: true }); }
+});
+
+test("an unknown package or suite is rejected before any build or test runs", { timeout: 60000 }, async () => {
+	const base = await mkdtemp(join(tmpdir(), "serraly-runner-reject-"));
+	try {
+		for (const args of [["--package", "pi-nope", "--list"], ["--suite", "nope", "--list"], ["--package", "pi-ui", "--suite", "integration"]]) {
+			const rejected = spawnSync(process.execPath, [join(root, "scripts/test.mjs"), ...args], {
+				cwd: root, env: isolatedEnvironment(base), encoding: "utf8", timeout: 55000,
+			});
+			assert.notEqual(rejected.status, 0, args.join(" "));
+		}
 	} finally { await rm(base, { recursive: true, force: true }); }
 });
 

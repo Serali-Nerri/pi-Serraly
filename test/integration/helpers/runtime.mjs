@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createRelease, validateRelease } from "../../../scripts/lib/package.mjs";
@@ -7,17 +8,29 @@ import { hostPackage } from "../../../scripts/lib/host.mjs";
 import { isolatedEnvironment } from "../../../scripts/lib/environment.mjs";
 import { runChild } from "../../../scripts/lib/process.mjs";
 
-import { entries } from "../fixtures/contracts.mjs";
-export { entries };
+import { names, releaseEntries } from "../fixtures/contracts.mjs";
+export { names, releaseEntries };
 export const fixtures = resolve(import.meta.dirname, "../fixtures");
 
-export async function releaseFixture() {
+/** Map every release member to the absolute entry path its packed manifest declares. */
+export async function entriesByName(release) {
+	const manifest = JSON.parse(await readFile(join(release, "package.json"), "utf8"));
+	const entries = {};
+	for (const entry of manifest.pi.extensions) {
+		const [, directory] = entry.split("/");
+		entries[directory] = join(release, entry.slice(2));
+	}
+	return entries;
+}
+
+export async function releaseFixture({ packages } = {}) {
 	const base = await mkdtemp(join(tmpdir(), "serraly-runtime-release-"));
 	try {
 		const release = join(base, "release");
-		await createRelease(release, { buildId: "runtime-integration" });
+		await createRelease(release, { buildId: "runtime-integration", packages });
 		await validateRelease(release);
-		return { release, host: hostPackage(), async cleanup() { await rm(base, { recursive: true, force: true }); } };
+		return { release, host: hostPackage(), entriesByName: await entriesByName(release),
+			async cleanup() { await rm(base, { recursive: true, force: true }); } };
 	} catch (error) { await rm(base, { recursive: true, force: true }); throw error; }
 }
 
@@ -66,9 +79,11 @@ export async function sdkScenario(stage, scenario, config = {}, timeout = 30000)
 }
 
 export function cliArgs(sandbox, host, extra = []) {
+	const manifest = JSON.parse(readFileSync(join(sandbox.env.SERRALY_RELEASE, "package.json"), "utf8"));
+	const entries = manifest.pi.extensions.map((entry) => join(sandbox.env.SERRALY_RELEASE, entry.slice(2)));
 	return [host.cli, "--offline", "--no-session", "--no-skills", "--no-prompt-templates", "--no-themes", "--no-context-files", "--no-approve",
 		"--no-extensions", "-e", join(sandbox.base, "fixtures/cli-guard.js"), "-e", join(sandbox.base, "fixtures/cli-safety.js"),
-		...entries.flatMap((entry) => ["-e", join(sandbox.env.SERRALY_RELEASE, entry)]),
+		...entries.flatMap((entry) => ["-e", entry]),
 		"-e", "builtin:tool-search", "-e", join(sandbox.base, "fixtures/cli-fixture.js"),
 		"--provider", "serraly-fixture", "--model", "fixture", "--thinking", "off", ...extra];
 }

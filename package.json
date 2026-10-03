@@ -1,35 +1,19 @@
 {
   "name": "pi-serraly",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Independently selectable private Pi extensions.",
   "engines": { "node": ">=22.19.0" },
-  "workspaces": ["modules/*"],
+  "workspaces": ["extensions/*", "packages/*"],
+  "pi": { "extensions": [], "skills": [], "prompts": [], "themes": [] },
   "scripts": {
     "check": "node scripts/check.mjs",
-    "test": "node scripts/test.mjs",
     "build": "node scripts/build.mjs",
-    "verify": "npm run check && npm test",
+    "test": "node scripts/test.mjs",
+    "pack:check": "node scripts/pack-check.mjs",
+    "verify": "npm run check && npm test && npm run pack:check",
     "release": "node scripts/release.mjs"
-  },
-  "pi": {
-    "extensions": [
-      "./dist/pi-ui/index.js",
-      "./dist/pi-ask-user-question/index.js",
-      "./dist/pi-loop/index.js",
-      "./dist/pi-tools/index.js",
-      "./dist/pi-background-shell/index.js",
-      "./dist/pi-add-dir/index.js",
-      "./dist/pi-subagents/index.js"
-    ]
-  },
-  "dependencies": {},
-  "peerDependencies": {
-    "@earendil-works/pi-ai": "*",
-    "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-tui": "*",
-    "typebox": "*"
   },
   "devDependencies": {
     "@earendil-works/pi-ai": "1.0.0",
@@ -38,10 +22,8 @@
     "@earendil-works/pi-tui": "1.0.0",
     "@types/node": "24.10.1",
     "esbuild": "0.28.2",
-    "diff": "8.0.4",
-    "proper-lockfile": "4.1.2",
     "tsx": "4.23.12",
-    "typescript": "5.9.3",
-    "typebox": "1.3.27"
+    "typebox": "1.3.27",
+    "typescript": "5.9.3"
   }
 }

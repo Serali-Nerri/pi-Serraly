@@ -28,6 +28,9 @@ function isHostPath(path) {
 	return /node_modules[/\\](?:@earendil-works|typebox)(?:[/\\]|$)/.test(path);
 }
 
+const matchesExternal = (path, patterns) => patterns.some((pattern) =>
+	pattern.endsWith("/*") ? path.startsWith(pattern.slice(0, -1)) : path === pattern);
+
 function resolveNpmCli() {
 	const candidates = [process.env.npm_execpath,
 		resolve(dirname(process.execPath), "node_modules/npm/bin/npm-cli.js"),
@@ -151,7 +154,7 @@ export async function analyzePayload(directory, files, manifest) {
 	}
 	for (const output of Object.values(analyzed.metafile.outputs)) {
 		for (const entry of output.imports) {
-			if (entry.external && !entry.path.startsWith("node:") && !external.includes(entry.path)) {
+			if (entry.external && !entry.path.startsWith("node:") && !matchesExternal(entry.path, external)) {
 				throw new Error(`${manifest.name}: undeclared runtime import: ${entry.path}`);
 			}
 		}
@@ -192,6 +195,11 @@ export async function verifyPackageArtifact(directory, sourceFiles) {
 	if (changed.length) throw new Error(`${manifest.name}: artifact integrity mismatch: ${changed.join(", ")}; rebuild before publication`);
 	await analyzePayload(directory, Object.keys(actual).sort(), manifest);
 	return seal;
+}
+
+/** Verify a source tree: compare the fresh pack listing instead of the whole tree. */
+export async function verifySourcePackage(directory) {
+	return verifyPackageArtifact(directory, await packFiles(directory));
 }
 
 /** Copy the packed payload to a deployment location, verifying both sides. */

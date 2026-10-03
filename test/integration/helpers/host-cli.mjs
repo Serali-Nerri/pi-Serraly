@@ -4,7 +4,7 @@ import { EventEmitter } from "node:events";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { diagnostics } from "./runtime.mjs";
-import { commandsByEntry } from "../fixtures/contracts.mjs";
+import { commandsByName } from "../fixtures/contracts.mjs";
 
 export async function runRpc(sandbox, args) {
 	const child = spawn(process.execPath, args, { cwd: sandbox.cwd, env: sandbox.env, stdio: "pipe" });
@@ -41,7 +41,7 @@ export async function runRpc(sandbox, args) {
 	try {
 		const state = await request("state", "get_state"); assert.equal(state.sessionFile, undefined);
 		const commands = await request("commands", "get_commands");
-		assert.deepEqual(commands.commands.map((item) => item.name).sort(), commandsByEntry.flat().sort());
+		assert.deepEqual(commands.commands.map((item) => item.name).sort(), Object.values(commandsByName).flat().sort());
 		const settled = waitFor((record) => record.type === "agent_settled");
 		await request("prompt", "prompt", { message: "Local synthetic reply" }); await settled;
 		child.stdin.end(); assert.equal(await closed, 0, stderr);
@@ -54,7 +54,7 @@ export async function runRpc(sandbox, args) {
 	} finally { clearTimeout(timer); if (child.exitCode === null) child.kill("SIGKILL"); await closed.catch(() => {}); }
 }
 
-// Same Python/POSIX technique as scripts/capture.mjs, but with the final eight
+// Same Python/POSIX technique as scripts/capture.mjs, but with the final seven
 // compiled entries and fixture arguments rather than its stage-one UI bundle.
 const ptyDriver = String.raw`
 import os,sys,json,pty,termios,fcntl,struct,subprocess,select,time,errno,signal

@@ -4,8 +4,8 @@ import { createRequire } from "node:module";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { build } from "esbuild";
-import { buildOrder } from "./packages.mjs";
-import { SEAL_PATH, packFiles, sealPackageArtifact, verifyPackageArtifact } from "./package-artifacts.mjs";
+import { INTERNAL_PACKAGE_NAME, buildOrder } from "./packages.mjs";
+import { sealPackageArtifact, verifySourcePackage } from "./package-artifacts.mjs";
 
 // esbuild's CJS interop keeps a lexical `require`; native ESM guarantees no such
 // binding, so a bundled CJS closure needs an explicit bridge.
@@ -40,8 +40,9 @@ function packageDirectory(from, name) {
 function internalDependencies(pkg) {
 	const resolved = new Map();
 	for (const name of Object.keys(pkg.manifest.devDependencies ?? {})) {
+		if (!INTERNAL_PACKAGE_NAME.test(name)) continue;
 		try { resolved.set(name, realpathSync(packageDirectory(pkg.directory, name))); }
-		catch { /* external devDependency, resolved by esbuild from node_modules */ }
+		catch { /* esbuild reports the unresolved internal dependency */ }
 	}
 	return resolved;
 }
@@ -147,18 +148,20 @@ async function runArtifactVerifier(pkg, payload) {
 	if (verified.code !== 0) throw new Error(`${pkg.name}: artifact verifier failed: ${verified.stderr || verified.stdout}`);
 }
 
-/** Replace a live dist with the verified candidate, restoring it on failure. */
-async function replaceDist(directory, candidate) {
+/**
+ * Swap the candidate dist into place, restoring the previous complete dist if
+ * anything fails. The candidate is a sibling of the live dist so that emitted
+ * source maps keep resolving to the package sources after the rename.
+ */
+async function withReplacedDist(directory, candidate, work) {
 	const dist = join(directory, "dist");
-	const retired = join(dirname(candidate), "retired-dist");
+	const retired = `${candidate}-retired`;
 	let hasRetired = false;
 	try { await rename(dist, retired); hasRetired = true; }
 	catch (error) { if (error.code !== "ENOENT") throw error; }
 	try {
 		await rename(candidate, dist);
-		// Source trees keep unpacked files, so the live check compares the fresh
-		// pack listing; deployment-side verification stays strictly physical.
-		await verifyPackageArtifact(directory, await packFiles(directory));
+		await work();
 	} catch (error) {
 		await rm(dist, { recursive: true, force: true });
 		if (hasRetired) await rename(retired, dist);
@@ -168,28 +171,22 @@ async function replaceDist(directory, candidate) {
 }
 
 /**
- * Build one package into its own dist. The candidate payload lives in a
- * `.build-*` staging directory; the live dist is replaced only after the seal,
- * the package's own verifier and the generic candidate checks all pass.
+ * Build one package into its own dist. The candidate is compiled in a
+ * `.build-dist-*` sibling, then sealed and verified in place; a failed build,
+ * seal or verification restores the previous complete dist.
  */
 export async function buildPackage(pkg) {
-	const staging = await mkdtemp(join(pkg.directory, ".build-"));
-	const payload = join(staging, "payload");
+	const candidate = await mkdtemp(join(pkg.directory, ".build-dist-"));
 	try {
-		for (const path of await packFiles(pkg.directory)) {
-			if (path === SEAL_PATH || path === "dist" || path.startsWith("dist/")) continue;
-			await mkdir(dirname(join(payload, path)), { recursive: true });
-			await cp(join(pkg.directory, path), join(payload, path));
-		}
-		const dist = join(payload, "dist");
-		await mkdir(dist, { recursive: true });
-		await runRecipe(pkg, dist);
-		const seal = await sealPackageArtifact({ name: pkg.name, directory: payload, manifest: pkg.manifest });
-		await runArtifactVerifier(pkg, payload);
-		await verifyPackageArtifact(payload);
-		await replaceDist(pkg.directory, dist);
+		await runRecipe(pkg, candidate);
+		let seal;
+		await withReplacedDist(pkg.directory, candidate, async () => {
+			seal = await sealPackageArtifact(pkg);
+			await runArtifactVerifier(pkg, pkg.directory);
+			await verifySourcePackage(pkg.directory);
+		});
 		return seal;
-	} finally { await rm(staging, { recursive: true, force: true }); }
+	} finally { await rm(candidate, { recursive: true, force: true }); }
 }
 
 /** Build the named packages (or all) with their internal dependencies first. */

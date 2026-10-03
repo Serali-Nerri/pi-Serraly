@@ -23,20 +23,20 @@ Each change follows this order:
 
 ```text
 .
-├── modules/
-│   ├── ui/                # src/index.ts, test/
-│   ├── questions/         # src/, test/
-│   ├── loop/              # src/, test/
-│   ├── tools/             # src/, test/fixtures/
-│   ├── background-shell/ # src/, extensions/, tests/
-│   ├── add-dir/           # src/, test/
-│   └── subagents/         # src/, test/ (Vitest)
-├── scripts/              # check, build, test, release entry points and lib/
+├── extensions/
+│   ├── pi-ui/                 # src/, test/, dist/ (built)
+│   ├── pi-ask-user-question/  # src/, test/
+│   ├── pi-loop/               # src/, test/
+│   ├── pi-tools/              # src/, test/fixtures/
+│   ├── pi-background-shell/   # src/, extensions/, tests/, scripts/
+│   ├── pi-add-dir/            # src/, test/
+│   └── pi-subagents/          # src/, test/ (Vitest)
+├── packages/             # shared build-time libraries (no Pi entry point)
+├── scripts/              # check, build, test, pack:check, release and lib/
 ├── test/integration/     # *.test.mjs, fixtures/
 ├── docs/                 # architecture.md, development.md
 ├── package.json
-├── package-lock.json
-└── dist/                 # generated development artifacts
+└── package-lock.json
 ```
 
 Follow module-local `AGENTS.md` instructions. Keep entry points independent; UI owns presentation, not business execution.
@@ -46,11 +46,12 @@ Follow module-local `AGENTS.md` instructions. Keep entry points independent; UI 
 Run from the repository root:
 
 - `npm ci --ignore-scripts --include=optional --legacy-peer-deps` — install locked dependencies.
-- `npm run check` — run workspace checks and root-script syntax checks.
-- `npm run build` — produce and validate seven compiled entries in `dist/`.
-- `npm test` — rebuild, then run module and integration suites.
-- `npm run verify` — run checks and the complete test/build pipeline.
-- `node scripts/test.mjs --module loop` — debug one suite; does not replace full verification.
+- `npm run check` — build shared library artifacts, then run each package's check and root-script syntax checks.
+- `npm run build` — build and seal every package artifact in its own `dist/`.
+- `npm test` — rebuild, then run every package suite and the integration suite.
+- `npm run pack:check` — verify existing sealed artifacts without rebuilding.
+- `npm run verify` — run checks, the complete test/build pipeline and artifact verification.
+- `node scripts/test.mjs --package pi-loop` — debug one package; does not replace full verification.
 - `node scripts/preview.mjs regular` — preview UI with temporary data.
 
 See `docs/development.md` for release preparation and additional commands.
@@ -65,7 +66,7 @@ Use strict TypeScript and ESM. Preserve local formatting: tabs in UI/questions/l
 - Change-detector tests considered harmful.
 - Do not create regression tests for bug fixes without a genuine gap in behavior testing.
 
-Root integration and most module tests use Node’s `node:test` runner, with `tsx` for TypeScript. Subagents retains its imported Vitest suites and runs through the same isolated root runner with network denial. Name module tests `*.test.ts` and root integration tests `*.test.mjs`. When a regression test is warranted, write a behavior-focused test before implementation; observe failure, then success. No numeric coverage threshold is configured. Preserve boundary/compiled-artifact tests, deterministic timing, and process/worker cleanup. Run `npm run verify` before submitting; document platform skips and manually verify visual changes.
+Root integration and most package tests use Node’s `node:test` runner, with `tsx` for TypeScript. Subagents retains its imported Vitest suites and runs through the same isolated root runner with network denial. Name package tests `*.test.ts` and root integration tests `*.test.mjs`. When a regression test is warranted, write a behavior-focused test before implementation; observe failure, then success. No numeric coverage threshold is configured. Preserve boundary/compiled-artifact tests, deterministic timing, and process/worker cleanup. Run `npm run verify` before submitting; document platform skips and manually verify visual changes.
 
 ## Commit & Pull Request Guidelines
 

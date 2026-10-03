@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { entries, toolsByEntry, commandsByEntry, questionArgs, patchInput } from "./contracts.mjs";
+import { toolsByName, commandsByName, questionArgs, patchInput } from "./contracts.mjs";
 
 const host = process.argv[2], scenario = process.argv[3];
 const SDK = await import(pathToFileURL(join(host, "dist/index.js")).href);
@@ -15,14 +15,17 @@ const TUI = await import(pathToFileURL(require.resolve("@earendil-works/pi-tui")
 const { AuthStorage } = await import(pathToFileURL(join(host, "dist/core/auth-storage.js")).href);
 const config = JSON.parse(await readFile(process.env.SERRALY_CONFIG, "utf8"));
 const cwd = process.cwd(), agentDir = process.env.PI_CODING_AGENT_DIR, release = process.env.SERRALY_RELEASE;
-const allIndices = entries.map((_, index) => index);
+// Members come from the packed release manifest, keyed by package name.
+const releaseManifest = JSON.parse(await readFile(join(release, "package.json"), "utf8"));
+const entryByName = Object.fromEntries(releaseManifest.pi.extensions.map((entry) => [entry.split("/")[2], join(release, entry.slice(2))]));
+const allNames = Object.keys(entryByName).sort();
 const baseline = Object.fromEntries(["getCallRenderer", "getResultRenderer", "getRenderShell", "updateDisplay"].map((name) => [name, SDK.ToolExecutionComponent.prototype[name]]));
 const report = (phase, extra = {}) => import("node:fs").then(({ appendFileSync }) => appendFileSync(process.env.SERRALY_REPORT, JSON.stringify({ phase, ...extra }) + "\n"));
 const credentials = AuthStorage.inMemory();
 const modelRuntime = await SDK.ModelRuntime.create({ credentials, modelsPath: null,
 	modelsStorePath: join(process.env.TMPDIR, "models-cache.json"), allowModelNetwork: false, refreshOnCreate: false });
 
-async function open(indices = config.indices ?? allIndices, packageFilter = config.packageFilter, discoverSettings = false) {
+async function open(names = config.names ?? allNames, packageFilter = config.packageFilter, discoverSettings = false) {
 	if (packageFilter !== undefined) {
 		// PackageManager reads persisted global/project resource settings, not
 		// SettingsManager's transient merged overrides. Exercise real settings.
@@ -36,7 +39,7 @@ async function open(indices = config.indices ?? allIndices, packageFilter = conf
 	const loader = new SDK.DefaultResourceLoader({ cwd, agentDir, settingsManager, eventBus,
 		noExtensions: !discoverSettings && packageFilter === undefined, noSkills: false, noPromptTemplates: true, noThemes: true, noContextFiles: true,
 		additionalExtensionPaths: [join(import.meta.dirname, "sdk-provider.js"), "builtin:tool-search", "builtin:codemode",
-			...(!discoverSettings && packageFilter === undefined ? indices.map((index) => join(release, entries[index])) : [])],
+			...(!discoverSettings && packageFilter === undefined ? names.map((name) => entryByName[name]) : [])],
 		extensionFactories: [{ name: "tool-search", builtin: true, factory: SDK.createToolSearchExtension() },
 			{ name: "codemode", builtin: true, factory: SDK.createCodemodeExtension() }],
 	});
@@ -60,15 +63,15 @@ async function open(indices = config.indices ?? allIndices, packageFilter = conf
 	} };
 }
 
-function inventory(h, indices) {
+function inventory(h, names) {
 	const extensions = h.loader.getExtensions().extensions.filter((extension) => extension.path.startsWith(release));
-	assert.equal(extensions.length, indices.length, "each manifest entry loads exactly once");
+	assert.equal(extensions.length, names.length, "each manifest entry loads exactly once");
 	const registeredTools = extensions.flatMap((extension) => [...extension.tools.keys()]).sort();
-	const expectedTools = indices.flatMap((index) => toolsByEntry[index]).sort();
+	const expectedTools = names.flatMap((name) => toolsByName[name]).sort();
 	assert.deepEqual(registeredTools, expectedTools);
 	assert.equal(new Set(registeredTools).size, registeredTools.length, "no duplicate tool registration");
 	const commands = h.session.extensionRunner.getRegisteredCommands().map((command) => command.invocationName).sort();
-	assert.deepEqual(commands, indices.flatMap((index) => commandsByEntry[index]).sort());
+	assert.deepEqual(commands, names.flatMap((name) => commandsByName[name]).sort());
 	assert.equal(new Set(commands).size, commands.length, "no duplicate commands");
 	const active = h.session.getActiveToolNames();
 	assert.ok(active.includes("tool_search"), "builtin discovery remains enabled by +tool_search");
@@ -80,7 +83,7 @@ function inventory(h, indices) {
 		assert.equal(tool.exposure, exposure);
 		assert.equal(active.includes(tool.name), exposure === "direct", "only direct tools are initially active");
 	}
-	const subagents = extensions.find((extension) => extension.path.endsWith("/pi-subagents/index.js"));
+	const subagents = extensions.find((extension) => extension.path.endsWith("/pi-subagents/dist/index.js"));
 	assert.equal(extensions.filter((extension) => extension.messageRenderers.has("subagent-result")).length, subagents ? 1 : 0,
 		"only the enabled subagents entry registers subagent-result");
 	assert.equal(h.session.extensionRunner.getMessageRenderer("subagent-result"), subagents?.messageRenderers.get("subagent-result"),
@@ -441,13 +444,14 @@ async function addDir(h) {
 }
 
 if (scenario === "filters") {
-	for (let disabled = 0; disabled < entries.length; disabled++) {
-		const indices = allIndices.filter((index) => index !== disabled);
-		const h = await open(indices, ["-" + entries[disabled].slice(2)]);
+	for (let disabled = 0; disabled < allNames.length; disabled++) {
+		const disabledName = allNames[disabled];
+		const names = allNames.filter((name) => name !== disabledName);
+		const h = await open(names, ["-" + releaseManifest.pi.extensions.find((entry) => entry.split("/")[2] === disabledName).slice(2)]);
 		let mounted;
 		try {
-			inventory(h, indices);
-			if (disabled === 0) {
+			inventory(h, names);
+			if (disabledName === "pi-ui") {
 				assert.deepEqual((await execute(h, "bg_status", {})).details.tasks, [], "UI-disabled package retains background execution");
 				const patch = await execute(h, "apply_patch", { input: patchInput });
 				assert.equal(patch.details.format, "apply_patch.v1", "UI-disabled package retains file mutation/report contract");
@@ -461,9 +465,9 @@ if (scenario === "filters") {
 } else {
 	const h = await open();
 	try {
-		if (scenario === "inventory") inventory(h, config.indices ?? allIndices);
+		if (scenario === "inventory") inventory(h, config.names ?? allNames);
 		else if (scenario === "subagents-contracts") {
-			inventory(h, config.indices ?? allIndices);
+			inventory(h, config.names ?? allNames);
 			await assert.rejects(execute(h, "Agent", { prompt: "fixture", agent: "no-such-agent" }), /Unknown agent type: no-such-agent/);
 			await assert.rejects(execute(h, "StopAgent", { agent_id: "missing" }), /Agent missing not found/);
 			const status = await execute(h, "AgentStatus", {});
@@ -489,7 +493,7 @@ if (scenario === "filters") {
 		else if (scenario === "footer-focus") await footerAndFocus(h);
 		else if (scenario === "add-dir") await addDir(h);
 		else if (scenario === "discovery") {
-			inventory(h, allIndices);
+			inventory(h, allNames);
 			const searched = await execute(h, "tool_search", { query: "+AskUserQuestion +bg_run" });
 			assert.ok(searched.content[0].text.includes("AskUserQuestion"));
 			for (const name of ["AskUserQuestion", "bg_run"]) assert.ok(h.session.getActiveToolNames().includes(name), "tool_search discovers and activates " + name);

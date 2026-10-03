@@ -1,6 +1,7 @@
 # Dependencies and generated builds
 node_modules/
 dist/
+.build-dist-*/
 .stage/
 .codegraph/
 *.tsbuildinfo
