@@ -1,6 +1,7 @@
 import type { AgentToolResult } from "@earendil-works/pi-coding-agent";
 import type { Component } from "@earendil-works/pi-tui";
 import { getCapabilities, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
+import { RenderLines, renderToolHeader, renderToolStatus, type ToolCardState, type ToolCardTheme } from "pi-ui-kit";
 import { config } from "../../config/config.ts";
 import { sanitizeToolResultText } from "../../utils/tool-result-sanitize.ts";
 import { scheduleAnimation } from "./result.ts";
@@ -29,31 +30,8 @@ export const COLOR = {
 	removedBg: [95, 0, 0],
 } satisfies Record<string, Rgb>;
 
-const RESULT_INDENT = "  ";
 export const CONTENT_INDENT = "      ";
 const DIFF_INDENT = "     ";
-const RESULT_BRANCH = "⎿ ";
-
-export class RenderLines implements Component {
-	private cachedWidth?: number;
-	private cachedLines?: string[];
-
-	constructor(private readonly build: (width: number) => string[]) {}
-
-	render(width: number): string[] {
-		const safeWidth = Math.max(1, width);
-		if (this.cachedWidth !== safeWidth || !this.cachedLines) {
-			this.cachedWidth = safeWidth;
-			this.cachedLines = this.build(safeWidth);
-		}
-		return this.cachedLines;
-	}
-
-	invalidate(): void {
-		this.cachedWidth = undefined;
-		this.cachedLines = undefined;
-	}
-}
 
 const ANSI_256_CUBE_VALUES = [0, 95, 135, 175, 215, 255] as const;
 const ANSI_256_GRAY_VALUES = Array.from({ length: 24 }, (_, index) => 8 + index * 10);
@@ -115,10 +93,6 @@ function bold(text: string): string {
 	return `\x1b[1m${text}\x1b[22m`;
 }
 
-function underline(text: string): string {
-	return `\x1b[4m${text}\x1b[24m`;
-}
-
 export function fit(text: string, width: number): string {
 	return visibleWidth(text) > width ? truncateToWidth(text, width, "…") : text;
 }
@@ -127,35 +101,39 @@ export function singleLine(text: string): Component {
 	return new RenderLines((width) => [fit(text, width)]);
 }
 
-export function toolHeaderText(
+function cardState(state: ToolState): ToolCardState {
+	return state.isError ? "error" : state.isPartial ? "running" : "success";
+}
+
+/** 公共卡头 `● title (summary)`；动画帧由调用方传入，kit 不持有 timer。 */
+export function toolHeaderLines(
+	theme: ToolCardTheme,
 	state: ToolState,
 	name: string,
-	argument?: string,
-	underlineArgument = false,
-	dot = "●",
-): string {
-	const dotColor = state.isError ? COLOR.removed : state.isPartial ? COLOR.dotPending : COLOR.dotSuccess;
-	const value = argument ?? "…";
-	const styledArgument = underlineArgument
-		? underline(foreground(COLOR.secondary, value))
-		: foreground(COLOR.secondary, value);
-	return (
-		`${foreground(dotColor, dot)} ` +
-		`${bold(foreground(COLOR.title, name))}` +
-		`${foreground(COLOR.secondary, "(")}${styledArgument}${foreground(COLOR.secondary, ")")}`
-	);
+	argument: string | undefined,
+	width: number,
+	glyph = "●",
+): string[] {
+	return renderToolHeader(theme, {
+		title: name,
+		summary: argument === undefined ? undefined : `(${argument})`,
+		state: cardState(state),
+		glyph,
+	}, width);
 }
 
-export function resultHead(content: string): string {
-	return `${RESULT_INDENT}${foreground(COLOR.gutter, RESULT_BRANCH)}${content}`;
+/** 用公共卡头实测同一 name 的固定宽度，供标题内容自行裁剪时预留空间。 */
+export function toolHeaderReservedWidth(
+	theme: ToolCardTheme,
+	state: ToolState,
+	name: string,
+	glyph = "●",
+): number {
+	return visibleWidth(toolHeaderLines(theme, state, name, "", Number.MAX_SAFE_INTEGER, glyph)[0] ?? "");
 }
 
-function resultLine(content: string): Component {
-	return singleLine(resultHead(content));
-}
-
-export function pendingResult(label: string): Component {
-	return resultLine(foreground(COLOR.dotPending, label));
+export function pendingResult(theme: ToolCardTheme, label: string): Component {
+	return new RenderLines((width) => renderToolStatus(theme, { state: "running", message: label }, width));
 }
 
 function textFromContent(content: readonly { type: string; text?: string }[]): string {
@@ -323,7 +301,7 @@ export function isFileLayoutTool(name: unknown): boolean {
 export class FileResultView implements Component {
 	private moreRow = -1;
 	constructor(
-		private readonly status: string,
+		private readonly status: (width: number) => string[],
 		private readonly body: Component,
 		readonly fullPreview: { title: string; content: Component },
 		private readonly source: string,
@@ -337,7 +315,7 @@ export class FileResultView implements Component {
 		const body = this.body.render(safe);
 		const explicitReveal = typeof this.reveal === "function" ? this.reveal() : this.reveal;
 		const clipped = explicitReveal ?? (body.some((line) => line.includes("…")) || this.source.split("\n").some((line) => visibleWidth(line) > safe - 12));
-		const lines = [fit(this.status, safe), ...body];
+		const lines = [...this.status(safe), ...body];
 		this.moreRow = clipped ? lines.length : -1;
 		if (clipped) lines.push(fit(foreground(isToolCallHovered(this.toolCallId) ? COLOR.title : COLOR.gutter, `${CONTENT_INDENT}${showMoreHintText()}`), safe));
 		return lines;
@@ -351,13 +329,13 @@ export class FileResultView implements Component {
 }
 
 /** 错误结果统一为红色诊断；展开查看完整错误，不把输入补丁当作成功 diff。 */
-export function errorResultView(title: string, message: string, toolCallId?: string): FileResultView {
+export function errorResultView(theme: ToolCardTheme, title: string, message: string, toolCallId?: string): FileResultView {
 	const text = sanitizeToolResultText(message);
 	const body = new RenderLines((width) =>
 		text.split("\n").flatMap((line) => wrapTextWithAnsi(foreground(COLOR.removed, line), width)),
 	);
 	return new FileResultView(
-		resultHead(foreground(COLOR.removed, text.split("\n")[0] || "Error")),
+		(width) => renderToolStatus(theme, { state: "error", message: text.split("\n")[0] || "Error" }, width),
 		new RenderLines(() => (text.includes("\n") ? [`${CONTENT_INDENT}…`] : [])),
 		{ title, content: body },
 		text,
@@ -368,7 +346,7 @@ export function errorResultView(title: string, message: string, toolCallId?: str
 export function createFileRenderer(original: any): any {
 	const name = original.name as "write" | "edit";
 	const fallback = (slot: string, args: any[]) => typeof original[slot] === "function"
-		? original[slot](...args) : resultLine("Result unavailable");
+		? original[slot](...args) : singleLine("Result unavailable");
 	const valid = (args: any) => typeof args?.path === "string" && (name !== "write" || typeof args.content === "string");
 	return {
 		...original,
@@ -376,20 +354,21 @@ export function createFileRenderer(original: any): any {
 		renderCall(args: any, theme: any, context: any) {
 			if (!valid(args)) return fallback("renderCall", [args, theme, context]);
 			if (context.isPartial && context.executionStarted) scheduleAnimation(context);
-			return singleLine(toolHeaderText(context, name, sanitizeToolResultText(args.path), true,
-				context.isPartial && context.executionStarted ? toolLoadingIcon() : "●"));
+			const glyph = context.isPartial && context.executionStarted ? toolLoadingIcon() : "●";
+			return new RenderLines((width) =>
+				toolHeaderLines(theme, context, name, sanitizeToolResultText(args.path), width, glyph));
 		},
 		renderResult(result: AgentToolResult<any>, options: any, theme: any, context: any) {
 			if (!valid(context.args)) return fallback("renderResult", [result, options, theme, context]);
-			if (options.isPartial) return pendingResult(name === "write" ? "Writing…" : "Editing…");
+			if (options.isPartial) return pendingResult(theme, name === "write" ? "Writing…" : "Editing…");
 			if (context.isError) {
-				return errorResultView(`${name}: ${context.args.path}`, textOf(result), context.toolCallId);
+				return errorResultView(theme, `${name}: ${context.args.path}`, textOf(result), context.toolCallId);
 			}
 			if (name === "write") {
 				const content = sanitizeToolResultText(context.args.content);
 				const count = lineCount(content);
-				const status = resultHead(foreground(COLOR.secondary, "Wrote ") + foreground(COLOR.title, String(count)) +
-					foreground(COLOR.secondary, ` ${count === 1 ? "line" : "lines"} to `) + underline(foreground(COLOR.title, sanitizeToolResultText(context.args.path))));
+				const message = `Wrote ${count} ${count === 1 ? "line" : "lines"} to ${sanitizeToolResultText(context.args.path)}`;
+				const status = (width: number) => renderToolStatus(theme, { state: "success", message }, width);
 				const preview = numberedPreview(content, options.expanded);
 				return new FileResultView(status, preview,
 					{ title: `write: ${context.args.path}`, content: numberedPreview(content, true, true) }, content, context.toolCallId,
@@ -398,9 +377,8 @@ export function createFileRenderer(original: any): any {
 			if (typeof result.details?.diff !== "string") return fallback("renderResult", [result, options, theme, context]);
 			const diff = sanitizeToolResultText(result.details.diff);
 			const { added, removed } = diffStats(diff);
-			const status = resultHead(foreground(COLOR.secondary, "Added ") + foreground(COLOR.title, String(added)) +
-				foreground(COLOR.secondary, `${added === 1 ? " line" : " lines"}, removed `) + foreground(COLOR.title, String(removed)) +
-				foreground(COLOR.secondary, removed === 1 ? " line" : " lines"));
+			const message = `Added ${added} ${added === 1 ? "line" : "lines"}, removed ${removed} ${removed === 1 ? "line" : "lines"}`;
+			const status = (width: number) => renderToolStatus(theme, { state: "success", message }, width);
 			const preview = diffPreview(diff, options.expanded);
 			// 换行后不再用源行宽度推断裁切；只有行预算真正丢弃内容时才显示查看更多。
 			return new FileResultView(status, preview,

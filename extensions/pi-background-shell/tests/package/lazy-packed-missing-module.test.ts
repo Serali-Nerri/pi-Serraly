@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { cp, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { describe, it } from 'node:test';
 import type { ExtensionUIContext } from '@earendil-works/pi-coding-agent';
+import { installedPackageDirectory } from '../helpers/workspace-dependencies.ts';
 import { loadRuntime } from './runtime-fixture.js';
 
 const exec = promisify(execFile);
@@ -66,6 +67,17 @@ void describe('packed lazy task UI closure', { concurrency: false }, () => {
       assert.equal(runtime.session.extensionRunner.hasHandlers('before_agent_start'), false);
       await runtime.close(); runtime = undefined;
 
+      // The shipped source imports the declared workspace kit, which a zero-dependency
+      // payload does not carry: that path is a workspace path, not a release path.
+      const sourceOnly = join(root, 'source-without-workspace');
+      await cp(packed, sourceOnly, { recursive: true });
+      const unresolved = await loadRuntime(join(sourceOnly, 'extensions/background-tasks.ts')).then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+      assert.ok(unresolved instanceof Error, 'the bare workspace import cannot resolve without the workspace');
+      assert.match(unresolved.message, /pi-ui-kit/);
+
       for (const [entry, missing] of [
         ['dist/extensions/background-tasks.js', 'dist/src/ui/background-tasks-manager.js'],
         ['extensions/background-tasks.ts', 'src/ui/background-tasks-manager.ts'],
@@ -75,6 +87,11 @@ void describe('packed lazy task UI closure', { concurrency: false }, () => {
         const damaged = join(root, `${entry.startsWith('dist/') ? 'damaged-dist' : 'damaged-source'}-${missing.includes('task-log-viewport') ? 'viewport' : 'manager'}`);
         await cp(packed, damaged, { recursive: true });
         await rm(join(damaged, missing));
+        if (entry.startsWith('extensions/')) {
+          // Workspace sources resolve the kit through the workspace link.
+          await mkdir(join(damaged, 'node_modules'), { recursive: true });
+          await symlink(installedPackageDirectory('pi-ui-kit'), join(damaged, 'node_modules/pi-ui-kit'), process.platform === 'win32' ? 'junction' : 'dir');
+        }
         runtime = await loadRuntime(join(damaged, entry));
         assert.deepEqual(runtime.tools.map((tool) => tool.name).sort(), ['bg_kill', 'bg_logs', 'bg_run', 'bg_status']);
         const command = runtime.session.extensionRunner.getRegisteredCommands().find((candidate) => candidate.invocationName === 'tasks');

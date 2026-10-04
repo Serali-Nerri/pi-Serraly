@@ -1,0 +1,35 @@
+{
+  "name": "pi-ui-kit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared tool-card syntax and layout helpers for the private pi-Serraly workspace",
+  "license": "Apache-2.0",
+  "engines": { "node": ">=22.19.0" },
+  "files": ["dist/", "README.md"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-package.mjs",
+    "check": "tsc -p tsconfig.json",
+    "pack:check": "node ../../scripts/build-package.mjs --check",
+    "prepack": "npm run build && npm run pack:check"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-tui": "*"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-tui": {
+      "optional": true
+    }
+  },
+  "serraly": {
+    "build": { "kind": "tsc", "project": "./tsconfig.build.json" },
+    "licenses": ["licenses/README.md", "licenses/claude-style-tools-LICENSE", "licenses/claude-style-tools-THIRD_PARTY_NOTICES.md", "licenses/LICENSES/pi-cc-extensions.txt", "UPSTREAM.md"],
+    "test": { "directory": "test" }
+  }
+}

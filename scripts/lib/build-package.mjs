@@ -65,7 +65,7 @@ function classifyInput(pkg, libraries, path) {
  * Bundle one entry into a candidate dist. Input ownership is checked against the
  * real resolution of every emitted input, not just the declared manifest.
  */
-export async function bundleEntry(pkg, { entry, outfile, cjsRequire = false }) {
+export async function bundleEntry(pkg, { entry, outfile, cjsRequire = false, sourcemap = false }) {
 	const libraries = internalDependencies(pkg);
 	const result = await build({
 		entryPoints: [entry], outfile,
@@ -74,6 +74,8 @@ export async function bundleEntry(pkg, { entry, outfile, cjsRequire = false }) {
 			.flatMap((name) => [name, `${name}/*`]),
 		legalComments: "eof", metafile: true, logLevel: "silent",
 		...(cjsRequire ? { banner: { js: cjsRequireBridge } } : {}),
+		// `linked` writes the map file and the sourceMappingURL reference the gates require.
+		...(sourcemap ? { sourcemap: "linked", sourcesContent: true } : {}),
 	});
 	const bundled = new Set();
 	for (const path of Object.keys(result.metafile.inputs)) {
@@ -135,6 +137,16 @@ async function runRecipe(pkg, dist) {
 	} else if (recipe.kind === "script") {
 		const built = await run(process.execPath, [resolve(pkg.directory, recipe.script), "--out-dir", dist], { cwd: pkg.directory });
 		if (built.code !== 0) throw new Error(`${pkg.name}: build script failed: ${built.stderr || built.stdout}`);
+		// A declared leaf is bundled after the script compiled the rest one-to-one,
+		// so a multi-file runtime can inline a shared library without giving up its
+		// own source maps.
+		for (const [source, bundle] of Object.entries(recipe.bundles ?? {})) {
+			const relativeOutput = relative(pkg.directory, resolve(pkg.directory, bundle.output));
+			if (!relativeOutput.startsWith("dist/")) throw new Error(`${pkg.name}: bundled output must live under dist: ${bundle.output}`);
+			const outfile = join(dist, relativeOutput.slice("dist/".length));
+			const { libraries } = await bundleEntry(pkg, { entry: resolve(pkg.directory, source), outfile, sourcemap: true });
+			await copyLibraryLicenses(pkg, dist, libraries);
+		}
 	} else {
 		throw new Error(`${pkg.name}: unsupported build recipe ${JSON.stringify(recipe.kind)}`);
 	}

@@ -18,20 +18,20 @@ import { config } from "../../config/config.ts";
 import { oneLine } from "../../utils/format.ts";
 import { sanitizeToolResultText } from "../../utils/tool-result-sanitize.ts";
 import { toolLoadingIcon } from "../../utils/tool-loading-icon.ts";
+import { RenderLines, renderToolStatus, type ToolCardTheme } from "pi-ui-kit";
 import {
 	COLOR,
 	CONTENT_INDENT,
 	FileResultView,
-	RenderLines,
 	diffPreview,
 	errorResultView,
 	fit,
 	foreground,
 	pendingResult,
-	resultHead,
 	singleLine,
 	textOf,
-	toolHeaderText,
+	toolHeaderLines,
+	toolHeaderReservedWidth,
 } from "./files.ts";
 import { describePatchTitle, fitPatchPaths, formatPatchTitle, patchDisplayPath, type PatchTitle } from "./apply-patch-title.ts";
 import { scheduleAnimation } from "./result.ts";
@@ -492,7 +492,7 @@ function previewContent(details: ApplyPatchDetails, display: (path: string) => s
 	return { title, content: new RenderLines((width) => buildOverlayLines(width, details, display)) };
 }
 
-function buildResultView(details: ApplyPatchDetails, expanded: boolean, context: any): FileResultView {
+function buildResultView(theme: ToolCardTheme, details: ApplyPatchDetails, expanded: boolean, context: any): FileResultView {
 	const display = (path: string) => patchDisplayPath(path, context?.cwd);
 	let clipped = false;
 	const body = new RenderLines((width) => {
@@ -501,7 +501,7 @@ function buildResultView(details: ApplyPatchDetails, expanded: boolean, context:
 		return built.lines;
 	});
 	return new FileResultView(
-		resultHead(summaryContent(details)),
+		(width) => renderToolStatus(theme, { state: "success", message: summaryContent(details) }, width),
 		body,
 		previewContent(details, display),
 		"",
@@ -539,25 +539,25 @@ export function createApplyPatchRenderer(
 			return new RenderLines((width) => {
 				const title: PatchTitle = context?.state?.[HEADLINE] ??
 					{ status: context?.executionStarted ? "Applying patch" : "Patch" };
-				const available = Math.max(0, width - visibleWidth(toolHeaderText(context, "apply_patch", "", true, dot)));
-				return [fit(toolHeaderText(context, "apply_patch", formatPatchTitle(title, available), true, dot), width)];
+				const available = Math.max(0, width - toolHeaderReservedWidth(theme, context, "apply_patch", dot));
+				return toolHeaderLines(theme, context, "apply_patch", formatPatchTitle(title, available), width, dot);
 			});
 		},
 		renderResult(result: any, options: any, theme: any, context: any) {
 			if (config.mode === "off") return fallbackResult(result, options, theme, context);
 			if (options?.isPartial) {
 				setTitle(context, { status: "Applying patch" });
-				return pendingResult("Applying patch…");
+				return pendingResult(theme, "Applying patch…");
 			}
 			// 失败走 Pi 错误通道（details 为空）：只显示错误诊断，绝不画成功 diff。
 			if (options?.isError || context?.isError || result?.isError) {
 				setTitle(context, { status: "Failed" });
-				return errorResultView("apply_patch: error", textOf(result), context?.toolCallId);
+				return errorResultView(theme, "apply_patch: error", textOf(result), context?.toolCallId);
 			}
 			const details = parseApplyPatchDetails(result?.details);
 			setTitle(context, details ? describePatchTitle(details, context?.cwd) : { status: "Result unavailable" });
 			if (!details) return fallbackResult(result, options, theme, context);
-			return buildResultView(details, Boolean(options?.expanded), context);
+			return buildResultView(theme, details, Boolean(options?.expanded), context);
 		},
 	};
 }

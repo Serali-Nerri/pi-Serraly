@@ -442,6 +442,65 @@ describe("renderAgentToolResult — background agent status indicators", () => {
 });
 
 /* ------------------------------------------------------------------ */
+/*  Shared tool-card syntax                                           */
+/* ------------------------------------------------------------------ */
+
+describe("agent tool card — shared card syntax", () => {
+  beforeEach(() => {
+    textInstances.length = 0;
+  });
+
+  it("renders the call line as the shared header through the shared theme roles", () => {
+    const roles: string[] = [];
+    const recordingTheme: Theme = {
+      fg: (color: string, text: string) => { roles.push(color); return text; },
+      bg: (_color: string, text: string) => text,
+      bold: (text: string) => text,
+    };
+    renderAgentToolCall({ agent: "builder", _modelOverride: "claude-sonnet-4-5" }, recordingTheme);
+
+    const allText = textInstances.map((t) => t.text).join("\n");
+    expect(allText).toContain("▸ Builder (claude-sonnet-4-5)");
+    expect(roles).toContain("toolTitle");
+    expect(roles).toContain("muted");
+  });
+
+  it("renders the result as the shared status line and keeps the statistics", () => {
+    renderAgentToolResult({
+      content: [{ type: "text", text: "Agent output" }],
+      details: {
+        type: "builder",
+        description: "Test agent",
+        turnCount: 3,
+        toolUses: 5,
+        input: 100,
+        output: 50,
+        contextPercent: 10,
+        durationMs: 60000,
+      },
+    }, { expanded: false }, noopTheme, SHOW_COST);
+
+    const allText = textInstances.map((t) => t.text).join("\n");
+    expect(allText).toContain("⎿ 5 uses·3 turns");
+    expect(allText).toContain("Test agent");
+  });
+
+  it("keeps the complete error text in the status line and the body", () => {
+    renderAgentToolResult({
+      isError: true,
+      content: [
+        { type: "text", text: "Unknown agent type: no-such-agent" },
+        { type: "text", text: "Available agent types: general-purpose, Explore" },
+      ],
+    }, { expanded: false }, noopTheme, SHOW_COST);
+
+    const allText = textInstances.map((t) => t.text).join("\n");
+    expect(allText).toContain("⎿ Unknown agent type: no-such-agent");
+    expect(allText).toContain("Available agent types: general-purpose, Explore");
+  });
+});
+
+/* ------------------------------------------------------------------ */
 /*  registerAgentInvalidation / invalidateAgentRow                    */
 /* ------------------------------------------------------------------ */
 

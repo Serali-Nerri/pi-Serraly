@@ -39,7 +39,7 @@ test("write and edit preserve local colors, lines, headers and full long preview
 		const write = h.tool("write", "w", { path: "out.ts", content: Array.from({ length: 100 }, (_, i) => `line ${i + 1}`).join("\n") }, result("ok"));
 		const edit = h.tool("edit", "e", { path: "in.ts", oldText: "old", newText: "new" }, result("ok", false, { diff: "-1 old\n+1 new" }));
 		const text = write.render(100).map(strip).join("\n");
-		assert.match(text, /● write\(out.ts\)/); assert.match(text, /Wrote 100 lines to out.ts/);
+		assert.match(text, /● write \(out.ts\)/); assert.match(text, /Wrote 100 lines to out.ts/);
 		assert.match(text, /10 line 10/); assert.doesNotMatch(text, /11 line 11/);
 		const diff = edit.render(100).join("\n");
 		assert.match(diff, /\x1b\[48;2;95;0;0m/); assert.match(diff, /\x1b\[48;2;0;95;0m/);
@@ -181,7 +181,7 @@ test("fullscreen file tool headers collapse after a single click", async () => {
 			h.click(lines[row]!.indexOf("click to show more"), row);
 			assert.equal(tool.expanded, true);
 			lines = h.render();
-			row = lines.findIndex((line) => line.includes(`${name}(${name}.ts)`));
+			row = lines.findIndex((line) => line.includes(`${name} (${name}.ts)`));
 			h.click(lines[row]!.indexOf(name), row);
 			assert.equal(tool.expanded, false);
 			h.root.removeChild(tool);
@@ -237,9 +237,9 @@ test("renderer exclusions, native mode, and replacement shutdown preserve owners
 		second = await harness();
 		await first.close();
 		const tool = second.tool("write", "w", { path: "b", content: "hello" }, result("ok"));
-		assert.match(tool.render(100).map(strip).join("\n"), /write\(b\)/);
+		assert.match(tool.render(100).map(strip).join("\n"), /write \(b\)/);
 		setConfig({ mode: "off" }); tool.invalidate();
-		assert.doesNotMatch(tool.render(100).map(strip).join("\n"), /write\(b\)/);
+		assert.doesNotMatch(tool.render(100).map(strip).join("\n"), /write \(b\)/);
 	} finally { await second?.close(); await first.close(); }
 });
 
@@ -303,7 +303,7 @@ test("compact rounds retain file styling and support nested native mouse input",
 		const write = h.tool("write", "w", { path: "output.ts", content: "const done = true;" }, result("ok"));
 		let lines = h.render();
 		assert.match(lines.join("\n"), /read×1/);
-		assert.match(lines.join("\n"), /write\(output.ts\)/);
+		assert.match(lines.join("\n"), /write \(output.ts\)/);
 		let row = lines.findIndex((line) => line.includes("read×1"));
 		h.click(lines[row]!.indexOf("click to show more"), row);
 		assert.equal(assistant.expanded, true); assert.equal(write.expanded, false);

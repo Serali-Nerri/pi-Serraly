@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
+import { padToWidth } from "pi-ui-kit";
 import {
 	helpText,
 	htmlToText,
 	looksLikeHtml,
 	mergeColumns,
-	padToWidth,
 	pushWrapped,
 	renderChoices,
 	renderPreviewBox,

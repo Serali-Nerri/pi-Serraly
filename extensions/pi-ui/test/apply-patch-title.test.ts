@@ -27,7 +27,7 @@ test("single-file titles use the final action, never the first input operation",
 	try {
 		for (const [kind, action] of [["add", "Add"], ["update", "Update"], ["delete", "Delete"]] as const) {
 			const tool = h.tool("apply_patch", kind, args, output(details(entry("batch_test/file.txt", kind))), definition);
-			assert.match(header(tool), new RegExp(`apply_patch\\(${action} · batch_test/file\\.txt\\)`));
+			assert.match(header(tool), new RegExp(`apply_patch \\(${action} · batch_test/file\\.txt\\)`));
 			assert.doesNotMatch(header(tool), /WRONG_FIRST_FILE|\*\*\*|Edit/);
 		}
 	} finally { await h.close(); }
@@ -128,10 +128,10 @@ test("result-arrival, replay, expand, resize, error and legacy transitions updat
 		tool.invalidate();
 		assert.match(header(tool), /src\/, test\/ · 2 changes/);
 		tool.updateResult(output({}, true));
-		assert.match(header(tool), /apply_patch\(Failed\)/);
+		assert.match(header(tool), /apply_patch \(Failed\)/);
 		assert.doesNotMatch(header(tool), /2 changes/);
 		tool.updateResult(output(details()));
-		assert.match(header(tool), /apply_patch\(No changes\)/);
+		assert.match(header(tool), /apply_patch \(No changes\)/);
 		tool.updateResult(output({ changes: [{ kind: "delete", path: "legacy.txt" }] }));
 		assert.match(header(tool), /Result unavailable/);
 		assert.doesNotMatch(header(tool), /Delete|legacy\.txt/);

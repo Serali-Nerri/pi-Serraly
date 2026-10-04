@@ -21,6 +21,7 @@
 | --- | --- | --- |
 | `pi-apply-patch-protocol` | `apply_patch.v1` 格式标识、四项输出预算、`ApplyPatch*` wire 类型 | 生产者的 diff 算法/工作量预算/截断策略，消费者的防御阈值/清洗/降级 |
 | `pi-config-core` | 有界 JSON 读取与原子写入机制（大小/UTF-8/权限/并发语义） | 缺失/损坏/不可信文件的错误与信任策略、字段合并、路径与文件名 |
+| `pi-ui-kit` | 工具卡公共语法：标题/摘要行、结果状态行、语义主题角色、宽度安全 padding 与按宽度缓存的行组件 | 正文与 diff/IO 预览、hover/hitbox、展开状态、动画帧、renderer 注册和业务信息 |
 
 工具契约和详细算法留在各模块 README/子系统文档。UI 的私有宿主访问只在
 `extensions/pi-ui/src/compat/`；其 host 事件只由 `src/lifecycle.ts` 注册。
@@ -53,7 +54,8 @@ manifest。每个 workspace 包必须是真实目录（非链接）、`private`�
 type BuildRecipe =
   | { kind: "bundle"; entry: string; cjsRequire?: boolean }
   | { kind: "tsc"; project: string }
-  | { kind: "script"; script: string; bundles?: Record<string, string>; verifyArtifact?: string };
+  | { kind: "script"; script: string; verifyArtifact?: string;
+      bundles?: Record<string, { output: string; packages: string[] }> };
 interface SerralyMetadata {
   build: BuildRecipe;
   licenses: string[];
@@ -80,7 +82,8 @@ dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace
 - UI、questions、loop、tools 是独立 ESM bundle；`diff@8.0.4` 打入补丁
   bundle 并携带其 BSD 文本。
 - background-shell 用 tsc 编译完整 `extensions/` + `src/`，保留 lazy import；
-  根入口只是同目录转发，不另行注册能力。
+  根入口只是同目录转发，不另行注册能力。唯一例外是 manifest 声明的
+  `src/ui/tool-cards.ts` 叶（见下），其余文件仍是逐文件 tsc 产物。
 - add-dir 的主入口 bundle 将 `@henryqw/pi-config-store@2.0.2` 及其 CJS 锁依赖
   全部打入产物，不增加根运行依赖。
 - subagents 是独立 ESM bundle，保留上游 MIT 许可及固定来源；Pi SDK、pi-ai、
@@ -92,6 +95,15 @@ dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace
   UTF-8、`0600` 文件、`0700` 新父目录和 `<pid>.<uuid>` 临时名只在该库一处实现；
   加载失败回退、保存前重读合并、项目层信任状态和 log/throw 语义仍各自保留。
   add-dir 继续使用自己的异步锁定 store，不迁移到该库。
+- ui、questions、background-shell 与 subagents 共用 `pi-ui-kit` 的卡语法：`● title
+  summary` 标题行与 `  ⎿ message` 结果状态行只有该库一处定义，运行/成功/失败/取消
+  用语义主题角色和状态文字区分，不集中任何 renderer。ui、questions、subagents
+  直接 bundle 该库；background-shell 的 `src/ui/tool-cards.ts` 是唯一引用 kit 的
+  无状态叶（只接收展示输入，不读 registry/config），tsc 之后由共享 builder 按
+  manifest 的 `serraly.build.bundles` 把它内联为同一位置的
+  `dist/src/ui/tool-cards.js`：宿主包 external、多源 source map、kit 许可复制到
+  `dist/licenses/<library>/`。构建期 gate 只允许该叶引用已声明的 workspace 包，
+  编译闭包中不允许残留裸 workspace import。
 - 在非发现暂存目录构建，检查 emitted import 图、必要许可和文件哈希后才发布
   开发 dist。许可检查使用完整的必需文件清单，不以目录存在代替法律闭包。
 - 每个包先在同级 `.build-dist-*` 候选目录编译（与 live `dist` 同深度，保证

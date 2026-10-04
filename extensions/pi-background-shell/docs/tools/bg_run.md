@@ -62,4 +62,4 @@ The suffix describes the actual spawn policy; it is not a system-prompt hook.
 }
 ```
 
-Source: `src/extension.ts:864`. See [runtime](../subsystems/background-task-runtime.md) and [completion delivery](../concepts/completion-delivery.md).
+Source: `src/extension.ts:857`. See [runtime](../subsystems/background-task-runtime.md) and [completion delivery](../concepts/completion-delivery.md).

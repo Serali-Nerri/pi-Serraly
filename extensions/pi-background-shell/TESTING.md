@@ -48,10 +48,14 @@ and use offline local tarball installation outside the development tree, without
 physical host peers or changes to user settings.
 
 `build:runtime` cleans module-local ignored `dist` before compiling the full tsc
-ESM closure and literal lazy UI imports. Prepack checks docs and payload. The
-compiled factory is `dist/extensions/background-tasks.js`, reexporting
-`dist/src/extension.js`; root builds add `dist/pi-background-shell/index.js`.
-Never load the development dependency tree as a production package.
+ESM closure and literal lazy UI imports. The shared package builder then inlines
+the manifest-declared `src/ui/tool-cards.ts` leaf, with `pi-ui-kit` bundled and
+host peers external, into the same `dist/src/ui/tool-cards.js`; the shipped source
+leaf needs the workspace link, the bundled dist does not. Prepack checks docs and
+payload. The compiled factory is `dist/extensions/background-tasks.js`,
+reexporting `dist/src/extension.js`; root builds add
+`dist/pi-background-shell/index.js`. Never load the development dependency tree as
+a production package.
 
 ## What tests exercise
 

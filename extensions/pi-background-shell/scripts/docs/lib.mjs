@@ -28,6 +28,7 @@ export const SOURCE_OWNERS = {
   'src/core/windows-taskkill.ts': 'docs/subsystems/background-task-runtime.md',
   'src/ui/background-tasks-manager.ts': 'docs/reference/shortcuts-and-dock.md',
   'src/ui/task-log-viewport.ts': 'docs/reference/shortcuts-and-dock.md',
+  'src/ui/tool-cards.ts': 'docs/subsystems/extension-lifecycle.md',
 };
 const AUTHORED_DOCS = [
   'docs/api/eventbus-v2.md', 'docs/commands/bg.md', 'docs/commands/bg-clear.md',
@@ -423,7 +424,7 @@ function runtimeImports(sf) {
   });
   return imports;
 }
-export function runtimeGraph(root, entry, { source = false, dynamic = true, distPrefix = 'dist' } = {}) {
+export function runtimeGraph(root, entry, { source = false, dynamic = true, distPrefix = 'dist', allowedBare = new Map() } = {}) {
   const pending = [entry], visited = new Set();
   while (pending.length) {
     const path = pending.pop(); if (visited.has(path)) continue;
@@ -438,7 +439,10 @@ export function runtimeGraph(root, entry, { source = false, dynamic = true, dist
     for (const spec of imports) {
       if (spec.startsWith('node:')) continue;
       if (!spec.startsWith('.')) {
-        check(HOST_PEERS.some((peer) => spec === peer || spec.startsWith(`${peer}/`)), `${path}: unexpected runtime dependency ${spec}`);
+        // Only a declared bundle leaf may still name its inlined workspace packages
+        // before the shared builder replaces the one-to-one tsc emit.
+        const declared = allowedBare.get(path) ?? [];
+        check(HOST_PEERS.some((peer) => spec === peer || spec.startsWith(`${peer}/`)) || declared.includes(spec), `${path}: unexpected runtime dependency ${spec}`);
         continue;
       }
       let target = posixPath(relative(root, resolve(root, dirname(path), spec)));
@@ -449,26 +453,56 @@ export function runtimeGraph(root, entry, { source = false, dynamic = true, dist
   }
   return [...visited].sort();
 }
-export function assertRuntimeClosure(sourceRoot = PACKAGE_ROOT, { distDirectory = join(sourceRoot, 'dist') } = {}) {
+export function assertRuntimeClosure(sourceRoot = PACKAGE_ROOT, { distDirectory = join(sourceRoot, 'dist'), preBundle = false } = {}) {
   const pkg = json(sourceRoot, 'package.json'); checkManifest(pkg);
   const prefix = posixPath(relative(sourceRoot, distDirectory));
   const sources = [...walkFiles(sourceRoot, 'src'), ...walkFiles(sourceRoot, 'extensions')].sort();
   sortedSame(sources, Object.keys(SOURCE_OWNERS), 'pure shell source inventory');
+  const bundles = declaredBundles(pkg, sources);
   const expected = [`${prefix}/package.json`, ...sources.flatMap((path) => [`${prefix}/${path.replace(/\.ts$/, '.js')}`, `${prefix}/${path.replace(/\.ts$/, '.js.map')}`])];
-  // The package seal and the copied license texts are written after this closure
-  // is built, so they are known extras rather than orphan artifacts.
-  const known = new Set([`${prefix}/artifacts.json`, ...(pkg.serraly?.licenses ?? []).map((path) => `${prefix}/${path}`)]);
-  sortedSame(walkFiles(sourceRoot, prefix).filter((path) => !known.has(path)), expected, 'runtime build artifacts (no orphans)');
+  // The package seal, the copied license texts and the inlined library licenses are
+  // written after this closure is built, so they are known extras rather than orphans.
+  const known = new Set([`${prefix}/artifacts.json`, ...(pkg.serraly?.licenses ?? []).map((path) => `${prefix}/${path}`),
+    ...[...bundles.values()].flatMap((bundle) => bundle.packages.map((name) => `${prefix}/licenses/${name}/`))]);
+  const isKnown = (path) => known.has(path) || [...known].some((entry) => entry.endsWith('/') && path.startsWith(entry));
+  sortedSame(walkFiles(sourceRoot, prefix).filter((path) => !isKnown(path)), expected, 'runtime build artifacts (no orphans)');
   const built = json(sourceRoot, `${prefix}/package.json`);
   check(built.name === pkg.name && built.version === pkg.version && built.type === 'module', 'dist package identity drift');
-  const graph = runtimeGraph(sourceRoot, `${prefix}/extensions/background-tasks.js`, { distPrefix: prefix });
+  const graph = runtimeGraph(sourceRoot, `${prefix}/extensions/background-tasks.js`, {
+    distPrefix: prefix,
+    allowedBare: new Map(preBundle ? [...bundles].map(([source, bundle]) => [`${prefix}/${source.replace(/\.ts$/, '.js')}`, bundle.packages]) : []),
+  });
   sortedSame(graph, expected.filter((path) => path.endsWith('.js')), 'reachable compiled runtime closure');
   for (const path of sources) {
     const js = `${prefix}/${path.replace(/\.ts$/, '.js')}`, map = json(sourceRoot, `${js}.map`);
-    check(map.file === js.split('/').at(-1) && map.sources.length === 1 && map.sourcesContent?.length === 1, `${js}: invalid source map`);
+    const bundle = bundles.get(path);
+    const mapName = js.split('/').at(-1);
+    if (bundle && !preBundle) {
+      check(map.file === undefined || map.file === mapName, `${js}: invalid source map file field`);
+      check(read(sourceRoot, js).includes(`//# sourceMappingURL=${mapName}.map`), `${js}: missing source map reference`);
+      // A declared leaf is an esbuild bundle: several owned sources, host packages
+      // external and no bare workspace import left in the compiled closure.
+      check(map.sources.length > 1 && map.sourcesContent?.length === map.sources.length, `${js}: bundled leaf needs a multi-source map`);
+      for (const [index, entry] of map.sources.entries()) {
+        const source = posixPath(relative(sourceRoot, resolve(sourceRoot, dirname(js), map.sourceRoot ?? '', entry)));
+        const owned = source === path ? path : source.startsWith('src/') && Object.hasOwn(SOURCE_OWNERS, source) ? source : undefined;
+        if (owned) check(map.sourcesContent[index] === read(sourceRoot, owned), `${js}: bundled source content mismatch for ${owned}`);
+        else check(bundle.packages.some((name) => entry.includes(name)), `${js}: bundled source ${entry} is not owned or declared`);
+      }
+      for (const name of bundle.packages) check(!runtimeImports(sourceFile(sourceRoot, js)).includes(name), `${js}: bundled package must not stay a bare import`);
+      continue;
+    }
+    if (bundle) {
+      // Before bundling, a declared leaf must at least import only declared packages.
+      for (const name of runtimeImports(sourceFile(sourceRoot, path))) {
+        if (name.startsWith('.') || name.startsWith('node:') || HOST_PEERS.some((peer) => name === peer || name.startsWith(`${peer}/`))) continue;
+        check(bundle.packages.includes(name), `${path}: undeclared bundled import ${name}`);
+      }
+    }
+    check(map.file === mapName && map.sources.length === 1 && map.sourcesContent?.length === 1, `${js}: invalid source map`);
     const source = posixPath(relative(sourceRoot, resolve(sourceRoot, dirname(js), map.sourceRoot ?? '', map.sources[0])));
     check(source === path && map.sourcesContent[0] === read(sourceRoot, path), `${js}: source map stale/mismatched source`);
-    check(read(sourceRoot, js).includes(`//# sourceMappingURL=${js.split('/').at(-1)}.map`), `${js}: missing source map reference`);
+    check(read(sourceRoot, js).includes(`//# sourceMappingURL=${mapName}.map`), `${js}: missing source map reference`);
     const emitted = ts.transpileModule(read(sourceRoot, path), { fileName: path, compilerOptions: {
       target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, esModuleInterop: true,
       sourceMap: true, inlineSources: true, verbatimModuleSyntax: true, isolatedModules: true,
@@ -476,6 +510,22 @@ export function assertRuntimeClosure(sourceRoot = PACKAGE_ROOT, { distDirectory 
     check(read(sourceRoot, js) === emitted.outputText, `${js}: compiled JavaScript differs from authoritative TypeScript`);
   }
   return expected.sort();
+}
+
+/** The manifest's declared bundle leaves: source path → output and inlined packages. */
+function declaredBundles(pkg, sources) {
+  const declared = new Map();
+  for (const [source, bundle] of Object.entries(pkg.serraly?.build?.bundles ?? {})) {
+    check(sources.includes(source), `declared bundle leaf is not a governed source: ${source}`);
+    check(bundle && typeof bundle === 'object' && typeof bundle.output === 'string' && Array.isArray(bundle.packages), `${source}: invalid bundle declaration`);
+    check(posixPath(bundle.output) === `dist/${source.replace(/\.ts$/, '.js')}`, `${source}: a bundled leaf must be written to its own compiled path`);
+    for (const name of bundle.packages) {
+      check(/^pi-[a-z0-9-]+$/.test(name) && pkg.devDependencies?.[name] !== undefined, `${source}: bundled package ${name} must be a workspace devDependency`);
+      check(!HOST_PEERS.includes(name), `${source}: host packages stay external`);
+    }
+    declared.set(source, bundle);
+  }
+  return declared;
 }
 export function checkPayloadFiles(files, sourceRoot = PACKAGE_ROOT, { artifactRoot = sourceRoot } = {}) {
   sortedSame(walkFiles(artifactRoot, 'docs'), [...AUTHORED_DOCS, ...GENERATED_DOCS], 'packed docs inventory (no retired evidence)');

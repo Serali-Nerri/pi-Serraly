@@ -28,20 +28,20 @@ Local fork `pi-background-shell@0.2.0`; verified host Pi 1.0.0 only.
 
 | Surface | Availability | Source |
 | --- | --- | --- |
-| `tool:bg_kill` | always | `src/extension.ts:974` |
+| `tool:bg_kill` | always | `src/extension.ts:976` |
 | `tool:bg_logs` | always | `src/extension.ts:933` |
-| `tool:bg_run` | always | `src/extension.ts:864` |
-| `tool:bg_status` | always | `src/extension.ts:907` |
-| `command:bg` | always | `src/extension.ts:711` |
-| `command:bg-clear` | always | `src/extension.ts:753` |
-| `command:bg-tasks` | always | `src/extension.ts:745` |
-| `command:jobs` | always | `src/extension.ts:787` |
-| `command:kill` | always | `src/extension.ts:831` |
-| `command:logs` | always | `src/extension.ts:800` |
-| `command:tasks` | always | `src/extension.ts:737` |
-| `shortcut:ctrl+alt+b` | dock:ctrl+alt+b | `src/extension.ts:771` |
-| `shortcut:ctrl+alt+c` | always | `src/extension.ts:779` |
-| `shortcut:shift+down` | dock:shift+down | `src/extension.ts:762` |
-| `renderer:background-task-notification` | always | `src/extension.ts:613` |
+| `tool:bg_run` | always | `src/extension.ts:857` |
+| `tool:bg_status` | always | `src/extension.ts:901` |
+| `command:bg` | always | `src/extension.ts:704` |
+| `command:bg-clear` | always | `src/extension.ts:746` |
+| `command:bg-tasks` | always | `src/extension.ts:738` |
+| `command:jobs` | always | `src/extension.ts:780` |
+| `command:kill` | always | `src/extension.ts:824` |
+| `command:logs` | always | `src/extension.ts:793` |
+| `command:tasks` | always | `src/extension.ts:730` |
+| `shortcut:ctrl+alt+b` | dock:ctrl+alt+b | `src/extension.ts:764` |
+| `shortcut:ctrl+alt+c` | always | `src/extension.ts:772` |
+| `shortcut:shift+down` | dock:shift+down | `src/extension.ts:755` |
+| `renderer:background-task-notification` | always | `src/extension.ts:606` |
 
 Dock `off` registers no dock shortcut; tools and commands remain available.

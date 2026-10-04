@@ -116,7 +116,7 @@ test("renderCall summarizes the questions", () => {
 	const { tool } = register();
 	const component = tool.renderCall?.({ questions: [testQuestion()] }, testTheme(), {} as never);
 	assert.ok(component);
-	assert.match(component.render(80).join("\n"), /AskUserQuestion 1 question \(Database\)/);
+	assert.match(component.render(80).join("\n"), /● AskUserQuestion 1 question \(Database\)/);
 });
 
 test("renderResult lists the answers, notes and freeform responses", () => {

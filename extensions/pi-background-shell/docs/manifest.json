@@ -28,7 +28,7 @@
           ]
         },
         "availability": "always",
-        "source": "src/extension.ts:974"
+        "source": "src/extension.ts:976"
       },
       {
         "id": "tool:bg_logs",
@@ -105,7 +105,7 @@
           "additionalProperties": false
         },
         "availability": "always",
-        "source": "src/extension.ts:864"
+        "source": "src/extension.ts:857"
       },
       {
         "id": "tool:bg_status",
@@ -122,7 +122,7 @@
           }
         },
         "availability": "always",
-        "source": "src/extension.ts:907"
+        "source": "src/extension.ts:901"
       }
     ],
     "commands": [
@@ -130,49 +130,49 @@
         "id": "command:bg",
         "name": "bg",
         "availability": "always",
-        "source": "src/extension.ts:711",
+        "source": "src/extension.ts:704",
         "description": "Start a tracked shell command: /bg [--survive-reload] [--name \"Task name\"] <command>"
       },
       {
         "id": "command:bg-clear",
         "name": "bg-clear",
         "availability": "always",
-        "source": "src/extension.ts:753",
+        "source": "src/extension.ts:746",
         "description": "Clear finished background task footer notices"
       },
       {
         "id": "command:bg-tasks",
         "name": "bg-tasks",
         "availability": "always",
-        "source": "src/extension.ts:745",
+        "source": "src/extension.ts:738",
         "description": "Open the background task manager UI"
       },
       {
         "id": "command:jobs",
         "name": "jobs",
         "availability": "always",
-        "source": "src/extension.ts:787",
+        "source": "src/extension.ts:780",
         "description": "List running and recent background tasks"
       },
       {
         "id": "command:kill",
         "name": "kill",
         "availability": "always",
-        "source": "src/extension.ts:831",
+        "source": "src/extension.ts:824",
         "description": "Stop a running background task: /kill <id>"
       },
       {
         "id": "command:logs",
         "name": "logs",
         "availability": "always",
-        "source": "src/extension.ts:800",
+        "source": "src/extension.ts:793",
         "description": "Show bounded output from a background task: /logs <id> [maxBytes]"
       },
       {
         "id": "command:tasks",
         "name": "tasks",
         "availability": "always",
-        "source": "src/extension.ts:737",
+        "source": "src/extension.ts:730",
         "description": "Open the background task manager UI"
       }
     ],
@@ -181,21 +181,21 @@
         "id": "shortcut:ctrl+alt+b",
         "name": "ctrl+alt+b",
         "availability": "dock:ctrl+alt+b",
-        "source": "src/extension.ts:771",
+        "source": "src/extension.ts:764",
         "description": "Open focused background task footer dock"
       },
       {
         "id": "shortcut:ctrl+alt+c",
         "name": "ctrl+alt+c",
         "availability": "always",
-        "source": "src/extension.ts:779",
+        "source": "src/extension.ts:772",
         "description": "Clear finished background task footer notices (terminal-dependent fallback for /bg-clear)"
       },
       {
         "id": "shortcut:shift+down",
         "name": "shift+down",
         "availability": "dock:shift+down",
-        "source": "src/extension.ts:762",
+        "source": "src/extension.ts:755",
         "description": "Open focused background task footer dock"
       }
     ],
@@ -204,7 +204,7 @@
         "id": "renderer:background-task-notification",
         "name": "background-task-notification",
         "availability": "always",
-        "source": "src/extension.ts:613"
+        "source": "src/extension.ts:606"
       }
     ]
   },
@@ -364,7 +364,7 @@
     {
       "path": "src/extension.ts",
       "owner": "docs/subsystems/extension-lifecycle.md",
-      "sha256": "77a03753111d467478ecbe9abb9a20c0d49868f01a1b4f1c392dd925b72caf39"
+      "sha256": "33956d24ad5c674d71e6ddc5cc5153fe10345f1c777eca39c9cd77f4df6db4a7"
     },
     {
       "path": "src/ui/background-tasks-manager.ts",
@@ -375,6 +375,11 @@
       "path": "src/ui/task-log-viewport.ts",
       "owner": "docs/reference/shortcuts-and-dock.md",
       "sha256": "6876eaf197bb17b29c23c558edd45af709533489802f8cb528838cab5bceb4e7"
+    },
+    {
+      "path": "src/ui/tool-cards.ts",
+      "owner": "docs/subsystems/extension-lifecycle.md",
+      "sha256": "92091f23cbd2b0077e915754b7b02bbe6ba1e83011d73e99da5c3aaf190707a5"
     }
   ],
   "authored_docs": [
@@ -432,15 +437,15 @@
     },
     {
       "path": "docs/subsystems/extension-lifecycle.md",
-      "sha256": "f3ef944a922e4ed258989d5ac9078339fcb84a0d1733100a903aab007718af2d"
+      "sha256": "70e9a9f1c8ac75c863d28128be2c0ba5b9863a8d960b6e05d81652a496159bfd"
     },
     {
       "path": "README.md",
-      "sha256": "58cac7ce7048a8b8c7afab1399b7420a8351642be825b9400db20636ae727e71"
+      "sha256": "0758ceab0021db43207979a464cbd15ee41cac8079428ff6a9867db01b9eb155"
     },
     {
       "path": "TESTING.md",
-      "sha256": "a719f0f1bb59cb3d6174790778ff7fcaa87d17694800ef13ec9de53134202cd3"
+      "sha256": "a8c46a950eeb6098948f1157f462d395b95a4dc154335a255b584ca710ee62d5"
     },
     {
       "path": "UPSTREAM.md",
@@ -448,7 +453,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "ada948dd71e5a4cb699f92d4a345a4d748b6fcef0cad5230e57e0cd2d80e9cef"
+      "sha256": "7593ab196cef8fe83395ca604cb0f386861d3a82f8780899ff36efbfdac2b239"
     }
   ]
 }

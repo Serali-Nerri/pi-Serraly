@@ -1,5 +1,6 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
+import { RenderLines, renderToolHeader, renderToolStatus } from "pi-ui-kit";
 import { createAskUserQuestionDialog } from "./dialog.ts";
 import { DESCRIPTION } from "./prompt.ts";
 import { type AskUserQuestionDetails, buildToolResultText, type DialogOutcome } from "./result.ts";
@@ -67,15 +68,16 @@ export function registerAskUserQuestion(pi: ExtensionAPI): void {
 			};
 		},
 
-		renderCall(args, theme) {
+		renderCall(args, theme, context) {
 			const questions = (args.questions ?? []) as QuestionInput[];
 			const headers = questions.map((question, index) => question.header || `Q${index + 1}`).join(", ");
 			const count = `${questions.length} question${questions.length === 1 ? "" : "s"}`;
-			return new Text(
-				`${theme.fg("toolTitle", theme.bold("AskUserQuestion "))}${theme.fg("muted", count)}${headers ? theme.fg("dim", ` (${headers})`) : ""}`,
-				0,
-				0,
-			);
+			const state = context?.isError ? "error" : context?.isPartial ? "running" : "success";
+			return new RenderLines((width) => renderToolHeader(theme, {
+				title: "AskUserQuestion",
+				summary: `${count}${headers ? ` (${headers})` : ""}`,
+				state,
+			}, width));
 		},
 
 		renderResult(result, _options, theme) {
@@ -85,7 +87,10 @@ export function registerAskUserQuestion(pi: ExtensionAPI): void {
 				return new Text(first?.type === "text" ? first.text : "", 0, 0);
 			}
 			if (details.cancelled) {
-				return new Text(theme.fg("warning", "No answer — the question was dismissed."), 0, 0);
+				return new RenderLines((width) => renderToolStatus(theme, {
+					state: "cancelled",
+					message: "No answer — the question was dismissed.",
+				}, width));
 			}
 			const lines: string[] = [];
 			for (const [index, question] of details.questions.entries()) {

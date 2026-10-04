@@ -2,7 +2,7 @@
 
 Private `pi-Serraly` workspace module, retaining the pure-shell fork of `pi-background-tasks`: named background processes, bounded logs, completion notifications, task UI, and opt-in **same-process** reload handoff. Development verification targets Pi **1.0.0**, TypeBox **1.3.27** and Node >=22.19.0; validation commands and platform limits are in [TESTING.md](TESTING.md).
 
-This module owns background execution and its dock/renderers, independently of the UI module. The `background-tasks` status and `background-task-notification` custom message remain stable. Installation and releases belong to the repository root documentation, not this module. Do not load the old fork or upstream together with this entry: names overlap, and the fork cannot adopt upstream processes. No global deployment is performed by module scripts.
+This module owns background execution and its dock/renderers, independently of the UI module. The four `bg_*` tool cards use the shared `pi-ui-kit` card syntax through `src/ui/tool-cards.ts`, the one module the build bundles with that library inlined; task names, ids, output paths, byte counts, truncation and expanded logs stay this module's own display data. The `background-tasks` status and `background-task-notification` custom message remain stable. Installation and releases belong to the repository root documentation, not this module. Do not load the old fork or upstream together with this entry: names overlap, and the fork cannot adopt upstream processes. No global deployment is performed by module scripts.
 
 ## Interfaces
 

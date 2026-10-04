@@ -9,6 +9,8 @@ TypeBox **1.3.27**、Node **≥22.19**。来源与许可见 [UPSTREAM.md](UPSTRE
 ## 使用
 
 `Agent` 前台调用返回结果和统计；后台调用立即返回 ID，完成后通知父会话。
+三工具的工具卡使用共享 `pi-ui-kit` 的标题/状态语法，模型标签、统计、描述、
+输出路径与错误正文仍是本模块自己的展示数据。
 `/agents` 可手工 spawn、查看会话、steer 运行中任务、continue 已结束任务、Stop、
 Clear、设置模型/并发/提示词/widget。widget 和 viewer 仅用于 TUI，不在
 print/JSON/RPC 创建终端组件或 UI bridge。

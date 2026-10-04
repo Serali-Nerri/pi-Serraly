@@ -26,6 +26,7 @@
     "prepack": "npm run build && npm run pack:check"
   },
   "devDependencies": {
+    "pi-ui-kit": "0.1.0",
     "pi-config-core": "0.1.0",
     "vitest": "4.1.10"
   },

@@ -21,4 +21,4 @@ Inspect one background task or list all running/recent background tasks. This is
 }
 ```
 
-Source: `src/extension.ts:907`. See [runtime](../subsystems/background-task-runtime.md) and [completion delivery](../concepts/completion-delivery.md).
+Source: `src/extension.ts:901`. See [runtime](../subsystems/background-task-runtime.md) and [completion delivery](../concepts/completion-delivery.md).

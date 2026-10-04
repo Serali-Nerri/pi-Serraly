@@ -90,6 +90,11 @@ for (const [label, definition, pattern, extras = [uiKit]] of [
 	["a non-private package", ui({ private: false }), /private/i],
 	["a missing dist allowlist entry", ui({ files: ["README.md"] }), /files/i],
 	["a missing Pi entry", ui({ pi: {} }), /pi\.extensions/i],
+	["a bundled leaf without an output", ui({ devDependencies: { "pi-ui-kit": "0.1.0" }, serraly: { build: { kind: "script", script: "./scripts/build.mjs", bundles: { "src/ui/cards.ts": "dist/src/ui/cards.js" } }, licenses: ["LICENSE"] } }), /must declare its output/i],
+	["a bundled leaf without packages", ui({ devDependencies: { "pi-ui-kit": "0.1.0" }, serraly: { build: { kind: "script", script: "./scripts/build.mjs", bundles: { "src/ui/cards.ts": { output: "dist/src/ui/cards.js" } } }, licenses: ["LICENSE"] } }), /bundled packages/i],
+	["a bundled leaf with an unknown package", ui({ serraly: { build: { kind: "script", script: "./scripts/build.mjs", bundles: { "src/ui/cards.ts": { output: "dist/src/ui/cards.js", packages: ["pi-missing-kit"] } } }, licenses: ["LICENSE"] } }), /devDependency/i],
+	["a bundled leaf with a non-workspace package", ui({ serraly: { build: { kind: "script", script: "./scripts/build.mjs", bundles: { "src/ui/cards.ts": { output: "dist/src/ui/cards.js", packages: ["esbuild"] } } }, licenses: ["LICENSE"] } }), /non-workspace/i],
+	["a bundled leaf escaping the package", ui({ devDependencies: { "pi-ui-kit": "0.1.0" }, serraly: { build: { kind: "script", script: "./scripts/build.mjs", bundles: { "src/ui/cards.ts": { output: "../outside.js", packages: ["pi-ui-kit"] } } }, licenses: ["LICENSE"] } }), /escapes the package/i],
 ]) {
 	test(`discovery rejects ${label}`, async (t) => {
 		const { root } = await workspaceFixture(t, [definition, ...extras]);

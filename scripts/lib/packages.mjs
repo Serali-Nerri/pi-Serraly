@@ -45,9 +45,15 @@ function assertManifestShape(name, manifest, directory, kind) {
 		relativeEntry(name, directory, recipe.project, "tsc project");
 	} else if (recipe.kind === "script") {
 		relativeEntry(name, directory, recipe.script, "build script");
-		for (const [source, output] of Object.entries(recipe.bundles ?? {})) {
+		for (const [source, bundle] of Object.entries(recipe.bundles ?? {})) {
 			relativeEntry(name, directory, `./${source}`, "bundled source");
-			relativeEntry(name, directory, `./${output}`, "bundled output");
+			if (!bundle || typeof bundle !== "object" || Array.isArray(bundle)) reject(`${name}: bundle ${source} must declare its output`);
+			relativeEntry(name, directory, `./${bundle.output}`, "bundled output");
+			if (!Array.isArray(bundle.packages) || bundle.packages.length === 0) reject(`${name}: bundle ${source} must declare the bundled packages`);
+			for (const bundled of bundle.packages) {
+				if (typeof bundled !== "string" || !INTERNAL_PACKAGE_NAME.test(bundled)) reject(`${name}: bundle ${source} declares a non-workspace package ${bundled}`);
+				if (manifest.devDependencies?.[bundled] === undefined) reject(`${name}: bundle ${source} package ${bundled} must be a devDependency`);
+			}
 		}
 		if (recipe.verifyArtifact !== undefined) relativeEntry(name, directory, `./${recipe.verifyArtifact}`, "artifact verifier");
 	} else {

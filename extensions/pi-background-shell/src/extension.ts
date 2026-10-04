@@ -4,13 +4,12 @@ import type {
   ExtensionAPI,
   ExtensionCommandContext,
   ExtensionContext,
-  Theme,
   ThemeColor,
-  ToolRenderResultOptions,
 } from '@earendil-works/pi-coding-agent';
 import { formatSize } from '@earendil-works/pi-coding-agent';
 import { Text, type KeyId } from '@earendil-works/pi-tui';
 import { Type, type Static } from 'typebox';
+import { renderBgToolCard } from './ui/tool-cards.js';
 import {
   DEFAULT_LOG_BYTES,
   MAX_LOG_BYTES,
@@ -81,10 +80,6 @@ function lightBlue(value: string): string {
 
 function textContent(text: string) {
   return [{ type: 'text' as const, text }];
-}
-
-interface TextToolResult {
-  content?: ReadonlyArray<{ type: string; text?: string }>;
 }
 
 interface BgToolArgumentRecord {
@@ -229,12 +224,10 @@ function isStaleExtensionContext(error: unknown): boolean {
   );
 }
 
-function renderPlainResult(result: TextToolResult, options: ToolRenderResultOptions, theme: Theme) {
-  void options;
-  void theme;
-  const text =
-    result.content?.map((part) => (part.type === 'text' ? (part.text ?? '') : '')).join('\n') ?? '';
-  return new Text(text, 0, 0);
+/** Map the host render context onto the shared card state. */
+function cardStateFor(context?: { isPartial?: boolean; isError?: boolean }): 'running' | 'success' | 'error' {
+  if (context?.isError) return 'error';
+  return context?.isPartial === false ? 'success' : 'running';
 }
 
 export default async function backgroundTasksExtension(pi: ExtensionAPI): Promise<void> {
@@ -887,20 +880,21 @@ export default async function backgroundTasksExtension(pi: ExtensionAPI): Promis
         details: { task: registry.snapshot(task) },
       };
     },
-    renderCall(args, theme) {
-      return new Text(
-        `${theme.fg('toolTitle', theme.bold('bg_run '))}${theme.fg('muted', truncateChars(taskDisplayName(args), COMMAND_PREVIEW_CHARS))}`,
-        0,
-        0,
-      );
+    renderCall(args, theme, context) {
+      return renderBgToolCard(theme, {
+        header: {
+          title: 'bg_run',
+          summary: truncateChars(taskDisplayName(args), COMMAND_PREVIEW_CHARS),
+          state: cardStateFor(context),
+        },
+      });
     },
     renderResult(result, _options, theme) {
       const { task } = result.details;
-      return new Text(
-        `${theme.fg('success', '✓ started')} ${theme.fg('accent', taskDisplayName(task))} ${theme.fg('dim', `(${task.id})`)}\n${theme.fg('dim', `Output: ${task.outputPath}`)}`,
-        0,
-        0,
-      );
+      return renderBgToolCard(theme, {
+        status: { state: 'success', message: `started ${taskDisplayName(task)} (${task.id})` },
+        bodyLines: [theme.fg('dim', `Output: ${task.outputPath}`)],
+      });
     },
   });
 
@@ -920,14 +914,20 @@ export default async function backgroundTasksExtension(pi: ExtensionAPI): Promis
         details: { tasks: snapshots },
       });
     },
-    renderCall(args, theme) {
-      return new Text(
-        `${theme.fg('toolTitle', theme.bold('bg_status'))}${args.taskId ? ` ${theme.fg('accent', args.taskId)}` : ''}`,
-        0,
-        0,
-      );
+    renderCall(args, theme, context) {
+      return renderBgToolCard(theme, {
+        header: { title: 'bg_status', summary: args.taskId, state: cardStateFor(context) },
+      });
     },
-    renderResult: renderPlainResult,
+    renderResult(result, _options, theme) {
+      const tasks = result.details.tasks;
+      const text =
+        result.content?.map((part) => (part.type === 'text' ? (part.text ?? '') : '')).join('\n') ?? '';
+      return renderBgToolCard(theme, {
+        status: { state: 'success', message: `${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'}` },
+        bodyLines: text.split('\n'),
+      });
+    },
   });
 
   pi.registerTool<typeof BgLogsParams, BgLogsDetails>({
@@ -949,25 +949,27 @@ export default async function backgroundTasksExtension(pi: ExtensionAPI): Promis
         details: logs.details,
       };
     },
-    renderCall(args, theme) {
-      return new Text(
-        `${theme.fg('toolTitle', theme.bold('bg_logs '))}${theme.fg('accent', args.taskId)}`,
-        0,
-        0,
-      );
+    renderCall(args, theme, context) {
+      return renderBgToolCard(theme, {
+        header: { title: 'bg_logs', summary: args.taskId, state: cardStateFor(context) },
+      });
     },
     renderResult(result, { expanded }, theme) {
       const details = result.details;
-      let text = `${theme.fg('accent', taskDisplayName(details.task))} ${theme.fg('dim', `(${details.task.id})`)} ${theme.fg('muted', details.tail ? 'tail' : 'head')} ${formatSize(details.bytesRead)}`;
-      if (details.truncated) text += theme.fg('warning', ' (truncated)');
-      text += `\n${theme.fg('dim', `Full output: ${details.path}`)}`;
+      const bodyLines = [theme.fg('dim', `Full output: ${details.path}`)];
       if (expanded) {
         const output = result.content
           .map((content) => (content.type === 'text' ? content.text : '[image content]'))
           .join('\n');
-        text += `\n${theme.fg('toolOutput', output.split('\n').slice(0, 30).join('\n'))}`;
+        bodyLines.push(theme.fg('toolOutput', output.split('\n').slice(0, 30).join('\n')));
       }
-      return new Text(text, 0, 0);
+      return renderBgToolCard(theme, {
+        status: {
+          state: details.truncated ? 'cancelled' : 'success',
+          message: `${details.tail ? 'tail' : 'head'} · ${formatSize(details.bytesRead)}${details.truncated ? ' · truncated' : ''}`,
+        },
+        bodyLines,
+      });
     },
   });
 
@@ -988,20 +990,17 @@ export default async function backgroundTasksExtension(pi: ExtensionAPI): Promis
         details: { task: registry.snapshot(task), message },
       };
     },
-    renderCall(args, theme) {
-      return new Text(
-        `${theme.fg('toolTitle', theme.bold('bg_kill '))}${theme.fg('accent', args.taskId)}`,
-        0,
-        0,
-      );
+    renderCall(args, theme, context) {
+      return renderBgToolCard(theme, {
+        header: { title: 'bg_kill', summary: args.taskId, state: cardStateFor(context) },
+      });
     },
     renderResult(result, _options, theme) {
       const { task } = result.details;
-      return new Text(
-        `${theme.fg('warning', '■ killed')} ${theme.fg('accent', taskDisplayName(task))} ${theme.fg('dim', `(${task.id})`)}\n${theme.fg('dim', `Output: ${task.outputPath}`)}`,
-        0,
-        0,
-      );
+      return renderBgToolCard(theme, {
+        status: { state: 'cancelled', message: `killed ${taskDisplayName(task)} (${task.id})` },
+        bodyLines: [theme.fg('dim', `Output: ${task.outputPath}`)],
+      });
     },
   });
 }

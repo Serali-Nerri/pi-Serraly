@@ -8,7 +8,7 @@ import { setConfig } from "../src/config/config.ts";
 import { parseApplyPatchDetails } from "../src/transcript/tool/apply-patch.ts";
 import { FileResultView } from "../src/transcript/tool/files.ts";
 import { ToolGroupComponent } from "../src/compat/grouping.ts";
-import { harness, strip } from "./harness.ts";
+import { harness, strip, theme } from "./harness.ts";
 
 const fixture = JSON.parse(readFileSync(join(import.meta.dirname, "fixtures", "apply-patch-v1.json"), "utf8"));
 const result = (text: string, details?: unknown, isError = false) => ({ content: [{ type: "text", text }], isError, details });
@@ -45,7 +45,7 @@ test("apply_patch renders per-file diffs from the result contract and never gues
 		const raw = tool.render(100).join("\n");
 		const text = strip(raw);
 		assert.ok(tool.resultRendererComponent instanceof FileResultView);
-		assert.match(text, /● apply_patch\(src\/, docs\/ · 3 changes\)/);
+		assert.match(text, /● apply_patch \(src\/, docs\/ · 3 changes\)/);
 		assert.match(text, /1 added, 1 updated, 1 moved · \+7 -5/);
 		assert.match(text, /src\/added\.ts \(\+4 -0\)/);
 		assert.match(text, /export const added = true;/);
@@ -68,7 +68,7 @@ test("summary statistics come from the tool result, not from the retained diff r
 		const details = detailsOf([change({ views: [view({ added: 17, removed: 3, diff: " 1 keep\n-2 old\n+2 new" })] })]);
 		const tool = patchTool(h, "ap-stats", "*** Begin Patch\n*** End Patch", result("ok", details));
 		const text = render(tool);
-		assert.match(text, /apply_patch\(Update · src\/a\.ts\)/);
+		assert.match(text, /apply_patch \(Update · src\/a\.ts\)/);
 		assert.match(text, /⎿ \+17 -3/);
 		assert.match(text, /src\/a\.ts \(\+17 -3\)/);
 		assert.doesNotMatch(text, /\+1 -1/);
@@ -103,7 +103,7 @@ test("move over an existing target keeps both the source removal and the replace
 		const tool = patchTool(h, "ap-move", "*** Begin Patch\n*** End Patch", result("ok", details));
 		const raw = tool.render(100).join("\n");
 		const text = strip(raw);
-		assert.match(text, /apply_patch\(Move · docs\/source\.md → docs\/target\.md\)/);
+		assert.match(text, /apply_patch \(Move · docs\/source\.md → docs\/target\.md\)/);
 		assert.match(text, /\(overwrote existing file\) · \+1 -2/);
 		assert.match(text, /docs\/source\.md \(\+0 -1\) · source removed/);
 		assert.match(text, /docs\/target\.md \(\+1 -1\) · existing target replaced/);
@@ -121,7 +121,7 @@ test("pure moves and unchanged overwrite targets are marked as such", async () =
 		})]);
 		const tool = patchTool(h, "ap-pure", "*** Begin Patch\n*** End Patch", result("ok", moved));
 		const text = render(tool);
-		assert.match(text, /apply_patch\(Move · docs\/old\.md → docs\/new\.md\)/);
+		assert.match(text, /apply_patch \(Move · docs\/old\.md → docs\/new\.md\)/);
 		assert.match(text, /⎿ \+0 -0/);
 		assert.match(text, /docs\/old\.md → docs\/new\.md \(\+0 -0\) · content unchanged/);
 		assert.doesNotMatch(text, /48;2;/);
@@ -167,7 +167,7 @@ test("unknown line statistics are reported as partial instead of a complete tota
 		const details = detailsOf([change({ views: [view({ added: 4, removed: null })] })]);
 		const tool = patchTool(h, "ap-null", "*** Begin Patch\n*** End Patch", result("ok", details));
 		const text = render(tool);
-		assert.match(text, /apply_patch\(Update · src\/a\.ts\)/);
+		assert.match(text, /apply_patch \(Update · src\/a\.ts\)/);
 		assert.match(text, /⎿ \+4 -\? \(partial\)/);
 		assert.match(text, /src\/a\.ts · statistics unavailable/);
 		assert.doesNotMatch(text, /\+4 -0/);
@@ -271,7 +271,7 @@ test("omitted diffs and unavailable reports stay visible without inventing numbe
 		const failedReport = patchTool(h, "ap-report", "*** Begin Patch\n*** End Patch",
 			result("Success. Updated the following files:\nM src/a.ts", unavailable));
 		const failedText = render(failedReport);
-		assert.match(failedText, /apply_patch\(Update · src\/a\.ts\)/);
+		assert.match(failedText, /apply_patch \(Update · src\/a\.ts\)/);
 		assert.match(failedText, /⎿ diff data unavailable/);
 		assert.match(failedText, /patch diff data unavailable/);
 		assert.match(failedText, /M src\/a\.ts/);
@@ -367,7 +367,9 @@ test("failed apply_patch executions render the error channel, never the input pa
 		const raw = tool.render(100).join("\n");
 		const text = strip(raw);
 		assert.match(text, /Failed to apply patch: first line/);
-		assert.match(raw, /\x1b\[38;2;215;95;95m/);
+		// 错误状态走主题的 error 角色，不再使用本模块的固定 RGB 调色板。
+		assert.ok(raw.includes(theme.fg("error", "Failed to apply patch: first line")),
+			"the error status uses the theme error role");
 		assert.doesNotMatch(text, /SHOULD_NOT_RENDER/);
 		assert.doesNotMatch(raw, /\x1b\[48;2;0;95;0m/);
 		assert.match(strip(tool.resultRendererComponent.fullPreview.content.render(100).join("\n")), /full diagnostic detail/);
@@ -425,7 +427,7 @@ test("large multi-file batches stay within the row budget while every omitted no
 		}));
 		const tool = patchTool(h, "ap-batch", "*** Begin Patch\n*** End Patch", result("ok", detailsOf(changes)));
 		const text = render(tool);
-		assert.match(text, /apply_patch\(src\/ · 10 changes\)/);
+		assert.match(text, /apply_patch \(src\/ · 10 changes\)/);
 		assert.match(text, /10 updated · statistics unavailable/);
 		assert.match(text, /… \+2 more notices/);
 		assert.match(text, /click to show more/);
@@ -458,7 +460,7 @@ test("hidden move-overwrite views are counted as entries rather than file operat
 			],
 		}));
 		const tool = patchTool(h, "ap-hidden-views", "", result("ok", detailsOf(changes)));
-		assert.match(render(tool), /apply_patch\(\.\/ · 8 changes\)/);
+		assert.match(render(tool), /apply_patch \(\.\/ · 8 changes\)/);
 		assert.match(render(tool), /8 moved ·/);
 		assert.match(render(tool), /more entries/);
 		assert.doesNotMatch(render(tool), /more files/);
@@ -480,7 +482,7 @@ test("compact mode keeps apply_patch as an independent file card outside the rou
 		let lines = h.render().join("\n");
 		assert.doesNotMatch(lines, /apply_patch×1/);
 		assert.match(lines, /src\/added\.ts/);
-		assert.match(lines, /● apply_patch\(/);
+		assert.match(lines, /● apply_patch \(/);
 
 		assistant.setExpanded(true);
 		lines = h.render().join("\n");
@@ -512,6 +514,7 @@ test("apply_patch layout survives narrow widths, unicode and hostile control seq
 		tool.invalidate();
 		const fallback = tool.render(100).join("\n");
 		assert.match(fallback, /\x1b\[38;5;/);
-		assert.doesNotMatch(fallback, /\x1b\[(?:38|48);2;/);
+		// 正文调色板（不是主题卡头）必须遵守终端能力：本模块的 truecolor 加色不再出现。
+		assert.doesNotMatch(fallback, /\x1b\[38;2;95;215;95m/);
 	} finally { setCapabilityOverrides({}); await h.close(); }
 });

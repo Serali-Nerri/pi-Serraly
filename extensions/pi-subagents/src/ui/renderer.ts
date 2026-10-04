@@ -5,13 +5,16 @@
  */
 
 import { Box, Container, Spacer, Text } from "@earendil-works/pi-tui";
+import { toolHeaderText, toolStatusText } from "pi-ui-kit";
 import type { Theme } from "./types.js";
 import {
   buildStatsParts,
+  cardState,
   formatMs,
   getDisplayName,
   buildModelThinkingTag,
   resolveModelLabel,
+  statusGlyph,
   statusIcon,
 } from "./format.js";
 import { getManager } from "../shell.js";
@@ -116,15 +119,15 @@ export function renderAgentToolCall(
     }
     const liveRecord = agentId ? getManager()?.getRecord(agentId) : undefined;
     const status = liveRecord?.lifecycle.status ?? "queued";
-    icon = statusIcon(status, theme, (args.agent as string) || undefined);
-    let text = `${icon} ${theme.fg("accent", theme.bold(label))}`;
+    icon = statusGlyph(status);
 
     const modelOverride = args._modelOverride as string | undefined;
-    if (modelOverride) {
-      text += ` (${modelOverride})`;
-    }
-
-    return new Text(text, 0, 0);
+    return new Text(toolHeaderText(theme, {
+      title: label,
+      summary: modelOverride ? `(${modelOverride})` : undefined,
+      state: cardState(status),
+      glyph: icon,
+    }), 0, 0);
   } else {
     // Foreground agents: look up live status from manager using stored agentId
     let agentId = context?.state?.agentId as string | undefined;
@@ -146,18 +149,24 @@ export function renderAgentToolCall(
     }
     const liveRecord = agentId ? getManager()?.getRecord(agentId) : undefined;
     const status = liveRecord?.lifecycle.status;
-    icon = statusIcon(status, theme, (args.agent as string) || undefined);
-  }
+    icon = statusGlyph(status);
 
-  // Build the call line text
-  let text = `${icon} ${theme.fg("accent", theme.bold(label))}`;
+    const modelOverride = args._modelOverride as string | undefined;
+    return new Text(toolHeaderText(theme, {
+      title: label,
+      summary: modelOverride ? `(${modelOverride})` : undefined,
+      state: cardState(status),
+      glyph: icon,
+    }), 0, 0);
+  }
 
   const modelOverride = args._modelOverride as string | undefined;
-  if (modelOverride) {
-    text += ` (${modelOverride})`;
-  }
-
-  return new Text(text, 0, 0);
+  return new Text(toolHeaderText(theme, {
+    title: label,
+    summary: modelOverride ? `(${modelOverride})` : undefined,
+    state: cardState(undefined),
+    glyph: icon,
+  }), 0, 0);
 }
 
 export function renderAgentToolResult(
@@ -178,7 +187,12 @@ export function renderAgentToolResult(
 
   // Validation/startup can fail before a record supplies the usual stats.
   if (result.isError && d?.turnCount == null) {
-    return new Text(text.split("\n").map((line) => `  ${theme.fg("error", line)}`).join("\n"), 0, 0);
+    const [first = "", ...rest] = text.split("\n");
+    const lines = [
+      toolStatusText(theme, { state: "error", message: first || "Agent failed" }),
+      ...rest.map((line) => `  ${theme.fg("error", line)}`),
+    ];
+    return new Text(lines.join("\n"), 0, 0);
   }
 
   // Foreground agents (stats present) — show model + stats + description (icon + name in call line)
@@ -186,7 +200,12 @@ export function renderAgentToolResult(
     const statsLine = buildStatsLine(d, theme, showCost);
     const tag = modelTag(d, theme, modelDisplayStyle);
     const modelPart = tag ? `${theme.fg("dim", tag)}·` : "";
-    let lines = `  ${modelPart}${statsLine}\n  ${theme.fg("text", desc)}`;
+    const status = toolStatusText(theme, {
+      state: cardState(d.status as string | undefined, result.isError),
+      message: `${modelPart}${statsLine}`,
+      styled: true,
+    });
+    let lines = `${status}\n  ${theme.fg("text", desc)}`;
     if (expanded && text) {
       lines +=
         "\n" +

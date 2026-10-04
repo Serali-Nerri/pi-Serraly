@@ -4,7 +4,8 @@
   "covers_sources": [
     "extensions/background-tasks.ts",
     "src/extension.ts",
-    "src/core/lazy-module.ts"
+    "src/core/lazy-module.ts",
+    "src/ui/tool-cards.ts"
   ],
   "covers_surfaces": []
 }
@@ -12,6 +13,8 @@
 # Extension lifecycle and lazy UI
 
 The module factory entry is `dist/extensions/background-tasks.js`, compiled from `extensions/background-tasks.ts` reexporting `src/extension.ts`. The root package adds a thin `dist/pi-background-shell/index.js` wrapper and keeps this complete compiled module closure; installation/release wiring belongs to root scripts. Four tools (deferred exposure, namespace `background-shell`) and seven commands are registered; only the selected dock shortcut is conditional. The completion renderer is `background-task-notification`.
+
+Tool cards use the shared card syntax. `src/ui/tool-cards.ts` is the only module that imports `pi-ui-kit`, and the only one the build bundles: `tsc` compiles the runtime one-to-one, then the shared package builder inlines that leaf (kit included, host packages external) into the same `dist/src/ui/tool-cards.js` with a multi-source map. The manifest declares that leaf under `serraly.build.bundles`; the docs gate allows the declared workspace packages there and nowhere else, and still rejects a bare workspace import in the compiled closure. The leaf renders card chrome from plain display input and never reads the registry, configuration or extension factory.
 
 A synchronous close fence blocks admission, closes the lazy dock lane and clears open UI before async cleanup. LazyModule is activation-local, single-flight, and remains closed after shutdown; failed imports are bounded errors. Static startup must not import `src/ui/background-tasks-manager.ts`; its literal deferred target ships in both source and dist closure. No eager UI load before dock use.
 

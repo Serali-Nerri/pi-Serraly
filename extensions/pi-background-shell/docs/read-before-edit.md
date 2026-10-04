@@ -19,5 +19,6 @@ Read the source owner's page and the relevant generated tool schema before chang
 | `src/extension.ts` | [subsystems/extension-lifecycle](subsystems/extension-lifecycle.md) |
 | `src/ui/background-tasks-manager.ts` | [reference/shortcuts-and-dock](reference/shortcuts-and-dock.md) |
 | `src/ui/task-log-viewport.ts` | [reference/shortcuts-and-dock](reference/shortcuts-and-dock.md) |
+| `src/ui/tool-cards.ts` | [subsystems/extension-lifecycle](subsystems/extension-lifecycle.md) |
 
 Run `npm run docs:generate`, `npm run docs:verify`, `npm run test:docs`, and the targeted runtime tests. See [gate design](subsystems/docs-freshness-gate.md).

@@ -31,6 +31,7 @@ void describe('shell docs package contract', () => {
   });
   void it('publishes exactly four tools/seven commands and only dock availability variants', () => {
     const manifest = JSON.parse(text('docs/manifest.json')) as Manifest;
+    const pkgManifest = JSON.parse(text('package.json')) as { serraly: { build: { bundles?: unknown } } };
     assert.equal(manifest.schema_version, 'pi-background-shell.docs-manifest.v1');
     assert.equal(manifest.package.verified_host, '1.0.0');
     assert.deepEqual(manifest.public_surfaces.tools.map((tool) => tool.id), ['tool:bg_kill', 'tool:bg_logs', 'tool:bg_run', 'tool:bg_status']);
@@ -40,11 +41,20 @@ void describe('shell docs package contract', () => {
     assert.equal(dock.get('shortcut:shift+down'), 'dock:shift+down');
     assert.equal(dock.get('shortcut:ctrl+alt+b'), 'dock:ctrl+alt+b');
     assert.equal(dock.get('shortcut:ctrl+alt+c'), 'always');
-    assert.equal(manifest.governed_sources.length, 14);
+    assert.equal(manifest.governed_sources.length, 15);
     assert.equal(
       manifest.governed_sources.find((source) => source.path === 'src/ui/task-log-viewport.ts')?.owner,
       'docs/reference/shortcuts-and-dock.md',
     );
+    // The bundled tool-card leaf is owned by the lifecycle doc, which also states
+    // the bundling contract; the kit stays a declared workspace devDependency.
+    assert.equal(
+      manifest.governed_sources.find((source) => source.path === 'src/ui/tool-cards.ts')?.owner,
+      'docs/subsystems/extension-lifecycle.md',
+    );
+    assert.deepEqual(pkgManifest.serraly.build.bundles, {
+      'src/ui/tool-cards.ts': { output: 'dist/src/ui/tool-cards.js', packages: ['pi-ui-kit'] },
+    });
     for (const source of manifest.governed_sources) assert.ok(text(source.owner).includes(source.path));
   });
   void it('records only the static run description plus dynamic shell rule, with v2 wire fields', () => {

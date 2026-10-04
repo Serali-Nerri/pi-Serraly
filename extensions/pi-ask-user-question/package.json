@@ -51,5 +51,8 @@
     "test": {
       "directory": "test"
     }
+  },
+  "devDependencies": {
+    "pi-ui-kit": "0.1.0"
   }
 }

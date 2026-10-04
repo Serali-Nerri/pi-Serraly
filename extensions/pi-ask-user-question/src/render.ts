@@ -1,5 +1,6 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { Markdown, type MarkdownTheme, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
+import { padToWidth } from "pi-ui-kit";
 import { choicesFor } from "./choices.ts";
 import { CHAT_LABEL, MAX_HEADER, NOTES_ONLY, OTHER_LABEL } from "./config.ts";
 import type { AnswerRecord } from "./result.ts";
@@ -9,11 +10,6 @@ import type { QuestionInput } from "./schema.ts";
 // ---------------------------------------------------------------------------
 // Layout helpers (pure: they only need a theme for coloring)
 // ---------------------------------------------------------------------------
-
-export function padToWidth(line: string, width: number): string {
-	const current = visibleWidth(line);
-	return current >= width ? line : line + " ".repeat(width - current);
-}
 
 export function looksLikeHtml(text: string): boolean {
 	return /<\s*(html|body|div|span|table|thead|tbody|tr|td|th|pre|code|p|h[1-6]|ul|ol|li|br|hr|strong|em|b|i|u|img|svg|section|article|header|footer|style|script)\b/i.test(

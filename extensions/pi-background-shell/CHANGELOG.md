@@ -5,6 +5,7 @@
 - Imported the clean local pure-shell fork at `86c52d3b5d9f9ab92b843868293495d17ec5d878` into private `pi-Serraly` as `modules/background-shell`, retaining business source, full tests and ISC provenance.
 - Development verification targets Pi 1.0.0 and TypeBox 1.3.27; workspace scripts isolate HOME/agent/cwd and resolve hoisted development dependencies.
 - Kept tsc runtime closure and lazy UI; root scripts own installation and release staging. CHANGELOG now ships with the module payload so provenance links remain valid. No global deployment or new runtime contract.
+- The four `bg_*` tool cards use the shared `pi-ui-kit` header/status syntax. `src/ui/tool-cards.ts` is a stateless display leaf: it is the only module importing that library, the only one the build bundles (kit inlined, host peers external, multi-source map, library licenses copied), and it keeps task names, ids, output paths, byte counts, truncation and expanded logs as this module's own display data.
 
 ## 0.1.0
 

@@ -36,5 +36,7 @@ if (result.status !== 0) {
 }
 const manifest = JSON.parse(readFileSync(join(PACKAGE_ROOT, 'package.json'), 'utf8'));
 writeFileSync(join(dist, 'package.json'), `${JSON.stringify({ name: manifest.name, version: manifest.version, type: 'module' }, null, 2)}\n`);
-assertRuntimeClosure(PACKAGE_ROOT, { distDirectory: dist });
+// The shared package builder inlines declared bundle leaves after this script,
+// so this gate runs in the pre-bundle phase; payload/pack gates require the bundle.
+assertRuntimeClosure(PACKAGE_ROOT, { distDirectory: dist, preBundle: true });
 console.log('runtime-build: one background JavaScript entry, source maps and complete deferred closure; no orphan artifacts.');

@@ -10,6 +10,7 @@ import {
   readdirSync,
   readlinkSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
@@ -17,6 +18,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { installedPackageDirectory } from '../helpers/workspace-dependencies.ts';
 import { parseJsonText } from '../../src/core/common.js';
 import { startInstalledDependencyRegistry } from '../helpers/offline-npm-registry.js';
 import { findFileUrlPathnameViolations } from '../helpers/typescript-source-guards.js';
@@ -1649,8 +1651,13 @@ void describe('package', { concurrency: false }, () => {
       assert.ok(entries.includes(`${id}.output`));
       const metadata = record(parseJsonValue(await readFile(join(runtimeDirectory, `${id}.json`), 'utf8')));
       for (const removed of ['isAgent', 'contextUsage', 'tokenUsage', 'toolUsage', 'model', 'telemetryWrapped']) assert.equal(Object.hasOwn(metadata, removed), false, removed);
-      // A second source-entry activation proves local checkout installation is also viable.
+      // A second source-entry activation proves local checkout installation is also
+      // viable: the shipped source needs the declared workspace kit, which the
+      // zero-dependency payload itself does not carry.
       await runtime.close(); runtime = undefined;
+      mkdirSync(join(installed, 'node_modules'), { recursive: true });
+      const workspaceKit = join(installed, 'node_modules/pi-ui-kit');
+      if (!existsSync(workspaceKit)) symlinkSync(installedPackageDirectory('pi-ui-kit'), workspaceKit, process.platform === 'win32' ? 'junction' : 'dir');
       runtime = await loadRuntime(join(installed, 'extensions/background-tasks.ts'));
       assert.deepEqual(runtime.tools.map((tool) => tool.name).sort(), ['bg_kill', 'bg_logs', 'bg_run', 'bg_status']);
     } finally {

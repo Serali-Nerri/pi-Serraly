@@ -13,6 +13,7 @@
 
 import { getAgentConfig } from "../agents/agent-types.js";
 import { agentColorAnsi } from "../agent-color.js";
+import type { ToolCardState } from "pi-ui-kit";
 import { getStore } from "../shell.js";
 import type { SubagentType, AgentInvocation } from "../agents/types.js";
 import type { AgentRecord, AgentStatus } from "../types.js";
@@ -53,6 +54,20 @@ export function statusIcon(status: string | undefined, theme: Theme, agentType?:
   const entry = STATUS_ICON[status as AgentStatus];
   if (!entry) return "▸";
   return applyAgentColor(entry.icon, agentColorAnsi(agentType), () => theme.fg(entry.color, entry.icon));
+}
+
+/** Plain status icon, for the shared tool card where the state colour is the theme's. */
+export function statusGlyph(status: string | undefined): string {
+  return STATUS_ICON[status as AgentStatus]?.icon ?? "▸";
+}
+
+/** Map an agent lifecycle status onto the shared tool-card state. */
+export function cardState(status: string | undefined, isError = false): ToolCardState {
+  if (isError || status === "error" || status === "aborted") return "error";
+  if (status === "completed") return "success";
+  if (status === "turn_limited") return "cancelled";
+  if (status === "queued" || status === "running") return "running";
+  return "neutral";
 }
 
 // ---- Internal helpers (used by buildStatsParts) ----
