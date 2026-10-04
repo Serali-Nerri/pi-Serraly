@@ -135,6 +135,32 @@ consumer 目录里以 `--offline --ignore-scripts --legacy-peer-deps` 安装本�
 再由开发树外的真实宿主 loader 加载。该 fixture 证明包的独立性与 bundled 闭包，
 不投影 registry 依赖图，也不安装宿主 peer。
 
+## Node 门禁与 CI
+
+所有根入口（`check`、`build`、`test`、`pack:check`、`release`）在开始任何工作前
+调用同一个 `scripts/lib/node-version.mjs` 门禁：低于 `>=22.19.0` 的运行环境直接
+失败并说明基线，不做降级、重试或“跳过该项”。无法解析的版本字符串同样 fail
+closed。包 manifest 的 `engines.node` 与该门禁必须一致。
+
+CI 与本地共用同一入口，不复制命令：
+
+```sh
+npm ci --ignore-scripts --include=optional --legacy-peer-deps
+npm run verify
+```
+
+`.github/workflows/ci.yml` 在 Ubuntu 上以 Node **22.19.0** 与 **24.12.0** 两个
+矩阵成员各跑一次完整 `npm run verify`（npm 11.7.0、完整 git 历史），并把固定的
+宿主 Pi 1.0.0 安装到 `RUNNER_TEMP` 之外的临时目录，通过 `PI_UI_HOST_PACKAGE`
+指向它；HOME、agent 目录与缓存都在 runner 临时目录内，不接触真实配置。只有
+安装锁定开发依赖和该宿主时允许访问 registry，测试与 release 阶段保持网络拒绝。
+CI 权限只有 `contents: read`，没有部署或发布凭据。
+
+版本门禁在 CI 中额外执行一次 diff 检查：pull request 用
+`--base <base.sha> --head <head.sha>`，push 用 before/current SHA。基线在克隆中
+不可用（例如全零 SHA 或浅克隆）时，门禁打印明确的跳过说明并继续执行完整
+verify，不把跳过写成通过；基线可用时漂移仍然失败。
+
 ## 版本门禁
 
 每个包独立版本。发布面（包内源码、构建配方、manifest、打包 payload 与随包文档）

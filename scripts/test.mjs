@@ -2,8 +2,10 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { discoverPackages, root } from "./lib/packages.mjs";
 import { discoverTests, isolatedRun } from "./lib/workspace.mjs";
+import { assertSupportedNode } from "./lib/node-version.mjs";
 
 try {
+	assertSupportedNode();
 	const args = process.argv.slice(2);
 	let selected, suite, list = false;
 	for (let index = 0; index < args.length; index++) {

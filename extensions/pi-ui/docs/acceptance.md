@@ -104,6 +104,10 @@ requiring deletion of that slot.
 Automated checks establish synthetic behavior and render bounds, not visual
 certification in the user's target terminal. Report results and platform skips
 from actual runs; no pass counts or manual sign-off are implied by this document.
+CI runs the automated suites on Node 22.19.0 and 24.12.0; a PTY skip is recorded
+as a gap in the report and is never written as a pass, and the shared tool-card
+syntax is additionally rendered at 1/8/40/80 columns by the root integration
+suite.
 
 ## Manual visual checklist
 

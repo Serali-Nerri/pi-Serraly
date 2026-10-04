@@ -1,0 +1,68 @@
+name: ci
+
+# Verification only: read the repository, run the same entry point as a local
+# checkout, and never deploy, publish or touch real Pi settings.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The qualified baseline and the current development release. Both run the
+        # identical entry point; a newer Node never stands in for the baseline.
+        node: ["22.19.0", "24.12.0"]
+    env:
+      # A pinned host outside the workspace and outside the development tree.
+      PI_UI_HOST_PACKAGE: ${{ runner.temp }}/pi-host/node_modules/@earendil-works/pi-coding-agent
+    steps:
+      - name: Check out the full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Pin the qualified npm
+        run: npm install --global npm@11.7.0
+
+      # Registry access is allowed only while installing the locked development
+      # dependencies and the pinned host. Every test and release phase afterwards
+      # runs with the runner's network denial.
+      - name: Install locked development dependencies
+        run: npm ci --ignore-scripts --include=optional --legacy-peer-deps
+
+      - name: Install the qualified host outside the workspace
+        run: |
+          mkdir -p "${{ runner.temp }}/pi-host"
+          cd "${{ runner.temp }}/pi-host"
+          npm init --yes >/dev/null
+          npm install --ignore-scripts --no-audit --no-fund \
+            @earendil-works/pi-coding-agent@1.0.0 \
+            @earendil-works/pi-tui@1.0.0 \
+            typebox@1.3.27
+
+      - name: Release-identity gate (pull request)
+        if: github.event_name == 'pull_request'
+        run: npm run check:package-versions -- --base "${{ github.event.pull_request.base.sha }}" --head "${{ github.sha }}"
+
+      - name: Release-identity gate (push)
+        if: github.event_name == 'push'
+        run: npm run check:package-versions -- --base "${{ github.event.before }}" --head "${{ github.sha }}"
+
+      - name: Verify
+        run: npm run verify

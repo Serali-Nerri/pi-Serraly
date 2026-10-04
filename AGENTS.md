@@ -53,6 +53,11 @@ Run from the repository root:
 - `npm run verify` — run checks, the complete test/build pipeline and artifact verification.
 - `node scripts/test.mjs --package pi-loop` — debug one package; does not replace full verification.
 - `node scripts/preview.mjs regular` — preview UI with temporary data.
+- `npm run check:package-versions -- --base <git-ref>` — release-identity gate; a baseline that is unavailable in the clone is skipped explicitly, a resolvable one fails on drift.
+
+Every root entry point refuses to start below Node 22.19.0 (`scripts/lib/node-version.mjs`);
+`.github/workflows/ci.yml` runs the same `npm run verify` on Node 22.19.0 and 24.12.0 with a
+pinned host outside the workspace. Registry access belongs to the dependency-install phase only.
 
 See `docs/development.md` for release preparation and additional commands.
 

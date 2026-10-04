@@ -4,6 +4,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRelease } from "./lib/package.mjs";
+import { assertSupportedNode } from "./lib/node-version.mjs";
 
 /**
  * Releases are named by the package version (directory and release.json
@@ -27,6 +28,7 @@ export function releaseTarget(args, { version, home = homedir() } = {}) {
 }
 
 async function main() {
+	assertSupportedNode();
 	const version = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")).version;
 	const target = releaseTarget(process.argv.slice(2), { version });
 	const result = await createRelease(target.output, {

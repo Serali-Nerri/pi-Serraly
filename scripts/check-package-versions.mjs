@@ -82,6 +82,17 @@ export async function checkPackageVersions({ root = repositoryRoot, base, head }
 	return offenders;
 }
 
+/** Whether the given ref resolves to a commit in this clone. */
+async function baseIsAvailable(ref) {
+	if (!/^[0-9a-f]{7,40}$/i.test(ref) || /^0+$/.test(ref)) return false;
+	try {
+		const { execFile } = await import("node:child_process");
+		const { promisify } = await import("node:util");
+		await promisify(execFile)("git", ["-C", repositoryRoot, "rev-parse", "--verify", "--quiet", `${ref}^{commit}`]);
+		return true;
+	} catch { return false; }
+}
+
 function usage() {
 	return "Usage: node scripts/check-package-versions.mjs --base <git-ref> [--head <git-ref>]";
 }
@@ -95,6 +106,13 @@ async function main() {
 		else throw new Error(usage());
 	}
 	if (!base) throw new Error(usage());
+	// CI passes the event's base/before SHA. A shallow clone or an all-zero SHA on a
+	// new branch has no such commit, so the diff gate is skipped explicitly instead
+	// of failing the run; the caller still executes the full verification.
+	if (!(await baseIsAvailable(base))) {
+		console.log(`check-package-versions: baseline ${base} is not available in this clone; skipping the diff gate (run the full verification instead)`);
+		return;
+	}
 	const offenders = await checkPackageVersions({ root: resolve(repositoryRoot), base, head });
 	if (offenders.length === 0) {
 		console.log(`check-package-versions: no release-identity drift against ${base}${head ? `..${head}` : ""}`);
