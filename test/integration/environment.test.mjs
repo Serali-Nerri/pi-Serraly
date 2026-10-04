@@ -67,6 +67,34 @@ test("test subprocesses receive resolved host code but no inherited credentials 
 	}
 });
 
+test("source-only subprocesses do not require an external Pi installation", async () => {
+	const { isolatedRun } = await import("../../scripts/lib/workspace.mjs");
+	const base = await mkdtemp(join(tmpdir(), "serraly-source-only-"));
+	const executable = process.execPath;
+	const descriptor = Object.getOwnPropertyDescriptor(process, "execPath");
+	const controls = ["PI_UI_HOST_PACKAGE", "PI_MANAGED_INSTALL_ROOT"];
+	const previous = new Map(controls.map((key) => [key, process.env[key]]));
+	try {
+		for (const key of controls) delete process.env[key];
+		Object.defineProperty(process, "execPath", { ...descriptor, value: join(base, "bin/node") });
+		const output = join(base, "environment.json");
+		await isolatedRun(executable, ["--input-type=module", "-e",
+			'import { writeFileSync } from "node:fs"; writeFileSync(process.argv[1], JSON.stringify(process.env));', output], base);
+		const env = JSON.parse(await readFile(output, "utf8"));
+		assert.equal(env.PI_UI_HOST_PACKAGE, undefined);
+		assert.equal(env.PI_MANAGED_INSTALL_ROOT, undefined);
+		assert.equal(env.PI_OFFLINE, "1");
+		assert.notEqual(env.HOME, process.env.HOME);
+	} finally {
+		Object.defineProperty(process, "execPath", descriptor);
+		for (const [key, value] of previous) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
+		await rm(base, { recursive: true, force: true });
+	}
+});
+
 test("UI preview owns its stage and report paths explicitly", { timeout: 60000 }, async () => {
 	const sandbox = await createSandbox();
 	try {

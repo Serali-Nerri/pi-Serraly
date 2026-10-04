@@ -28,7 +28,7 @@
           ]
         },
         "availability": "always",
-        "source": "src/extension.ts:976"
+        "source": "src/extension.ts:981"
       },
       {
         "id": "tool:bg_logs",
@@ -56,7 +56,7 @@
           ]
         },
         "availability": "always",
-        "source": "src/extension.ts:933"
+        "source": "src/extension.ts:938"
       },
       {
         "id": "tool:bg_run",
@@ -364,7 +364,7 @@
     {
       "path": "src/extension.ts",
       "owner": "docs/subsystems/extension-lifecycle.md",
-      "sha256": "33956d24ad5c674d71e6ddc5cc5153fe10345f1c777eca39c9cd77f4df6db4a7"
+      "sha256": "c9f93008a9329ca7ca2a11c1dc56eecfe5afc31abd196b86567c0657a541ac05"
     },
     {
       "path": "src/ui/background-tasks-manager.ts",
@@ -441,11 +441,11 @@
     },
     {
       "path": "README.md",
-      "sha256": "0758ceab0021db43207979a464cbd15ee41cac8079428ff6a9867db01b9eb155"
+      "sha256": "43d4b93d3d53cd21b8d05d14014fe33665284f4b7bb2ae6ae9a27355397ede00"
     },
     {
       "path": "TESTING.md",
-      "sha256": "6f493ed9100fb4027a1e0e03abae948cb0af9ddd3fe4b2e6dd616fbe50973e2e"
+      "sha256": "d087550e46e456e4caa631efa10e2c45a8fb3b11ab4f46defaaa51353edd43f6"
     },
     {
       "path": "UPSTREAM.md",

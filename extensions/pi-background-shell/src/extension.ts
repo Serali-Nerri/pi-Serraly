@@ -919,10 +919,15 @@ export default async function backgroundTasksExtension(pi: ExtensionAPI): Promis
         header: { title: 'bg_status', summary: args.taskId, state: cardStateFor(context) },
       });
     },
-    renderResult(result, _options, theme) {
-      const tasks = result.details.tasks;
+    renderResult(result, _options, theme, context) {
       const text =
         result.content?.map((part) => (part.type === 'text' ? (part.text ?? '') : '')).join('\n') ?? '';
+      if (context?.isError) {
+        return renderBgToolCard(theme, {
+          status: { state: 'error', message: text },
+        });
+      }
+      const tasks = result.details.tasks;
       return renderBgToolCard(theme, {
         status: { state: 'success', message: `${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'}` },
         bodyLines: text.split('\n'),

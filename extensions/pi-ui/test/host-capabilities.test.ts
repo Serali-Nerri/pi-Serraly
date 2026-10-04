@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { registerHooks } from "node:module";
 import test from "node:test";
 import {
 	AssistantMessageComponent,
@@ -142,6 +143,70 @@ test("probeHostCapabilities lists a non-writable capability without writing anyt
 		Object.defineProperty(tool, "createResultRegion", descriptor);
 	}
 	assert.deepEqual(probeHostCapabilities(), { ok: true, missing: [] });
+});
+
+test("the public probe rejects nonextensible targets with own writable methods without mutating the host", async () => {
+	for (const constrain of [Object.preventExtensions, Object.seal]) {
+		// Fresh external host classes: irreversible constraints never touch Pi's
+		// actual prototypes or another fixture's host.
+		const hostUrl = `data:text/javascript,${encodeURIComponent(`
+			export class ToolExecutionComponent {
+				hasRendererDefinition() {}
+				getRenderShell() {}
+				getCallRenderer() {}
+				getResultRenderer() {}
+				updateDisplay() {}
+				render() {}
+				createResultRegion() {}
+			}
+			export class AssistantMessageComponent { updateContent() {} render() {} }
+			export class SkillInvocationMessageComponent { updateDisplay() {} render() {} }
+			export class CompactionSummaryMessageComponent { updateDisplay() {} render() {} }
+			export class BranchSummaryMessageComponent { updateDisplay() {} render() {} }
+			export class Container { addChild() {} removeChild() {} clear() {} }
+			export class TuiAltScreen { dispatchMouseToLayout() {} }
+			// ${constrain.name}
+		`)}`;
+		const host = await import(hostUrl);
+		const probeUrl = new URL("../src/compat/host-capabilities.ts", import.meta.url);
+		probeUrl.searchParams.set("fixture", constrain.name);
+		const hooks = registerHooks({
+			resolve(specifier, context, nextResolve) {
+				if (context.parentURL === probeUrl.href &&
+					["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui"].includes(specifier)) {
+					return { url: hostUrl, shortCircuit: true };
+				}
+				return nextResolve(specifier, context);
+			},
+		});
+		try {
+			const probe = await import(probeUrl.href);
+			assert.deepEqual(probe.probeHostCapabilities(), { ok: true, missing: [] });
+			const target = host.ToolExecutionComponent.prototype;
+			constrain(target);
+			const before = Object.values(host).map((component: any) => Object.getOwnPropertyDescriptors(component.prototype));
+			const missing = [
+				"ToolExecutionComponent.hasRendererDefinition (target not extensible)",
+				"ToolExecutionComponent.getRenderShell (target not extensible)",
+				"ToolExecutionComponent.getCallRenderer (target not extensible)",
+				"ToolExecutionComponent.getResultRenderer (target not extensible)",
+				"ToolExecutionComponent.updateDisplay (target not extensible)",
+				"ToolExecutionComponent.render (target not extensible)",
+				"ToolExecutionComponent.createResultRegion (target not extensible)",
+			];
+			assert.deepEqual(probe.probeHostCapabilities(), { ok: false, missing }, constrain.name);
+			assert.throws(() => probe.requireHostCapabilities(), (error: any) => {
+				assert.deepEqual(error.capabilities, missing);
+				return true;
+			});
+			assert.throws(() => probe.requireReplaceableMethod("ToolExecutionComponent", target, "render"),
+				/ToolExecutionComponent\.render \(target not extensible\)/);
+			assert.deepEqual(Object.values(host).map((component: any) => Object.getOwnPropertyDescriptors(component.prototype)),
+				before, "preflight and in-place guards leave every host prototype unchanged");
+		} finally {
+			hooks.deregister();
+		}
+	}
 });
 
 test("the probe covers every host prototype the compat domains patch", () => {

@@ -13,6 +13,8 @@ This module owns background execution and its dock/renderers, independently of t
 | `bg_logs` | Bounded head/tail output, truncation notice and full output path. |
 | `bg_kill` | Stop a running task/tree; unknown or ended tasks fail. |
 
+`bg_status` lookup failures, including unknown or ambiguous task IDs, render a normal shared error card with the host's error text. Successful results retain the task count and status text, including an empty task list.
+
 Commands: `/bg`, `/jobs`, `/logs`, `/kill`, `/tasks`, `/bg-tasks`, `/bg-clear`.
 
 ```text

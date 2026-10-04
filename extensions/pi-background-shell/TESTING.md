@@ -96,6 +96,11 @@ SDK harnesses must use counted lifecycle bindings such as `onError` and await
 Bare `AgentSession.dispose()` and empty/mode-only reload bindings do not establish
 supported cleanup or reload continuity. Rebind after runtime session replacement.
 
+Timeout tests wait for the failed terminal snapshot within the execution timeout
+plus the registry's tree-stop/proof budget and a bounded metadata-settlement
+margin. They retain the configured execution deadline and exact status/error/log
+assertions; sending a termination signal alone is not terminal completion.
+
 ## Manual dock checks
 
 Pi defaults to fullscreen; also inspect explicit regular mode

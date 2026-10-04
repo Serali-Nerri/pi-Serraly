@@ -9,7 +9,7 @@
  * or oversized file is a failure the caller decides how to treat.
  */
 import { randomUUID } from "node:crypto";
-import { closeSync, constants, fstatSync, mkdirSync, openSync, readSync, renameSync, unlinkSync, writeSync } from "node:fs";
+import { closeSync, constants, fstatSync, mkdirSync, openSync, readSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 
 export type JsonFileRead =
@@ -99,7 +99,7 @@ export function writeTextFileAtomicSync(path: string, contents: string, maxBytes
 	let descriptor: number | undefined;
 	try {
 		descriptor = openSync(temporary, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, 0o600);
-		writeSync(descriptor, bytes);
+		writeFileSync(descriptor, bytes);
 		closeSync(descriptor);
 		descriptor = undefined;
 		renameSync(temporary, path);

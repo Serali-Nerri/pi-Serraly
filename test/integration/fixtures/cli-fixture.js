@@ -26,7 +26,7 @@ export function installGuard(pi) {
 			const stack = new Error().stack;
 			// The manager watchdog is a business timer and valid in every mode.
 			// Qualify presentation timers, not every timer in the shared bundle.
-			if (stack.includes(process.env.SERRALY_RELEASE + "/dist/pi-subagents/") &&
+			if (stack.includes(process.env.SERRALY_RELEASE + "/extensions/pi-subagents/dist/") &&
 				/AgentWidget\.ensureTimer|ConversationViewer\.scheduleRender|createNavInputHandler/.test(stack)) {
 				state.timers++;
 				report("subagents-ui-timer", { name, stack });
@@ -40,7 +40,7 @@ export function installGuard(pi) {
 			"pasteToEditor", "setEditorText", "editor", "addAutocompleteProvider", "setEditorComponent", "setTheme", "setToolsExpanded"]) {
 			const original = ctx.ui[name];
 			ctx.ui[name] = function (...args) {
-				if (new Error().stack.includes(process.env.SERRALY_RELEASE + "/dist/pi-subagents/")) state.uiCalls.push({ name });
+				if (new Error().stack.includes(process.env.SERRALY_RELEASE + "/extensions/pi-subagents/dist/")) state.uiCalls.push({ name });
 				return original.apply(this, args);
 			};
 		}

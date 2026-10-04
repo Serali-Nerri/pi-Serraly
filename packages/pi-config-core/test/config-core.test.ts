@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { chmodSync, closeSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import fs, { chmodSync, closeSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
@@ -146,6 +147,35 @@ describe("writeTextFileAtomicSync", () => {
 	it("counts bytes rather than characters when bounding a write", () => {
 		assert.throws(() => writeTextFileAtomicSync(configPath(), '"界界界界"', 10), /exceed 10 bytes/);
 		assert.deepEqual(readdirSync(directory), []);
+	});
+
+	it("keeps the target and leaves no temporary file when a short write runs out of space", (t) => {
+		writeTextFileAtomicSync(configPath(), '{"kept":true}\n', LIMIT);
+		const systemWrite = fs.writeSync;
+		const diskFull = Object.assign(new Error("No space left on device"), { code: "ENOSPC" });
+		let spaceRemaining = 4;
+		const write = t.mock.method(fs, "writeSync", (
+			descriptor: number, buffer: NodeJS.ArrayBufferView, offset = 0,
+			length = buffer.byteLength - offset, position: number | null = null,
+		) => {
+			if (spaceRemaining === 0) throw diskFull;
+			const written = systemWrite(descriptor, buffer, offset, Math.min(length, spaceRemaining), position);
+			spaceRemaining -= written;
+			return written;
+		});
+		let failure: unknown;
+		try {
+			syncBuiltinESMExports();
+			writeTextFileAtomicSync(configPath(), '{"replacement":true}\n', LIMIT);
+		} catch (cause) {
+			failure = cause;
+		} finally {
+			write.mock.restore();
+			syncBuiltinESMExports();
+		}
+		assert.equal(readFileSync(configPath(), "utf8"), '{"kept":true}\n');
+		assert.equal(failure, diskFull);
+		assert.deepEqual(temporaryFiles(), []);
 	});
 
 	it("rejects an invalid byte limit before any side effect", () => {

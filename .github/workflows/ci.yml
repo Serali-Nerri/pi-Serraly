@@ -52,7 +52,7 @@ jobs:
 
       - name: Release-identity gate (pull request)
         if: github.event_name == 'pull_request'
-        run: npm run check:package-versions -- --base "${{ github.event.pull_request.base.sha }}" --head "${{ github.event.pull_request.head.sha }}"
+        run: npm run check:package-versions -- --base "${{ github.event.pull_request.base.sha }}" --head "${{ github.event.pull_request.head.sha }}" --merge-base
 
       - name: Release-identity gate (push)
         if: github.event_name == 'push'

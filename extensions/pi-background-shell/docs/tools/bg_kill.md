@@ -24,4 +24,4 @@ Stop a running background task by ID. Fails loudly if the task is unknown or alr
 }
 ```
 
-Source: `src/extension.ts:976`. See [runtime](../subsystems/background-task-runtime.md) and [completion delivery](../concepts/completion-delivery.md).
+Source: `src/extension.ts:981`. See [runtime](../subsystems/background-task-runtime.md) and [completion delivery](../concepts/completion-delivery.md).

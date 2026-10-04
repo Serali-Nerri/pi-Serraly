@@ -59,7 +59,8 @@ RED/GREEN 只运行新增或失败的测试文件；功能完成后运行受影�
 2. **模块边界测试**：实际注册定义、renderer、文件/进程/worker 和宿主 SDK。
    外部或慢操作才允许 test double；保留真正影响断言的副作用。
 3. **产物集成**：实际编译入口、release 树、新路径 lazy import、宿主 loader
-   和类身份、资源过滤、七入口共存、脚本化 child 与合成 stdio MCP。
+   和类身份、资源过滤、七入口共存、脚本化 child 与合成 stdio MCP。CLI 的模块
+   计时器/UI 守卫按当前 release 成员路径归属调用，并有能触发计数的正向控制。
 4. **操作演练**：临时目录内真实文件锁、原子发布和故障中断恢复。
 5. **人工交互**：目标终端的视觉、快捷键、鼠标和焦点；自动渲染宽度检查不替代它。
 
@@ -98,7 +99,9 @@ PI_UI_HOST_PACKAGE=/absolute/path/to/pi-coding-agent npm run verify
 
 该变量只选择宿主包代码，不选择用户配置。根集成测试从独立 release 通过宿主
 loader 加载，不能用源码 workspace 的 ESM import 冒充最终运行验证。
-隔离前解析宿主位置，再只向子进程传递代码路径，不传递真实配置。managed 安装
+显式或 managed 安装指示存在时，隔离前解析宿主位置，只向子进程传递代码路径，
+不传递真实配置；无安装指示的静态检查和源码测试不查找外部宿主。实际 CLI/SDK
+验收仍由宿主查找器校验当前 Node 的全局安装，缺少宿主时直接失败。managed 安装
 不必拥有独立 Node；使用实际启动 Pi 的运行时验收，不因该 Node 来自 nvm 而再跑一遍。
 
 ## UI 预览
@@ -169,7 +172,8 @@ CI 权限只有 `contents: read`，没有部署或发布凭据。
 再增加有明确目标的 CI 兼容性任务。
 
 版本门禁在 CI 中额外执行一次 diff 检查：pull request 用
-`--base <base.sha> --head <head.sha>`，push 用 before/current SHA。基线在克隆中
+`--base <base.sha> --head <head.sha> --merge-base`，以共同祖先的发布面和版本作为
+基线；push 仍直接比较 before/current SHA。基线在克隆中
 不可用（例如全零 SHA 或浅克隆）时，门禁打印明确的跳过说明并继续执行完整
 verify，不把跳过写成通过；基线可用时漂移仍然失败。
 
@@ -178,10 +182,11 @@ verify，不把跳过写成通过；基线可用时漂移仍然失败。
 每个包独立版本。发布面（包内源码、构建配方、manifest、打包 payload 与随包文档）
 变化后必须提高该包版本；只有包内测试或仓库根人类文档变化时可以不动版本。
 被 bundle 的库升版时，必须同时更新消费者的精确依赖并提高消费者版本，因为它的
-封印 payload 已变。根 release-set 版本独立于各包。
+封印 payload 已变。版本按语义版本优先级比较：build metadata 不参与排序，
+prerelease 低于相同数字版本的正式版。根 release-set 版本独立于各包。
 
 ```sh
-npm run check:package-versions -- --base <git-ref> [--head <git-ref>]
+npm run check:package-versions -- --base <git-ref> [--head <git-ref>] [--merge-base]
 ```
 
 基线只读取 Git 中的包身份（名称/版本/依赖名），因此旧提交不需要当前的

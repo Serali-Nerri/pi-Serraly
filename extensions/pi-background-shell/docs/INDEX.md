@@ -28,8 +28,8 @@ Local fork `pi-background-shell@0.2.0`; verified host Pi 1.0.0 only.
 
 | Surface | Availability | Source |
 | --- | --- | --- |
-| `tool:bg_kill` | always | `src/extension.ts:976` |
-| `tool:bg_logs` | always | `src/extension.ts:933` |
+| `tool:bg_kill` | always | `src/extension.ts:981` |
+| `tool:bg_logs` | always | `src/extension.ts:938` |
 | `tool:bg_run` | always | `src/extension.ts:857` |
 | `tool:bg_status` | always | `src/extension.ts:901` |
 | `command:bg` | always | `src/extension.ts:704` |

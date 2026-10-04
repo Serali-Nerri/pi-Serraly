@@ -12,8 +12,10 @@
 - The reference README describes a local fixed-interval subset of Claude Code’s
   `/loop`. Its behavior and limitations are retained in the new README.
 - **No LICENSE or NOTICE was present in the reference.** No license has been
-  invented or inherited from another module. The root license index must retain
-  this absence; clarify permission before any redistribution.
+  invented or inherited from another module. The package manifest omits the
+  `license` field, and the packed payload retains this provenance in
+  `dist/UPSTREAM.md`. The root license index must retain this absence; clarify
+  permission before any redistribution.
 
 ## Deliberate adaptations
 

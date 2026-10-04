@@ -17,7 +17,7 @@ import {
   type ExtensionUIContext,
 } from '@earendil-works/pi-coding-agent';
 import { parseJsonText, type BgTaskSnapshot, type TaskStatus } from '../../src/core/common.js';
-import { BackgroundTaskRegistry } from '../../src/core/registry.js';
+import { BackgroundTaskRegistry, STOP_WAIT_MS } from '../../src/core/registry.js';
 import {
   BG_EXTENSION_CAPABILITIES,
   BG_REQUEST_CHANNEL,
@@ -952,15 +952,17 @@ void describe('sdk', () => {
 
   void it('fails timed-out tasks loudly', async () => {
     const { session } = await harness();
+    const timeoutSeconds = 1;
     try {
       const r = await exec(session, 'bg_run', {
         name: 'SDK Timeout',
         command: `node -e ${JSON.stringify('setTimeout(() => {}, 5000)')}`,
-        timeoutSeconds: 1,
+        timeoutSeconds,
         notifyOnCompletion: false,
         triggerOnCompletion: false,
       });
-      const t = await wait(session, taskFromResult(r).id, 80);
+      const terminalWaitIterations = Math.ceil((timeoutSeconds * 1000 + STOP_WAIT_MS + 500) / 50);
+      const t = await wait(session, taskFromResult(r).id, terminalWaitIterations);
       assert.equal(t.status, 'failed');
       assert.match(t.error ?? '', /Timed out after 1s/);
       const logs = await exec(session, 'bg_logs', { taskId: t.id, maxBytes: 1000 });

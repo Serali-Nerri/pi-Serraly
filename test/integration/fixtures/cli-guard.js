@@ -11,7 +11,7 @@ export default function (pi) {
 	for (const name of ["setTimeout", "setInterval"]) {
 		const original = globalThis[name];
 		globalThis[name] = (...args) => {
-			if (new Error().stack.includes(process.env.SERRALY_RELEASE + "/dist/pi-ui/")) state.timers++;
+			if (new Error().stack.includes(process.env.SERRALY_RELEASE + "/extensions/pi-ui/dist/")) state.timers++;
 			return original(...args);
 		};
 	}

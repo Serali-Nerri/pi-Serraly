@@ -20,10 +20,11 @@ writeTextFileAtomicSync(path, `${JSON.stringify(value, null, 2)}\n`, 64 * 1024);
   file, and the read never blocks on a FIFO.
 - `writeTextFileAtomicSync(path, contents, maxBytes)` checks the encoded size before any
   side effect, then writes `<name>.<pid>.<uuid>.tmp` in the same directory with `wx` and
-  `0600` and renames it over the target. A missing parent directory is created with
-  `0700`; an existing parent directory keeps its mode. Failures clean up the temporary
-  file and propagate. There is no lock and no crash-durable `fsync`: concurrent writers
-  are last-writer-wins, and every write is complete.
+  `0600` and renames it over the target only after all bytes are written. A missing
+  parent directory is created with `0700`; an existing parent directory keeps its mode.
+  Failures clean up the temporary file and propagate; a write failure before rename
+  leaves the original target unchanged. There is no lock and no crash-durable `fsync`:
+  concurrent writers are last-writer-wins, and every successful write is complete.
 - `maxBytes` must be a positive safe integer; a bad argument throws before any I/O.
 
 Consumers: `pi-ui` (64 KiB, `claude-style-tools.json`) and `pi-subagents` (64 KiB,

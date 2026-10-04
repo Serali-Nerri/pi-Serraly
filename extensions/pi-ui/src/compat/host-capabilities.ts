@@ -3,7 +3,8 @@
  *
  * Pi 1.0.0 exposes the interactive components as classes whose methods are
  * replaced by reference. Before any patch is installed this module verifies that
- * every required method exists and can be replaced. The probe writes nothing and
+ * every required method exists and can be replaced, and every patch target is
+ * extensible so its pipeline registry can be installed. The probe writes nothing and
  * never invokes an accessor, so a hostile or newer host cannot be mutated by a
  * failed check. It only covers public prototype members: it makes no claim about
  * private instance fields, and the real host plus visual acceptance remain the
@@ -96,10 +97,10 @@ function descriptorOf(target: object, name: string): PropertyDescriptor | undefi
 
 /** The reason a requirement is unusable, or undefined when it is satisfied. */
 function capabilityFailure({ target, name, optional }: Requirement): string | undefined {
+	if (!Object.isExtensible(target)) return "target not extensible";
 	const descriptor = descriptorOf(target, name);
-	const own = Object.getOwnPropertyDescriptor(target, name);
 	if (descriptor === undefined) {
-		if (optional === true) return Object.isExtensible(target) ? undefined : "target not extensible";
+		if (optional === true) return undefined;
 		return "missing";
 	}
 	if (descriptor.get !== undefined || descriptor.set !== undefined) {
@@ -108,7 +109,6 @@ function capabilityFailure({ target, name, optional }: Requirement): string | un
 	}
 	if (typeof descriptor.value !== "function" && !(optional === true && descriptor.value === undefined)) return "not a method";
 	if (descriptor.writable !== true) return "not writable";
-	if (own === undefined && !Object.isExtensible(target)) return "target not extensible";
 	return undefined;
 }
 
@@ -157,7 +157,7 @@ export function assertUiPatchOwnership(): void {
 
 /**
  * In-place guard for one patch site: the member must exist (unless optional) and
- * the target must allow the assignment the installer is about to perform.
+ * the target must allow method replacement and pipeline registry installation.
  */
 export function requireReplaceableMethod(
 	owner: string,

@@ -34,4 +34,4 @@ Read bounded output from a background task for deliberate inspection; this is no
 }
 ```
 
-Source: `src/extension.ts:933`. See [runtime](../subsystems/background-task-runtime.md) and [completion delivery](../concepts/completion-delivery.md).
+Source: `src/extension.ts:938`. See [runtime](../subsystems/background-task-runtime.md) and [completion delivery](../concepts/completion-delivery.md).

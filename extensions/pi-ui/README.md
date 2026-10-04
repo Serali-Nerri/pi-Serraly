@@ -31,7 +31,9 @@ UI 只展示已经返回或保存的数据；不读当前磁盘补全历史 diff
 兼容补丁按引用替换 Pi 1.0.0 的展示方法（工具/助手/容器/三种摘要组件的
 `render`、`updateDisplay`、`createResultRegion`、`dispatchMouseToLayout` 等）。
 每个 TUI `session_start` 在 thinking 与 transcript 修改之前做一次无写入预检：
-只读 descriptor、继承与 extensibility，不执行 getter，也不写任何槽位。缺少
+只读 descriptor、继承与 extensibility，不执行 getter，也不写任何槽位。
+所有必需补丁目标原型都必须可扩展，以便注册 pipeline 槽位；即使方法已在原型
+自身定义且可写，禁止扩展或 sealed 的原型也不能安装补丁。缺少
 必需能力、方法不可替换或原型不可扩展时，整个兼容域被跳过（原生展示、shell、
 命令和 Markdown 继续工作），每 session 只通知一次并列出具体能力名；安装器仍
 在自身位置保留就地检查，防止预检后出现竞态。预检只证明公开方法可替换，

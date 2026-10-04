@@ -22,12 +22,14 @@ export function isolatedEnvironment(base) {
 	};
 }
 
-/** Resolve host code before replacing HOME; never forward managed-install or user settings. */
+/** Resolve a configured host before isolation; unconfigured source-only work needs no host. */
 export function testEnvironment(base) {
 	const env = isolatedEnvironment(base);
 	// Unit fixtures exercise native OSC8 pointer regions explicitly. CLI preview
 	// sandboxes separately keep their own hyperlink setting.
 	env.PI_HYPERLINKS = "1";
-	env.PI_UI_HOST_PACKAGE = hostPackage().directory;
+	if (process.env.PI_UI_HOST_PACKAGE !== undefined || process.env.PI_MANAGED_INSTALL_ROOT !== undefined) {
+		env.PI_UI_HOST_PACKAGE = hostPackage().directory;
+	}
 	return env;
 }

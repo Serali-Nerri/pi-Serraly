@@ -18,10 +18,29 @@ const git = (root, args) => execFileSync("git", args, { cwd: root, encoding: "ut
 
 /** Compare concrete semantic versions; returns > 0 when `left` is newer. */
 export function compareVersions(left, right) {
-	const parse = (value) => value.split("-")[0].split(".").map((part) => Number(part));
+	const parse = (value) => {
+		const [version] = value.split("+");
+		const [core] = version.split("-");
+		return {
+			core: core.split(".").map((part) => BigInt(part)),
+			prerelease: version === core ? [] : version.slice(core.length + 1).split("."),
+		};
+	};
 	const a = parse(left), b = parse(right);
 	for (let index = 0; index < 3; index++) {
-		if (a[index] !== b[index]) return a[index] - b[index];
+		if (a.core[index] !== b.core[index]) return a.core[index] < b.core[index] ? -1 : 1;
+	}
+	if (a.prerelease.length === 0) return b.prerelease.length === 0 ? 0 : 1;
+	if (b.prerelease.length === 0) return -1;
+	for (let index = 0; index < Math.max(a.prerelease.length, b.prerelease.length); index++) {
+		const aPart = a.prerelease[index], bPart = b.prerelease[index];
+		if (aPart === undefined) return -1;
+		if (bPart === undefined) return 1;
+		const aId = /^\d+$/.test(aPart) ? BigInt(aPart) : aPart;
+		const bId = /^\d+$/.test(bPart) ? BigInt(bPart) : bPart;
+		if (aId === bId) continue;
+		if (typeof aId !== typeof bId) return typeof aId === "bigint" ? -1 : 1;
+		return aId < bId ? -1 : 1;
 	}
 	return 0;
 }
@@ -50,9 +69,11 @@ function isReleaseSurface(entry, path) {
 /**
  * Report packages whose release identity is inconsistent with the baseline.
  * An empty result means every changed release surface carries a higher version.
+ * With mergeBase, both identities and changed paths use the common ancestor.
  */
-export async function checkPackageVersions({ root = repositoryRoot, base, head } = {}) {
+export async function checkPackageVersions({ root = repositoryRoot, base, head, mergeBase = false } = {}) {
 	if (!base) throw new Error("checkPackageVersions requires a baseline Git ref");
+	if (mergeBase) base = git(root, ["merge-base", base, head ?? "HEAD"]).trim();
 	const basePackages = await identityAt(root, base);
 	const headPackages = head === undefined
 		? new Map((await discoverPackages(root)).map((pkg) => [pkg.name, {
@@ -99,15 +120,16 @@ async function baseIsAvailable(ref) {
 }
 
 function usage() {
-	return "Usage: node scripts/check-package-versions.mjs --base <git-ref> [--head <git-ref>]";
+	return "Usage: node scripts/check-package-versions.mjs --base <git-ref> [--head <git-ref>] [--merge-base]";
 }
 
 async function main() {
 	const args = process.argv.slice(2);
-	let base, head;
+	let base, head, mergeBase = false;
 	for (let index = 0; index < args.length; index++) {
 		if (args[index] === "--base" && args[index + 1]) base = args[++index];
 		else if (args[index] === "--head" && args[index + 1]) head = args[++index];
+		else if (args[index] === "--merge-base") mergeBase = true;
 		else throw new Error(usage());
 	}
 	if (!base) throw new Error(usage());
@@ -118,9 +140,9 @@ async function main() {
 		console.log(`check-package-versions: baseline ${base} is not available in this clone; skipping the diff gate (run the full verification instead)`);
 		return;
 	}
-	const offenders = await checkPackageVersions({ root: resolve(repositoryRoot), base, head });
+	const offenders = await checkPackageVersions({ root: resolve(repositoryRoot), base, head, mergeBase });
 	if (offenders.length === 0) {
-		console.log(`check-package-versions: no release-identity drift against ${base}${head ? `..${head}` : ""}`);
+		console.log(`check-package-versions: no release-identity drift against ${base}${head ? `..${head}` : ""}${mergeBase ? " (merge base)" : ""}`);
 		return;
 	}
 	for (const offender of offenders) console.error(`${offender.name}: ${offender.reason}`);

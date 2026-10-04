@@ -71,6 +71,38 @@ test("a changed release surface needs a higher version", async (t) => {
 	assert.deepEqual(offenders.map((offender) => offender.name), ["pi-alpha"]);
 });
 
+test("release bumps follow semantic version precedence including prerelease and build metadata", async (t) => {
+	const cases = [
+		["1.0.0", "1.0.1+build.1", true],
+		["1.0.0+build.9", "1.0.1+build.1", true],
+		["1.0.0+build.9", "1.0.0+build.10", false],
+		["1.0.0-rc.1+build.9", "1.0.0+build.1", true],
+		["1.0.0", "1.0.0-rc.2", false],
+		["1.0.0-rc.9+build.9", "1.0.0-rc.10+build.1", true],
+		["1.0.0-rc.10", "1.0.0-rc.9", false],
+		["1.0.0-1", "1.0.0-alpha", true],
+		["1.0.0-alpha", "1.0.0-1", false],
+		["1.0.0-alpha", "1.0.0-alpha.1", true],
+		["1.0.0-alpha.1", "1.0.0-alpha", false],
+		["1.0.0-alpha-beta", "1.0.0-alpha-gamma", true],
+		["1.0.0-beta", "1.0.0-alpha", false],
+	];
+	for (const [before, after, accepted] of cases) {
+		await t.test(`${before} -> ${after} is ${accepted ? "accepted" : "rejected"}`, async (t) => {
+			const fixture = await gitFixture(t);
+			await fixture.write("package.json", JSON.stringify({ name: "fixture-root", private: true, workspaces: ["extensions/*"] }) + "\n");
+			await fixture.write("extensions/pi-alpha/package.json", manifest("pi-alpha", before));
+			await fixture.write("extensions/pi-alpha/src/index.ts", "export const answer = 1;\n");
+			const baseline = await fixture.commit("baseline version");
+			await fixture.write("extensions/pi-alpha/package.json", manifest("pi-alpha", after));
+			await fixture.write("extensions/pi-alpha/src/index.ts", "export const answer = 2;\n");
+			const head = await fixture.commit("change source and version");
+			const offenders = await checkPackageVersions({ root: fixture.base, base: baseline, head });
+			assert.deepEqual(offenders.map((offender) => offender.name), accepted ? [] : ["pi-alpha"]);
+		});
+	}
+});
+
 test("test-only and root-only changes do not require a package bump", async (t) => {
 	const fixture = await gitFixture(t);
 	const baseline = await firstCommit(fixture);
@@ -79,6 +111,36 @@ test("test-only and root-only changes do not require a package bump", async (t) 
 	await fixture.write("scripts/tooling.mjs", "export const tooling = 1;\n");
 	const changed = await fixture.commit("test and root-only changes");
 	assert.deepEqual(await checkPackageVersions({ root: fixture.base, base: baseline, head: changed }), []);
+});
+
+test("a divergent PR compares its release surface and versions with the common ancestor", async (t) => {
+	const fixture = await gitFixture(t);
+	await fixture.write("package.json", JSON.stringify({ name: "fixture-root", private: true, workspaces: ["extensions/*"] }) + "\n");
+	await fixture.write("extensions/pi-ui/package.json", manifest("pi-ui", "0.2.0"));
+	await fixture.write("extensions/pi-ui/src/index.ts", "export const answer = 1;\n");
+	const ancestor = await fixture.commit("A: ui 0.2.0");
+
+	await fixture.write("extensions/pi-ui/package.json", manifest("pi-ui", "0.2.1"));
+	await fixture.write("extensions/pi-ui/src/index.ts", "export const answer = 2;\n");
+	const main = await fixture.commit("M: main bumps ui and changes source");
+	fixture.git("checkout", "-q", "-b", "pr", ancestor);
+	await fixture.write("README.md", "# PR documentation\n");
+	const documentation = await fixture.commit("H: PR changes only the root README");
+
+	assert.deepEqual(await checkPackageVersions({ root: fixture.base, base: main, head: documentation, mergeBase: true }), []);
+	const snapshotOffenders = await checkPackageVersions({ root: fixture.base, base: main, head: documentation });
+	assert.deepEqual(snapshotOffenders.map((offender) => offender.name), ["pi-ui"]);
+
+	await fixture.write("extensions/pi-ui/src/index.ts", "export const answer = 3;\n");
+	const source = await fixture.commit("PR changes source without a bump");
+	const offenders = await checkPackageVersions({ root: fixture.base, base: main, head: source, mergeBase: true });
+	assert.deepEqual(offenders.map((offender) => offender.name), ["pi-ui"]);
+	assert.match(offenders[0].reason, /baseline 0\.2\.0/);
+
+	await fixture.write("extensions/pi-ui/package.json", manifest("pi-ui", "0.2.1"));
+	const bumped = await fixture.commit("PR bumps ui relative to the common ancestor");
+	assert.deepEqual(await checkPackageVersions({ root: fixture.base, base: main, head: bumped, mergeBase: true }), []);
+	assert.deepEqual(await checkPackageVersions({ root: fixture.base, base: main, mergeBase: true }), []);
 });
 
 test("a moved package directory keeps its identity and baseline version", async (t) => {

@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "description": "Session-local fixed-interval /loop scheduling.",
-  "license": "MIT",
   "engines": {
     "node": ">=22.19.0"
   },
