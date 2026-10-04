@@ -14,6 +14,7 @@ import { isExpandedToolIoView } from "../../transcript/tool/result.ts";
 import { setToolTuiFullscreen } from "../../transcript/tool/show-more-hint.ts";
 import { setHoveredToolCallId, getToolMouseTui } from "../../overlays/mouse-state.ts";
 import { resolveRendererPolicy } from "../policy.ts";
+import { requireReplaceableMethod } from "../host-capabilities.ts";
 
 const OWNER = Symbol.for("claude-style-tools.native-mouse");
 type Preview = { title: string; content: string | Component };
@@ -117,61 +118,11 @@ export function installToolMouseInteraction(ctx: any): () => void {
 	activeContext = ctx;
 	const patches: Array<{ proto: any; key: string; original: any; installed: any }> = [];
 	let disposed = false;
-	const patch = (proto: any, key: string, factory: (original: any) => any) => {
+	const patch = (owner: string, proto: any, key: string, factory: (original: any) => any) => {
+		requireReplaceableMethod(owner, proto, key, { optional: key === "handleMouse" });
 		const original = proto[key]; const installed = factory(original);
 		proto[key] = installed; patches.push({ proto, key, original, installed });
 	};
-	const toolProto = ToolExecutionComponent.prototype as any;
-	patch(toolProto, "createResultRegion", (original) => function (this: any, child: any) {
-		const native = original.call(this, child);
-		if (!resolveRendererPolicy(this).managed) return native;
-		return toolRegion(this, child, native);
-	});
-	const track = (proto: any) => patch(proto, "render", (original) => function (this: any, width: number) {
-		const lines = original.call(this, width); frames.set(this, lines); return lines;
-	});
-	const expandable = (proto: any, enabled: (value: any) => boolean = () => true) => {
-		track(proto);
-		patch(proto, "handleMouse", (original) => function (this: any, event: TuiMouseEvent) {
-			if (!isCardActive(this) || !enabled(this)) return original?.call(this, event);
-			const lines = frames.get(this) ?? [];
-			const line = lines[event.y] ?? "";
-			const setHover = (value: boolean) => {
-				if (isCompactAssistantComponent(this)) setHoveredCompactAssistant(value ? this : undefined);
-				else this.setHintHovered?.(value);
-				this.invalidate?.();
-			};
-			if (!this.expanded) return cardEvent(this, event, line, setHover);
-			const result = original?.call(this, event);
-			return result ?? cardEvent(this, event, line, setHover);
-		});
-	};
-	expandable(ThinkingPreviewBlock.prototype);
-	expandable(AssistantMessageComponent.prototype, isCompactAssistantComponent);
-	// ccstyle 的 updateDisplay 接管这三个摘要后不再构建原生 MouseRegion（on/compact），
-	// 必须由这里的 hint 命中逻辑负责展开；off 模式 handleMouse 早退给原生 Box 分发，
-	// 原生 MouseRegion 仍负责整行点击切换，OSC8 链接与拖拽选择都不受影响。
-	expandable(SkillInvocationMessageComponent.prototype);
-	expandable(CompactionSummaryMessageComponent.prototype);
-	expandable(BranchSummaryMessageComponent.prototype);
-	track(ToolGroupComponent.prototype);
-	patch(ToolGroupComponent.prototype, "handleMouse", () => function (this: any, event: TuiMouseEvent) {
-		if (!isStyleActive()) return undefined;
-		const line = frames.get(this)?.[event.y] ?? "";
-		const child = this.childAtRow(event.y, event.width);
-		if (this.expanded && child && (event.clickCount ?? 0) < 2) {
-			const result = child.component.handleMouse?.({ ...event, x: event.x - 1, y: child.row, width: Math.max(1, event.width - 2) });
-			if (result) return result;
-		}
-		return cardEvent(this, event, line, (value) => { this.setHintHovered(value); this.invalidate(); });
-	});
-	patch(TuiAltScreen.prototype, "dispatchMouseToLayout", (original) => function (this: any, event: TuiMouseEvent) {
-		hoverVisited = false;
-		const result = original.call(this, event);
-		if (event.type === "move" && !hoverVisited && hovered) { clearHover(); this.requestRender(); }
-		return result;
-	});
-	setToolTuiFullscreen(getToolMouseTui()?.mode === "fullscreen");
 	const installation = { dispose() {
 		if (disposed) return;
 		disposed = true; clearHover();
@@ -185,6 +136,64 @@ export function installToolMouseInteraction(ctx: any): () => void {
 			patchRegistry.dispose(OWNER, installation);
 		}
 	} };
+	// Register before the first write: a failure in any later patch releases the
+	// prototypes that were already replaced instead of leaving them owned.
 	patchRegistry.install(OWNER, installation);
+	const toolProto = ToolExecutionComponent.prototype as any;
+	try {
+		patch("ToolExecutionComponent", toolProto, "createResultRegion", (original) => function (this: any, child: any) {
+			const native = original.call(this, child);
+			if (!resolveRendererPolicy(this).managed) return native;
+			return toolRegion(this, child, native);
+		});
+		const track = (owner: string, proto: any) => patch(owner, proto, "render", (original) => function (this: any, width: number) {
+			const lines = original.call(this, width); frames.set(this, lines); return lines;
+		});
+		const expandable = (owner: string, proto: any, enabled: (value: any) => boolean = () => true) => {
+			track(owner, proto);
+			patch(owner, proto, "handleMouse", (original) => function (this: any, event: TuiMouseEvent) {
+				if (!isCardActive(this) || !enabled(this)) return original?.call(this, event);
+				const lines = frames.get(this) ?? [];
+				const line = lines[event.y] ?? "";
+				const setHover = (value: boolean) => {
+					if (isCompactAssistantComponent(this)) setHoveredCompactAssistant(value ? this : undefined);
+					else this.setHintHovered?.(value);
+					this.invalidate?.();
+				};
+				if (!this.expanded) return cardEvent(this, event, line, setHover);
+				const result = original?.call(this, event);
+				return result ?? cardEvent(this, event, line, setHover);
+			});
+		};
+		expandable("ThinkingPreviewBlock", ThinkingPreviewBlock.prototype);
+		expandable("AssistantMessageComponent", AssistantMessageComponent.prototype, isCompactAssistantComponent);
+		// ccstyle 的 updateDisplay 接管这三个摘要后不再构建原生 MouseRegion（on/compact），
+		// 必须由这里的 hint 命中逻辑负责展开；off 模式 handleMouse 早退给原生 Box 分发，
+		// 原生 MouseRegion 仍负责整行点击切换，OSC8 链接与拖拽选择都不受影响。
+		expandable("SkillInvocationMessageComponent", SkillInvocationMessageComponent.prototype);
+		expandable("CompactionSummaryMessageComponent", CompactionSummaryMessageComponent.prototype);
+		expandable("BranchSummaryMessageComponent", BranchSummaryMessageComponent.prototype);
+		track("ToolGroupComponent", ToolGroupComponent.prototype);
+		patch("ToolGroupComponent", ToolGroupComponent.prototype, "handleMouse", () => function (this: any, event: TuiMouseEvent) {
+			if (!isStyleActive()) return undefined;
+			const line = frames.get(this)?.[event.y] ?? "";
+			const child = this.childAtRow(event.y, event.width);
+			if (this.expanded && child && (event.clickCount ?? 0) < 2) {
+				const result = child.component.handleMouse?.({ ...event, x: event.x - 1, y: child.row, width: Math.max(1, event.width - 2) });
+				if (result) return result;
+			}
+			return cardEvent(this, event, line, (value) => { this.setHintHovered(value); this.invalidate(); });
+		});
+		patch("TuiAltScreen", TuiAltScreen.prototype, "dispatchMouseToLayout", (original) => function (this: any, event: TuiMouseEvent) {
+			hoverVisited = false;
+			const result = original.call(this, event);
+			if (event.type === "move" && !hoverVisited && hovered) { clearHover(); this.requestRender(); }
+			return result;
+		});
+	} catch (error) {
+		installation.dispose();
+		throw error;
+	}
+	setToolTuiFullscreen(getToolMouseTui()?.mode === "fullscreen");
 	return () => installation.dispose();
 }

@@ -26,6 +26,7 @@ import {
 	TOOL_GROUPING_PARENT_KEY as PARENT_KEY,
 	TOOL_GROUPING_PATCH_KEY as PATCH_KEY,
 } from "./patch-keys.ts";
+import { requireReplaceableMethod } from "./host-capabilities.ts";
 
 type Patch = {
 	owner: object;
@@ -483,6 +484,7 @@ export type ToolGroupingHooks = {
 
 export function installToolGrouping(getEnabled: () => boolean): ToolGroupingHooks {
 	const prototype = Container.prototype as any;
+	for (const name of ["addChild", "removeChild", "clear"]) requireReplaceableMethod("Container", prototype, name);
 	const previous = patchRegistry.get<Patch>(PATCH_KEY);
 	if (previous) {
 		previous.active = false;

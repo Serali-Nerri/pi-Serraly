@@ -9,7 +9,14 @@ initTheme("dark", false);
 export { theme };
 export const strip = (text: string) => text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "").replace(/\x1b[_\]][\s\S]*?(?:\x07|\x1b\\)/g, "");
 
-export async function harness(options: { mode?: "on" | "compact" | "off"; headless?: boolean } = {}) {
+export type HarnessOptions = {
+	mode?: "on" | "compact" | "off";
+	headless?: boolean;
+	/** Runs after the extension factory and before `session_start`; host mutations and spies belong here. */
+	beforeStart?: () => void;
+};
+
+export async function harness(options: HarnessOptions = {}) {
 	setConfig({ mode: options.mode ?? "on" });
 	const events = new Map<string, Function[]>();
 	const commands = new Map<string, any>();
@@ -19,6 +26,8 @@ export async function harness(options: { mode?: "on" | "compact" | "off"; headle
 	const widgets = new Map<string, Component>();
 	const root = new Container();
 	const output: string[] = [];
+	/** Every `ui.notify` call, including the ones emitted during session_start. */
+	const notices: Array<{ message: string; level: string | undefined }> = [];
 	const terminal = { columns: 100, rows: 36, write: (s: string) => output.push(s),
 		start() {}, stop() {}, hideCursor() {}, showCursor() {}, moveBy() {}, clearLine() {}, clearFromCursor() {},
 		setTitle() {}, drainInput: async () => {}, };
@@ -47,7 +56,7 @@ export async function harness(options: { mode?: "on" | "compact" | "off"; headle
 		getContextUsage: () => undefined,
 		ui: {
 			theme, getToolsExpanded: () => false, getThinkingVisible: () => false,
-			notify() {}, requestRender() {},
+			notify(message: string, level?: string) { notices.push({ message, level }); }, requestRender() {},
 			setWidget(id: string, factory: any) {
 				if (!factory) widgets.delete(id); else widgets.set(id, factory(tui, theme));
 			},
@@ -72,6 +81,7 @@ export async function harness(options: { mode?: "on" | "compact" | "off"; headle
 		appendEntry(customType: string, data: any) { entries.push({ type: "custom", customType, data }); },
 		setActiveTools() { mutations.push("activeTools"); },
 		getAllTools: () => [...toolMetadata.values()],
+		getCommands: () => [...commands.keys()].map((name) => ({ name })),
 		getThinkingLevel: () => "off",
 		getSettings: () => ({}),
 	};
@@ -79,6 +89,7 @@ export async function harness(options: { mode?: "on" | "compact" | "off"; headle
 	const emit = async (name: string, event: any = {}, context = ctx) => {
 		for (const handler of events.get(name) ?? []) await handler(event, context);
 	};
+	options.beforeStart?.();
 	await emit("session_start");
 	const tool = (name: string, id: string, args: any, result?: any, definition = definitions[name]) => {
 		if (definition !== definitions[name] || !toolMetadata.has(name)) {
@@ -104,7 +115,7 @@ export async function harness(options: { mode?: "on" | "compact" | "off"; headle
 	};
 	const click = (x: number, y: number) => { pointer(x, y); pointer(x, y, "release"); };
 	const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
-	return { pi, ctx, tui, root, widgets, commands, entries, registered, mutations, definitions, events, terminal, toolMetadata,
+	return { pi, ctx, tui, root, widgets, commands, entries, registered, mutations, definitions, events, terminal, notices, toolMetadata,
 		tool, emit, render, pointer, click, flush, get overlay() { return overlay; },
 		get header() { return header; }, get footer() { return footer; },
 		async close() { await emit("session_shutdown"); tui.stopSelectionAutoScroll(); tui.stopScrollbarHover(); tui.stopScrollbarDrag(); },

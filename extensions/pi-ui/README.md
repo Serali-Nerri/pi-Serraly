@@ -26,6 +26,17 @@ Pi 1.0.0 的展示模块，将 Claude 风格转写与会话 shell 合并为一�
 UI 只展示已经返回或保存的数据；不读当前磁盘补全历史 diff，不隐藏工具自己的
 截断提示，也不减少模型收到的结果。
 
+## 宿主能力预检
+
+兼容补丁按引用替换 Pi 1.0.0 的展示方法（工具/助手/容器/三种摘要组件的
+`render`、`updateDisplay`、`createResultRegion`、`dispatchMouseToLayout` 等）。
+每个 TUI `session_start` 在 thinking 与 transcript 修改之前做一次无写入预检：
+只读 descriptor、继承与 extensibility，不执行 getter，也不写任何槽位。缺少
+必需能力、方法不可替换或原型不可扩展时，整个兼容域被跳过（原生展示、shell、
+命令和 Markdown 继续工作），每 session 只通知一次并列出具体能力名；安装器仍
+在自身位置保留就地检查，防止预检后出现竞态。预检只证明公开方法可替换，
+不证明私有实例字段布局稳定，实际宿主与人工视觉验收仍是必需的。
+
 ## 配置
 
 Pi 默认使用 fullscreen；宿主设置 `"tuiMode": "regular"` 或

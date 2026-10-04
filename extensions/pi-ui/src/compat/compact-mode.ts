@@ -21,6 +21,7 @@ import { config } from "../config/config.ts";
 import { getUiScheduler } from "../scheduler.ts";
 import { resolveRendererPolicy } from "./policy.ts";
 import { captureMethod, installMethodStep, nativeMethod } from "./method-pipeline.ts";
+import { requireReplaceableMethod } from "./host-capabilities.ts";
 import { sanitizeToolResultText } from "../utils/tool-result-sanitize.ts";
 import { refreshTranscriptComponent } from "./transcript-refresh.ts";
 import { getMessageDisplayTheme } from "./message-display.ts";
@@ -621,9 +622,11 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 
 	const assistantPrototype = AssistantMessageComponent.prototype as any;
 	const toolPrototype = ToolExecutionComponent.prototype as any;
-	for (const [proto, name] of [[assistantPrototype, "updateContent"], [toolPrototype, "render"], [toolPrototype, "updateDisplay"]] as const) {
-		if (typeof proto?.[name] !== "function") throw new Error(`Pi 1.0.0 compact component lacks ${name}`);
-	}
+	for (const [owner, proto, name] of [
+		["AssistantMessageComponent", assistantPrototype, "updateContent"],
+		["ToolExecutionComponent", toolPrototype, "render"],
+		["ToolExecutionComponent", toolPrototype, "updateDisplay"],
+	] as const) requireReplaceableMethod(owner, proto, name);
 	const steps: Array<ReturnType<typeof installMethodStep>> = [];
 	const patch: CompactModePatch = {
 		active: true,

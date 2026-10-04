@@ -5,6 +5,7 @@ import { showStylePanel } from "./config/panel.ts";
 import { installCompactThinking } from "./state/thinking-controller.ts";
 import { createShellController } from "./shell/controller.ts";
 import { installTranscript } from "./compat/index.ts";
+import { HostCapabilityError, requireHostCapabilities } from "./compat/host-capabilities.ts";
 import { bindRendererPolicy } from "./compat/policy.ts";
 import { getToolMouseTui, setToolMouseTui } from "./overlays/mouse-state.ts";
 import { setToolTuiFullscreen } from "./transcript/tool/show-more-hint.ts";
@@ -57,6 +58,18 @@ export function registerUiLifecycle(pi: ExtensionAPI): void {
 	};
 	const safe = (domain: string, action: () => void, context: ExtensionContext) => {
 		try { action(); } catch (error) { report(domain, error, context); }
+	};
+	/**
+	 * One read-only preflight before any thinking/transcript patch. A host that
+	 * cannot be patched keeps its native display, shell, commands and Markdown;
+	 * every unusable capability is reported once per session through one notice.
+	 */
+	const compatAvailable = (context: ExtensionContext): boolean => {
+		try { requireHostCapabilities(); return true; }
+		catch (error) {
+			report("compat", error instanceof HostCapabilityError ? error : new HostCapabilityError([String(error)]), context);
+			return false;
+		}
 	};
 	const stopTranscript = () => { transcript?.dispose(); transcript = undefined; };
 	thinking.onBeforeShutdown(stopTranscript);
@@ -133,8 +146,10 @@ export function registerUiLifecycle(pi: ExtensionAPI): void {
 				invalidate() {},
 			};
 		}), context);
-		safe("thinking", () => router.emit("session_start", event, context), context);
-		safe("transcript", () => { transcript = installTranscript(context, thinking); }, context);
+		if (compatAvailable(context)) {
+			safe("thinking", () => router.emit("session_start", event, context), context);
+			safe("transcript", () => { transcript = installTranscript(context, thinking); }, context);
+		}
 		safe("shell", () => shell.start(context), context);
 		refresh();
 		deferRefresh();

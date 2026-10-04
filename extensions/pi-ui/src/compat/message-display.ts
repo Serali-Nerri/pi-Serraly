@@ -8,6 +8,7 @@ import { Markdown, Spacer, Text } from "@earendil-works/pi-tui";
 import { MESSAGE_DISPLAY_PATCH, patchRegistry } from "./patch-keys.ts";
 import { config } from "../config/config.ts";
 import { showMoreHintText } from "../transcript/tool/show-more-hint.ts";
+import { requireReplaceableMethod } from "./host-capabilities.ts";
 
 /**
  * 接管三个消息组件（`<skill>` 块、压缩摘要、分支摘要），ccstyle on 时渲染为
@@ -142,8 +143,9 @@ export function installMessageDisplayRendering(): () => void {
 		entries: [],
 		dispose: () => {},
 	};
-	const installOne = (ComponentClass: any, kind: DisplayKind): void => {
+	const installOne = (ComponentClass: any, kind: DisplayKind, owner: string): void => {
 		const prototype = ComponentClass.prototype;
+		requireReplaceableMethod(owner, prototype, "updateDisplay");
 		const original = prototype.updateDisplay;
 		const installed = function (this: any) {
 			if (patch.active && config.mode !== "off") {
@@ -161,9 +163,8 @@ export function installMessageDisplayRendering(): () => void {
 		prototype.updateDisplay = installed;
 		patch.entries.push({ prototype, installed, original });
 	};
-	installOne(SkillInvocationMessageComponent, SKILL_KIND);
-	installOne(CompactionSummaryMessageComponent, COMPACTION_KIND);
-	installOne(BranchSummaryMessageComponent, BRANCH_KIND);
+	// Register the disposer before the first write: a later failure releases the
+	// components that were already patched instead of leaving them owned.
 	patch.dispose = () => {
 		patch.active = false;
 		for (const entry of patch.entries) {
@@ -174,6 +175,14 @@ export function installMessageDisplayRendering(): () => void {
 		patchRegistry.dispose(MESSAGE_DISPLAY_PATCH, patch);
 	};
 	patchRegistry.install(MESSAGE_DISPLAY_PATCH, patch);
+	try {
+		installOne(SkillInvocationMessageComponent, SKILL_KIND, "SkillInvocationMessageComponent");
+		installOne(CompactionSummaryMessageComponent, COMPACTION_KIND, "CompactionSummaryMessageComponent");
+		installOne(BranchSummaryMessageComponent, BRANCH_KIND, "BranchSummaryMessageComponent");
+	} catch (error) {
+		patch.dispose();
+		throw error;
+	}
 	return patch.dispose;
 }
 

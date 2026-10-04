@@ -5,6 +5,7 @@ import { AssistantMessageComponent } from "@earendil-works/pi-coding-agent";
 import { type Component } from "@earendil-works/pi-tui";
 import { COMPACT_THINKING_PATCH_KEY } from "./patch-keys.ts";
 import { captureMethod, installMethodStep } from "./method-pipeline.ts";
+import { requireReplaceableMethod } from "./host-capabilities.ts";
 
 type Assistant = InstanceType<typeof AssistantMessageComponent>;
 type Internals = {
@@ -29,6 +30,7 @@ export function installThinkingPatch(options: {
 	preview(message: AssistantMessage, run: ThinkingRun): Component;
 }): ThinkingPatch {
 	const prototype = AssistantMessageComponent.prototype;
+	requireReplaceableMethod("AssistantMessageComponent", prototype, "updateContent");
 	const original = captureMethod(prototype, "updateContent") as typeof prototype.updateContent;
 	let installed = true;
 	let latest: Assistant | undefined;

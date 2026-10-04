@@ -8,6 +8,7 @@ import {
 import { getMessageDisplayTheme } from "./message-display.ts";
 import { managedView, resolveRendererPolicy } from "./policy.ts";
 import { captureMethod, installMethodStep } from "./method-pipeline.ts";
+import { requireReplaceableMethod } from "./host-capabilities.ts";
 
 type Methods = {
 	hasRendererDefinition: (...args: any[]) => boolean;
@@ -28,9 +29,7 @@ type Patch = {
 export type DefaultModeHooks = { isOwner(): boolean; shutdown(): void };
 
 function requireMethods(proto: any, methods: readonly string[]): void {
-	for (const name of methods) if (typeof proto?.[name] !== "function") {
-		throw new Error(`Pi 1.0.0 tool component lacks ${name}; native rendering retained`);
-	}
+	for (const name of methods) requireReplaceableMethod("ToolExecutionComponent", proto, name);
 }
 function syncShell(component: any, shell: "default" | "self"): void {
 	const target = shell === "self" ? component.selfRenderContainer : component.contentBox;

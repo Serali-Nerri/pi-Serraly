@@ -27,6 +27,13 @@
 `extensions/pi-ui/src/compat/`；其 host 事件只由 `src/lifecycle.ts` 注册。
 UI 的共享 scheduler 不管理 loop 定时器、后台进程或子会话资源。
 
+UI 在修改 thinking/transcript 前先做一次无副作用的宿主能力预检（只读
+descriptor/继承/extensibility，不执行 getter、不写槽位）：缺少必需方法、
+方法不可替换或原型不可扩展时跳过整个兼容域，保留原生展示、shell、命令与
+Markdown，每 session 只通知一次并列出能力名；安装器保留就地检查以覆盖预检后
+的竞态，失败按逆序释放已获取的部分。预检只覆盖公开方法，不声称能验证私有
+instance 字段布局，实际宿主与人工视觉验收仍必需。
+
 ## 源码与运行树
 
 ```text
