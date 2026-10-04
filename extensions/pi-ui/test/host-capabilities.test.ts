@@ -40,7 +40,8 @@ test("a missing required method is reported by name and skips the whole compat d
 		assert.equal(Object.hasOwn(skill, PIPELINES), false);
 		assert.equal((globalThis as any)[Symbol.for("claude-style-tools.global-tool-render-patch")], undefined);
 		assert.ok(h.commands.has("ccstyle"), "the public shell keeps its commands");
-		assert.ok(h.widgets.has("pi-ui-bridge"), "the public shell keeps its bridge widget");
+		assert.equal(h.widgets.has("pi-ui-bridge"), false,
+			"the TUI bridge exists only for the compat domain that was skipped");
 	} finally {
 		await h?.close();
 		tool.createResultRegion = region;

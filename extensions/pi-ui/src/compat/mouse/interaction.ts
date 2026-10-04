@@ -7,7 +7,7 @@ import { config } from "../../config/config.ts";
 import { showTextPreview } from "../../overlays/text-preview.ts";
 import { ThinkingPreviewBlock } from "../../transcript/thinking.ts";
 import { walkComponentTree } from "../component-tree.ts";
-import { patchRegistry } from "../patch-keys.ts";
+import { NATIVE_MOUSE_OWNER, patchRegistry } from "../patch-keys.ts";
 import { COMPACT_LOCAL_EXPANSION, COMPACT_ROUND_PARENT, isCompactAssistantComponent, setHoveredCompactAssistant } from "../compact-mode.ts";
 import { ToolGroupComponent } from "../grouping.ts";
 import { isExpandedToolIoView } from "../../transcript/tool/result.ts";
@@ -16,7 +16,7 @@ import { setHoveredToolCallId, getToolMouseTui } from "../../overlays/mouse-stat
 import { resolveRendererPolicy } from "../policy.ts";
 import { requireReplaceableMethod } from "../host-capabilities.ts";
 
-const OWNER = Symbol.for("claude-style-tools.native-mouse");
+const OWNER = NATIVE_MOUSE_OWNER;
 type Preview = { title: string; content: string | Component };
 let activeContext: any;
 let hovered: { key: unknown; clear: () => void } | undefined;
@@ -114,7 +114,8 @@ function toolRegion(host: any, child: any, fallback: Component): Component {
 }
 
 export function installToolMouseInteraction(ctx: any): () => void {
-	patchRegistry.get<{ dispose(): void }>(OWNER)?.dispose();
+	patchRegistry.getOwned(OWNER, (value): value is { dispose(): void } =>
+		typeof value === "object" && value !== null && typeof (value as { dispose?: unknown }).dispose === "function")?.dispose();
 	activeContext = ctx;
 	const patches: Array<{ proto: any; key: string; original: any; installed: any }> = [];
 	let disposed = false;
@@ -138,7 +139,7 @@ export function installToolMouseInteraction(ctx: any): () => void {
 	} };
 	// Register before the first write: a failure in any later patch releases the
 	// prototypes that were already replaced instead of leaving them owned.
-	patchRegistry.install(OWNER, installation);
+	patchRegistry.installOwned(OWNER, installation);
 	const toolProto = ToolExecutionComponent.prototype as any;
 	try {
 		patch("ToolExecutionComponent", toolProto, "createResultRegion", (original) => function (this: any, child: any) {

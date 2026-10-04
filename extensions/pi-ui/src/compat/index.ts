@@ -1,7 +1,7 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { config } from "../config/config.ts";
 import type { CompactThinkingController } from "../state/thinking-controller.ts";
-import { patchRegistry } from "./patch-keys.ts";
+import { patchRegistry, TRANSCRIPT_OWNER } from "./patch-keys.ts";
 import { installCompactMode, refreshCompactModeComponents } from "./compact-mode.ts";
 import { installDefaultMode, installToolExpandedBackground } from "./default-mode.ts";
 import { installToolMouseInteraction } from "./mouse/interaction.ts";
@@ -11,11 +11,12 @@ import { installMessageDisplayRendering, setMessageDisplayTheme } from "./messag
 import { clearAllAnimations } from "../transcript/tool/result.ts";
 import { refreshMountedTranscript } from "./transcript-refresh.ts";
 
-const OWNER = Symbol.for("claude-style-tools.rendering-owner");
+const OWNER = TRANSCRIPT_OWNER;
 
 /** Patch installation only. Session routing/commands/scheduling belong to lifecycle. */
 export function installTranscript(ctx: ExtensionContext, thinking: CompactThinkingController) {
-	patchRegistry.get<{ dispose(): void }>(OWNER)?.dispose();
+	patchRegistry.getOwned(OWNER, (value): value is { dispose(): void } =>
+		typeof value === "object" && value !== null && typeof (value as { dispose?: unknown }).dispose === "function")?.dispose();
 	const disposers: Array<() => void> = [];
 	let disposed = false;
 	const release = () => {
@@ -53,7 +54,7 @@ export function installTranscript(ctx: ExtensionContext, thinking: CompactThinki
 				patchRegistry.dispose(OWNER, current);
 			},
 		};
-		patchRegistry.install(OWNER, current);
+		patchRegistry.installOwned(OWNER, current);
 		return current;
 	} catch (error) {
 		release();

@@ -136,7 +136,8 @@ type PatchEntry = {
 
 /** patch 三个消息组件的 updateDisplay，返回统一 dispose（/reload 链安全）。 */
 export function installMessageDisplayRendering(): () => void {
-	const previous = patchRegistry.get<{ dispose: () => void }>(MESSAGE_DISPLAY_PATCH);
+	const previous = patchRegistry.getOwned(MESSAGE_DISPLAY_PATCH,
+		(value): value is { dispose: () => void } => typeof value === "object" && value !== null && typeof (value as { dispose?: unknown }).dispose === "function");
 	if (previous) previous.dispose();
 	const patch: { active: boolean; entries: PatchEntry[]; dispose: () => void } = {
 		active: true,
@@ -174,7 +175,7 @@ export function installMessageDisplayRendering(): () => void {
 		}
 		patchRegistry.dispose(MESSAGE_DISPLAY_PATCH, patch);
 	};
-	patchRegistry.install(MESSAGE_DISPLAY_PATCH, patch);
+	patchRegistry.installOwned(MESSAGE_DISPLAY_PATCH, patch);
 	try {
 		installOne(SkillInvocationMessageComponent, SKILL_KIND, "SkillInvocationMessageComponent");
 		installOne(CompactionSummaryMessageComponent, COMPACTION_KIND, "CompactionSummaryMessageComponent");

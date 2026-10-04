@@ -21,6 +21,8 @@ import {
 	ToolExecutionComponent,
 } from "@earendil-works/pi-coding-agent";
 import { Container, TuiAltScreen } from "@earendil-works/pi-tui";
+import { ForeignPatchError, isOwnedPatch, OWNERSHIP_SLOTS, slotName } from "./patch-keys.ts";
+import { METHOD_PIPELINE_KEY } from "./method-pipeline.ts";
 
 /** A failed capability check: the named host members are unusable for patching. */
 export class HostCapabilityError extends Error {
@@ -40,6 +42,20 @@ type Requirement = {
 	/** Absent is acceptable, but a present member must still be replaceable. */
 	optional?: boolean;
 };
+
+/**
+ * Every host prototype the compat domains patch. Their pipeline slots must be
+ * owned or absent; a foreign map means another patch already manages them.
+ */
+const PATCHED_PROTOTYPES: readonly { owner: string; prototype: object }[] = [
+	{ owner: "ToolExecutionComponent", prototype: ToolExecutionComponent.prototype },
+	{ owner: "AssistantMessageComponent", prototype: AssistantMessageComponent.prototype },
+	{ owner: "SkillInvocationMessageComponent", prototype: SkillInvocationMessageComponent.prototype },
+	{ owner: "CompactionSummaryMessageComponent", prototype: CompactionSummaryMessageComponent.prototype },
+	{ owner: "BranchSummaryMessageComponent", prototype: BranchSummaryMessageComponent.prototype },
+	{ owner: "Container", prototype: Container.prototype },
+	{ owner: "TuiAltScreen", prototype: TuiAltScreen.prototype },
+];
 
 function requirement(owner: string, target: object, name: string, optional = false): Requirement {
 	return optional ? { owner, target, name, optional } : { owner, target, name };
@@ -113,6 +129,30 @@ export function probeHostCapabilities(): { ok: boolean; missing: readonly string
 export function requireHostCapabilities(): void {
 	const { missing } = probeHostCapabilities();
 	if (missing.length > 0) throw new HostCapabilityError(missing);
+}
+
+/**
+ * Refuse a host where a foreign patch already owns one of this module's slots or
+ * one of the patched prototypes' pipeline registries. Only descriptors are read:
+ * an accessor slot is foreign, and no external getter, disposer or `stop` runs.
+ * The check runs before any of our own owners are released, so a conflict cannot
+ * leave the UI half-uninstalled.
+ */
+export function assertUiPatchOwnership(): void {
+	const foreign: string[] = [];
+	for (const key of OWNERSHIP_SLOTS) {
+		const descriptor = Object.getOwnPropertyDescriptor(globalThis, key);
+		if (descriptor === undefined) continue;
+		if (descriptor.get !== undefined || descriptor.set !== undefined || !isOwnedPatch(descriptor.value)) foreign.push(slotName(key));
+	}
+	for (const { owner, prototype } of PATCHED_PROTOTYPES) {
+		const descriptor = Object.getOwnPropertyDescriptor(prototype, METHOD_PIPELINE_KEY);
+		if (descriptor === undefined) continue;
+		if (descriptor.get !== undefined || descriptor.set !== undefined || !isOwnedPatch(descriptor.value)) {
+			foreign.push(`${owner}.${slotName(METHOD_PIPELINE_KEY)}`);
+		}
+	}
+	if (foreign.length > 0) throw new ForeignPatchError(foreign[0]!, foreign.slice(1));
 }
 
 /**

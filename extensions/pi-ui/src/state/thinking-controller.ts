@@ -35,6 +35,9 @@ export type CompactThinkingController = {
 
 type ActiveThinking = { messageTimestamp: number; contentIndex: number; startedAt: number };
 type ThinkingOwner = { stop(): void };
+/** Owned-slot shape: only a branded thinking owner is stopped or handed over. */
+const isThinkingOwner = (value: unknown): value is ThinkingOwner =>
+	typeof value === "object" && value !== null && typeof (value as ThinkingOwner).stop === "function";
 let nextControllerId = 0;
 
 /** No host subscriptions, patches or timers until a routed TUI session_start. */
@@ -173,12 +176,12 @@ export function installCompactThinking(
 	const subscriptions = [
 		events.on("session_start", (_event, ctx) => {
 			if (disposed || ctx.mode !== "tui" || !ctx.hasUI) return;
-			patchRegistry.get<ThinkingOwner>(COMPACT_THINKING_OWNER)?.stop();
+			patchRegistry.getOwned(COMPACT_THINKING_OWNER, isThinkingOwner)?.stop();
 			active = true;
 			theme = ctx.ui.theme;
 			setThinkingPreviewConfig(config);
 			patch = installThinkingPatch({ isActive, isActiveRun, preview });
-			patchRegistry.install(COMPACT_THINKING_OWNER, owner);
+			patchRegistry.installOwned(COMPACT_THINKING_OWNER, owner);
 			restore(ctx);
 		}),
 		events.on("message_update", (event) => {

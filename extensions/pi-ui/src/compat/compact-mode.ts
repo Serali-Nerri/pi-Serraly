@@ -476,6 +476,13 @@ type CompactModePatch = {
 	dispose: () => void;
 };
 
+/** Owned-slot shape: only a branded compact patch for the same prototypes is reused. */
+function isCompactModePatch(value: unknown, prototype: object): value is CompactModePatch {
+	if (typeof value !== "object" || value === null) return false;
+	const patch = value as CompactModePatch;
+	return patch.prototype === prototype && typeof patch.assertAssistantOwnership === "function" && typeof patch.dispose === "function";
+}
+
 const trackedAssistantComponents = new Set<any>();
 const trackedToolComponents = new Set<any>();
 let hoveredAssistantComponent: any;
@@ -617,7 +624,7 @@ function collectMountedComponents(root: any): void {
 }
 
 export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHooks {
-	const previous = patchRegistry.get<CompactModePatch>(COMPACT_MODE_PATCH_KEY);
+	const previous = patchRegistry.getOwned(COMPACT_MODE_PATCH_KEY, (value): value is CompactModePatch => isCompactModePatch(value, toolPrototype));
 	if (previous) previous.dispose();
 
 	const assistantPrototype = AssistantMessageComponent.prototype as any;
@@ -1067,7 +1074,7 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		steps.push(installMethodStep(assistantPrototype, "updateContent", () => patch.assistantInstalled));
 		steps.push(installMethodStep(toolPrototype, "render", () => patch.toolInstalledRender));
 		steps.push(installMethodStep(toolPrototype, "updateDisplay", () => patch.toolInstalledUpdateDisplay));
-		patchRegistry.install(COMPACT_MODE_PATCH_KEY, patch);
+		patchRegistry.installOwned(COMPACT_MODE_PATCH_KEY, patch);
 	} catch (error) {
 		patch.dispose();
 		throw error;

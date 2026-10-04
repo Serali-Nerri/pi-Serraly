@@ -56,12 +56,10 @@ export function refreshTranscriptComponent(value: unknown): boolean {
  */
 function assertCompactModeOutermost(): void {
 	try {
-		const patch = patchRegistry.get<{ assertAssistantOwnership?: () => void }>(
-			COMPACT_MODE_PATCH_KEY,
-		);
-		if (patch && typeof patch.assertAssistantOwnership === "function") {
-			patch.assertAssistantOwnership();
-		}
+		const patch = patchRegistry.getOwned(COMPACT_MODE_PATCH_KEY,
+			(value): value is { assertAssistantOwnership: () => void } =>
+				typeof value === "object" && value !== null && typeof (value as { assertAssistantOwnership?: unknown }).assertAssistantOwnership === "function");
+		patch?.assertAssistantOwnership();
 	} catch {
 		// 无 compact-mode 补丁或断言失败时跳过，扫描仍会执行。
 	}

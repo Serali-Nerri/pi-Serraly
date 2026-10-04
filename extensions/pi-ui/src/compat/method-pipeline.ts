@@ -1,12 +1,32 @@
+import { ForeignPatchError, brandOwned, isOwnedPatch } from "./patch-keys.ts";
+
 // One host wrapper per method. Ordered display steps can join/leave independently.
-const KEY = Symbol.for("pi-ui.method-pipelines");
+export const METHOD_PIPELINE_KEY = Symbol.for("pi-ui.method-pipelines");
 type Method = (this: any, ...args: any[]) => any;
 type Step = { active: boolean; invoke: Method };
 type Pipeline = { native: Method; dispatch: Method; steps: Step[] };
 
+/**
+ * The prototype's pipeline registry. A foreign or accessor slot is never adopted:
+ * installers refuse it, readers ignore it, and the value stays untouched.
+ */
+function ownedPipelines(proto: any): Map<string, Pipeline> | undefined {
+	const descriptor = Object.getOwnPropertyDescriptor(proto, METHOD_PIPELINE_KEY);
+	if (descriptor === undefined) return undefined;
+	if (descriptor.get !== undefined || descriptor.set !== undefined) return undefined;
+	return isOwnedPatch(descriptor.value) ? descriptor.value as Map<string, Pipeline> : undefined;
+}
+
 function pipelines(proto: any): Map<string, Pipeline> {
-	if (!Object.hasOwn(proto, KEY)) Object.defineProperty(proto, KEY, { value: new Map(), configurable: true });
-	return proto[KEY];
+	const descriptor = Object.getOwnPropertyDescriptor(proto, METHOD_PIPELINE_KEY);
+	if (descriptor !== undefined && (descriptor.get !== undefined || descriptor.set !== undefined || !isOwnedPatch(descriptor.value))) {
+		throw new ForeignPatchError(`method-pipelines on ${proto?.constructor?.name ?? "prototype"}`);
+	}
+	const owned = ownedPipelines(proto);
+	if (owned !== undefined) return owned;
+	const registry = brandOwned(new Map<string, Pipeline>());
+	Object.defineProperty(proto, METHOD_PIPELINE_KEY, { value: registry, configurable: true });
+	return registry;
 }
 function snapshot(pipeline: Pipeline): Method {
 	const last = pipeline.steps.at(-1);
@@ -15,12 +35,12 @@ function snapshot(pipeline: Pipeline): Method {
 
 /** Capture lower display steps, never the mutable dispatcher (which would recurse). */
 export function captureMethod(proto: any, name: string): Method {
-	const pipeline: Pipeline | undefined = Object.hasOwn(proto, KEY) ? proto[KEY].get(name) : undefined;
+	const pipeline: Pipeline | undefined = ownedPipelines(proto)?.get(name);
 	return pipeline && proto[name] === pipeline.dispatch ? snapshot(pipeline) : proto[name];
 }
 
 export function nativeMethod(proto: any, name: string): Method {
-	return (Object.hasOwn(proto, KEY) ? proto[KEY].get(name)?.native : undefined) ?? proto[name];
+	return ownedPipelines(proto)?.get(name)?.native ?? proto[name];
 }
 
 export function installMethodStep(proto: any, name: string, create: (next: Method) => Method): { dispatch: Method; dispose(): void } {
@@ -35,7 +55,7 @@ export function installMethodStep(proto: any, name: string, create: (next: Metho
 		const current = pipeline;
 		current.dispatch = function (this: any, ...args: any[]) { return snapshot(current).apply(this, args); };
 		try { proto[name] = current.dispatch; } catch (error) {
-			if (registry.size === 0 && proto[KEY] === registry) delete proto[KEY];
+			if (registry.size === 0 && proto[METHOD_PIPELINE_KEY] === registry) delete proto[METHOD_PIPELINE_KEY];
 			throw error;
 		}
 		registry.set(name, current);
@@ -48,7 +68,7 @@ export function installMethodStep(proto: any, name: string, create: (next: Metho
 		if (mounted) {
 			if (proto[name] === current.dispatch) proto[name] = current.native;
 			if (previous) registry.set(name, previous); else registry.delete(name);
-			if (registry.size === 0 && proto[KEY] === registry) delete proto[KEY];
+			if (registry.size === 0 && proto[METHOD_PIPELINE_KEY] === registry) delete proto[METHOD_PIPELINE_KEY];
 		}
 		throw error;
 	}
@@ -69,7 +89,7 @@ export function installMethodStep(proto: any, name: string, create: (next: Metho
 			if (current.steps.length > 0) return;
 			if (proto[name] === current.dispatch) proto[name] = current.native;
 			if (registry.get(name) === current) registry.delete(name);
-			if (registry.size === 0 && proto[KEY] === registry) delete proto[KEY];
+			if (registry.size === 0 && proto[METHOD_PIPELINE_KEY] === registry) delete proto[METHOD_PIPELINE_KEY];
 		},
 	};
 }

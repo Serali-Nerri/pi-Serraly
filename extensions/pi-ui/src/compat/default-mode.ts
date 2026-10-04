@@ -28,6 +28,16 @@ type Patch = {
 };
 export type DefaultModeHooks = { isOwner(): boolean; shutdown(): void };
 
+/** Owned-slot shapes: only a branded patch for the same prototype is handed over. */
+function isRenderPatch(value: unknown, proto: object): value is Patch {
+	if (typeof value !== "object" || value === null) return false;
+	const patch = value as Patch;
+	return patch.version === 2 && patch.prototype === proto && typeof patch.installed?.getCallRenderer === "function";
+}
+function isDisposable(value: unknown): value is { dispose(): void } {
+	return typeof value === "object" && value !== null && typeof (value as { dispose?: unknown }).dispose === "function";
+}
+
 function requireMethods(proto: any, methods: readonly string[]): void {
 	for (const name of methods) requireReplaceableMethod("ToolExecutionComponent", proto, name);
 }
@@ -78,7 +88,7 @@ function release(patch: Patch): void {
 export function installDefaultMode(): DefaultModeHooks {
 	const proto = ToolExecutionComponent.prototype as any;
 	requireMethods(proto, METHOD_NAMES);
-	const previous = patchRegistry.get<Patch>(GLOBAL_TOOL_RENDER_PATCH);
+	const previous = patchRegistry.getOwned(GLOBAL_TOOL_RENDER_PATCH, (value): value is Patch => isRenderPatch(value, proto));
 	const downstream = Object.fromEntries(METHOD_NAMES.map((key) => [key,
 		previous?.version === 2 && previous.prototype === proto && proto[key] === previous.installed?.[key]
 			? previous.downstream[key] : proto[key],
@@ -107,13 +117,13 @@ export function installDefaultMode(): DefaultModeHooks {
 		},
 	};
 	for (const key of METHOD_NAMES) proto[key] = patch.installed[key];
-	patchRegistry.install(GLOBAL_TOOL_RENDER_PATCH, patch);
+	patchRegistry.installOwned(GLOBAL_TOOL_RENDER_PATCH, patch);
 	return { isOwner: () => patch.active && patchRegistry.owns(GLOBAL_TOOL_RENDER_PATCH, patch), shutdown: () => release(patch) };
 }
 
 /** Expanded managed tools only; dedicated/off/excluded cards keep their own shell. */
 export function installToolExpandedBackground(): () => void {
-	patchRegistry.get<{ dispose(): void }>(TOOL_EXPANDED_BACKGROUND_PATCH)?.dispose();
+	patchRegistry.getOwned(TOOL_EXPANDED_BACKGROUND_PATCH, isDisposable)?.dispose();
 	const proto = ToolExecutionComponent.prototype as any;
 	requireMethods(proto, ["updateDisplay"]);
 	const original = captureMethod(proto, "updateDisplay");
@@ -147,6 +157,6 @@ export function installToolExpandedBackground(): () => void {
 		patchRegistry.dispose(TOOL_EXPANDED_BACKGROUND_PATCH, patch);
 	} };
 	const step = installMethodStep(proto, "updateDisplay", () => installed);
-	patchRegistry.install(TOOL_EXPANDED_BACKGROUND_PATCH, patch);
+	patchRegistry.installOwned(TOOL_EXPANDED_BACKGROUND_PATCH, patch);
 	return patch.dispose;
 }

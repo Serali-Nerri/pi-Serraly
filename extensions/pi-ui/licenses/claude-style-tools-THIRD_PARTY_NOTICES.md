@@ -19,6 +19,13 @@ copyright (c) 2026 Tifan Dwi Avianto. The MIT license is included in
 The file-change renderer is maintained locally. The upstream rich-diff renderer
 and its Shiki dependencies are not included.
 
+Patch ownership is a local divergence from the upstream patch slots: every owner
+and prototype pipeline this module writes carries the
+`Symbol.for("pi-serraly.ui.patch-owner")` brand. A slot that holds an unmarked
+value is treated as a foreign patch, so it is never adopted, replaced or disposed
+and the compatibility domain is skipped for that session; the upstream slot names
+are kept so such conflicts stay discoverable.
+
 The former claude-style-tools bundle included grok-mermaid 0.2.2 under
 Apache-2.0. The unified UI removes that dependency and delegates standard Mermaid
 rendering to Pi. No grok-mermaid code is included in this bundle.

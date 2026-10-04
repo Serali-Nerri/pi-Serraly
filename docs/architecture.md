@@ -32,7 +32,12 @@ descriptor/继承/extensibility，不执行 getter、不写槽位）：缺少必
 方法不可替换或原型不可扩展时跳过整个兼容域，保留原生展示、shell、命令与
 Markdown，每 session 只通知一次并列出能力名；安装器保留就地检查以覆盖预检后
 的竞态，失败按逆序释放已获取的部分。预检只覆盖公开方法，不声称能验证私有
-instance 字段布局，实际宿主与人工视觉验收仍必需。
+instance 字段布局，实际宿主与人工视觉验收仍必需。同一预检还校验补丁槽位的
+所有权：本模块写入的 owner/pipeline 带 `Symbol.for("pi-serraly.ui.patch-owner")`
+品牌，未标记的值（即使带 `dispose`/`stop` 或形状相似）视为 foreign，不调用、
+不接管、不覆盖，兼容域在修改任何槽位前整体失败并只通知一次具体槽位名；上游
+槽位名保留用于发现冲突，不自动兼容未知 patch。安装后外部替换 wrapper 或槽位
+时，shutdown 按 identity 只释放自己写入的值。
 
 ## 源码与运行树
 

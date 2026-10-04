@@ -37,6 +37,17 @@ UI 只展示已经返回或保存的数据；不读当前磁盘补全历史 diff
 在自身位置保留就地检查，防止预检后出现竞态。预检只证明公开方法可替换，
 不证明私有实例字段布局稳定，实际宿主与人工视觉验收仍是必需的。
 
+## 补丁所有权
+
+兼容补丁通过 `Symbol.for` 槽位跨 `/reload` 交接。只有本模块写入的 owner 与
+原型 pipeline 会带上 `Symbol.for("pi-serraly.ui.patch-owner")` 品牌；槽位里出现
+未标记的值——即使它带有 `dispose`/`stop` 或形状相似——一律视为 foreign：
+不调用、不接管、不覆盖，也不会被 shutdown 删除。发现 foreign 时兼容域在修改
+任何槽位之前整体失败，每 session 只通知一次并给出具体槽位名。上游槽位名保持
+不变以便发现冲突，但不会自动兼容未知 patch。安装后外部替换 wrapper 或槽位时，
+shutdown 只按 identity 释放自己写入的值，保留外部值。`/ccstyle off` 只恢复原生
+展示，只有真正禁用入口才卸载本模块的补丁。
+
 ## 配置
 
 Pi 默认使用 fullscreen；宿主设置 `"tuiMode": "regular"` 或

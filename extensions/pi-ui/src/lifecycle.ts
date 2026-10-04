@@ -5,15 +5,15 @@ import { showStylePanel } from "./config/panel.ts";
 import { installCompactThinking } from "./state/thinking-controller.ts";
 import { createShellController } from "./shell/controller.ts";
 import { installTranscript } from "./compat/index.ts";
-import { HostCapabilityError, requireHostCapabilities } from "./compat/host-capabilities.ts";
+import { HostCapabilityError, assertUiPatchOwnership, requireHostCapabilities } from "./compat/host-capabilities.ts";
 import { bindRendererPolicy } from "./compat/policy.ts";
 import { getToolMouseTui, setToolMouseTui } from "./overlays/mouse-state.ts";
 import { setToolTuiFullscreen } from "./transcript/tool/show-more-hint.ts";
 import { mountedTranscriptChanged, mountedTranscriptIdentity, refreshMountedTranscript } from "./compat/transcript-refresh.ts";
 import { bindUiScheduler, UiScheduler } from "./scheduler.ts";
-import { patchRegistry } from "./compat/patch-keys.ts";
+import { patchRegistry, UI_LIFECYCLE_OWNER } from "./compat/patch-keys.ts";
 
-const OWNER = Symbol.for("pi-ui.lifecycle-owner");
+const OWNER = UI_LIFECYCLE_OWNER;
 const BRIDGE = "pi-ui-bridge";
 type Handler = (event: any, ctx: ExtensionContext) => unknown;
 
@@ -65,8 +65,13 @@ export function registerUiLifecycle(pi: ExtensionAPI): void {
 	 * every unusable capability is reported once per session through one notice.
 	 */
 	const compatAvailable = (context: ExtensionContext): boolean => {
-		try { requireHostCapabilities(); return true; }
-		catch (error) {
+		try {
+			requireHostCapabilities();
+			// Ownership is checked before any of our own owners are released, so a
+			// foreign patch cannot leave the UI half-uninstalled.
+			assertUiPatchOwnership();
+			return true;
+		} catch (error) {
 			report("compat", error instanceof HostCapabilityError ? error : new HostCapabilityError([String(error)]), context);
 			return false;
 		}
@@ -74,6 +79,9 @@ export function registerUiLifecycle(pi: ExtensionAPI): void {
 	const stopTranscript = () => { transcript?.dispose(); transcript = undefined; };
 	thinking.onBeforeShutdown(stopTranscript);
 	const owner = { dispose };
+	/** Owned-slot shape: only a branded lifecycle owner is disposed or handed over. */
+	const isLifecycleOwner = (value: unknown): value is typeof owner =>
+		typeof value === "object" && value !== null && typeof (value as { dispose?: unknown }).dispose === "function";
 
 	function dispose(): void {
 		if (!active || !ctx) return;
@@ -115,15 +123,22 @@ export function registerUiLifecycle(pi: ExtensionAPI): void {
 	pi.on("session_start", (event, context) => {
 		dispose();
 		if (context.mode !== "tui" || !context.hasUI) return;
-		patchRegistry.get<typeof owner>(OWNER)?.dispose();
 		ctx = context;
 		active = true;
 		generation++;
 		reported.clear();
-		patchRegistry.install(OWNER, owner);
 		scheduler.start((force) => getToolMouseTui()?.requestRender?.(force), (error) => report("refresh", error, context));
 		unbindScheduler = bindUiScheduler(scheduler);
 		unbindPolicy = bindRendererPolicy(() => pi.getAllTools());
+		// Capabilities and slot ownership are checked before any patch or owner is
+		// installed, so a foreign patch is never touched and our own owners are never
+		// released for a domain that cannot be installed. The shell keeps working.
+		if (!compatAvailable(context)) {
+			safe("shell", () => shell.start(context), context);
+			return;
+		}
+		patchRegistry.getOwned(OWNER, isLifecycleOwner)?.dispose();
+		patchRegistry.installOwned(OWNER, owner);
 		const bridgeGeneration = generation;
 		safe("bridge", () => context.ui.setWidget(BRIDGE, (tui) => {
 			if (!active || bridgeGeneration !== generation || !patchRegistry.owns(OWNER, owner)) {
@@ -146,10 +161,8 @@ export function registerUiLifecycle(pi: ExtensionAPI): void {
 				invalidate() {},
 			};
 		}), context);
-		if (compatAvailable(context)) {
-			safe("thinking", () => router.emit("session_start", event, context), context);
-			safe("transcript", () => { transcript = installTranscript(context, thinking); }, context);
-		}
+		safe("thinking", () => router.emit("session_start", event, context), context);
+		safe("transcript", () => { transcript = installTranscript(context, thinking); }, context);
 		safe("shell", () => shell.start(context), context);
 		refresh();
 		deferRefresh();

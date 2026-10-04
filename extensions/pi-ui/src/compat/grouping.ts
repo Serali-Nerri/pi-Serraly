@@ -43,6 +43,13 @@ type Patch = {
 	cancelAnimation?: () => void;
 };
 
+/** Owned-slot shape: a branded grouping patch for the same Container prototype. */
+function isGroupingPatch(value: unknown, prototype: object): value is Patch {
+	if (typeof value !== "object" || value === null) return false;
+	const patch = value as Patch;
+	return patch.prototype === prototype && typeof patch.installed?.addChild === "function";
+}
+
 function toolName(tool: any): string {
 	return String(tool?.toolName ?? tool?.toolDefinition?.name ?? "tool");
 }
@@ -485,7 +492,7 @@ export type ToolGroupingHooks = {
 export function installToolGrouping(getEnabled: () => boolean): ToolGroupingHooks {
 	const prototype = Container.prototype as any;
 	for (const name of ["addChild", "removeChild", "clear"]) requireReplaceableMethod("Container", prototype, name);
-	const previous = patchRegistry.get<Patch>(PATCH_KEY);
+	const previous = patchRegistry.getOwned(PATCH_KEY, (value): value is Patch => isGroupingPatch(value, prototype));
 	if (previous) {
 		previous.active = false;
 		previous.enabled = () => false;
@@ -556,7 +563,7 @@ export function installToolGrouping(getEnabled: () => boolean): ToolGroupingHook
 	prototype.addChild = patch.installed.addChild;
 	prototype.removeChild = patch.installed.removeChild;
 	prototype.clear = patch.installed.clear;
-	patchRegistry.install(PATCH_KEY, patch);
+	patchRegistry.installOwned(PATCH_KEY, patch);
 	return {
 		setTheme(theme: any) {
 			patch.theme = theme;

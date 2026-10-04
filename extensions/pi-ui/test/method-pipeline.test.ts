@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { captureMethod, installMethodStep } from "../src/compat/method-pipeline.ts";
+import { METHOD_PIPELINE_KEY, captureMethod, installMethodStep } from "../src/compat/method-pipeline.ts";
+import { isOwnedPatch } from "../src/compat/patch-keys.ts";
 
 test("display steps share one wrapper, preserve order and release to the native method", () => {
 	const original = () => "native";
@@ -29,6 +30,26 @@ test("late disposal leaves a foreign wrapper intact and captured pipeline become
 	patch.dispose();
 	assert.equal(proto.method, foreign);
 	assert.equal(proto.method(), "foreign(native)");
+});
+
+test("an installed pipeline registry carries the ownership brand", () => {
+	const proto = { method: () => "native" };
+	const patch = installMethodStep(proto, "method", (next) => function () { return `ui(${next.call(this)})`; });
+	try {
+		assert.equal(isOwnedPatch((proto as any)[METHOD_PIPELINE_KEY]), true);
+	} finally { patch.dispose(); }
+	assert.equal(Object.hasOwn(proto, METHOD_PIPELINE_KEY), false, "the owned registry is removed again");
+});
+
+test("a foreign pipeline registry is preserved and refuses the patch", () => {
+	const foreign = new Map();
+	const native = () => "native";
+	const proto: any = { method: native };
+	Object.defineProperty(proto, METHOD_PIPELINE_KEY, { value: foreign, configurable: true });
+	assert.throws(() => installMethodStep(proto, "method", () => () => {}), /method-pipelines/);
+	assert.equal(proto[METHOD_PIPELINE_KEY], foreign, "the foreign registry is never replaced");
+	assert.equal(proto.method, native, "the method is untouched");
+	assert.equal(captureMethod(proto, "method"), native, "readers ignore a foreign registry");
 });
 
 test("missing host capability fails before any method change", () => {
