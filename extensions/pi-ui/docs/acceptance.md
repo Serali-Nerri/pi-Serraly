@@ -6,20 +6,14 @@ From the repository root:
 
 ```sh
 npm run verify
-# Focused runtime debugging; not a substitute for full verification:
-node --import tsx --test extensions/pi-ui/test/runtime-integration.test.ts
 ```
 
-Use Node ≥22.19 and a Pi **1.0.0** host outside the development dependency tree.
-The default host path is derived from the active Node installation's
-`../lib/node_modules/@earendil-works/pi-coding-agent`. To select another installed
-1.0.0 host:
+For focused runtime debugging, run `extensions/pi-ui/test/runtime-integration.test.ts`
+through the isolated runner described in the [development guide](../../../docs/development.md).
+That guide owns build prerequisites, managed-host selection and Node qualification;
+do not repeat full verification for each UI test change.
 
-```sh
-PI_UI_HOST_PACKAGE=/absolute/path/to/pi-coding-agent npm run verify
-```
-
-The override selects package code, not user configuration. Tests compile the
+Tests use Pi **1.0.0** package code, not user configuration. They compile the
 current UI to a temporary ESM bundle, keep Pi/TypeBox external, and load it with
 the host's actual bundled CLI (`dist/bundle/cli.js`) and extension loader.
 
@@ -104,8 +98,7 @@ requiring deletion of that slot.
 Automated checks establish synthetic behavior and render bounds, not visual
 certification in the user's target terminal. Report results and platform skips
 from actual runs; no pass counts or manual sign-off are implied by this document.
-CI runs the automated suites on Node 22.19.0 and 24.12.0; a PTY skip is recorded
-as a gap in the report and is never written as a pass, and the shared tool-card
+A PTY skip is recorded as a gap in the report and is never written as a pass. The shared tool-card
 syntax is additionally rendered at 1/8/40/80 columns by the root integration
 suite.
 

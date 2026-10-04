@@ -7,34 +7,39 @@ TypeBox **1.3.27**. Do not install a separate module dependency tree. Wildcard
 host peers are packaging policy, not a compatibility claim for other Pi versions.
 Dependency installation and release staging belong to the root development guide.
 
-From the repository root:
+For complete repository acceptance, run this once from the repository root:
 
 ```sh
 npm run verify
-# Module-only debugging:
-npm run verify --workspace pi-background-shell
-npm run build:runtime --workspace pi-background-shell
-npm run typecheck --workspace pi-background-shell
-npm run test:type-safety --workspace pi-background-shell
-npm run docs:generate --workspace pi-background-shell # after source/prose review
-npm run docs:verify --workspace pi-background-shell
-npm run test:docs --workspace pi-background-shell
-npm run test:unit --workspace pi-background-shell
-npm run test:sdk --workspace pi-background-shell
-npm run test:rpc --workspace pi-background-shell
-npm run test:component --workspace pi-background-shell
-npm run test:package --workspace pi-background-shell
-npm run test:agent-loop --workspace pi-background-shell
-npm run test:pty --workspace pi-background-shell
-npm run smoke --workspace pi-background-shell
-npm run pack:dry-run --workspace pi-background-shell
-npm run payload:check --workspace pi-background-shell
 ```
 
-`npm test --workspace pi-background-shell` runs typecheck/type-safety and the
-unit/SDK/RPC/component/package suites. `test:full` also runs PTY and scripted-provider
-tests; module `verify` adds docs verification, CLI smoke and payload checks.
-Module-only commands do not replace root verification and release integration.
+Alternatively, for module-only verification (not an additional step after root verify):
+
+```sh
+npm run verify --workspace pi-background-shell
+```
+
+For focused debugging, build once after artifact-affecting changes, then run only
+the affected suite. For example:
+
+```sh
+npm run build --workspace pi-background-shell
+npm run test:sdk --workspace pi-background-shell
+```
+
+Other focused scripts are `typecheck`, `test:type-safety`, `test:unit`, `test:rpc`,
+`test:component`, `test:package`, `test:agent-loop`, `test:pty`, `test:docs` and
+`smoke`. `pack:check` and `payload:check` inspect existing artifacts. Run
+`docs:generate` after reviewing governed source/prose changes and `docs:verify` to
+check freshness. These are alternatives by scope, not a checklist to execute in full.
+
+`check` runs static TypeScript and docs verification only. `npm test --workspace
+pi-background-shell` runs the unit/SDK/RPC/component/package suites; type-safety is
+covered by the package suite and remains available as `test:type-safety` for focused
+debugging. `test:full` also runs PTY and scripted-provider tests. Module `verify`
+builds once, then runs `check`, `test:full` and CLI smoke; the build already validates
+the sealed artifact and payload. Module-only commands do not replace root
+verification and release integration.
 
 ## Isolation and build boundaries
 
@@ -47,15 +52,25 @@ Build and docs gates are data-only. Package fixtures resolve hoisted dependencie
 and use offline local tarball installation outside the development tree, without
 physical host peers or changes to user settings.
 
-`build:runtime` cleans module-local ignored `dist` before compiling the full tsc
-ESM closure and literal lazy UI imports. The shared package builder then inlines
-the manifest-declared `src/ui/tool-cards.ts` leaf, with `pi-ui-kit` bundled and
+`build` (also available as `build:runtime`) compiles the full tsc ESM closure and
+literal lazy UI imports in a new sibling candidate directory, leaving live `dist`
+untouched during compilation. The shared package builder then inlines the
+manifest-declared `src/ui/tool-cards.ts` leaf,
+with `pi-ui-kit` bundled and
 host peers external, into the same `dist/src/ui/tool-cards.js`; the shipped source
-leaf needs the workspace link, the bundled dist does not. Prepack checks docs and
-payload. The compiled factory is `dist/extensions/background-tasks.js`,
-reexporting `dist/src/extension.js`; root builds add
-`dist/pi-background-shell/index.js`. Never load the development dependency tree as
-a production package.
+leaf needs the workspace link, the bundled dist does not. `prepack` verifies docs
+then builds once; the build validates the artifact and payload without a second
+`pack:check`. The sealed candidate replaces live dist, with rollback if validation
+fails. The compiled factory is `dist/extensions/background-tasks.js`, reexporting
+`dist/src/extension.js`; there is no aggregate root-dist forwarding entry.
+Never load the development dependency tree as a production package.
+
+Tests and checks never rebuild implicitly. `test:sdk`, `test:package`, `smoke`,
+`payload:check` and `pack:check` require current, explicitly built artifacts; missing
+or stale artifacts must be fixed by running `build`, not by rerunning a test. The
+aggregate test commands reuse that same build. Source-only focused tests and docs
+verification need no runtime build; static typechecking uses existing workspace
+library declarations.
 
 ## What tests exercise
 

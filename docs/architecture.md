@@ -76,8 +76,8 @@ interface SerralyMetadata {
 }
 ```
 
-依赖方向：扩展（`extensions/*`）只能依赖库（`packages/*`），库不依赖扩展，
-库之间目前无依赖。内部依赖必须用精确版本写在 `devDependencies` 并随产物
+依赖方向：扩展（`extensions/*`）只能依赖库（`packages/*`）；三个库保持独立，
+不得依赖其他 workspace 包。内部依赖必须用精确版本写在 `devDependencies` 并随产物
 bundle；`dependencies` 必须为空，`peerDependencies` 只列宿主。构建顺序来自
 该依赖图（先依赖后使用者），拒绝缺依赖、版本不符、循环、跨扩展依赖、越界入口
 和符号链接 workspace。
@@ -120,7 +120,7 @@ dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace
   开发 dist。许可检查使用完整的必需文件清单，不以目录存在代替法律闭包。
 - 每个包先在同级 `.build-dist-*` 候选目录编译（与 live `dist` 同深度，保证
   emitted source map 在最终位置仍解析回包内源码），再原子替换 live dist；
-  替换后写入封印并运行包自带的 artifact 校验器和通用 source 校验，任一步失败
+  候选 dist 内先写入封印，替换后运行包自带的 artifact 校验器和通用 source 校验，任一步失败
   都恢复旧的完整 dist，不留下候选或封印残余。封印（`dist/artifacts.json`）
   记录本次真实 pack 清单除自身外的每个文件及其 SHA-256。
 - 封印校验分两侧：构建侧对本次真实 pack 清单逐个比对，部署侧按全部物理文件
@@ -137,6 +137,9 @@ dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace
   符号链接，并要求运行树不含 `node_modules`、链接或非普通文件；manifest 与
   dist 完整性记录共同绑定 release digest。digest 用于漂移检测，不构成来源
   真实性签名。
+- 构建、测试和 release 组装分离：完整 verify 只构建一次，测试与 release
+  复用已封印产物，不隐式重建或修复损坏产物。pack:check 供独立检查现有产物，
+  不重复嵌套在已经执行同一校验的 build/verify 中。
 - 正式更新创建新目录，不能覆写旧 release。在途 worker 不会读到半更新产物。
 
 ## 跨模块交互

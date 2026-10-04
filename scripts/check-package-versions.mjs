@@ -33,6 +33,7 @@ async function identityAt(root, ref) {
 		const manifest = JSON.parse(git(root, ["show", `${ref}:${path}`]));
 		if (typeof manifest.name !== "string" || typeof manifest.version !== "string") continue;
 		packages.set(manifest.name, { version: manifest.version, directory: path.slice(0, -"/package.json".length),
+			test: manifest.serraly?.test,
 			dependencies: { ...manifest.devDependencies, ...manifest.peerDependencies } });
 	}
 	return packages;
@@ -82,9 +83,13 @@ export async function checkPackageVersions({ root = repositoryRoot, base, head }
 	return offenders;
 }
 
-/** Whether the given ref resolves to a commit in this clone. */
+/**
+ * Whether the given ref resolves to a commit in this clone. Only a genuinely
+ * unavailable baseline (a shallow clone or an all-zero event SHA) skips the diff
+ * gate; a resolvable ref such as `HEAD~1`, a branch or a tag is always checked.
+ */
 async function baseIsAvailable(ref) {
-	if (!/^[0-9a-f]{7,40}$/i.test(ref) || /^0+$/.test(ref)) return false;
+	if (typeof ref !== "string" || ref === "" || /^0+$/.test(ref)) return false;
 	try {
 		const { execFile } = await import("node:child_process");
 		const { promisify } = await import("node:util");

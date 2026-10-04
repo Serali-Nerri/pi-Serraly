@@ -105,6 +105,7 @@ function validateGraph(packages) {
 				if (source === "peerDependencies") reject(`${pkg.name}: bundled library ${name} must be a devDependency, not a peer`);
 				if (range !== dependency.manifest.version) reject(`${pkg.name}: internal dependency ${name} must use the exact version ${dependency.manifest.version}`);
 				if (pkg.kind === "extension" && dependency.kind === "extension") reject(`${pkg.name}: extension cannot depend on extension ${name}`);
+				if (pkg.kind === "library") reject(`${pkg.name}: a library cannot depend on the workspace package ${name}`);
 			}
 		}
 	}
@@ -162,6 +163,7 @@ export async function discoverPackages(repositoryRoot = root) {
 }
 
 function requireSelection(all, names) {
+	if (names.length === 0) reject("Package selection requires at least one name");
 	const byName = new Map(all.map((pkg) => [pkg.name, pkg]));
 	const seen = new Set();
 	return names.map((name) => {

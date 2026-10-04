@@ -15,7 +15,7 @@ Each change follows this order:
 1. **Update documents first.** Update the owning document before the code, and confirm it holds no contradiction or stale statement.
 2. **Write the test first.** Follow TDD: write the behavior-focused test, observe it fail, then implement. See "Testing Guidelines" for what not to test.
 3. **Implement the minimum.** Write only what the current contract requires; no speculative abstraction.
-4. **Close the loop.** Confirm there is no leftover code, no duplicated source of truth and no document/implementation contradiction, then run `npm run verify`.
+4. **Close the loop.** Run focused tests during iteration; after the complete change, confirm there is no leftover code, duplicated source of truth or document/implementation contradiction, then run `npm run verify` once. Do not repeat full verification per subtask or commit.
 
 ## Project Structure & Module Organization
 
@@ -46,18 +46,20 @@ Follow module-local `AGENTS.md` instructions. Keep entry points independent; UI 
 Run from the repository root:
 
 - `npm ci --ignore-scripts --include=optional --legacy-peer-deps` — install locked dependencies.
-- `npm run check` — build shared library artifacts, then run each package's check and root-script syntax checks.
+- `npm run check` — run each package's check and root-script syntax checks against already-built library declarations.
 - `npm run build` — build and seal every package artifact in its own `dist/`.
-- `npm test` — rebuild, then run every package suite and the integration suite.
+- `npm test` — run package and integration suites using existing artifacts; no implicit build.
 - `npm run pack:check` — verify existing sealed artifacts without rebuilding.
-- `npm run verify` — run checks, the complete test/build pipeline and artifact verification.
+- `npm run verify` — build once (including artifact validation), then check and run all suites.
 - `node scripts/test.mjs --package pi-loop` — debug one package; does not replace full verification.
 - `node scripts/preview.mjs regular` — preview UI with temporary data.
 - `npm run check:package-versions -- --base <git-ref>` — release-identity gate; a baseline that is unavailable in the clone is skipped explicitly, a resolvable one fails on drift.
 
 Every root entry point refuses to start below Node 22.19.0 (`scripts/lib/node-version.mjs`);
-`.github/workflows/ci.yml` runs the same `npm run verify` on Node 22.19.0 and 24.12.0 with a
-pinned host outside the workspace. Registry access belongs to the dependency-install phase only.
+`.github/workflows/ci.yml` runs `npm run verify` once on Node 24.12.0 with a pinned host
+outside the workspace. Local acceptance uses the actual managed Pi host/runtime; the
+22.19 lower bound is a startup constraint, not a mandatory local compatibility matrix.
+Registry access belongs to the dependency-install phase only.
 
 See `docs/development.md` for release preparation and additional commands.
 

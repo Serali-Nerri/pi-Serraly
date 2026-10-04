@@ -35,8 +35,6 @@ try {
 	if (list) {
 		for (const group of groups) console.log(group.tests.join("\n"));
 	} else {
-		// npm test is self-contained: integration never loads a stale artifact.
-		await isolatedRun(process.execPath, [join(root, "scripts/build.mjs")]);
 		for (const group of groups) {
 			const name = group.pkg?.name ?? group.name;
 			console.log(`\n=== ${name} ===`);

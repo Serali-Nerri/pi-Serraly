@@ -21,7 +21,6 @@ void describe('shell docs package contract', () => {
     assert.ok(pkg.files.includes('UPSTREAM.md'));
     assert.equal(pkg.scripts['docs:generate'], 'node scripts/docs/generate.mjs');
     assert.equal(pkg.scripts['docs:verify'], 'node scripts/docs/verify.mjs');
-    for (const script of ['build', 'docs:verify', 'pack:check']) assert.ok(pkg.scripts['prepack']?.includes(script));
     // The packed-payload gate still runs inside every build, through the shared builder.
     assert.equal(pkg.serraly.build.verifyArtifact, './scripts/check-package-payload.mjs');
     for (const path of ['docs/INDEX.md', 'docs/read-before-edit.md', 'docs/manifest.json', 'docs/reference/runtime-contracts.md', 'docs/api/eventbus-v2.md']) assert.ok(existsSync(new URL(`../../${path}`, import.meta.url)), path);

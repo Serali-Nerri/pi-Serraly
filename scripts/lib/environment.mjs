@@ -1,4 +1,5 @@
 import { dirname, join } from "node:path";
+import { hostPackage } from "./host.mjs";
 
 /**
  * Isolated HOME/config/cache and an allowlist environment. Generic callers must
@@ -21,14 +22,12 @@ export function isolatedEnvironment(base) {
 	};
 }
 
-/** Only deliberate non-secret controls are forwarded to isolated test children. */
-export function testEnvironment(base, controls = {}) {
+/** Resolve host code before replacing HOME; never forward managed-install or user settings. */
+export function testEnvironment(base) {
 	const env = isolatedEnvironment(base);
 	// Unit fixtures exercise native OSC8 pointer regions explicitly. CLI preview
 	// sandboxes separately keep their own hyperlink setting.
 	env.PI_HYPERLINKS = "1";
-	if (typeof controls.PI_UI_HOST_PACKAGE === "string" && controls.PI_UI_HOST_PACKAGE) {
-		env.PI_UI_HOST_PACKAGE = controls.PI_UI_HOST_PACKAGE;
-	}
+	env.PI_UI_HOST_PACKAGE = hostPackage().directory;
 	return env;
 }

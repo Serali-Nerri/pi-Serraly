@@ -515,7 +515,6 @@ void describe('package', { concurrency: false }, () => {
       assert.equal(p.devDependencies?.[peer], peer === 'typebox' ? '1.3.27' : '1.0.0');
     }
     assert.equal(p.scripts['build:runtime'], 'node ../../scripts/build-package.mjs');
-    for (const gate of ['build', 'docs:verify', 'pack:check']) assert.ok(p.scripts['prepack']?.includes(gate));
     assert.equal(p.serraly.build.verifyArtifact, './scripts/check-package-payload.mjs');
     const provenance = await text('UPSTREAM.md');
     assert.match(provenance, /471f1dcae7ff13d8f989e4c056bdff1e6b01f1ef/);

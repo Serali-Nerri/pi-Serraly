@@ -110,12 +110,12 @@ test("discovery rejects duplicate package names", async (t) => {
 	await assert.rejects(discoverPackages(root), /duplicate package name/i);
 });
 
-test("discovery rejects an internal dependency cycle", async (t) => {
+test("discovery keeps libraries independent of other workspace packages", async (t) => {
 	const { root } = await workspaceFixture(t, [
 		{ directory: "packages/pi-ui-kit", manifest: libraryManifest({ devDependencies: { "pi-config-core": "0.1.0" } }), files: license },
-		{ directory: "packages/pi-config-core", manifest: libraryManifest({ name: "pi-config-core", devDependencies: { "pi-ui-kit": "0.1.0" } }), files: license },
+		{ directory: "packages/pi-config-core", manifest: libraryManifest({ name: "pi-config-core" }), files: license },
 	]);
-	await assert.rejects(discoverPackages(root), /cycle/i);
+	await assert.rejects(discoverPackages(root), /library cannot depend on the workspace package/i);
 });
 
 test("discovery rejects a symlinked workspace package", async (t) => {

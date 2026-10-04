@@ -8,7 +8,20 @@ export const expectedVersion = "1.0.0";
 
 export function hostPackage() {
 	// Read package metadata only; never invoke npm/resolve a source-workspace host.
-	const candidate = process.env.PI_UI_HOST_PACKAGE || resolve(dirname(process.execPath), "../lib/node_modules/@earendil-works/pi-coding-agent");
+	let candidate = process.env.PI_UI_HOST_PACKAGE;
+	if (candidate !== undefined) {
+		assert.ok(candidate.trim(), "PI_UI_HOST_PACKAGE must identify a host package");
+	} else {
+		const managedRoot = process.env.PI_MANAGED_INSTALL_ROOT;
+		if (managedRoot !== undefined) {
+			assert.ok(managedRoot.trim(), "PI_MANAGED_INSTALL_ROOT must identify a managed installation");
+			const version = readFileSync(join(managedRoot, "current-version"), "utf8").trim();
+			assert.equal(version, expectedVersion, "managed Pi current-version must select Pi 1.0.0");
+			candidate = join(managedRoot, "releases", version, "node_modules/@earendil-works/pi-coding-agent");
+		} else {
+			candidate = resolve(dirname(process.execPath), "../lib/node_modules/@earendil-works/pi-coding-agent");
+		}
+	}
 	const directory = realpathSync(candidate);
 	assert.ok(!directory.startsWith(root + sep), "CLI host must be outside the development dependency tree");
 	const manifest = JSON.parse(readFileSync(join(directory, "package.json"), "utf8"));

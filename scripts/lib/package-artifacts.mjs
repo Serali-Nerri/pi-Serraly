@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
 import { cp, lstat, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { existsSync } from "node:fs";
 import { build } from "esbuild";
 import { filesIn } from "./artifacts.mjs";
@@ -162,15 +162,22 @@ export async function analyzePayload(directory, files, manifest) {
 	return analyzed.metafile;
 }
 
-/** Seal a candidate payload: the record covers every packed file except itself. */
-export async function sealPackageArtifact(pkg) {
-	const sealPath = join(pkg.directory, SEAL_PATH);
+/**
+ * Seal a candidate payload before it is published: the record covers every packed
+ * file except itself. The candidate's files are recorded under their final
+ * `dist/...` paths, so the swapped-in dist is already sealed when it goes live.
+ */
+export async function sealPackageArtifact(pkg, candidate = join(pkg.directory, "dist")) {
+	const sealPath = join(candidate, basename(SEAL_PATH));
 	await mkdir(dirname(sealPath), { recursive: true });
-	await writeFile(sealPath, "{}\n");
-	const files = await packFiles(pkg.directory);
-	if (!files.includes(SEAL_PATH)) throw new Error(`${pkg.name}: the packed payload must include ${SEAL_PATH}`);
-	const seal = { format: 1, name: pkg.name, version: pkg.manifest.version,
-		hashes: await hashListedFiles(pkg.directory, files, SEAL_PATH) };
+	const files = (await packFiles(pkg.directory)).filter((path) => !path.startsWith("dist/") && path !== SEAL_PATH);
+	const hashes = await hashListedFiles(pkg.directory, files);
+	for (const path of await filesIn(candidate)) {
+		if (path === sealPath) continue;
+		const name = relativePath(candidate, path);
+		hashes[`dist/${name}`] = sha256(await readFile(path));
+	}
+	const seal = { format: 1, name: pkg.name, version: pkg.manifest.version, hashes };
 	await writeFile(sealPath, JSON.stringify(seal, null, 2) + "\n");
 	return seal;
 }

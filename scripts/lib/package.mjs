@@ -1,8 +1,7 @@
 import { createHash } from "node:crypto";
 import { cp, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { buildPackage } from "./build-package.mjs";
-import { buildOrder, discoverPackages, root, selectExtensions } from "./packages.mjs";
+import { discoverPackages, root, selectExtensions } from "./packages.mjs";
 import { SEAL_PATH, copyPackageArtifact, verifyPackageArtifact } from "./package-artifacts.mjs";
 
 /** Acceptance is pinned to the qualified host; an explicit override must match. */
@@ -155,9 +154,8 @@ async function requireExternalDestination(output) {
 }
 
 /**
- * Prepare an immutable release: validate the selection, build the selected
- * extensions (and their libraries), copy each verified payload, then seal the
- * aggregate manifest and member identities.
+ * Assemble an immutable release from already-built artifacts. Validation must
+ * report a missing or corrupt payload, never repair it by invoking a builder.
  */
 export async function createRelease(output, { buildId, packages: names } = {}) {
 	output = resolve(output);
@@ -166,7 +164,6 @@ export async function createRelease(output, { buildId, packages: names } = {}) {
 	const selected = selectExtensions(all, names);
 	if (buildId !== undefined && !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}$/.test(buildId)) throw new Error("Invalid build id");
 	const version = JSON.parse(await readFile(join(root, "package.json"), "utf8")).version;
-	for (const pkg of buildOrder(all, selected.map((pkg) => pkg.name))) await buildPackage(pkg);
 	await mkdir(dirname(output), { recursive: true });
 	const stage = await mkdtemp(join(dirname(output), ".serraly-pending-"));
 	try {

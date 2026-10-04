@@ -1,31 +1,10 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { createSandbox } from "../../scripts/preview.mjs";
-import { isolatedEnvironment, testEnvironment } from "../../scripts/lib/environment.mjs";
-
-test("root test environment allowlists controls and replaces all user directories", () => {
-	const base = "/synthetic/test-sandbox";
-	const canaries = {
-		HOME: "/real/home", NODE_OPTIONS: "--require=credential-reader",
-		AWS_SECRET_ACCESS_KEY: "canary", AWS_SESSION_TOKEN: "canary",
-		GOOGLE_APPLICATION_CREDENTIALS: "/real/credential.json", HTTPS_PROXY: "canary",
-		ANTHROPIC_API_KEY: "canary", PI_SESSION_FILE: "/real/session.jsonl",
-		PI_UI_HOST_PACKAGE: "/explicit/host-package",
-	};
-	const env = testEnvironment(base, canaries);
-	for (const key of Object.keys(canaries).filter((key) => key !== "HOME" && key !== "PI_UI_HOST_PACKAGE")) {
-		assert.equal(env[key], undefined, key);
-	}
-	assert.equal(env.HOME, join(base, "home"));
-	assert.equal(env.PI_CODING_AGENT_DIR, join(base, "agent"));
-	assert.equal(env.XDG_CACHE_HOME, join(base, "home/.cache"));
-	assert.equal(env.PI_UI_HOST_PACKAGE, canaries.PI_UI_HOST_PACKAGE);
-	assert.equal(env.PI_OFFLINE, "1");
-	assert.equal(env.PI_HYPERLINKS, "1");
-});
+import { isolatedEnvironment } from "../../scripts/lib/environment.mjs";
 
 test("generic isolation carries no UI preview stage or report path", () => {
 	const base = "/synthetic/generic-sandbox";
@@ -34,26 +13,47 @@ test("generic isolation carries no UI preview stage or report path", () => {
 	assert.equal(env.PI_OFFLINE, "1");
 	assert.equal(env.PI_UI_STAGE, undefined, "the generic environment must not preload a UI preview stage");
 	assert.equal(env.PI_UI_REPORT, undefined, "the generic environment must not redirect a UI preview report");
-	assert.equal(testEnvironment(base).PI_UI_STAGE, undefined);
-	assert.equal(testEnvironment(base).PI_UI_REPORT, undefined);
 });
 
-test("the workspace process launcher excludes inherited credentials and session pointers", async () => {
+test("test subprocesses receive resolved host code but no inherited credentials or user directories", async () => {
 	const { isolatedRun } = await import(new URL("../../scripts/lib/workspace.mjs", import.meta.url).href);
-	const base = await mkdtemp(join(tmpdir(), "serraly-env-observation-"));
+	const base = await realpath(await mkdtemp(join(tmpdir(), "serraly-env-observation-")));
+	const managedRoot = join(base, "install");
+	const directory = join(managedRoot, "releases/1.0.0/node_modules/@earendil-works/pi-coding-agent");
 	const canaries = {
+		HOME: "/synthetic/user-home", PI_CODING_AGENT_DIR: "/synthetic/user-agent",
+		AWS_SECRET_ACCESS_KEY: "synthetic-canary", AWS_SESSION_TOKEN: "synthetic-canary",
+		GOOGLE_APPLICATION_CREDENTIALS: "/synthetic/credential.json",
 		ANTHROPIC_API_KEY: "synthetic-canary", PI_SESSION_FILE: "/synthetic/session.jsonl",
 		HTTPS_PROXY: "https://synthetic.invalid", NODE_OPTIONS: "--require=synthetic-missing-module",
+		PI_MANAGED_INSTALL_ROOT: managedRoot, PI_UI_HOST_PACKAGE: undefined,
 	};
 	const previous = new Map(Object.keys(canaries).map((key) => [key, process.env[key]]));
 	try {
-		Object.assign(process.env, canaries);
+		await mkdir(join(directory, "dist/bundle"), { recursive: true });
+		await writeFile(join(directory, "package.json"), JSON.stringify({
+			name: "@earendil-works/pi-coding-agent", version: "1.0.0", bin: { pi: "dist/bundle/cli.js" },
+		}));
+		await writeFile(join(directory, "dist/bundle/cli.js"), "// Fixture code; never launched.\n");
+		await writeFile(join(managedRoot, "current-version"), "1.0.0\n");
+		for (const [key, value] of Object.entries(canaries)) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
 		const output = join(base, "environment.json");
 		await isolatedRun(process.execPath, ["--input-type=module", "-e",
 			'import { writeFileSync } from "node:fs"; writeFileSync(process.argv[1], JSON.stringify(process.env));', output], base);
 		const env = JSON.parse(await readFile(output, "utf8"));
-		for (const key of Object.keys(canaries)) assert.equal(env[key], undefined, key);
+		for (const key of Object.keys(canaries).filter((key) => !["HOME", "PI_CODING_AGENT_DIR", "PI_UI_HOST_PACKAGE"].includes(key))) {
+			assert.equal(env[key], undefined, key);
+		}
+		assert.equal(env.PI_UI_HOST_PACKAGE, directory);
 		assert.notEqual(env.HOME, process.env.HOME);
+		assert.notEqual(env.PI_CODING_AGENT_DIR, process.env.PI_CODING_AGENT_DIR);
+		assert.equal(env.PI_CODING_AGENT_DIR, join(env.TMPDIR, "agent"));
+		assert.equal(env.HOME, join(env.TMPDIR, "home"));
+		assert.equal(env.XDG_CONFIG_HOME, join(env.TMPDIR, "home/.config"));
+		assert.equal(env.XDG_CACHE_HOME, join(env.TMPDIR, "home/.cache"));
 		assert.equal(env.PI_OFFLINE, "1");
 		assert.equal(env.PI_HYPERLINKS, "1");
 		assert.equal(env.PI_UI_STAGE, undefined, "test children never inherit a preview stage path");

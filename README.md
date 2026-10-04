@@ -31,8 +31,8 @@ npm ci --ignore-scripts --include=optional --legacy-peer-deps
 npm run verify
 ```
 
-`check` 先构建共享库产物再检查各包，`test` 先构建全部包再运行各包套件与根集成
-测试，`pack:check` 只验证现有产物。调试单个包或套件：
+`verify` 只构建一次（含产物校验），然后执行 check 和 test；后二者不隐式构建。
+涉及编译产物的定向测试先显式构建受影响包，`pack:check` 可独立验证现有产物：
 
 ```sh
 node scripts/test.mjs --package pi-loop
@@ -42,8 +42,9 @@ node scripts/test.mjs --package pi-subagents --list
 
 验证使用临时 HOME/agent/cwd、合成会话、离线脚本化 provider 和本地 fixture，
 不读取真实 auth/session/settings，也不发送真实模型请求。
-根入口在 Node 低于 **22.19** 时直接失败；CI 在 Node 22.19.0 与 24.12.0 上运行
-同一个 `npm run verify`，并在安装阶段之外保持网络拒绝。
+根入口在 Node 低于 **22.19** 时直接失败；CI 只在 Node **24.12.0** 上运行一轮
+`npm run verify`，本地使用实际 managed Pi 的运行时，不重复执行 Node 矩阵。
+安装阶段之外保持网络拒绝。
 命令、测试层级、release 和更新/回滚流程见[开发指南](docs/development.md)。
 真实配置切换须另行授权。
 

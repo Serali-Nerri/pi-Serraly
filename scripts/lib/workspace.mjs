@@ -19,7 +19,7 @@ export async function discoverTests(directory) {
 export async function isolatedRun(command, args, cwd = root, { denyNetwork = false } = {}) {
 	const base = await mkdtemp(join(tmpdir(), "pi-serraly-verify-"));
 	try {
-		const env = testEnvironment(base, { PI_UI_HOST_PACKAGE: process.env.PI_UI_HOST_PACKAGE });
+		const env = testEnvironment(base);
 		if (denyNetwork) {
 			env.SERRALY_REPORT = join(base, "network-report.jsonl");
 			env.NODE_OPTIONS = `--import=${pathToFileURL(join(root, "test/integration/fixtures/network-guard.mjs")).href}`;

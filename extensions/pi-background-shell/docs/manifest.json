@@ -433,7 +433,7 @@
     },
     {
       "path": "docs/subsystems/docs-freshness-gate.md",
-      "sha256": "900271624a20021bb2f0718b04dfbd775388cda62d31e87e15124afaba79f194"
+      "sha256": "4d5cac30fd6abeda5d29117917561945389a366eec0b044e698a1bf1b9ef3197"
     },
     {
       "path": "docs/subsystems/extension-lifecycle.md",
@@ -445,7 +445,7 @@
     },
     {
       "path": "TESTING.md",
-      "sha256": "a8c46a950eeb6098948f1157f462d395b95a4dc154335a255b584ca710ee62d5"
+      "sha256": "6f493ed9100fb4027a1e0e03abae948cb0af9ddd3fe4b2e6dd616fbe50973e2e"
     },
     {
       "path": "UPSTREAM.md",

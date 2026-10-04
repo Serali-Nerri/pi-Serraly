@@ -6,14 +6,12 @@
 
 ```sh
 npm ci --ignore-scripts --include=optional --legacy-peer-deps
-npm run check
-npm test
-npm run build
 npm run verify
 ```
 
-`check` 调用各 workspace 的严格检查并检查根脚本语法；`npm test` 先构建完整产物，
-再执行分模块套件及根集成测试；`verify` 组合两者。任一步骤失败即失败，
+`build` 是唯一的构建入口；`check` 只调用严格检查及根脚本语法检查，
+`npm test` 只执行测试，不隐式重建。`verify` 顺序执行 build、check、test，
+一次构建已包含封印及包级 artifact 校验，不再重复 pack:check。任一步骤失败即失败，
 不以重试隐藏结果。集成测试使用真实宿主 loader 与临时 release 目录，不需要
 registry。
 
@@ -42,12 +40,17 @@ node --input-type=module -e '
 ' -- test/integration/runtime.test.mjs test/integration/subagents-runtime.test.mjs
 ```
 
-定向根测试需要已有完整的 `npm run build` 产物；根 runner 自动重建。
-模块选择只用于调试，不代替完成前的 `npm run verify`。
+涉及编译产物的定向测试需要先构建受影响的包，例如
+`npm run build --workspace pi-ui`（自动先构建它依赖的库）；不涉及产物的源代码测试
+不需要构建。根集成测试需要完整产物。测试与 release 组装不暗中修复缺失或损坏的
+产物，修改源代码后由调用方显式重建。
+RED/GREEN 只运行新增或失败的测试文件；功能完成后运行受影响包及直接消费者。
+一次完整变更收尾时运行 `npm run verify`，不在每个小步骤、每个提交后重复全量。
+同一代码、锁文件和运行环境已有成功记录时复用结果，只补缺口。
 入口路径和构建策略见[架构](architecture.md)。
 后台 shell 的源码或人类文档变更经审阅后，先运行
 `npm run docs:generate --workspace pi-background-shell` 更新哈希管控产物，
-再运行完整验证；生成哈希不替代行为审阅。
+再运行相关门禁；生成哈希不替代行为审阅。
 
 ## 测试层级与质量要求
 
@@ -84,8 +87,10 @@ GREEN。测试名说明破坏的行为。不得用源码字符串匹配代替执
 不得读真实 auth、sessions 或 settings；不得发送真实模型请求。
 模块 tests 自己拥有进程/worker 清理。
 
-实际 CLI 基线来自开发树外的全局 **1.0.0** host；必要时可显式指定另一份
-同版本安装：
+实际 CLI/SDK 验收使用开发树外的 **1.0.0** host：显式 `PI_UI_HOST_PACKAGE`
+优先，其次从 `PI_MANAGED_INSTALL_ROOT/current-version` 定位 managed release，
+仅在没有 managed 安装指示时使用当前 Node 的全局 npm 安装。显式配置无效时失败，
+不能悄悄换成另一份宿主。必要时指定另一份同版本安装：
 
 ```sh
 PI_UI_HOST_PACKAGE=/absolute/path/to/pi-coding-agent npm run verify
@@ -93,6 +98,8 @@ PI_UI_HOST_PACKAGE=/absolute/path/to/pi-coding-agent npm run verify
 
 该变量只选择宿主包代码，不选择用户配置。根集成测试从独立 release 通过宿主
 loader 加载，不能用源码 workspace 的 ESM import 冒充最终运行验证。
+隔离前解析宿主位置，再只向子进程传递代码路径，不传递真实配置。managed 安装
+不必拥有独立 Node；使用实际启动 Pi 的运行时验收，不因该 Node 来自 nvm 而再跑一遍。
 
 ## UI 预览
 
@@ -125,7 +132,9 @@ npm run release -- --build-id <id> --output /absolute/path/to/new-release
 名称都会直接失败。release 默认包含七个扩展；聚合 manifest 只声明被选中的入口，
 `release.json` 记录每个成员的路径与封印摘要。
 
-release 不安装运行依赖、不携带 lock 或 `node_modules`，只复制已验证的 payload。
+release 不构建、不安装运行依赖、不携带 lock 或 `node_modules`，只复制已构建并
+验证的 payload；缺失或篡改产物直接拒绝。正式交付前的 verify 已负责构建，
+测试 fixture 也复用同一轮产物，不对每个临时 release 重复编译。
 目标路径不能包含符号链接或发现目录，也不能继承祖先的物理宿主；聚合 manifest、
 成员封印和整体 digest 必须通过。既有目录拒绝覆盖，这一步**不**修改 Pi settings
 或 extensions。
@@ -149,12 +158,15 @@ npm ci --ignore-scripts --include=optional --legacy-peer-deps
 npm run verify
 ```
 
-`.github/workflows/ci.yml` 在 Ubuntu 上以 Node **22.19.0** 与 **24.12.0** 两个
-矩阵成员各跑一次完整 `npm run verify`（npm 11.7.0、完整 git 历史），并把固定的
-宿主 Pi 1.0.0 安装到 `RUNNER_TEMP` 之外的临时目录，通过 `PI_UI_HOST_PACKAGE`
+`.github/workflows/ci.yml` 在 Ubuntu 上以 Node **24.12.0** 跑一次完整
+`npm run verify`（npm 11.7.0、完整 git 历史），并把固定的
+宿主 Pi 1.0.0 安装到 runner 的临时目录（在工作区之外），通过 `PI_UI_HOST_PACKAGE`
 指向它；HOME、agent 目录与缓存都在 runner 临时目录内，不接触真实配置。只有
 安装锁定开发依赖和该宿主时允许访问 registry，测试与 release 阶段保持网络拒绝。
 CI 权限只有 `contents: read`，没有部署或发布凭据。
+`>=22.19.0` 保留为工具链启动下限，不作为本项目每次交付的多版本资格声明。
+本地不另外安装 Node 22.19 或重复切换 nvm 验收；若以后承诺分发到不同运行时，
+再增加有明确目标的 CI 兼容性任务。
 
 版本门禁在 CI 中额外执行一次 diff 检查：pull request 用
 `--base <base.sha> --head <head.sha>`，push 用 before/current SHA。基线在克隆中
@@ -183,8 +195,8 @@ npm run check:package-versions -- --base <git-ref> [--head <git-ref>]
 settings 切换需要单独授权，并满足以下约束：
 
 1. 递增根版本并发布新目录，完成 verify、release validation、外部宿主启动
-   检查和 CLI/SDK 验收。Node 最低版本 22.19 未实跑、平台 skip 或
-   未人工查看的 PTY 必须列为资格缺口，不能用较新 Node 的成功替代最低基线。
+   检查和 CLI/SDK 验收，记录实际宿主/Node 版本。平台 skip 或未人工查看的
+   PTY 必须如实列出，不额外制造未承诺的 Node 版本矩阵。
 2. 停止所有相关 Pi 实例，确认 child 与 MCP/后台资源已关闭；备份 user settings
    与相关已信任项目 settings 的精确内容。
 3. 切换只改 `packages`：先校验目标 release 的 manifest 与 digest，再按 Pi 的

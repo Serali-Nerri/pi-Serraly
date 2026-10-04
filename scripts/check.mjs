@@ -2,15 +2,12 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { assertSupportedNode } from "./lib/node-version.mjs";
 import { filesIn } from "./lib/artifacts.mjs";
-import { buildPackage } from "./lib/build-package.mjs";
 import { discoverPackages, root } from "./lib/packages.mjs";
 import { isolatedRun } from "./lib/workspace.mjs";
 
 try {
 	assertSupportedNode();
 	const packages = await discoverPackages();
-	// Consumers typecheck against built library declarations and seals.
-	for (const pkg of packages.filter((candidate) => candidate.kind === "library")) await buildPackage(pkg);
 	for (const pkg of packages) {
 		const manifest = JSON.parse(await readFile(join(pkg.directory, "package.json"), "utf8"));
 		const command = manifest.scripts?.check ? "check" : "typecheck";

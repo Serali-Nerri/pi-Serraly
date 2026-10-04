@@ -49,9 +49,12 @@ function internalDependencies(pkg) {
 
 function classifyInput(pkg, libraries, path) {
 	const real = realpathSync(path);
-	if (real === pkg.directory || real.startsWith(pkg.directory + sep)) return { kind: "self" };
+	// Dependency identities are classified before package ownership: a host or
+	// retired package installed inside the package's own node_modules is still a
+	// host/retired input and must never be bundled as if it were local source.
 	if (HOST_PATH.test(real)) return { kind: "host" };
 	if (RETIRED_PATH.test(real)) return { kind: "retired" };
+	if (real === pkg.directory || real.startsWith(pkg.directory + sep)) return { kind: "self" };
 	for (const [name, directory] of libraries) {
 		if (real === directory || real.startsWith(directory + sep)) {
 			return real.startsWith(join(directory, "dist") + sep) ? { kind: "library", name } : { kind: "library-private", name };
@@ -153,8 +156,14 @@ async function runRecipe(pkg, dist) {
 	await copyLicenses(pkg, dist);
 }
 
-async function runArtifactVerifier(pkg, payload) {
-	const script = pkg.manifest.serraly?.verifyArtifact;
+/**
+ * Run the artifact verifier a package declares in its build recipe. It is part of
+ * the build and of `pack:check`, so a package-specific payload gate (for example
+ * the background shell's packed-closure check) can never be skipped by building
+ * through a different entry point.
+ */
+export async function runArtifactVerifier(pkg, payload) {
+	const script = pkg.manifest.serraly?.build?.verifyArtifact;
 	if (!script) return;
 	const verified = await run(process.execPath, [resolve(pkg.directory, script), "--artifact-root", payload], { cwd: pkg.directory });
 	if (verified.code !== 0) throw new Error(`${pkg.name}: artifact verifier failed: ${verified.stderr || verified.stdout}`);
@@ -183,17 +192,17 @@ async function withReplacedDist(directory, candidate, work) {
 }
 
 /**
- * Build one package into its own dist. The candidate is compiled in a
- * `.build-dist-*` sibling, then sealed and verified in place; a failed build,
- * seal or verification restores the previous complete dist.
+ * Build one package into its own dist. The candidate is compiled and sealed in a
+ * `.build-dist-*` sibling, then swapped into place and re-verified; a failed
+ * build, seal or verification restores the previous complete dist, and the live
+ * dist is never left unsealed.
  */
 export async function buildPackage(pkg) {
 	const candidate = await mkdtemp(join(pkg.directory, ".build-dist-"));
 	try {
 		await runRecipe(pkg, candidate);
-		let seal;
+		const seal = await sealPackageArtifact(pkg, candidate);
 		await withReplacedDist(pkg.directory, candidate, async () => {
-			seal = await sealPackageArtifact(pkg);
 			await runArtifactVerifier(pkg, pkg.directory);
 			await verifySourcePackage(pkg.directory);
 		});

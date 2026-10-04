@@ -17,7 +17,7 @@
     "build": "node ../../scripts/build-package.mjs",
     "check": "tsc -p tsconfig.json",
     "pack:check": "node ../../scripts/build-package.mjs --check",
-    "prepack": "npm run build && npm run pack:check"
+    "prepack": "npm run build"
   },
   "serraly": {
     "build": { "kind": "tsc", "project": "./tsconfig.build.json" },
