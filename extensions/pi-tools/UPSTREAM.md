@@ -36,7 +36,7 @@ The package's original BSD-3-Clause license is retained in [licenses/diff-BSD-3-
 ## Intentional workspace deviations
 
 1. Only leading indentation and single-quoted TypeScript literals were normalized to tabs/double quotes. All seven production ASTs and literal values were checked against the source; template-string data, including the Lark grammar and description, remains unchanged. No patch algorithm, file lock, preflight, abort/partial-commit diagnostic, size budget, report contract, tool schema, exposure, namespace or prompt metadata changed.
-2. The private module manifest has exact `diff: "8.0.4"` and optional host-provided peers `@earendil-works/pi-coding-agent: "*"` and `typebox: "*"`. No module-local development host copies or lockfile were imported. Root development tooling supplies Pi 1.0.0, TypeBox 1.3.27, TypeScript and tsx.
+2. The private module manifest has exact `diff: "8.0.4"` and optional host-provided peers `@earendil-works/pi-coding-agent: "*"` and `typebox: "*"`. No module-local development host copies or lockfile were imported. Root development tooling supplies Pi 1.0.2, TypeBox 1.3.27, TypeScript and tsx.
 3. The strict NodeNext/no-emit/erasable-syntax TypeScript boundary covers `src/` and `test/`. Legacy JavaScript deployment checking was removed because the deployment implementation itself was intentionally excluded.
 4. The old loader/execution extension test now loads the explicit workspace entry with a temporary agent directory rather than invoking `deploy()`. Its real add/update/no-op byte/identity assertions are retained.
 5. The README source-text schema/snippet comparison test was excluded: reading Markdown fragments is not behavior verification. The real registered-tool schema/grammar tests are retained, and the new SDK test checks that prompt metadata actually reaches the initial prompt.
@@ -71,6 +71,6 @@ Recorded migration checks:
 
 ## Workspace addition: same-name search tools
 
-`src/index.ts` also registers `grep`, `find` and `ls` as `exposure: "codemode"` replacements for the built-in tools. They import the host's public `createGrepToolDefinition`/`createFindToolDefinition`/`createLsToolDefinition` and override only exposure, namespace and the renderer fields. No Pi source was copied, so no additional license payload is required; behavior tracks the pinned Pi 1.0.0 release.
+`src/index.ts` also registers `grep`, `find` and `ls` as `exposure: "codemode"` replacements for the built-in tools. They import the host's public `createGrepToolDefinition`/`createFindToolDefinition`/`createLsToolDefinition` and override only exposure, namespace and the renderer fields. No Pi source was copied, so no additional license payload is required; behavior tracks the pinned Pi 1.0.2 release.
 
 The root owner must include this workspace in shared checks/tests and bundle `src/index.ts` to `dist/pi-tools/index.js`. Keep host imports external, bundle `diff@8.0.4`, and retain this module's LICENSE, NOTICE, source record and BSD license. Do not install physical host peers into the isolated runtime tree. Full compiled-loader/module-identity, six-entry discovery/filtering/coexistence and release-switch/rollback tests are root integration responsibilities, not evidence implied by the source-loader tests here.

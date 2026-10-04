@@ -13,7 +13,7 @@ through the isolated runner described in the [development guide](../../../docs/d
 That guide owns build prerequisites, managed-host selection and Node qualification;
 do not repeat full verification for each UI test change.
 
-Tests use Pi **1.0.0** package code, not user configuration. They compile the
+Tests use Pi **1.0.2** package code, not user configuration. They compile the
 current UI to a temporary ESM bundle, keep Pi/TypeBox external, and load it with
 the host's actual bundled CLI (`dist/bundle/cli.js`) and extension loader.
 
@@ -70,7 +70,8 @@ at 80 columns.
 | Factory and CLI | Compiled ESM loading, pinned host version, no factory-time UI timers/patches or business tool registration, command surface and help without session/provider startup. |
 | Print/JSON/RPC | Scripted built-in read loop and extension commands; native prototypes/protocol output, no shell/bridge/UI timers. RPC `hasUI=true` alone does not activate terminal features. |
 | SDK lifecycle and reload | In-memory settings/auth/sessions, repeated TUI activation and cleanup, one shared scheduler, inactive no-UI contexts, panel/context factories, real reload and defaultTools transitions. |
-| Renderer and class identity | Host-created tool/TUI instances share imported prototypes and installed patches; built-in, codemode and MCP definitions preserve renderer ownership and retained/truncated output without MCP execution. |
+| Renderer and class identity | Public `registerToolRenderer` resolution in extension load order, built-in renderer merging, same-name overrides, rendererless and custom tools; host-created tool/TUI instances share imported prototypes and installed patches; built-in, codemode and MCP definitions preserve renderer ownership and retained/truncated output without MCP execution. |
+| HTML export | Real `AgentSession.exportToHtml()` output includes synthetic tool input and retained output through public renderers; isolated sessions never request a model. |
 | Markdown and state | Real-host destinations, literal text, code/target preservation, reference definitions and container boundaries; billing/context and Thinking persistence use synthetic session data. |
 | Failure and compaction | Missing/read-only methods, foreign wrappers, stale context access, unconditional cleanup and refresh after mounted-tree replacement. |
 | Terminal modes and widths | Default fullscreen without mode overrides, explicit regular/fullscreen PTYs, alternate-screen behavior, notifications, bounded rows, temporary file/diff operations, native OSC 8 and shutdown cleanup. |

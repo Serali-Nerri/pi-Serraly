@@ -1,6 +1,6 @@
 {
   "name": "pi-background-shell",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Pi extension for background shell processes, bounded logs, task UI, completion notifications, and same-process reload handoff.",
   "type": "module",
   "license": "ISC",
@@ -60,9 +60,9 @@
     "typebox": "*"
   },
   "devDependencies": {
-    "@earendil-works/pi-ai": "1.0.0",
-    "@earendil-works/pi-coding-agent": "1.0.0",
-    "@earendil-works/pi-tui": "1.0.0",
+    "@earendil-works/pi-ai": "1.0.2",
+    "@earendil-works/pi-coding-agent": "1.0.2",
+    "@earendil-works/pi-tui": "1.0.2",
     "@types/node": "24.10.1",
     "tsx": "4.23.12",
     "typebox": "1.3.27",

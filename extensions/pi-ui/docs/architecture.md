@@ -1,4 +1,4 @@
-# pi-ui architecture — Pi 1.0.0
+# pi-ui architecture — Pi 1.0.2
 
 ## Ownership
 

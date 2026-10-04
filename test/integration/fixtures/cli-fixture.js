@@ -49,7 +49,7 @@ export function installGuard(pi) {
 
 export default function (pi) {
 	const state = globalThis[Symbol.for("serraly.runtime-fixture")];
-	assert.ok(state); assert.equal(VERSION, "1.0.0");
+	assert.ok(state); assert.equal(VERSION, "1.0.2");
 	const config = JSON.parse(readFileSync(process.env.SERRALY_CONFIG, "utf8"));
 	registerScriptedProvider(pi, state);
 	pi.on("session_start", async (_event, ctx) => {

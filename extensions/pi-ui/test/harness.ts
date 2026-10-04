@@ -1,7 +1,10 @@
 import { createBashToolDefinition, createEditToolDefinition, createReadToolDefinition, createWriteToolDefinition,
-	initTheme, ToolExecutionComponent } from "@earendil-works/pi-coding-agent";
+	DefaultResourceLoader, ExtensionRunner, SettingsManager, initTheme, ToolExecutionComponent,
+	type ExtensionFactory } from "@earendil-works/pi-coding-agent";
 import { Container, TuiAltScreen, type Component } from "@earendil-works/pi-tui";
 import { theme } from "../../../node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/theme/theme.js";
+// Pinned host presentation entry: interactive-mode merges these before resolver fallback.
+import { withBuiltInRenderers } from "../../../node_modules/@earendil-works/pi-coding-agent/dist/core/tools/renderers/index.js";
 import extension from "../src/index.ts";
 import { setConfig } from "../src/config/config.ts";
 
@@ -12,6 +15,8 @@ export const strip = (text: string) => text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, 
 export type HarnessOptions = {
 	mode?: "on" | "compact" | "off";
 	headless?: boolean;
+	/** Loaded by Pi's real registration API, in this order after the UI extension. */
+	extensionFactories?: ExtensionFactory[];
 	/** Runs after the extension factory and before `session_start`; host mutations and spies belong here. */
 	beforeStart?: () => void;
 };
@@ -85,7 +90,32 @@ export async function harness(options: HarnessOptions = {}) {
 		getThinkingLevel: () => "off",
 		getSettings: () => ({}),
 	};
-	extension(pi);
+	// Keep synthetic UI/context/timing controls, but never emulate registration or
+	// resolver ordering. No resource discovery, credentials, sessions or providers.
+	const agentDir = process.env.PI_CODING_AGENT_DIR;
+	if (!agentDir) throw new Error("Run the harness through the isolated runner");
+	const loader = new DefaultResourceLoader({
+		cwd: process.cwd(), agentDir,
+		settingsManager: SettingsManager.inMemory(), noExtensions: true,
+		noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true,
+		extensionFactories: [extension, ...options.extensionFactories ?? []],
+	});
+	await loader.reload();
+	const loaded = loader.getExtensions();
+	if (loaded.errors.length) throw new Error(JSON.stringify(loaded.errors));
+	Object.assign(loaded.runtime, pi);
+	const ui = loaded.extensions[0]!;
+	for (const [name, handlers] of ui.handlers) events.set(name, handlers);
+	for (const [name, command] of ui.commands) commands.set(name, command);
+	registered.push(...[...ui.tools.values()].map((tool) => tool.definition));
+	for (const ext of loaded.extensions) {
+		for (const [name, { definition, sourceInfo }] of ext.tools) {
+			definitions[name] = definition;
+			toolMetadata.set(name, { name, description: definition.description,
+				parameters: definition.parameters, exposure: definition.exposure ?? "direct", sourceInfo } as any);
+		}
+	}
+	const runner = new ExtensionRunner(loaded.extensions, loaded.runtime, process.cwd(), ctx.sessionManager, {} as any);
 	const emit = async (name: string, event: any = {}, context = ctx) => {
 		for (const handler of events.get(name) ?? []) await handler(event, context);
 	};
@@ -98,7 +128,8 @@ export async function harness(options: HarnessOptions = {}) {
 				sourceInfo: { path: "fixture-extension.ts", source: "local", scope: "temporary", origin: "top-level" },
 			});
 		}
-		const component = new ToolExecutionComponent(name, id, args, { showImages: false }, definition, tui, process.cwd()) as any;
+		const component = new ToolExecutionComponent(name, id, args, { showImages: false },
+			runner.resolveToolRenderers(name, () => withBuiltInRenderers(name, definition)), tui, process.cwd()) as any;
 		component.markExecutionStarted();
 		if (result) component.updateResult(result);
 		root.addChild(component);

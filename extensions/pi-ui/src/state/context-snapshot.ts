@@ -17,7 +17,7 @@ export type ContextSnapshotOptions = {
 type ContextEstimate = { tokens: number; trailingTokens: number; lastUsageIndex: number | null };
 const finiteNonnegative = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0;
 
-/** Pi 1.0.0 estimateContextTokens semantics, using only public exports.
+/** Pi 1.0.2 estimateContextTokens semantics, using only public exports.
  * That helper isn't exported from the package root. Never use billing UsageEntry.
  */
 function estimateAllContext(projection: SessionProjection): number {

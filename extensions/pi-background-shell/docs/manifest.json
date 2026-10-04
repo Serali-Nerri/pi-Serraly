@@ -2,10 +2,10 @@
   "schema_version": "pi-background-shell.docs-manifest.v1",
   "package": {
     "name": "pi-background-shell",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "entry": "./dist/extensions/background-tasks.js",
     "node": ">=22.19.0",
-    "verified_host": "1.0.0",
+    "verified_host": "1.0.2",
     "typebox": "1.3.27"
   },
   "public_surfaces": {
@@ -417,7 +417,7 @@
     },
     {
       "path": "docs/getting-started.md",
-      "sha256": "edd5af88c2e7ff1669e8ca7b2afab41c73a503a75e7c29c1b8643543c8b7d43f"
+      "sha256": "17e6e3a8fccb59334098506b7ba1c6a983bf9bdfad5a84481a2666129846f66b"
     },
     {
       "path": "docs/operations/configuration.md",
@@ -433,27 +433,27 @@
     },
     {
       "path": "docs/subsystems/docs-freshness-gate.md",
-      "sha256": "4d5cac30fd6abeda5d29117917561945389a366eec0b044e698a1bf1b9ef3197"
+      "sha256": "a4ff2652f02ed9334c7a4f8f4de8103135b30fcba2abc41288231654986c8f71"
     },
     {
       "path": "docs/subsystems/extension-lifecycle.md",
-      "sha256": "70e9a9f1c8ac75c863d28128be2c0ba5b9863a8d960b6e05d81652a496159bfd"
+      "sha256": "6a10b1a9b43f8d327a4bade177e7f5c23374801f8a121a449eaa065c8d0d8a21"
     },
     {
       "path": "README.md",
-      "sha256": "43d4b93d3d53cd21b8d05d14014fe33665284f4b7bb2ae6ae9a27355397ede00"
+      "sha256": "a4a48cd6ad51ced9558871e5678e295321f89454aa8afdf341500e71c23a18f3"
     },
     {
       "path": "TESTING.md",
-      "sha256": "d087550e46e456e4caa631efa10e2c45a8fb3b11ab4f46defaaa51353edd43f6"
+      "sha256": "f8f56d39fd32f4e786785d615de2597ba72b3f5ab95cd9827e2ff7744d8eac51"
     },
     {
       "path": "UPSTREAM.md",
-      "sha256": "a0076c4dcae91ebf1d9e09c71f4fee0c69e7a8d8835a88b87c2323aa97b94664"
+      "sha256": "91420f8e86ef5f24fa4f2d20b1b56747139d30fa593b1f2bef6db281616bb480"
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "7593ab196cef8fe83395ca604cb0f386861d3a82f8780899ff36efbfdac2b239"
+      "sha256": "bd0bcac6641d5f1a560de4c551a45dfc18b2422a108cfd533f2018be10e79875"
     }
   ]
 }

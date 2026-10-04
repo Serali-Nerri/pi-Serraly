@@ -7,7 +7,7 @@
 
 The source and behavior tests are maintained as an independent module of this
 private workspace, not published on a separate npm release line. Runtime host
-packages remain external peers; the supported development baseline is Pi 1.0.0,
+packages remain external peers; the supported development baseline is Pi 1.0.2,
 TypeBox 1.3.27 and the repository's strict TypeScript. The imported Vitest suites
 run through the common isolated runner.
 

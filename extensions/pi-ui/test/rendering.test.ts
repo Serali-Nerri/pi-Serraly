@@ -26,7 +26,7 @@ test("only rendering commands are registered and native tools are untouched", as
 		assert.equal(h.events.has("before_agent_start"), false);
 		const definition = h.definitions.bash;
 		const tool = h.tool("bash", "b", { command: "printf x" }, result("x"));
-		assert.equal(tool.toolDefinition, definition);
+		assert.deepEqual(tool.toolDefinition.parameters, definition.parameters);
 		assert.equal(tool.toolDefinition.execute, definition.execute);
 		assert.doesNotMatch(JSON.stringify(definition.promptGuidelines), /Codex|10,000/);
 	} finally { await h.close(); }

@@ -1,6 +1,6 @@
 {
   "name": "pi-ui",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "description": "Tool cards, Thinking, shell, /ccstyle and /context for the private pi-Serraly workspace",

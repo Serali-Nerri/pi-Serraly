@@ -75,37 +75,24 @@ test("configuration-only exclusion restores already mounted group children", asy
 });
 
 for (const name of ["write", "edit"]) {
-	test(`renderer-less ${name} override retains generic captured Input/Output and layout`, async () => {
+	test(`rendererless ${name} override inherits host renderers and stays outside managed groups`, async () => {
 		const h = await harness();
-		const definition = { name, label: "Custom file tool", description: "Non-builtin schema.", parameters: {} };
-		const result = { content: [{ type: "text", text: "ACK" }], details: { original: true } };
+		const definition = { name, label: "Custom file tool", description: "Alternate schema.", parameters: {} };
+		const args = { file_path: "custom.txt", text: "custom body", content: "retained write content" };
+		const result = { content: [{ type: "text", text: "ACK" }], details: { diff: "+1 retained edit diff" } };
 		try {
-			const tool = h.tool(name, `override-${name}`, { file_path: "custom.txt", text: "custom body" }, result, definition);
-			assert.equal(resolveRendererPolicy(tool).reason, "generic");
-			assert.equal(resolveRendererPolicy(tool).compactable, true);
-			tool.setExpanded(true);
-			const text = tool.render(120).map(strip).join("\n");
-			assert.match(text, /ACK/);
-			assert.match(text, /custom body/);
-			assert.doesNotMatch(text, /Result unavailable/);
-			assert.equal(tool.getRenderShell(), "default", "generic expansion is not the builtin file shell");
-			assert.equal(tool.toolDefinition, definition);
-			assert.equal(tool.result, result);
-		} finally { await h.close(); }
-	});
-
-	test(`adjacent renderer-less ${name} override follows the shared grouping decision`, async () => {
-		const h = await harness();
-		try {
-			const read = h.tool("read", `adjacent-read-${name}`, { path: "fixture.ts" }, { content: [{ type: "text", text: "read" }] });
-			const definition = { name, label: "Custom file tool", description: "Alternate schema.", parameters: {} };
-			const override = h.tool(name, `adjacent-${name}`, { file_path: "custom.txt", text: "body" },
-				{ content: [{ type: "text", text: "ACK" }] }, definition);
-			assert.equal(resolveRendererPolicy(override).groupable, true);
-			const group = h.root.children.find((child) => child instanceof ToolGroupComponent) as ToolGroupComponent | undefined;
-			assert.ok(group);
-			assert.ok(group.children.includes(read));
-			assert.ok(group.children.includes(override), "name alone cannot veto a generic source-aware tool");
+			h.tool("read", `adjacent-read-${name}`, { path: "fixture.ts" }, { content: [{ type: "text", text: "read" }] });
+			const override = h.tool(name, `override-${name}`, args, result, definition);
+			override.setExpanded(true);
+			const text = override.render(120).map(strip).join("\n");
+			assert.match(text, /custom\.txt/);
+			if (name === "write") assert.match(text, /retained write content/);
+			else assert.match(text, /retained edit diff/);
+			assert.doesNotMatch(text, /custom body/, "host merges the native renderer; it does not invent a generic Input pane");
+			assert.ok(h.root.children.includes(override));
+			assert.ok(!h.root.children.some((child) => child instanceof ToolGroupComponent && child.children.includes(override)));
+			assert.deepEqual(args, { file_path: "custom.txt", text: "custom body", content: "retained write content" });
+			assert.deepEqual(result, { content: [{ type: "text", text: "ACK" }], details: { diff: "+1 retained edit diff" } });
 		} finally { await h.close(); }
 	});
 }

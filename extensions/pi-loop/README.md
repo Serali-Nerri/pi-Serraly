@@ -1,6 +1,6 @@
 # loop
 
-Session-local, fixed-interval prompt repetition for Pi 1.0.0. The module owns
+Session-local, fixed-interval prompt repetition for Pi 1.0.2. The module owns
 `/loop` and the `local-loop` status entry; it does not depend on the UI module.
 
 ```text

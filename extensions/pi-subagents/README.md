@@ -2,7 +2,7 @@
 
 独立入口 `dist/pi-subagents/index.js`，在 Pi 中注册 **`Agent`、`StopAgent`、
 `AgentStatus`** 和 **`/agents`**。三工具使用宿主默认的 direct exposure，注册后
-active；UI 模块只管展示，不执行或代管子代理。支持基线是 Pi **1.0.0**、
+active；UI 模块只管展示，不执行或代管子代理。支持基线是 Pi **1.0.2**、
 TypeBox **1.3.27**、Node **≥22.19**。来源与许可见 [UPSTREAM.md](UPSTREAM.md)
 及 [LICENSE](LICENSE)；构建、隔离和 release/替换流程见[开发指南](../../docs/development.md)。
 

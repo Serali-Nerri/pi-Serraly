@@ -1,6 +1,6 @@
 {
 	"name": "pi-tools",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"private": true,
 	"type": "module",
 	"description": "apply_patch plus codemode-only grep/find/ls replacements for the private pi-Serraly workspace",
