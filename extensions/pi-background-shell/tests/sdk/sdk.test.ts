@@ -308,12 +308,9 @@ function requireTerminal(value: unknown): BackgroundTaskExtensionTerminal {
   return { schema_version: BG_TERMINAL_SCHEMA, task: requiredTask(value['task'], 'terminal task') };
 }
 
-// The EventBus kill response is only emitted after stopTask resolves. On Windows
-// the two-stage taskkill flow issues a logical terminate request first and waits
-// the full KILL_GRACE_MS window (3000 ms) before forcing, so a kill response
-// cannot arrive inside the POSIX budget. POSIX keeps the tight budget so a
-// genuine hang still fails fast there.
-const EVENT_RESPONSE_TIMEOUT_MS = process.platform === 'win32' ? 10_000 : 1500;
+// Kill replies await stopTask, including TERM-to-KILL grace and process-tree
+// proof. POSIX covers that full budget; Windows also allows for helper startup.
+const EVENT_RESPONSE_TIMEOUT_MS = process.platform === 'win32' ? 10_000 : STOP_WAIT_MS + 500;
 
 function waitForEventResponse(
   eventBus: EventBus,
@@ -350,8 +347,7 @@ async function emitEventRequest(
   return pending;
 }
 
-// Matches EVENT_RESPONSE_TIMEOUT_MS: a killed task only reaches a terminal state
-// after the Windows grace window elapses, so the same platform budget applies.
+// Terminal publication follows tree-stop completion and the correlated response.
 const TERMINAL_SNAPSHOT_POLL_MS = 25;
 const TERMINAL_SNAPSHOT_ATTEMPTS = EVENT_RESPONSE_TIMEOUT_MS / TERMINAL_SNAPSHOT_POLL_MS;
 
@@ -665,11 +661,26 @@ void describe('sdk', () => {
         name: 'EventBus Sleep',
         // `exec` is a POSIX shell builtin and shellQuote emits POSIX quoting;
         // neither is valid under cmd.exe. Node's own quoting handles both.
-        command: `node -e ${JSON.stringify('setTimeout(() => {}, 5000)')}`,
+        command: `node -e ${JSON.stringify('process.on("SIGTERM", () => {}); process.stdout.write("term-handler-ready\\n"); setInterval(() => {}, 1000)')}`,
         notifyOnCompletion: false,
         triggerOnCompletion: false,
       });
       const sleepTask = requiredTask(requireOkResult(sleep), 'sleep run task');
+      let ready = false;
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        const readiness = await emitEventRequest(eventBus, `sdk-sleep-ready-${String(attempt)}`, 'logs', {
+          taskId: sleepTask.id,
+          maxBytes: 100,
+          tail: true,
+        });
+        const output = requiredJsonObject(requireOkResult(readiness), 'readiness logs must be an object');
+        if (String(output['text']).includes('term-handler-ready')) {
+          ready = true;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      assert.ok(ready, 'child installs its TERM handler before the kill request');
       const kill = await emitEventRequest(eventBus, 'sdk-kill', 'kill', { taskId: sleepTask.id });
       const killResult = requiredJsonObject(requireOkResult(kill), 'kill result must be an object');
       assert.equal(requiredTask(killResult['task'], 'kill task').status, 'killed');
