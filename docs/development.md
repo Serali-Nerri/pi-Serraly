@@ -9,6 +9,9 @@ npm ci --ignore-scripts --include=optional --legacy-peer-deps
 npm run verify
 ```
 
+合并或切换分支后，若工作区目录或 lock 有变化，重新执行 `npm ci`，清除旧依赖
+与旧工作区链接；不要沿用旧 `modules/*` 布局的 `node_modules`。
+
 `build` 是唯一的构建入口；`check` 只调用严格检查及根脚本语法检查，
 `npm test` 只执行测试，不隐式重建。`verify` 顺序执行 build、check、test，
 一次构建已包含封印及包级 artifact 校验，不再重复 pack:check。任一步骤失败即失败，
@@ -202,11 +205,13 @@ settings 切换需要单独授权，并满足以下约束：
 1. 递增根版本并发布新目录，完成 verify、release validation、外部宿主启动
    检查和 CLI/SDK 验收，记录实际宿主/Node 版本。平台 skip 或未人工查看的
    PTY 必须如实列出，不额外制造未承诺的 Node 版本矩阵。
-2. 停止所有相关 Pi 实例，确认 child 与 MCP/后台资源已关闭；备份 user settings
-   与相关已信任项目 settings 的精确内容。
+2. 备份 user settings 与需要修改的已信任项目 settings 的精确内容，并验证备份
+   可原样恢复。切换引用不要求停止正在运行的 Pi 实例，不终止会话或 child/MCP/
+   后台资源，也不自动触发热重载。
 3. 切换只改 `packages`：先校验目标 release 的 manifest 与 digest，再按 Pi 的
    settings 锁协议原子写入，写入后确认引用恰好一条且不影响其他条目。
-4. 启动后核对受影响入口各注册一次、无冲突诊断，再恢复正常工作。
+4. 已运行实例继续使用已加载的代码；下次完整启动加载新 release。核对新启动的
+   受影响入口各注册一次、无冲突诊断。
 5. 回滚恢复备份 settings 并指回旧版本目录；新旧 release 和备份都保留供检查，
    **不覆写**，不把内存会话假定为可跨重启恢复。配置保留
    `<agentDir>/subagents-lite.json`、`subagents-lite-prompt.md`、`agents/*.md`
