@@ -335,10 +335,13 @@ void describe('same-process reload shell owner', { concurrency: false }, () => {
     });
   }
 
-  void it('releases an orphaned slot when terminal settlement follows a bounded stop failure', async () => {
+  void it('releases an orphaned slot when terminal settlement follows a bounded stop failure', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let currentTime = 1000;
     const logs: string[] = [];
     let nonce = 0;
     const hub = createReloadShellOwnerHubForTests({
+      now: () => currentTime,
       handoffTimeoutMs: 20,
       randomNonce: () => String(++nonce).padStart(32, '0'),
       logger: { error: (...args: unknown[]) => logs.push(args.map(String).join(' ')) },
@@ -354,6 +357,7 @@ void describe('same-process reload shell owner', { concurrency: false }, () => {
     });
     let released = false;
     let stopCalls = 0;
+    let stopAttempt: Promise<BgTask> | undefined;
     const execution: ReloadableShellExecutionV1 = {
       protocol: RELOAD_SHELL_OWNER_PROTOCOL,
       launchNonce: task.reloadSurvival?.launchNonce ?? 'owner-late-terminal',
@@ -392,7 +396,7 @@ void describe('same-process reload shell owner', { concurrency: false }, () => {
         released = true;
         execution.phase = 'released';
       },
-      async requestStop() {
+      requestStop() {
         stopCalls += 1;
         execution.phase = 'stop_requested';
         setTimeout(() => {
@@ -401,8 +405,12 @@ void describe('same-process reload shell owner', { concurrency: false }, () => {
           resolveTerminal(task);
           sink?.onTerminal(execution);
         }, 70);
-        await new Promise((resolve) => setTimeout(resolve, 10));
-        throw new Error('synthetic bounded stop wait expired before terminal close');
+        stopAttempt = new Promise<BgTask>((_resolve, reject) => {
+          setTimeout(() => {
+            reject(new Error('synthetic bounded stop wait expired before terminal close'));
+          }, 10);
+        });
+        return stopAttempt;
       },
     };
     task.reloadExecution = execution;
@@ -410,7 +418,18 @@ void describe('same-process reload shell owner', { concurrency: false }, () => {
     hub.markAdmissionCommitted(lease, execution);
     hub.beginReloadHandoff(lease);
 
-    await new Promise((resolve) => setTimeout(resolve, 130));
+    currentTime += 20;
+    t.mock.timers.tick(20);
+    assert.ok(stopAttempt, 'handoff expiry must start the bounded stop attempt');
+    currentTime += 10;
+    t.mock.timers.tick(10);
+    await assert.rejects(stopAttempt, /bounded stop wait expired/u);
+    assert.equal(released, false, 'a failed stop wait is not terminal ownership proof');
+
+    // Settle the injected execution only after its stop wait has failed.
+    currentTime += 60;
+    t.mock.timers.tick(60);
+    await execution.terminal;
 
     assert.equal(stopCalls, 1, 'deadline cleanup must request one stop');
     assert.equal(task.status, 'failed');
