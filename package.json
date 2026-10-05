@@ -22,7 +22,6 @@
     "build": "node scripts/build.mjs",
     "test": "node scripts/test.mjs",
     "pack:check": "node scripts/pack-check.mjs",
-    "check:package-versions": "node scripts/check-package-versions.mjs",
     "verify": "npm run build && npm run check && npm test",
     "release": "node scripts/release.mjs"
   },

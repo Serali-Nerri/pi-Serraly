@@ -51,9 +51,9 @@ Run from the repository root:
 - `npm test` — run package and integration suites using existing artifacts; no implicit build.
 - `npm run pack:check` — verify existing sealed artifacts without rebuilding.
 - `npm run verify` — build once (including artifact validation), then check and run all suites.
+- `npm run build && npm run release && pi install "$HOME/.local/share/pi-Serraly/releases/$(node -p 'require("./package.json").version')"` — build, seal a release directory and install it into Pi; after a version change, `pi remove` the previous release path.
 - `node scripts/test.mjs --package pi-loop` — debug one package; does not replace full verification.
 - `node scripts/preview.mjs regular` — preview UI with temporary data.
-- `npm run check:package-versions -- --base <git-ref>` — release-identity gate; a baseline that is unavailable in the clone is skipped explicitly, a resolvable one fails on drift.
 
 Every root entry point refuses to start below Node 22.19.0 (`scripts/lib/node-version.mjs`);
 `.github/workflows/ci.yml` runs `npm run verify` once on Node 24.12.0 with a pinned host

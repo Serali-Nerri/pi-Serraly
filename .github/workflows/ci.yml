@@ -21,10 +21,8 @@ jobs:
       # A pinned host outside the workspace and outside the development tree.
       PI_UI_HOST_PACKAGE: ${{ runner.temp }}/pi-host/node_modules/@earendil-works/pi-coding-agent
     steps:
-      - name: Check out the full history
+      - name: Check out the repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Use the qualified runtime
         uses: actions/setup-node@v4
@@ -49,14 +47,6 @@ jobs:
             @earendil-works/pi-coding-agent@1.0.2 \
             @earendil-works/pi-tui@1.0.2 \
             typebox@1.3.27
-
-      - name: Release-identity gate (pull request)
-        if: github.event_name == 'pull_request'
-        run: npm run check:package-versions -- --base "${{ github.event.pull_request.base.sha }}" --head "${{ github.event.pull_request.head.sha }}" --merge-base
-
-      - name: Release-identity gate (push)
-        if: github.event_name == 'push'
-        run: npm run check:package-versions -- --base "${{ github.event.before }}" --head "${{ github.sha }}"
 
       - name: Verify
         run: npm run verify

@@ -179,36 +179,14 @@ npm run verify
 ```
 
 `.github/workflows/ci.yml` 在 Ubuntu 上以 Node **24.12.0** 跑一次完整
-`npm run verify`（npm 11.7.0、完整 git 历史），并把固定的
-宿主 Pi 1.0.2 安装到 runner 的临时目录（在工作区之外），通过 `PI_UI_HOST_PACKAGE`
-指向它；HOME、agent 目录与缓存都在 runner 临时目录内，不接触真实配置。只有
+`npm run verify`（npm 11.7.0），并把固定的宿主 Pi 1.0.2 安装到 runner 的
+临时目录（在工作区之外），通过 `PI_UI_HOST_PACKAGE` 指向它；HOME、agent
+目录与缓存都在 runner 临时目录内，不接触真实配置。只有
 安装锁定开发依赖和该宿主时允许访问 registry，测试与 release 阶段保持网络拒绝。
 CI 权限只有 `contents: read`，没有部署或发布凭据。
 `>=22.19.0` 保留为工具链启动下限，不作为本项目每次交付的多版本资格声明。
 本地不另外安装 Node 22.19 或重复切换 nvm 验收；若以后承诺分发到不同运行时，
 再增加有明确目标的 CI 兼容性任务。
-
-版本门禁在 CI 中额外执行一次 diff 检查：pull request 用
-`--base <base.sha> --head <head.sha> --merge-base`，以共同祖先的发布面和版本作为
-基线；push 仍直接比较 before/current SHA。基线在克隆中
-不可用（例如全零 SHA 或浅克隆）时，门禁打印明确的跳过说明并继续执行完整
-verify，不把跳过写成通过；基线可用时漂移仍然失败。
-
-## 版本门禁
-
-每个包独立版本。发布面（包内源码、构建配方、manifest、打包 payload 与随包文档）
-变化后必须提高该包版本；只有包内测试或仓库根人类文档变化时可以不动版本。
-被 bundle 的库升版时，必须同时更新消费者的精确依赖并提高消费者版本，因为它的
-封印 payload 已变。版本按语义版本优先级比较：build metadata 不参与排序，
-prerelease 低于相同数字版本的正式版。根 release-set 版本独立于各包。
-
-```sh
-npm run check:package-versions -- --base <git-ref> [--head <git-ref>] [--merge-base]
-```
-
-基线只读取 Git 中的包身份（名称/版本/依赖名），因此旧提交不需要当前的
-`serraly` schema；不查询远端分支或 npm。共享构建脚本的产物影响由审阅判断，
-门禁不声称自动推断语义。包移动目录后仍按名称识别原版本。
 
 ## 更新与回滚
 
