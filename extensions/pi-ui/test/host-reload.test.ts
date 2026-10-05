@@ -129,7 +129,7 @@ try {
 			rebuild();
 		} });
 		assert.notEqual(tool, oldTool);
-		assert.deepEqual([...mounted.keys()].sort(), ["header", "footer", "pi-ui-bridge"].sort());
+		assert.deepEqual([...mounted.keys()].sort(), ["footer", "pi-ui-bridge"].sort());
 		assert.notEqual(SDK.ToolExecutionComponent.prototype.getCallRenderer, original);
 		assert.equal(tool.getCallRenderer, SDK.ToolExecutionComponent.prototype.getCallRenderer);
 		assert.equal(assistant.expanded, true, "new transcript follows global tool expansion after actual reload");

@@ -105,7 +105,7 @@ suite.
 
 ## Manual visual checklist
 
-- [ ] Welcome/footer layout, model/cwd, runtime and extension status segments.
+- [ ] Native startup header untouched by this module, footer layout, cwd, runtime and extension status segments.
 - [ ] On/compact/off presentation; Thinking remains interactive in off.
 - [ ] All five settings pages, twelve settings and keyboard/focus behavior.
 - [ ] `/context` labels, six categories, text previews and Escape ownership.

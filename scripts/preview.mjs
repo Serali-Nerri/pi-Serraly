@@ -83,7 +83,7 @@ export default function (pi) {
 		state.hasUI = ctx.hasUI;
 		if (state.ui !== ctx.ui) {
 			state.ui = ctx.ui;
-			for (const name of ["setWidget", "setHeader", "setFooter"]) {
+			for (const name of ["setWidget", "setFooter"]) {
 				const original = ctx.ui[name];
 				ctx.ui[name] = function (...args) {
 					state.calls.push({ method: name, key: name === "setWidget" ? args[0] : undefined,
@@ -312,7 +312,7 @@ export default function (pi) {
 			assert.equal(patch.installed.getCallRenderer, ToolExecutionComponent.prototype.getCallRenderer);
 			assert.notEqual(AssistantMessageComponent.prototype.updateContent, state.assistantMethod);
 			const installed = state.calls.slice(state.startCallOffset).filter((call) => call.install);
-			assert.deepEqual(installed.map((call) => call.method), ["setWidget", "setHeader", "setFooter"]);
+			assert.deepEqual(installed.map((call) => call.method), ["setWidget", "setFooter"]);
 			assert.equal(installed[0].key, "pi-ui-bridge");
 			// Obtain the actual interactive-mode TUI without adding a persistent widget.
 			await ctx.ui.custom((tui, _theme, _keys, done) => {

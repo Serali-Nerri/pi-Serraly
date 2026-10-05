@@ -275,8 +275,8 @@ try {
 	for (let cycle = 0; cycle < 3; cycle++) {
 		const offset = state.calls.length;
 		await session.bindExtensions({ uiContext: ui, mode: "tui" });
-		assert.deepEqual([...mounted.keys()].sort(), ["header", "footer", "pi-ui-bridge"].sort());
-		assert.deepEqual(state.calls.slice(offset).filter((call) => call.install).map((call) => call.method), ["setWidget", "setHeader", "setFooter"]);
+		assert.deepEqual([...mounted.keys()].sort(), ["footer", "pi-ui-bridge"].sort());
+		assert.deepEqual(state.calls.slice(offset).filter((call) => call.install).map((call) => call.method), ["setWidget", "setFooter"]);
 		assert.ok(state.timers > 0, "guard observes the real UI scheduler");
 		assert.equal(state.activeTimers.size, 1, "one scheduler timer serves all UI jobs");
 		for (const component of mounted.values()) for (const width of [40, 80, 120]) for (const line of component.render(width))
@@ -291,9 +291,9 @@ try {
 		const restartOffset = state.calls.length;
 		await session.extensionRunner.emit({ type: "session_start", reason: "reload" });
 		assert.deepEqual(state.calls.slice(restartOffset).map((call) => [call.method, call.install]),
-			[["setFooter", false], ["setHeader", false], ["setWidget", false],
-				["setWidget", true], ["setHeader", true], ["setFooter", true]]);
-		assert.equal(mounted.size, 3);
+			[["setFooter", false], ["setWidget", false],
+				["setWidget", true], ["setFooter", true]]);
+		assert.equal(mounted.size, 2);
 		await session.extensionRunner.emit({ type: "session_shutdown" });
 		assert.equal(state.activeTimers.size, 0);
 		assert.deepEqual([...mounted.keys()], []);
@@ -346,8 +346,8 @@ for (const mode of ["regular", "fullscreen"] as const) for (const width of [40, 
 				assert.match(result.ansi, /fixture/);
 				assert.ok(final.notices.some((notice: { message: string }) => notice.message.includes("mode=on")));
 				assert.ok(!final.notices.some((notice: { type: string }) => notice.type === "warning" || notice.type === "error"));
-				assert.deepEqual(final.calls.filter((call) => call.install).map((call) => call.method), ["setWidget", "setHeader", "setFooter"]);
-				assert.deepEqual(final.calls.filter((call) => !call.install).map((call) => call.method), ["setFooter", "setHeader", "setWidget"]);
+				assert.deepEqual(final.calls.filter((call) => call.install).map((call) => call.method), ["setWidget", "setFooter"]);
+				assert.deepEqual(final.calls.filter((call) => !call.install).map((call) => call.method), ["setFooter", "setWidget"]);
 				assert.equal(/\x1b\[\?1049h/.test(result.ansi), mode === "fullscreen", "actual alternate-screen terminal mode");
 				await noPersistentSession(sandbox);
 			} finally { await sandbox.cleanup(); }
@@ -370,8 +370,8 @@ for (const mode of ["regular", "fullscreen"] as const) {
 				assert.match(result.ansi, /Stage-one rich fixture complete/);
 				assert.ok(result.ansi.includes("\x1b]8;"), "native OSC8 is enabled only in this reserved-domain profile");
 				assert.ok(!final.notices.some((notice: { type: string }) => ["warning", "error"].includes(notice.type)));
-				assert.deepEqual(final.calls.filter((call) => call.install).map((call) => call.method), ["setWidget", "setHeader", "setFooter"]);
-				assert.deepEqual(final.calls.filter((call) => !call.install).map((call) => call.method), ["setFooter", "setHeader", "setWidget"]);
+				assert.deepEqual(final.calls.filter((call) => call.install).map((call) => call.method), ["setWidget", "setFooter"]);
+				assert.deepEqual(final.calls.filter((call) => !call.install).map((call) => call.method), ["setFooter", "setWidget"]);
 				await noPersistentSession(sandbox, ["rich-seed.txt", "rich-preview.ts"]);
 			} finally { await sandbox.cleanup(); }
 		});

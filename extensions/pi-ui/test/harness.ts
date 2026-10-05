@@ -41,7 +41,6 @@ export async function harness(options: HarnessOptions = {}) {
 	tui.addChild(root);
 	tui.stopped = false; tui.altScreenActive = true;
 	let overlay: Component | undefined;
-	let header: Component | undefined;
 	let footer: (Component & { dispose?(): void }) | undefined;
 	const definitions: Record<string, any> = {
 		bash: createBashToolDefinition(process.cwd()), read: createReadToolDefinition(process.cwd()),
@@ -65,7 +64,6 @@ export async function harness(options: HarnessOptions = {}) {
 			setWidget(id: string, factory: any) {
 				if (!factory) widgets.delete(id); else widgets.set(id, factory(tui, theme));
 			},
-			setHeader(factory: any) { header = factory?.(tui, theme); },
 			setFooter(factory: any) {
 				footer?.dispose?.();
 				footer = factory?.(tui, theme, {
@@ -148,7 +146,7 @@ export async function harness(options: HarnessOptions = {}) {
 	const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 	return { pi, ctx, tui, root, widgets, commands, entries, registered, mutations, definitions, events, terminal, notices, toolMetadata,
 		tool, emit, render, pointer, click, flush, get overlay() { return overlay; },
-		get header() { return header; }, get footer() { return footer; },
+		get footer() { return footer; },
 		async close() { await emit("session_shutdown"); tui.stopSelectionAutoScroll(); tui.stopScrollbarHover(); tui.stopScrollbarDrag(); },
 	};
 }

@@ -6,7 +6,7 @@ import { invalidateContextSnapshot } from "../state/context-snapshot.ts";
 import { FOOTER_SEGMENTS } from "./display.ts";
 import { installFooter } from "./footer.ts";
 import { emptyGitStatus, readGitStatus } from "./git.ts";
-import { captureShellHost, installHeader } from "./header.ts";
+import { captureShellHost } from "./host.ts";
 import { readRuntimeInfo } from "./runtime.ts";
 
 export interface ShellController {
@@ -38,7 +38,6 @@ export function createShellController(
 	let state = createInitialState();
 	let generation = 0;
 	let current: (ReturnType<typeof captureShellHost> & { ctx: ExtensionContext; cwd: string }) | undefined;
-	let cleanupHeader: ((clearHost?: boolean) => void) | undefined;
 	let cleanupFooter: ((clearHost?: boolean) => void) | undefined;
 	let gitJob: { generation: number; pending: boolean } | undefined;
 	const contextSessions = new WeakMap<ExtensionContext, string | undefined>();
@@ -111,15 +110,12 @@ export function createShellController(
 		current = undefined;
 		gitJob = undefined;
 		for (const job of ["activity", "git", "runtime"]) scheduler.cancel(`${key}:${job}`);
-		const header = cleanupHeader;
 		const footer = cleanupFooter;
-		cleanupHeader = undefined;
 		cleanupFooter = undefined;
 		if (manager) invalidateUsageCache(manager);
-		// Footer owns the subscriptions: release those before either view can touch
-		// the host. Each installer checks its captured session/UI authority itself.
-		try { footer?.(); }
-		finally { header?.(); }
+		// The footer owns its host subscriptions and checks its captured
+		// session/UI authority itself.
+		footer?.();
 	};
 
 	return {
@@ -132,7 +128,6 @@ export function createShellController(
 			const token = generation;
 			invalidateUsageCache(current.manager);
 			try {
-				cleanupHeader = installHeader(pi, ctx, () => isCurrent(token));
 				cleanupFooter = installFooter(ctx, () => state, () => getModelMeta(ctx, () => pi.getThinkingLevel()), {
 					requestRender: request,
 					scheduleGitRefresh: scheduleGit,

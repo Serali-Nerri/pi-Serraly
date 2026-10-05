@@ -5,7 +5,7 @@ import type { IconGlyphs, IconMode } from "./icons.ts";
 import { resolveGlyphs, resolveIconMode, runtimeSymbol } from "./icons.ts";
 import type { GitStatus } from "./git.ts";
 import type { RuntimeInfo } from "./runtime.ts";
-import { captureShellHost } from "./header.ts";
+import { captureShellHost } from "./host.ts";
 import {
 	alignRight,
 	basenamePath,

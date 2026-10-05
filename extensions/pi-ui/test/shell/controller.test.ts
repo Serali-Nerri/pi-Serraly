@@ -40,9 +40,7 @@ function deferred<T>() {
 async function settle() { await Promise.resolve(); await Promise.resolve(); }
 
 function harness(queries: ShellQueries = { git: async () => emptyGitStatus(), runtime: async () => null }) {
-	let header: View | undefined;
 	let footer: View | undefined;
-	let removedHeader = 0;
 	let removedFooter = 0;
 	let unsubscribed = 0;
 	const branches: (() => void)[] = [];
@@ -51,12 +49,8 @@ function harness(queries: ShellQueries = { git: async () => emptyGitStatus(), ru
 		get(target, key) { assert.ok(key in target, `unowned ExtensionAPI access: ${String(key)}`); return Reflect.get(target, key); },
 	}) as unknown as ExtensionAPI;
 	const ui = new Proxy({ theme,
-		setHeader(factory: Function | undefined) {
-			// Deliberately do NOT dispose old components: the controller must own cleanup.
-			if (!factory) removedHeader++;
-			header = factory?.({ requestRender() { throw new Error("separate TUI bridge"); } }, theme);
-		},
 		setFooter(factory: Function | undefined) {
+			// Deliberately do NOT dispose old components: the controller must own cleanup.
 			if (!factory) removedFooter++;
 			footer = factory?.({ requestRender() { throw new Error("separate TUI bridge"); } }, theme, {
 				onBranchChange(fn: () => void) { branches.push(fn); return () => { unsubscribed++; }; },
@@ -71,8 +65,10 @@ function harness(queries: ShellQueries = { git: async () => emptyGitStatus(), ru
 		} as unknown as ExtensionContext;
 	}
 	const controller = createShellController(pi, scheduler.scheduler, queries);
-	return { controller, pi, scheduler, context, branches, header: () => header, footer: () => footer,
-		removedHeader: () => removedHeader, removedFooter: () => removedFooter, unsubscribed: () => unsubscribed };
+	// The synthetic UI deliberately omits `setHeader`: the proxy asserts on any
+	// unowned access, so installing a startup header fails the test itself.
+	return { controller, pi, scheduler, context, branches, footer: () => footer,
+		removedFooter: () => removedFooter, unsubscribed: () => unsubscribed };
 }
 
 // Model Pi 1.0.2: all context getters and the captured public liveness query
@@ -96,12 +92,11 @@ function invalidatableContext(base: ExtensionContext, onProbe = () => {}) {
 	return { ctx, staleReads, invalidate: () => { active = false; } };
 }
 
-test("controller installs the full shell, uses only owned scheduler jobs and releases subscriptions without host disposal", async () => {
+test("controller installs the footer shell, uses only owned scheduler jobs and releases subscriptions without host disposal", async () => {
 	const h = harness();
 	const ctx = h.context();
 	h.scheduler.schedule("parent:work", 1, () => {}, true);
 	h.controller.start(ctx);
-	assert.match(h.header()!.render(120).join("\n"), /Welcome/);
 	assert.match(h.footer()!.render(180).join("\n"), /other extension status/);
 	h.scheduler.flush(":git"); h.scheduler.flush(":runtime"); await settle();
 	h.controller.agentStart();
@@ -116,7 +111,7 @@ test("controller installs the full shell, uses only owned scheduler jobs and rel
 	const footer = h.footer()!;
 	h.controller.dispose(); h.controller.dispose();
 	assert.equal(h.unsubscribed(), 1);
-	assert.equal(h.removedHeader(), 1); assert.equal(h.removedFooter(), 1);
+	assert.equal(h.removedFooter(), 1);
 	assert.deepEqual(Array.from(h.scheduler.jobs.keys()), ["parent:work"]);
 	const renders = h.scheduler.renders;
 	h.branches[0](); activity.callback(); footer.dispose?.();
@@ -201,7 +196,7 @@ test("a reused manager's replaced session cleans listeners but never clears stal
 	assert.equal(h.scheduler.renders, renders);
 	h.controller.dispose();
 	assert.equal(h.unsubscribed(), 1);
-	assert.equal(h.removedHeader(), 0); assert.equal(h.removedFooter(), 0);
+	assert.equal(h.removedFooter(), 0);
 	assert.deepEqual(footer.render(180), []);
 	const fresh = h.context(manager);
 	h.controller.start(fresh);
@@ -232,7 +227,6 @@ for (const replacement of ["foreign", "new shell"] as const) {
 		h.scheduler.schedule("parent:work", 1, () => {}, true);
 		h.controller.start(old.ctx);
 		h.controller.agentStart();
-		const oldHeader = h.header()!;
 		const oldFooter = h.footer()!;
 		const oldKeys = Array.from(h.scheduler.jobs.keys()).filter((key) => key !== "parent:work");
 		assert.equal(oldKeys.length, 3);
@@ -244,34 +238,31 @@ for (const replacement of ["foreign", "new shell"] as const) {
 		old.staleReads.length = 0;
 		let newer: ReturnType<typeof createShellController> | undefined;
 		if (replacement === "foreign") {
-			base.ui.setHeader(() => ({ invalidate() {}, render: () => ["foreign header"] }));
 			base.ui.setFooter(() => ({ invalidate() {}, render: () => ["foreign footer"] }));
 		} else {
 			newer = createShellController(h.pi, h.scheduler.scheduler, queries);
 			// Same UI, manager and ID: ownership and runner validity must suffice.
 			newer.start(h.context(base.sessionManager));
 		}
-		const newHeader = h.header();
 		const newFooter = h.footer();
 		const remainingKeys = Array.from(h.scheduler.jobs.keys()).filter((key) => !oldKeys.includes(key));
 		const renders = h.scheduler.renders;
 		h.controller.messageEnd(); h.branches[0]();
-		assert.deepEqual(oldHeader.render(120), []);
 		assert.deepEqual(oldFooter.render(180), []);
 		disposing = true;
 		assert.doesNotThrow(() => h.controller.dispose());
 		assert.doesNotThrow(() => h.controller.dispose());
 		for (const callback of oldCallbacks) callback();
-		h.branches[0](); oldHeader.dispose?.(); oldFooter.dispose?.();
+		h.branches[0](); oldFooter.dispose?.();
 		assert.equal(h.unsubscribed(), 1);
-		assert.equal(h.removedHeader(), 0); assert.equal(h.removedFooter(), 0);
-		assert.equal(h.header(), newHeader); assert.equal(h.footer(), newFooter);
+		assert.equal(h.removedFooter(), 0);
+		assert.equal(h.footer(), newFooter);
 		assert.deepEqual(Array.from(h.scheduler.jobs.keys()), remainingKeys);
 		assert.equal(h.scheduler.renders, renders);
 		assert.equal(gitCalls, 0); assert.equal(runtimeCalls, 0);
 		assert.deepEqual(old.staleReads, [], "cleanup and stale callbacks never re-read the old context");
 		assert.deepEqual(disposalProbes, replacement === "foreign" ? [
-			{ unsubscribed: 1, ownedJobs: 0 }, { unsubscribed: 1, ownedJobs: 0 },
+			{ unsubscribed: 1, ownedJobs: 0 },
 		] : [], "local jobs and subscriptions are released before any host liveness query");
 		newer?.dispose();
 		assert.deepEqual(Array.from(h.scheduler.jobs.keys()), ["parent:work"]);
@@ -291,14 +282,12 @@ test("restart after runner invalidation ignores in-flight results and coalesced 
 	h.controller.agentStart();
 	for (let i = 0; i < 30; i++) h.controller.toolEnd(old.ctx);
 	const activity = Array.from(h.scheduler.jobs.values()).find((job) => job.repeat)!.callback;
-	const oldHeader = h.header()!;
 	const oldFooter = h.footer()!;
 	old.invalidate();
 	const fresh = h.context();
 	assert.doesNotThrow(() => h.controller.start(fresh));
 	assert.equal(h.unsubscribed(), 1);
-	assert.equal(h.removedHeader(), 0); assert.equal(h.removedFooter(), 0);
-	const freshHeader = h.header();
+	assert.equal(h.removedFooter(), 0);
 	const freshFooter = h.footer();
 	const renders = h.scheduler.renders;
 	gitJobs[0].resolve({ ...emptyGitStatus(), branch: "STALE" });
@@ -306,9 +295,8 @@ test("restart after runner invalidation ignores in-flight results and coalesced 
 	await settle();
 	activity(); h.branches[0]();
 	h.controller.toolEnd(old.ctx); h.controller.agentEnd(old.ctx); h.controller.rebuild(old.ctx);
-	assert.deepEqual(oldHeader.render(120), []);
 	assert.deepEqual(oldFooter.render(180), []);
-	assert.equal(h.header(), freshHeader); assert.equal(h.footer(), freshFooter);
+	assert.equal(h.footer(), freshFooter);
 	assert.equal(h.scheduler.renders, renders);
 	assert.equal(gitJobs.length, 1, "no stale coalesced follow-up");
 	assert.equal(runtimeJobs.length, 1);
@@ -319,7 +307,7 @@ test("restart after runner invalidation ignores in-flight results and coalesced 
 	assert.match(h.footer()!.render(180).join("\n"), /fresh/);
 	h.controller.dispose(); h.controller.dispose();
 	assert.equal(h.unsubscribed(), 2);
-	assert.equal(h.removedHeader(), 1); assert.equal(h.removedFooter(), 1);
+	assert.equal(h.removedFooter(), 1);
 	assert.equal(h.scheduler.jobs.size, 0);
 });
 
@@ -348,7 +336,7 @@ test("rejected queries are contained and disposal does not stop parent scheduler
 	h.controller.dispose();
 });
 
-test("failed host installation rolls back the header and every acquired footer subscription", () => {
+test("failed host installation rolls back every acquired footer subscription", () => {
 	const h = harness();
 	const ctx = h.context();
 	const originalUI = ctx.ui;
@@ -358,7 +346,6 @@ test("failed host installation rolls back the header and every acquired footer s
 	} };
 	assert.throws(() => h.controller.start(ctx), /host rejected installed footer/);
 	assert.equal(h.unsubscribed(), 1);
-	assert.equal(h.removedHeader(), 1);
 	assert.equal(h.scheduler.jobs.size, 0);
 	assert.deepEqual(h.footer()!.render(120), []);
 	h.controller.dispose();

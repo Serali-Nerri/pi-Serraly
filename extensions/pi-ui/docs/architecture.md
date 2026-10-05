@@ -26,7 +26,7 @@ other jobs from running. Shutdown stops scheduling before resources are released
 | --- | --- |
 | `compat/` | Private host fields, prototype capability checks, source-aware renderer policy, ownership, grouping/compact/message/mouse integration |
 | `state/` | Billing/context snapshots and Thinking timing/persistence controller |
-| `shell/` | Header/footer views, statuses, bounded Git/runtime queries and generation guards |
+| `shell/` | Footer view, captured host identity/liveness, statuses, bounded Git/runtime queries and generation guards |
 | `transcript/` | Thinking and tool/file/diff/Input-Output views over captured data |
 | `overlays/` | Context and text-preview dialogs, hover/TUI state |
 | `markdown/` | One display-only transformer; native Mermaid/ordinary URLs plus narrow CJK-punctuation URL-boundary compatibility |

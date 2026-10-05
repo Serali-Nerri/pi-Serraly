@@ -458,7 +458,7 @@ if (scenario === "filters") {
 				assert.equal((await execute(h, "AskUserQuestion", questionArgs)).details.questions.length, 1);
 			} else {
 				mounted = await mount(h);
-				assert.ok(mounted.mounted.has("footer") && mounted.mounted.has("header"), "disabling a business entry does not disable UI");
+				assert.ok(mounted.mounted.has("footer"), "disabling a business entry does not disable UI");
 			}
 		} finally { await h.close(); mounted?.dispose(); }
 	}
