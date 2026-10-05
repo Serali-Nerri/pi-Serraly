@@ -7,13 +7,13 @@
 
 | 能力 | 运行入口 | 使用与契约 |
 | --- | --- | --- |
-| UI | `extensions/pi-ui/dist/index.js` | [工具卡、Thinking、shell、`/ccstyle`、`/context`](extensions/pi-ui/README.md) |
-| 提问 | `extensions/pi-ask-user-question/dist/index.js` | [`AskUserQuestion`、对话框、AFK](extensions/pi-ask-user-question/README.md) |
-| 循环 | `extensions/pi-loop/dist/index.js` | [`/loop`、内存任务和忙闲调度](extensions/pi-loop/README.md) |
-| 基础工具 | `extensions/pi-tools/dist/index.js` | [`apply_patch` 与 codemode 专用的 `grep`/`find`/`ls`](extensions/pi-tools/README.md) |
+| UI | `extensions/pi-ui/dist/pi-ui.js` | [工具卡、Thinking、shell、`/ccstyle`、`/context`](extensions/pi-ui/README.md) |
+| 提问 | `extensions/pi-ask-user-question/dist/pi-ask-user-question.js` | [`AskUserQuestion`、对话框、AFK](extensions/pi-ask-user-question/README.md) |
+| 循环 | `extensions/pi-loop/dist/pi-loop.js` | [`/loop`、内存任务和忙闲调度](extensions/pi-loop/README.md) |
+| 基础工具 | `extensions/pi-tools/dist/pi-tools.js` | [`apply_patch` 与 codemode 专用的 `grep`/`find`/`ls`](extensions/pi-tools/README.md) |
 | 后台 shell | `extensions/pi-background-shell/dist/extensions/background-tasks.js` | [`bg_*`、任务 UI、通知和同进程 reload](extensions/pi-background-shell/README.md) |
-| 外部目录 | `extensions/pi-add-dir/dist/index.js` | [`/dir-add`、`/dir-ls`、外部指令与 skills](extensions/pi-add-dir/README.md) |
-| 子代理 | `extensions/pi-subagents/dist/index.js` | [`Agent`、`StopAgent`、`AgentStatus`、`/agents` 与独立原生 SDK 会话](extensions/pi-subagents/README.md) |
+| 外部目录 | `extensions/pi-add-dir/dist/pi-add-dir.js` | [`/dir-add`、`/dir-ls`、外部指令与 skills](extensions/pi-add-dir/README.md) |
+| 子代理 | `extensions/pi-subagents/dist/pi-subagents.js` | [`Agent`、`StopAgent`、`AgentStatus`、`/agents` 与独立原生 SDK 会话](extensions/pi-subagents/README.md) |
 
 每个扩展是独立的 private npm workspace 包，拥有自己的 manifest、构建、测试、许可
 和版本；`packages/` 下的共享库只被这些扩展在构建期 bundle。根 `pi` 显式声明空

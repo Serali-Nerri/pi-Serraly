@@ -1,12 +1,12 @@
 // Hand-derived public registration contracts, NOT imported from implementation.
 export const entriesByName = {
-	"pi-add-dir": "./dist/index.js",
-	"pi-ask-user-question": "./dist/index.js",
+	"pi-add-dir": "./dist/pi-add-dir.js",
+	"pi-ask-user-question": "./dist/pi-ask-user-question.js",
 	"pi-background-shell": "./dist/extensions/background-tasks.js",
-	"pi-loop": "./dist/index.js",
-	"pi-subagents": "./dist/index.js",
-	"pi-tools": "./dist/index.js",
-	"pi-ui": "./dist/index.js",
+	"pi-loop": "./dist/pi-loop.js",
+	"pi-subagents": "./dist/pi-subagents.js",
+	"pi-tools": "./dist/pi-tools.js",
+	"pi-ui": "./dist/pi-ui.js",
 };
 export const names = Object.keys(entriesByName);
 export const releaseEntries = names.map((name) => `./extensions/${name}/${entriesByName[name].slice(2)}`);

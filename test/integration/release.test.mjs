@@ -44,6 +44,8 @@ test("release carries seven independent members prepared without a package manag
 		assert.equal(manifest.workspaces, undefined);
 		assert.deepEqual(manifest.dependencies, {}, "release manifest declares no installable runtime dependencies");
 		assert.deepEqual(manifest.pi, { extensions: releaseEntries });
+		const labels = releaseEntries.map((entry) => entry.slice(entry.lastIndexOf("/") + 1));
+		assert.equal(new Set(labels).size, releaseEntries.length, "each extension entry must render as a distinct label");
 		assert.equal(await present(join(output, "package-lock.json")), false);
 		assert.equal(await present(join(output, "node_modules")), false);
 		for (const name of names) {

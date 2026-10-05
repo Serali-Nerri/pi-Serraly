@@ -92,7 +92,7 @@ one:
 - `licenses/signal-exit-ISC.txt` — `signal-exit` 3.0.7
 
 The config store and its transitive dependencies are bundled into
-`dist/index.js`; the module declares no runtime dependencies of its
+`dist/pi-add-dir.js`; the module declares no runtime dependencies of its
 own.
 
 ## Not migrated

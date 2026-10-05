@@ -13,7 +13,7 @@
   ],
   "pi": {
     "extensions": [
-      "./dist/index.js"
+      "./dist/pi-loop.js"
     ]
   },
   "scripts": {

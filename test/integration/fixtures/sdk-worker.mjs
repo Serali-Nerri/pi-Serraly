@@ -83,7 +83,7 @@ function inventory(h, names) {
 		assert.equal(tool.exposure, exposure);
 		assert.equal(active.includes(tool.name), exposure === "direct", "only direct tools are initially active");
 	}
-	const subagents = extensions.find((extension) => extension.path.endsWith("/pi-subagents/dist/index.js"));
+	const subagents = extensions.find((extension) => extension.path.endsWith("/pi-subagents/dist/pi-subagents.js"));
 	assert.equal(extensions.filter((extension) => extension.messageRenderers.has("subagent-result")).length, subagents ? 1 : 0,
 		"only the enabled subagents entry registers subagent-result");
 	assert.equal(h.session.extensionRunner.getMessageRenderer("subagent-result"), subagents?.messageRenderers.get("subagent-result"),

@@ -28,7 +28,7 @@ async function release(name, packages) {
 
 test("a subset release declares and ships exactly the selected members", { timeout: 300000 }, async () => {
 	const selected = await release("ui-only", ["pi-ui"]);
-	assert.deepEqual(selected.manifest.pi.extensions, ["./extensions/pi-ui/dist/index.js"]);
+	assert.deepEqual(selected.manifest.pi.extensions, ["./extensions/pi-ui/dist/pi-ui.js"]);
 	assert.deepEqual(Object.keys(selected.record.packages), ["pi-ui"]);
 	assert.equal(await present(join(selected.output, "extensions/pi-ui")), true);
 	for (const absent of ["pi-background-shell", "pi-subagents", "pi-tools"]) {
@@ -44,8 +44,8 @@ test("a subset release declares and ships exactly the selected members", { timeo
 
 	const pair = await release("questions-subagents", ["pi-ask-user-question", "pi-subagents"]);
 	assert.deepEqual(pair.manifest.pi.extensions, [
-		"./extensions/pi-ask-user-question/dist/index.js",
-		"./extensions/pi-subagents/dist/index.js",
+		"./extensions/pi-ask-user-question/dist/pi-ask-user-question.js",
+		"./extensions/pi-subagents/dist/pi-subagents.js",
 	]);
 	assert.deepEqual(Object.keys(pair.record.packages), ["pi-ask-user-question", "pi-subagents"]);
 });
@@ -86,7 +86,7 @@ test("the release CLI reports the selected members without touching settings", {
 	{ cwd: root, env, encoding: "utf8", timeout: 290000 });
 	assert.equal(result.status, 0, result.stderr || result.stdout);
 	const manifest = JSON.parse(await readFile(join(output, "package.json"), "utf8"));
-	assert.deepEqual(manifest.pi.extensions, ["./extensions/pi-loop/dist/index.js", "./extensions/pi-tools/dist/index.js"]);
+	assert.deepEqual(manifest.pi.extensions, ["./extensions/pi-loop/dist/pi-loop.js", "./extensions/pi-tools/dist/pi-tools.js"]);
 	const rejected = spawnSync(process.execPath, [join(root, "scripts/release.mjs"), "--output", join(base, "cli-invalid"), "--package", "pi-nope"],
 		{ cwd: root, env, encoding: "utf8", timeout: 60000 });
 	assert.notEqual(rejected.status, 0);

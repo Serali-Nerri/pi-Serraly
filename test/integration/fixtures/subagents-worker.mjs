@@ -76,7 +76,7 @@ function observeTimers() {
 		globalThis[name] = function track(callback, delay, ...args) {
 			const error = {}; Error.captureStackTrace(error, track);
 			const caller = error.stack.split("\n")[1] ?? "";
-			const owned = caller.includes("/pi-subagents/dist/index.js");
+			const owned = caller.includes("/pi-subagents/dist/pi-subagents.js");
 			const fixture = caller.includes(import.meta.dirname);
 			const nativeCleanup = caller.includes("/pi-mcp/") && caller.includes("stdio.js");
 			let kind = nativeCleanup ? "cleanup" : "sdk";
@@ -154,7 +154,7 @@ export default function (pi) {
 	const settingsManager = SDK.SettingsManager.create(cwd, agentDir, { projectTrusted: config.trusted === true });
 	const loader = new SDK.DefaultResourceLoader({ cwd, agentDir, settingsManager,
 		noExtensions: true, noSkills: true, noThemes: true, noPromptTemplates: true, noContextFiles: true,
-		additionalExtensionPaths: [provider, "builtin:codemode", "builtin:tool-search", join(process.env.SERRALY_RELEASE, "extensions/pi-subagents/dist/index.js")],
+		additionalExtensionPaths: [provider, "builtin:codemode", "builtin:tool-search", join(process.env.SERRALY_RELEASE, "extensions/pi-subagents/dist/pi-subagents.js")],
 		extensionFactories: [{ name: "codemode", builtin: true, factory: SDK.createCodemodeExtension() },
 			{ name: "tool-search", builtin: true, factory: SDK.createToolSearchExtension() }] });
 	await loader.reload();

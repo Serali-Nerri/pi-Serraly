@@ -7,6 +7,7 @@ import { initTheme } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
 import { theme } from "../../node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/theme/theme.js";
 import { root } from "../../scripts/lib/packages.mjs";
+import { entriesByName } from "./fixtures/contracts.mjs";
 
 /**
  * The four tool-card consumers register their own renderers; the shared kit owns
@@ -45,7 +46,7 @@ async function loadFactory(consumer, entry) {
 	return module.default;
 }
 
-async function registered(consumer, entry = "dist/index.js") {
+async function registered(consumer, entry = entriesByName[packageDirectories[consumer].split("/").pop()]) {
 	const factory = await loadFactory(consumer, entry);
 	const pi = fakePi();
 	await factory(pi.api);
