@@ -66,7 +66,8 @@ node scripts/test.mjs --package pi-subagents --list
 
 - [跨模块职责、依赖和产物结构](docs/architecture.md)
 - [开发、测试和 release 准备](docs/development.md)
-- 各包 README 与 `LICENSE`/`UPSTREAM.md`：单能力用法及继承代码的来源与许可
+- [上游与许可汇总](UPSTREAM.md)：仍保留外部上游的扩展及其固定来源
+- 各包 README 与 `LICENSE`：单能力用法及许可
 
 旧源码仓库只作历史参考，不再用于常规更新。模块保留各自许可证，
 私有组织不将继承代码重新标记为统一的自有许可证。

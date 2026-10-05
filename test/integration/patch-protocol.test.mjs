@@ -140,7 +140,7 @@ test("the consumer enforces the total budget across views", () => {
 		"one byte over the total budget is rejected even when every view is small");
 });
 
-test("a consumer rebuilds its bundled library and ships its license", { timeout: 300000 }, async () => {
+test("a consumer rebuilds its bundled library", { timeout: 300000 }, async () => {
 	const packages = await discoverPackages();
 	const library = packages.find((pkg) => pkg.name === "pi-apply-patch-protocol");
 	const consumer = packages.find((pkg) => pkg.name === "pi-ui");
@@ -149,8 +149,6 @@ test("a consumer rebuilds its bundled library and ships its license", { timeout:
 	assert.equal(existsSync(join(library.directory, "dist/index.js")), false, "the fixture removes the built library");
 	await buildPackages(packages, ["pi-ui"]);
 	assert.equal(existsSync(join(library.directory, "dist/index.js")), true, "the consumer build rebuilt its library first");
-	assert.equal(existsSync(join(consumer.directory, "dist/licenses/pi-apply-patch-protocol/LICENSE")), true,
-		"the bundled library ships its own license text with the consumer");
 });
 
 test("a consumer built without its library dist still packs and installs standalone", { timeout: 300000 }, async (t) => {
@@ -161,6 +159,4 @@ test("a consumer built without its library dist still packs and installs standal
 	const packed = await packedFixture(t, "pi-tools");
 	assert.equal(packed.installed.status, 0, `the packed consumer installs offline: ${packed.installed.stderr}`);
 	assert.ok(packed.entry && existsSync(packed.entry), "the installed payload exposes its entry point");
-	assert.equal(existsSync(join(packed.directory, "dist/licenses/pi-apply-patch-protocol/LICENSE")), true,
-		"the standalone payload carries the bundled library license");
 });

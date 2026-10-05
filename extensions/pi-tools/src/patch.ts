@@ -1,21 +1,8 @@
 /**
- * OpenAI Codex `apply_patch` — parser and text updater (no filesystem access).
+ * apply_patch parser and text updater (no filesystem access).
  *
- * Ported from the Rust implementation in https://github.com/openai/codex at
- * commit a6fdb11eda992b706c5e6a21ae5fd8c7376f8e06:
- *   codex-rs/apply-patch/src/parser.rs
- *   codex-rs/apply-patch/src/streaming_parser.rs
- *   codex-rs/apply-patch/src/file_update.rs
- *   codex-rs/apply-patch/src/seek_sequence.rs
- *   codex-rs/apply-patch/src/text_file.rs
- *
- * Copyright 2025 OpenAI (original Rust implementation)
- * SPDX-License-Identifier: Apache-2.0
- * Licensed under the Apache License, Version 2.0:
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Intentional deviations from upstream:
- *  - The streaming parser is collapsed into a single buffered parse.
+ * Behavior notes:
+ *  - The parser is buffered; it does not stream.
  *  - `*** Environment ID:` is recognized and rejected with an explicit error.
  *  - Patch paths are validated (non-empty, no NUL) at parse time.
  *  - A duplicate `*** Move to:` header gets its own error message.
@@ -84,7 +71,7 @@ function checkPatchPath(path: string, lineNumber: number): void {
 /**
  * Parse an apply_patch document into hunks.
  *
- * Accepts the upstream lenient form: leading/trailing whitespace around
+ * Accepts the lenient form: leading/trailing whitespace around
  * markers, CRLF input, and optional `<<EOF` / `<<'EOF'` / `<<"EOF"` heredoc
  * wrappers. Throws an `Error` with a line number for malformed patches.
  */
@@ -145,7 +132,7 @@ function pushContextLine(chunk: Chunk, text: string): void {
 }
 
 /**
- * Buffered port of upstream's `StreamingPatchParser`: `lines` are already
+ * Buffered parser: `lines` are already
  * free of line terminators and line numbers are 1-based over the patch text.
  */
 function parsePatchLines(lines: string[]): Hunk[] {
@@ -335,8 +322,8 @@ function parsePatchLines(lines: string[]): Hunk[] {
 	for (let index = 0; index < lines.length; index += 1) {
 		const line = lines[index] ?? "";
 		const lineNumber = index + 1;
-		// Upstream's parser processes the final line through `finish()`, which
-		// accepts a padded `*** End Patch` even in update hunks.
+		// A padded `*** End Patch` is accepted even in update hunks when it is
+		// the final line.
 		if (index === lines.length - 1 && line.trim() === END_PATCH_MARKER) {
 			handleHunkHeadersAndEndPatch(line.trim(), lineNumber);
 			continue;
@@ -479,7 +466,7 @@ function renderSourceFile(lines: SourceLine[]): string {
  * Rebuilds the file from source-ordered, non-overlapping replacements.
  * Unchanged lines keep their original terminators, inserted lines use the
  * preferred terminator, and every remaining line receives a terminator when
- * the line contents change (upstream updates historically add a trailing newline).
+ * the line contents change.
  */
 function applyReplacements(lines: SourceLine[], preferredEnding: string, replacements: Replacement[]): SourceLine[] {
 	const result: SourceLine[] = [];
@@ -529,7 +516,7 @@ function computeReplacements(originalLines: string[], path: string, chunks: Chun
 		}
 
 		if (chunk.oldLines.length === 0) {
-			// Pure additions append at the end of the file, like upstream.
+			// Pure additions append at the end of the file.
 			replacements.push({ start: originalLines.length, oldLen: 0, newLines: [...chunk.newLines] });
 			continue;
 		}
@@ -592,8 +579,7 @@ function computeReplacements(originalLines: string[], path: string, chunks: Chun
  * Apply update chunks to the contents of an existing file and return the new
  * contents. Preserves per-line terminators and a leading BOM; new lines use
  * the file's first existing terminator style. No-op updates retain the original
- * bytes; actual edits produce newline-terminated non-empty results, like
- * Codex's `PreserveLineEndings` update behavior.
+ * bytes; actual edits produce newline-terminated non-empty results.
  */
 export function applyUpdate(content: string, chunks: Chunk[], path: string): string {
 	const hasBom = content.startsWith("﻿");

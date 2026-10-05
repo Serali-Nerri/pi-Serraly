@@ -22,8 +22,7 @@ Intervals must be positive and between one minute and 24 hours. Seconds are
 rounded **up** to a whole minute and creation reports when rounding occurred.
 Without a recognized interval the entire input is a prompt, using a fixed ten
 minutes. An empty command shows usage; a recognized interval without a prompt
-is rejected. This is Claude Code `/loop`’s fixed-interval subset, not cron or
-Claude’s dynamically chosen default cadence.
+is rejected. The scheduler repeats one fixed interval; it is not cron.
 
 ## Scheduling and management
 
@@ -60,6 +59,5 @@ still idle and no `agent_start` was observed. It is cancelled when the agent
 starts/settles or the session is cleared. Synchronous delivery errors propagate
 through the command promise without permanently locking dispatch.
 
-See [UPSTREAM.md](UPSTREAM.md) for provenance and deliberate adaptations.
 Installation, building, validation safety, and release staging are root-package
 responsibilities.

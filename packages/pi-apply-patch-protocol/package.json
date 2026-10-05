@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "description": "Shared apply_patch.v1 wire types and output budgets for the private pi-Serraly workspace",
-  "license": "Apache-2.0",
   "engines": { "node": ">=22.19.0" },
   "files": ["dist/", "README.md"],
   "exports": {
@@ -20,7 +19,6 @@
     "prepack": "npm run build"
   },
   "serraly": {
-    "build": { "kind": "tsc", "project": "./tsconfig.build.json" },
-    "licenses": ["LICENSE", "UPSTREAM.md"]
+    "build": { "kind": "tsc", "project": "./tsconfig.build.json" }
   }
 }

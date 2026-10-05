@@ -6,7 +6,7 @@ import { DESCRIPTION } from "./prompt.ts";
 import { type AskUserQuestionDetails, buildToolResultText, type DialogOutcome } from "./result.ts";
 import { ParamsSchema, type QuestionInput, validateQuestions } from "./schema.ts";
 
-/** Claude Code's sentinel answer for a question that only received notes. */
+/** Sentinel answer for a question that only received notes. */
 const NOTES_ONLY_DISPLAY = "(notes only)";
 
 async function runDialog(ctx: ExtensionContext, questions: QuestionInput[]): Promise<DialogOutcome> {

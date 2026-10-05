@@ -1,5 +1,5 @@
 /**
- * Tests for the Codex `apply_patch` port in ../src/patch.ts.
+ * Tests for the apply_patch parser and text updater in ../src/patch.ts.
  *
  * Run with Node's native TypeScript support (no dependencies):
  *   node --test test/patch.test.ts

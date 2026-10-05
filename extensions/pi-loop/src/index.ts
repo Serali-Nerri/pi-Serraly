@@ -30,7 +30,7 @@ function duration(value: string, unit: string): { intervalMs: number; roundedSec
 	return { intervalMs, roundedSeconds: seconds && raw !== intervalMs };
 }
 
-/** Parses a fixed-interval subset of Claude Code's /loop syntax. */
+/** Parses /loop arguments into an interval and prompt. */
 export function parseLoopInput(args: string): LoopInput | string {
 	const input = args.trim();
 	if (!input) return "用法：/loop [5m|2h|1d] <提示词>；/loop list|stop <ID> 管理任务。";
@@ -203,7 +203,7 @@ export default function (pi: ExtensionAPI): void {
 			jobs.set(id, job);
 			schedule(job, ctx);
 			status(ctx);
-			const note = parsed.defaultInterval ? "（未指定间隔，采用固定 10 分钟；不是 Claude 的动态节奏）" : "";
+			const note = parsed.defaultInterval ? "（未指定间隔，采用固定 10 分钟）" : "";
 			const rounding = parsed.roundedSeconds ? "（秒数已向上取整至整分钟）" : "";
 			ctx.ui.notify(`Loop ${id}：每 ${job.intervalMs / MINUTE} 分钟；立即执行一次，7 天后到期。${note}${rounding}`, "info");
 			flush(ctx);

@@ -53,7 +53,7 @@ function nonTuiContext(): ExtensionToolContext {
 	return { mode: "print", ui: {} } as unknown as ExtensionToolContext;
 }
 
-test("registers the Claude Code tool metadata", () => {
+test("registers the tool metadata", () => {
 	const { tool } = register();
 	assert.equal(tool.name, "AskUserQuestion");
 	assert.equal(tool.label, "Ask User Question");

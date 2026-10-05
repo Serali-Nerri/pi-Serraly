@@ -31,7 +31,7 @@ test("formatLabels quotes labels containing a comma or quote", () => {
 	assert.equal(formatLabels(['say "hi"']), '"say \\"hi\\""');
 });
 
-test("formatAnswer follows Claude Code's precedence", () => {
+test("formatAnswer follows the documented precedence", () => {
 	assert.equal(formatAnswer(record({ labels: ["a", "b"] }), true), "a, b");
 	assert.equal(formatAnswer(record({ labels: ["a", "b"] }), false), "a");
 	assert.equal(formatAnswer(record({ labels: ["a"], custom: "custom" }), false), "custom");

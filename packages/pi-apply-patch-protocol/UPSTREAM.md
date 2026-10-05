@@ -2,9 +2,7 @@
 
 ## Extracted from
 
-- Source module: `extensions/pi-tools` (`pi-apply-patch` lineage, Apache-2.0 in this
-  workspace; the upstream parser/grammar origin is recorded in that module's
-  `UPSTREAM.md`).
+- Source module: `extensions/pi-tools`.
 - Extracted in the current working tree: the `apply_patch.v1` wire types and the four
   output budgets were moved verbatim from `src/report.ts`, and the consumer-side type
   declarations were moved verbatim from the UI parser.
@@ -21,5 +19,3 @@ Both sides keep their own policy:
   `reportUnavailable` fallback;
 - the consumer keeps its change/view defence thresholds, sanitizer and degradation
   behavior for unknown or legacy shapes.
-
-`LICENSE` is the Apache-2.0 text carried by `extensions/pi-tools`.

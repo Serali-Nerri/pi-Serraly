@@ -1,5 +1,5 @@
 /**
- * Tool description and prompt guidelines, ported verbatim from Claude Code 2.1.259.
+ * Tool description and prompt guidelines.
  *
  * The same text is registered as the tool `description`, so it doubles as the user-facing
  * help when the model considers calling the tool.

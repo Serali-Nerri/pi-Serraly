@@ -4,7 +4,6 @@
 	"private": true,
 	"type": "module",
 	"description": "apply_patch plus codemode-only grep/find/ls replacements for the private pi-Serraly workspace",
-	"license": "Apache-2.0",
 	"engines": {
 		"node": ">=22.19.0"
 	},
@@ -40,11 +39,6 @@
 			"kind": "bundle",
 			"entry": "./src/index.ts"
 		},
-		"licenses": [
-			"LICENSE",
-			"NOTICE",
-			"UPSTREAM.md"
-		],
 		"bundledLicenses": [
 			{
 				"package": "diff",

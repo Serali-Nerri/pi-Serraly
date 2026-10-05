@@ -34,8 +34,8 @@ function assertManifestShape(name, manifest, directory, kind) {
 	}
 	const metadata = manifest.serraly;
 	if (!metadata || typeof metadata !== "object") reject(`${name}: missing serraly metadata`);
-	if (!Array.isArray(metadata.licenses) || metadata.licenses.length === 0) reject(`${name}: serraly.licenses must declare inherited license texts`);
-	for (const license of metadata.licenses) relativeEntry(name, directory, `./${license}`, "license");
+	if (metadata.licenses !== undefined && !Array.isArray(metadata.licenses)) reject(`${name}: serraly.licenses must be an array of license texts`);
+	for (const license of metadata.licenses ?? []) relativeEntry(name, directory, `./${license}`, "license");
 	const recipe = metadata.build;
 	if (!recipe || typeof recipe !== "object") reject(`${name}: missing serraly build recipe`);
 	if (recipe.kind === "bundle") {

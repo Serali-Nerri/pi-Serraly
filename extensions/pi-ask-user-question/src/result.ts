@@ -37,7 +37,7 @@ export interface AskUserQuestionDetails {
 	cancelled?: boolean;
 }
 
-/** Mirrors Claude Code's label formatting: quote labels containing `, ` or `"`. */
+/** Label formatting: quote labels containing `, ` or `"`. */
 export function formatLabels(labels: string[]): string {
 	return labels.map((label) => (label.includes(", ") || label.includes('"') ? JSON.stringify(label) : label)).join(", ");
 }
@@ -84,7 +84,7 @@ export function isCleanlyAnswered(
 	return record.labels.every((label) => allowed.has(label));
 }
 
-/** Port of Claude Code's mapToolResultToToolResultBlockParam. */
+/** Maps a dialog outcome to the model-facing result text. */
 export function buildToolResultText(
 	questions: QuestionInput[],
 	outcome: Extract<DialogOutcome, { kind: "submitted" } | { kind: "afk" }>,

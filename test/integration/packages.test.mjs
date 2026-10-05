@@ -86,6 +86,7 @@ for (const [label, definition, pattern, extras = [uiKit]] of [
 	["an escaping extension entry", ui({ pi: { extensions: ["./dist/../outside.js"] } }), /entry/i],
 	["an absolute extension entry", ui({ pi: { extensions: ["/dist/index.js"] } }), /entry/i],
 	["a missing build recipe", ui({ serraly: undefined }), /serraly/i],
+	["a non-array license list", ui({ serraly: { build: { kind: "bundle", entry: "./src/index.ts" }, licenses: "LICENSE" } }), /serraly\.licenses/i],
 	["an unknown build recipe", ui({ serraly: { build: { kind: "wat" }, licenses: ["LICENSE"] } }), /build recipe/i],
 	["a non-private package", ui({ private: false }), /private/i],
 	["a missing dist allowlist entry", ui({ files: ["README.md"] }), /files/i],
@@ -101,6 +102,12 @@ for (const [label, definition, pattern, extras = [uiKit]] of [
 		await assert.rejects(discoverPackages(root), pattern);
 	});
 }
+
+test("discovery accepts absent inherited license texts", async (t) => {
+	const { root } = await workspaceFixture(t, [ui({ serraly: { build: { kind: "bundle", entry: "./src/index.ts" } } })]);
+	const packages = await discoverPackages(root);
+	assert.equal(packages[0]?.manifest.serraly.licenses, undefined);
+});
 
 test("discovery rejects duplicate package names", async (t) => {
 	const { root } = await workspaceFixture(t, [

@@ -51,7 +51,7 @@ test("validateQuestions rejects duplicate option labels", () => {
 	);
 });
 
-test("ParamsSchema enforces Claude Code's shape", () => {
+test("ParamsSchema enforces the documented shape", () => {
 	assert.equal(Value.Check(ParamsSchema, { questions: testQuestions() }), true);
 	// A 13 character header is the smallest violation of the documented limit.
 	assert.equal(

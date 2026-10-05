@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
@@ -51,12 +51,6 @@ for (const name of names) {
 		assert.equal(packed.installed.status, 0, packed.installed.stderr || packed.installed.stdout);
 		assert.ok(packed.entry, "the installed manifest declares a Pi entry");
 		assert.equal(existsSync(join(packed.directory, "node_modules")), false, `${name} ships no dependency tree`);
-		if (name === "pi-loop") await t.test("retains provenance without advertising a license grant", async () => {
-			const manifest = JSON.parse(await readFile(join(packed.directory, "package.json"), "utf8"));
-			assert.equal(Object.hasOwn(manifest, "license"), false, "no upstream license grant is available to advertise");
-			const provenance = await readFile(join(packed.directory, "dist/UPSTREAM.md"), "utf8");
-			assert.ok(provenance.trim(), "the packed payload ships readable, nonempty provenance");
-		});
 		const expectation = join(packed.base, "expectation.json");
 		await writeFile(expectation, JSON.stringify({
 			tools: toolsByName[name], commands: commandsByName[name],

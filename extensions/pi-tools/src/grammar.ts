@@ -1,6 +1,4 @@
-// Copyright 2025 OpenAI. SPDX-License-Identifier: Apache-2.0
-// Adapted to a TypeScript string from openai/codex, commit
-// a6fdb11eda992b706c5e6a21ae5fd8c7376f8e06, core/assets/tools/apply_patch.lark.
+// Lark grammar for the apply_patch tool.
 export const PATCH_GRAMMAR = `start: begin_patch hunk+ end_patch
 begin_patch: "*** Begin Patch" LF
 end_patch: "*** End Patch" LF?

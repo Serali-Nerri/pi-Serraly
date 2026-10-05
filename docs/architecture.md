@@ -187,4 +187,5 @@ MCP 延迟工具由宿主处理，搜索激活与 codemode store 只保留在该
 
 根 README 负责定位、入口索引和安全边界；本文负责跨模块职责与依赖/产物结构；
 `development.md` 负责构建、测试、隔离和发布流程；模块 README 与
-`LICENSE`/`UPSTREAM.md` 负责单能力用法及继承代码的来源与许可。
+`LICENSE` 负责单能力用法及许可；根 [`UPSTREAM.md`](../UPSTREAM.md) 汇总仍保留的
+外部上游。

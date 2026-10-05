@@ -35,9 +35,9 @@ async function snapshot(root: string): Promise<Record<string, string>> {
 	return result;
 }
 
-const fixtures = fileURLToPath(new URL("./fixtures/codex/", import.meta.url));
+const fixtures = fileURLToPath(new URL("./fixtures/apply-patch/", import.meta.url));
 for (const scenario of (await readdir(fixtures)).filter((name) => /^\d/.test(name)).sort()) {
-	test(`upstream fixture: ${scenario}`, async (t) => {
+	test(`fixture: ${scenario}`, async (t) => {
 		const root = await workspace(t);
 		const source = join(fixtures, scenario);
 		try { await cp(join(source, "input"), root, { recursive: true }); } catch (error) {
@@ -48,8 +48,7 @@ for (const scenario of (await readdir(fixtures)).filter((name) => /^\d/.test(nam
 		const fails = /^(005|006|007|008|009|012|013|015)_/.test(scenario);
 		if (fails) await assert.rejects(applyPatch(input, root));
 		else await applyPatch(input, root);
-		// Intentional improvement over the standalone upstream CLI: validation of
-		// a later hunk fails before any earlier hunk is written.
+		// Validation of a later hunk fails before any earlier hunk is written.
 		const expected = scenario.startsWith("015_") ? before : await snapshot(join(source, "expected"));
 		assert.deepEqual(await snapshot(root), expected);
 	});

@@ -74,10 +74,7 @@ returned as annotations.
 
 The timer ticks each second. Any key resets the idle countdown; completion and
 component disposal clear the timer. Partial selections/notes are preserved in
-an AFK outcome. These names are distinct from Claude Code’s `CLAUDE_AFK_*` names.
+an AFK outcome.
 
-## Provenance
-
-See [UPSTREAM.md](UPSTREAM.md), the preserved [MIT license](LICENSE), and the
-historical [Claude Code port record](docs/claude-code-port.md). Build, installation,
+Build, installation,
 validation safety, and release instructions belong to the root package.

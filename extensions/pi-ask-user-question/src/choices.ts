@@ -1,7 +1,7 @@
 import type { OptionInput, QuestionInput } from "./schema.ts";
 
 /**
- * The selectable rows of a question: its own options followed by Claude Code's two built-in
+ * The selectable rows of a question: its own options followed by the two built-in
  * escape hatches, `Other` (free text answer) and `Chat about this` (freeform response).
  */
 export type Choice =

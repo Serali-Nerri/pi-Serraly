@@ -20,7 +20,7 @@
 
 `grep` 依赖 ripgrep（`rg`），`find` 依赖 fd；缺失时宿主按 Pi 的既有策略查找或下载。三者没有 `outputSchema`，codemode 脚本获得文本输出而不是结构化对象。
 
-`apply_patch` 支持 UTF-8 文本文件的新增、修改、删除和移动，以及一份补丁的多个文件操作。保留已有文件的 BOM、各行换行符和普通权限位。支持 grammar 的模型/接口接收 Codex Lark 语法；其他接口使用相同工具的 JSON 参数。
+`apply_patch` 支持 UTF-8 文本文件的新增、修改、删除和移动，以及一份补丁的多个文件操作。保留已有文件的 BOM、各行换行符和普通权限位。支持 grammar 的模型/接口接收 apply_patch 的 Lark 语法；其他接口使用相同工具的 JSON 参数。
 
 开发与测试基线为 Pi **1.0.2**、TypeBox **1.3.27**、Node **≥22.19**。
 `apply_patch` 不启动后台进程、不执行 shell 命令、不发送网络请求或遥测。
@@ -110,7 +110,7 @@ apply_patch: @@ context anchors are text, not line numbers. Keep chunks in sourc
 
 - `@@` 后可以是源码中的定位文本，**不是** unified diff 的数字行号。
 - 块中的空格前缀是上下文，`-` 是删除，`+` 是新增；修改块按原文件顺序排列。
-- 沿用 Codex：依次尝试精确匹配、忽略尾部空白、忽略两端空白、规范化部分 Unicode 标点。
+- 依次尝试精确匹配、忽略尾部空白、忽略两端空白、规范化部分 Unicode 标点。
 - 同等匹配有多个位置时，选择当前搜索位置之后的第一个；请提供足够上下文。
 - 只有 `+` 行、没有旧行的更新块会追加到文件末尾。
 - 实际改变行内容的非空更新结果会补齐末尾换行；纯删除可以得到空文件。新增内容使用 LF。
@@ -121,7 +121,7 @@ apply_patch: @@ context anchors are text, not line numbers. Keep chunks in sourc
 
 **这是文件修改工具，不是权限沙箱。** 路径相对于调用时的 `ctx.cwd`；允许绝对路径和 `../`，不展开 shell 的 `~`。目录符号链接会解析到真实目录，可能指向工作区之外。
 
-- `Add File` 和 `Move to` **可以覆盖已存在的普通文本文件**，与 Codex 一致。操作前应先阅读目标文件。
+- `Add File` 和 `Move to` **可以覆盖已存在的普通文本文件**。操作前应先阅读目标文件。
 - 拒绝文件级符号链接、硬链接、目录、NUL/二进制内容和无效 UTF-8；如需修改链接目标，请明确指定真实目标路径。
 - 完整补丁先做路径、文本及上下文校验；校验失败不写文件。
 - 结果按最终文件状态报告实际变更，不把 no-op 列为 `M`；整份补丁无实际变更时返回 `No files were modified.`，`details.changes` 为空。仅移动路径仍是变更，移动到同一规范路径且内容不变则是 no-op。
