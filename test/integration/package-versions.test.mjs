@@ -4,8 +4,8 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
-import { checkPackageVersions, compareVersions } from "../../scripts/check-package-versions.mjs";
-import { discoverPackages, selectExtensions } from "../../scripts/lib/packages.mjs";
+import { checkPackageVersions } from "../../scripts/check-package-versions.mjs";
+import { discoverPackages, root } from "../../scripts/lib/packages.mjs";
 
 /** A real Git repository so the gate is exercised against actual trees. */
 async function gitFixture(t) {
@@ -195,16 +195,15 @@ test("the working tree is compared when no head ref is given", async (t) => {
 	assert.deepEqual(offenders.map((offender) => offender.name), ["pi-alpha"]);
 });
 
-test("the current repository satisfies the gate against its own baseline shape", async () => {
-	// The real workspace is only compared against itself here: identity must be
-	// readable from the current tree without the legacy module layout.
+test("workspace lock metadata matches declared release identities and dependency pins", async () => {
 	const packages = await discoverPackages();
-	const extensions = selectExtensions(packages);
-	assert.deepEqual(extensions.map((pkg) => pkg.manifest.version), extensions.map(() => "0.2.0"));
-	for (const library of packages.filter((pkg) => pkg.kind === "library")) {
-		assert.match(library.manifest.version, /^\d+\.\d+\.\d+$/, `${library.name} declares a readable version`);
+	const lock = JSON.parse(await readFile(join(root, "package-lock.json"), "utf8"));
+	for (const pkg of packages) {
+		const locked = lock.packages[pkg.relativeDirectory];
+		assert.ok(locked, `${pkg.name} must have workspace lock metadata`);
+		assert.equal(locked.version, pkg.manifest.version, `${pkg.name}: lockfile version must match the manifest`);
+		for (const field of ["devDependencies", "peerDependencies"]) {
+			assert.deepEqual(locked[field], pkg.manifest[field], `${pkg.name}: lockfile ${field} must match the manifest`);
+		}
 	}
-	assert.ok(compareVersions("0.2.0", "0.1.0") > 0);
-	assert.ok(compareVersions("1.0.0", "1.0.1") < 0);
-	assert.equal(compareVersions("1.0.0", "1.0.0"), 0);
 });
