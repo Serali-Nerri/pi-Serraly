@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Component } from "@earendil-works/pi-tui";
+import { visibleWidth, type Component } from "@earendil-works/pi-tui";
 import { createMockCtx, type ComponentFactory } from "../../menu-test-helpers.js";
 
 vi.mock("../../../src/shell.js", () => ({
@@ -57,7 +57,10 @@ async function openMenu(): Promise<Component> {
 describe("custom prompt menu path", () => {
   it("offers and creates the selected agent's prompt without touching the HOME sentinel", async () => {
     const component = await openMenu();
-    expect(component.render(160).join("\n")).toContain(join(agentDir, "subagents-lite-prompt.md"));
+    const promptPath = join(agentDir, "subagents-lite-prompt.md");
+    // This checks path identity, not clipping; allow room for the isolated fixture path.
+    const width = 160 + visibleWidth(promptPath);
+    expect(component.render(width).join("\n")).toContain(promptPath);
 
     component.handleInput?.("\x1b[B");
     component.handleInput?.("\r");
