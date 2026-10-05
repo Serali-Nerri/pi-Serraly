@@ -2,7 +2,7 @@
 
 ## Engineering Standards
 
-- Keep code readable, structure and dependency direction explicit, and the repository maintainable. Add abstraction only for a current need, never for a speculative one.
+- Keep code readable, structure and dependency direction explicit, and the repository maintainable.
 - Each document owns exactly one concern: README positions the repository and its entry points; `docs/architecture.md` covers module boundaries and artifacts; `docs/development.md` covers commands, testing, isolation and release; module docs and `LICENSE`/`UPSTREAM.md` cover that module's usage, contracts and provenance.
 - State the current contract only. Do not accumulate work logs, stage narratives, evidence dumps, or obsolete instructions in repository documents; delete what is no longer true instead of annotating it.
 
@@ -82,3 +82,13 @@ Use concise, descriptive subjects with conventional prefixes where they fit. PRs
 ## Security & Configuration
 
 Use isolated HOME/config/session fixtures; never access real credentials or send real model requests. Do not run `pi install .` or load development `dist/` into real settings. Deployment references one immutable versioned release directory. Keep the `subagents-lite.json`, `subagents-lite-prompt.md` and `agents/*.md` config filenames. Changing real settings requires explicit authorization, a verified settings backup and a restore-based rollback.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live as local markdown under `.scratch/<feature-slug>/`. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context layout: root `GLOSSARY.md` and `docs/adr/`. See `docs/agents/domain.md`.
