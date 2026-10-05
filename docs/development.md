@@ -126,6 +126,14 @@ node scripts/capture.mjs /tmp/pi-ui-captures
 列、专用子代理 renderer 和 host class identity。自动宽度/ANSI 断言不替代人工
 视觉、输入和焦点验收；无 PTY 或未人工查看时必须如实报告。
 
+## 分支与发布通道
+
+`main` 是稳定分支，只接收经过审阅、完整验证并完成试用观察期的版本；`dev`
+承载预览。预览的根 release-set 版本必须带 prerelease 标识（例如
+`0.3.0-preview.1`）；晋升到 `main` 只交付已审阅、已验证的版本，不把未验收的
+开发树整体当作稳定版本。两个通道都使用不可变的版本化 release 目录；真实配置
+切换仍须单独授权、验证备份可恢复，并以恢复备份回滚，见[更新与回滚](#更新与回滚)。
+
 ## 运行包
 
 完整 verify 后，在开发树外准备新版本目录。发布以 `package.json` 的 `version`
