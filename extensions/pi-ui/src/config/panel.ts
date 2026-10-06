@@ -1,6 +1,6 @@
 import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { Input, matchesKey, SettingsList, truncateToWidth, type SettingItem } from "@earendil-works/pi-tui";
-import { config, updateConfig, type Config } from "./config.ts";
+import { config, EXPANDED_CARD_BACKGROUND_SLOTS, updateConfig, type Config } from "./config.ts";
 
 const sections = ["Style", "Files", "Thinking", "UI", "Feature"] as const;
 const fields: Array<Array<[keyof Config, string, string[]]>> = [
@@ -11,9 +11,10 @@ const fields: Array<Array<[keyof Config, string, string[]]>> = [
 	[["useSummaryTitlesAsThinkingTitle", "Summary titles", ["true", "false"]],
 	 ["previewLines", "Preview lines", ["0", "1", "3", "5", "10"]],
 	 ["animationIntervalMs", "Animation interval (ms)", ["40", "60", "90", "120", "180"]]],
-	[["inputClip", "Summary characters", ["40", "80", "100", "160"]],
+	[["inputClip", "Summary characters (0 = auto)", ["0", "40", "80", "100", "160"]],
 	 ["expandedInputMaxLines", "Input preview lines", ["5", "10", "20", "40"]],
-	 ["expandedOutputMaxLines", "Output preview lines", ["10", "20", "40", "80"]]],
+	 ["expandedOutputMaxLines", "Output preview lines", ["10", "20", "40", "80"]],
+	 ["expandedCardBackground", "Expanded card background", [...EXPANDED_CARD_BACKGROUND_SLOTS]]],
 	[["enableContextCommand", "Context inspector", ["true", "false"]]],
 ];
 

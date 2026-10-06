@@ -89,9 +89,14 @@ frontmatter is invalid — is reported by Pi and does not leave this module aski
 for a reload forever.
 
 `@` completion keeps every suggestion the host provider already produced and
-adds absolute candidates from the active directories. Queries that are already
-absolute, `~/…`, `./…` or `../…` are passed through unchanged, including their
-backslash spellings: scope classification follows Pi's slash normalization.
+adds absolute candidates from the active directories. Unquoted `@namespace:`
+queries are passed through unchanged when the delegated provider declines file
+completion through `shouldTriggerFileCompletion`, so explicit reference namespaces
+are never mixed with external files. Ordinary relative file queries still add
+external candidates independently of the provider's Tab-trigger preference.
+Queries that are already absolute, `~/…`, `./…` or `../…` are passed through
+unchanged, including their backslash spellings: scope classification follows
+Pi's slash normalization.
 A candidate the host builds from a file name inside an external directory is
 dropped when its text could move the terminal cursor, and the descriptions
 this module adds are escaped like every other string it prints. Ordinary

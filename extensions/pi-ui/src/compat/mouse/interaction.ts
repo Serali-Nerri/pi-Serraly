@@ -10,6 +10,7 @@ import { walkComponentTree } from "../component-tree.ts";
 import { NATIVE_MOUSE_OWNER, patchRegistry } from "../patch-keys.ts";
 import { COMPACT_LOCAL_EXPANSION, COMPACT_ROUND_PARENT, isCompactAssistantComponent, setHoveredCompactAssistant } from "../compact-mode.ts";
 import { ToolGroupComponent } from "../grouping.ts";
+import { messageActionAtRow } from "../message-display.ts";
 import { isExpandedToolIoView } from "../../transcript/tool/result.ts";
 import { setToolTuiFullscreen } from "../../transcript/tool/show-more-hint.ts";
 import { setHoveredToolCallId, getToolMouseTui } from "../../overlays/mouse-state.ts";
@@ -18,6 +19,7 @@ import { requireReplaceableMethod } from "../host-capabilities.ts";
 
 const OWNER = NATIVE_MOUSE_OWNER;
 type Preview = { title: string; content: string | Component };
+type CardAction = "expand" | "collapse" | "reveal";
 let activeContext: any;
 let hovered: { key: unknown; clear: () => void } | undefined;
 let hoverVisited = false;
@@ -70,10 +72,13 @@ function openPreview(preview: Preview): void {
 		activeContext?.ui?.notify(error instanceof Error ? error.message : String(error), "error"));
 }
 
-function cardEvent(card: any, event: TuiMouseEvent, line: string, setHover: (value: boolean) => void, preview?: Preview): any {
+function cardEvent(card: any, event: TuiMouseEvent, line: string, setHover: (value: boolean) => void, preview?: Preview, declaredAction?: CardAction): any {
 	if (!isCardActive(card)) return undefined;
-	const groupHeader = card instanceof ToolGroupComponent && event.y === 1;
-	const hit = (!card.expanded || preview !== undefined || groupHeader) && hintHit(line, event.x);
+	const action = declaredAction ?? card.actionAtRow?.(event.y) ?? messageActionAtRow(card, event.y);
+	const available = card.expanded
+		? action === "collapse" || (action === "reveal" && preview !== undefined)
+		: action === "expand" || action === "reveal";
+	const hit = available && hintHit(line, event.x);
 	if (event.type === "move") {
 		const changed = hit && hover(preview?.title ?? card, setHover);
 		return hit ? { handled: true, render: changed } : undefined;
@@ -81,7 +86,7 @@ function cardEvent(card: any, event: TuiMouseEvent, line: string, setHover: (val
 	// Only the explicit action captures the press. Body drags stay with Pi selection.
 	if (event.type === "press" && event.button === "left" && hit) return { handled: true, render: false };
 	if (event.type !== "click" || event.button !== "left") return undefined;
-	if (preview && hit && card.expanded) { openPreview(preview); return { handled: true }; }
+	if (preview && action === "reveal" && hit && card.expanded) { openPreview(preview); return { handled: true }; }
 	if (!card.expanded && hit) { expand(card); return { handled: true }; }
 	if (card.expanded) {
 		card[COMPACT_LOCAL_EXPANSION] = false;
@@ -107,7 +112,7 @@ function toolRegion(host: any, child: any, fallback: Component): Component {
 				child.setHoveredSection(value ? section ?? null : null);
 			}
 			setHoveredToolCallId(value ? host.toolCallId : null); host.invalidate?.();
-		}, preview);
+		}, preview, child.actionAtRow?.(event.y));
 	});
 	region.render = (width) => { lines = child.render(width); return lines; };
 	return region;

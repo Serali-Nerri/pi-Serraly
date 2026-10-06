@@ -25,6 +25,9 @@
 - `minuque/pi-cc-extensions` v0.8.69（`5d7a2666f51da9f450bd019af10200c88cc1df98`）
   与 v0.8.70（`26aa98df430fa4112c6880367b9d477c0ef53f1f`）的渲染、thinking、
   context、Markdown 和工具摘要模块；
+- 选择性吸收 v0.9.10（`2b72669cafefe0771b2e3e63b0db5c478314d2d4`）的自适应
+  摘要、轻量动画、尾部工作汇总、声明式动作、diff 省略语义和展开背景；
+  不是整版同步，具体采用与未采用边界见模块许可通知；
 - `tifandotme/pi-extensions` 的 `pi-compact-thinking`；
 - `OldSuns/pi-open-tui` 0.3.1 的 footer 渲染、icons、运行时检测、usage 聚合与
   格式化，记录在
@@ -35,3 +38,11 @@
 
 `pi-ui-kit` 的工具卡渲染改自 pi-cc-extensions，许可通知随库复制；`pi-config-core`
 与 `pi-apply-patch-protocol` 为自有代码。详见各包的 `UPSTREAM.md`。
+
+## 自有引用扩展
+
+`pi-session-reference` 与 `pi-subagents` 的提及功能为本地原创实现，行为参考
+pi-cc-extensions v0.9.10 的 reference 入口，不保留其实现代码或旧 ABI。
+历史引用的来源说明见
+[`pi-session-reference/UPSTREAM.md`](extensions/pi-session-reference/UPSTREAM.md)；
+子代理提及的当前契约见模块 README。

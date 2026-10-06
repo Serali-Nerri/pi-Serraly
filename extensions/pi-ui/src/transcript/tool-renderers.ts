@@ -39,11 +39,6 @@ function createGenericRenderer(original: any): any {
 		renderShell: "self",
 		renderCall(args: any, theme: any, context: any) {
 			if (config.mode === "off") return fallback(original, "renderCall", [args, theme, context], String(name));
-			const state = resolveToolVisualState(context);
-			const pending = state === "pending" || (!state && (context?.isPartial || context?.executionStarted));
-			if (pending && context?.executionStarted) scheduleAnimation(context);
-			const glyph = pending ? pendingIcon(name) : settledIcon(name, state);
-			const icon = state === "success" ? `\x1b[38;2;80;220;100m${glyph}\x1b[39m` : theme.fg(toolIconColor(context), glyph);
 			const summary = toolCallSummary(name, args, {
 				title: label === name ? humanizeToolLabel(label) : label, variant: "default", cwd: context?.cwd,
 			});
@@ -52,7 +47,12 @@ function createGenericRenderer(original: any): any {
 			let cachedLine: string | undefined;
 			return {
 				render(width: number) {
-					if (cachedWidth === width && cachedLine !== undefined) return [cachedLine];
+					const state = resolveToolVisualState(context);
+					const pending = state === "pending" || (!state && (context?.isPartial || context?.executionStarted));
+					if (!pending && cachedWidth === width && cachedLine !== undefined) return [cachedLine];
+					if (pending && context?.executionStarted) scheduleAnimation(context);
+					const glyph = pending ? pendingIcon(name) : settledIcon(name, state);
+					const icon = state === "success" ? `\x1b[38;2;80;220;100m${glyph}\x1b[39m` : theme.fg(toolIconColor(context), glyph);
 					const viewport = toolViewportWidth(width);
 					const lead = expanded ? "" : " ";
 					const available = Math.max(0, viewport - visibleWidth(icon) - 1 - (expanded ? 0 : 1) - visibleWidth(summary.detail));
@@ -66,10 +66,10 @@ function createGenericRenderer(original: any): any {
 		renderResult(result: any, options: any, theme: any, context: any) {
 			if (config.mode === "off") return fallback(original, "renderResult", [result, options, theme, context], textFromResult(result));
 			const expanded = isToolExpanded(options, context);
-			if (options?.isPartial) return new Text(theme.fg("muted", expanded ? "↳ Pending…" : "   ↳ Pending…"), 0, 0);
 			const error = Boolean(options?.isError || context?.isError);
-			setToolVisualState(context, error ? "error" : "success");
+			setToolVisualState(context, options?.isPartial ? "pending" : error ? "error" : "success");
 			const text = textFromResult(result, expanded);
+			if (options?.isPartial && !text.trim()) return new Text(theme.fg("muted", expanded ? "↳ Pending…" : "   ↳ Pending…"), 0, 0);
 			const args = context?.args;
 			if (expanded) return renderExpandedToolResult(text, theme, error, context?.lastComponent, args, true);
 			const count = outputLineCount(result) || countLines(text);
@@ -83,6 +83,7 @@ function createGenericRenderer(original: any): any {
 			let normal: string | undefined;
 			let hovered: string | undefined;
 			return {
+				actionAtRow(row: number) { return expandable && row === 0 ? "expand" : undefined; },
 				render(width: number) {
 					if (cachedWidth !== width || normal === undefined) {
 						cachedWidth = width;

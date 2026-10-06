@@ -5,6 +5,7 @@ import type { Theme } from "@earendil-works/pi-coding-agent";
 import { Box, Text, getKeybindings, truncateToWidth, visibleWidth, wrapTextWithAnsi, type Component } from "@earendil-works/pi-tui";
 import { isToolTuiFullscreen } from "./tool/show-more-hint.ts";
 import type { CompactThinkingConfig } from "../state/thinking-controller.ts";
+import { config as styleConfig } from "../config/config.ts";
 
 const config: CompactThinkingConfig = {
 	useSummaryTitlesAsThinkingTitle: true,
@@ -235,6 +236,7 @@ export class ThinkingPreviewBlock implements Component {
 	private theme: Theme | undefined;
 	private _expanded: boolean;
 	private hintHovered = false;
+	private actionRow: number | undefined;
 	private collapsedMemo:
 		| {
 				width: number;
@@ -284,6 +286,10 @@ export class ThinkingPreviewBlock implements Component {
 		}
 	}
 
+	actionAtRow(row: number): "expand" | undefined {
+		return !this._expanded && row === this.actionRow ? "expand" : undefined;
+	}
+
 	setHintHovered(hovered: boolean): void {
 		if (this.hintHovered !== hovered) this.collapsedMemo = undefined;
 		this.hintHovered = hovered;
@@ -293,6 +299,7 @@ export class ThinkingPreviewBlock implements Component {
 		const hint = this._expanded
 			? undefined
 			: hiddenPreviewHint(hiddenLines, Boolean(this.text) && config.previewLines <= 0);
+		this.actionRow = undefined;
 		if (!hint) return new Text(this.heading, padding, 0).render(width);
 		const rawHint = hint.prefix + hint.action + hint.suffix;
 		const contentWidth = Math.max(1, width - padding * 2);
@@ -302,11 +309,13 @@ export class ThinkingPreviewBlock implements Component {
 				? truncateToWidth(this.heading, headingBudget, "")
 				: this.heading;
 		const action = this.paint(this.hintHovered ? "text" : "dim", hint.action);
-		return new Text(
+		const lines = new Text(
 			clipped + this.paint("dim", hint.prefix) + action + this.paint("dim", hint.suffix),
 			padding,
 			0,
 		).render(width);
+		if (hint.action && lines.at(-1)?.includes(hint.action)) this.actionRow = lines.length - 1;
+		return lines;
 	}
 
 	private bodyLines(width: number, padding: number): { lines: string[]; hiddenLines: number } {
@@ -333,7 +342,7 @@ export class ThinkingPreviewBlock implements Component {
 				: heading;
 			const bgFn =
 				this.theme && typeof this.theme.bg === "function"
-					? (text: string) => this.theme!.bg("userMessageBg" as never, text)
+					? (text: string) => this.theme!.bg(styleConfig.expandedCardBackground, text)
 					: undefined;
 			const box = new Box(1, 1, bgFn);
 			box.addChild({

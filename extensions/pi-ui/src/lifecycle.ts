@@ -149,6 +149,7 @@ export function registerUiLifecycle(pi: ExtensionAPI): void {
 				render() {
 					if (!active || bridgeGeneration !== generation || !patchRegistry.owns(OWNER, owner)) return [];
 					setToolTuiFullscreen(tui.mode === "fullscreen");
+					transcript?.compact.reconcile(tui);
 					// Pi rebuilds after ALL session_compact handlers finish. A timer
 					// turn alone is not a boundary when another extension awaits.
 					if (active && pendingCompaction?.generation === generation &&
@@ -169,7 +170,8 @@ export function registerUiLifecycle(pi: ExtensionAPI): void {
 	});
 	pi.on("session_shutdown", dispose);
 	for (const name of [
-		"agent_start", "agent_end", "message_update", "message_end",
+		"agent_start", "agent_end", "agent_settled", "message_start", "message_update", "message_end",
+		"ui_prompt_start", "ui_prompt_end",
 		"tool_execution_start", "tool_execution_update", "tool_execution_end",
 		"session_tree", "session_compact", "model_select", "thinking_level_select",
 	] as const) {
@@ -178,8 +180,20 @@ export function registerUiLifecycle(pi: ExtensionAPI): void {
 			ctx = context;
 			safe(name, () => router.emit(name, event, context), context);
 			switch (name) {
-				case "agent_start": shell.agentStart(); break;
+				case "agent_start": transcript?.compact.activityStart(); shell.agentStart(); break;
 				case "agent_end": shell.agentEnd(context); break;
+				case "agent_settled": transcript?.compact.activitySettled(); break;
+				case "message_start": {
+					const message = event.message;
+					const background = message.role === "custom" && typeof message.details === "object" &&
+						message.details !== null && (message.details as Record<string, unknown>).requestBackground === true;
+					if (message.role === "user" || (message.role === "custom" && message.display && !background)) {
+						transcript?.compact.groupBoundary();
+					}
+					break;
+				}
+				case "ui_prompt_start": transcript?.compact.userWait(true); break;
+				case "ui_prompt_end": transcript?.compact.userWait(false); break;
 				case "message_end": shell.messageEnd(); break;
 				case "tool_execution_end":
 					shell.toolEnd(context);

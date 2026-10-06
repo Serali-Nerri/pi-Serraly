@@ -25,6 +25,11 @@ const ANSI_FG_RESET = "\x1b[39m";
 
 /** 事件上下文中同步的最新主题（与 toolGrouping.setTheme 同一来源）。 */
 let displayTheme: any;
+const actionRows = new WeakMap<object, number>();
+
+export function messageActionAtRow(component: object, row: number): "expand" | undefined {
+	return actionRows.get(component) === row ? "expand" : undefined;
+}
 
 export function setMessageDisplayTheme(theme: any): void {
 	displayTheme = theme;
@@ -101,6 +106,7 @@ function renderCcstyle(component: any, kind: DisplayKind): void {
 	const theme = displayTheme;
 	if (!theme) return; // 主题未就绪时保留原生渲染
 	captureNativeShell(component);
+	actionRows.delete(component);
 	component.setBgFn?.(undefined); // 与工具调用一致，去掉灰底
 	component.clear();
 	ensureHintHover(component);
@@ -110,14 +116,23 @@ function renderCcstyle(component: any, kind: DisplayKind): void {
 		component.paddingY = 0; // 工具组件 paddingY=0；原生 Box 默认 1，会上下各留一个空行
 		const hovered = component.hintHovered === true;
 		const hint = `${theme.fg("dim", " • ")}${theme.fg(hovered ? "text" : "dim", showMoreHintText())}`;
-		component.addChild(new Text(`${icon} ${title}${hint}`, 0, 0));
+		const text = new Text(`${icon} ${title}${hint}`, 0, 0);
+		component.addChild({
+			render(width: number) {
+				const lines = text.render(width);
+				if (lines.at(-1)?.includes(showMoreHintText())) actionRows.set(component, lines.length - 1);
+				else actionRows.delete(component);
+				return lines;
+			},
+			invalidate() { text.invalidate(); },
+		});
 		return;
 	}
-	// 展开卡与 tool 一致：userMessageBg + 上下左右 1 格
+	// 展开卡与 tool 一致：语义背景 + 上下左右 1 格
 	component.paddingX = 1;
 	component.paddingY = 1;
 	if (typeof theme.bg === "function" && typeof component.setBgFn === "function") {
-		component.setBgFn((text: string) => theme.bg("userMessageBg", text));
+		component.setBgFn((text: string) => displayTheme.bg(config.expandedCardBackground, text));
 	}
 	component.addChild(new Text(`${icon} ${title}`, 0, 0));
 	component.addChild(new Spacer(1));

@@ -53,13 +53,13 @@ function mountPanel() {
 	};
 }
 
-test("five-page panel retains all twelve settings and omits discarded controls", async () => {
+test("five-page panel exposes current settings and omits discarded controls", async () => {
 	const panel = mountPanel();
 	const pages = [
 		["Mode", "Original renderers"],
 		["Write preview lines", "Edit preview lines", "Expanded file lines"],
 		["Summary titles", "Preview lines", "Animation interval (ms)"],
-		["Summary characters", "Input preview lines", "Output preview lines"],
+		["Summary characters (0 = auto)", "Input preview lines", "Output preview lines", "Expanded card background"],
 		["Context inspector"],
 	];
 	for (const labels of pages) {

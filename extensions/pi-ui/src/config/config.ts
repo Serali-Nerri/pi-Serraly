@@ -1,6 +1,11 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { readJsonFileBoundedSync, writeTextFileAtomicSync } from "pi-config-core";
+import type { ThemeBg } from "@earendil-works/pi-coding-agent";
+
+export const EXPANDED_CARD_BACKGROUND_SLOTS: readonly ThemeBg[] = [
+	"userMessageBg", "toolPendingBg", "customMessageBg", "selectedBg", "searchMatchBg", "toolSuccessBg", "toolErrorBg",
+];
 
 /** The stored configuration must stay readable by the same bound on the next start. */
 const CONFIG_MAX_BYTES = 64 * 1024;
@@ -16,6 +21,7 @@ export interface Config {
 	previewLines: number;
 	animationIntervalMs: number;
 	inputClip: number;
+	expandedCardBackground: ThemeBg;
 	expandedInputMaxLines: number;
 	expandedOutputMaxLines: number;
 	enableContextCommand: boolean;
@@ -30,7 +36,8 @@ export const DEFAULT_CONFIG: Config = {
 	useSummaryTitlesAsThinkingTitle: true,
 	previewLines: 3,
 	animationIntervalMs: 90,
-	inputClip: 100,
+	inputClip: 0,
+	expandedCardBackground: "userMessageBg",
 	expandedInputMaxLines: 5,
 	expandedOutputMaxLines: 10,
 	enableContextCommand: true,
@@ -53,6 +60,9 @@ export function normalizeConfig(input: unknown): Config {
 	const source = isRecord(input) ? input : {};
 	const result = { ...DEFAULT_CONFIG, excludeRenderers: [] } as Config;
 	if (source.mode === "on" || source.mode === "compact" || source.mode === "off") result.mode = source.mode;
+	if (EXPANDED_CARD_BACKGROUND_SLOTS.includes(source.expandedCardBackground as ThemeBg)) {
+		result.expandedCardBackground = source.expandedCardBackground as ThemeBg;
+	}
 	if (Array.isArray(source.excludeRenderers)) {
 		result.excludeRenderers = [...new Set(source.excludeRenderers.filter((name): name is string =>
 			typeof name === "string" && /^[\w.:-]+$/.test(name)))];
@@ -60,7 +70,8 @@ export function normalizeConfig(input: unknown): Config {
 	for (const [key, bounds] of Object.entries(numericBounds)) {
 		const value = source[key];
 		if (typeof value === "number" && Number.isFinite(value)) {
-			(result as unknown as Record<string, unknown>)[key] = Math.max(bounds[0], Math.min(bounds[1], Math.floor(value)));
+			(result as unknown as Record<string, unknown>)[key] = key === "inputClip" && value === 0
+				? 0 : Math.max(bounds[0], Math.min(bounds[1], Math.floor(value)));
 		}
 	}
 	for (const key of ["useSummaryTitlesAsThinkingTitle", "enableContextCommand"] as const) {

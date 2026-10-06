@@ -20,7 +20,7 @@ test("build produces executable ESM for every entry allowed by the package manif
 		assert.equal(built.status, 0, built.stderr || built.stdout);
 		const packages = selectExtensions(await discoverPackages());
 		assert.deepEqual(packages.map((pkg) => pkg.name), [
-			"pi-add-dir", "pi-ask-user-question", "pi-background-shell", "pi-loop", "pi-subagents", "pi-tools", "pi-ui",
+			"pi-add-dir", "pi-ask-user-question", "pi-background-shell", "pi-loop", "pi-session-reference", "pi-subagents", "pi-tools", "pi-ui",
 		]);
 		for (const pkg of packages) {
 			const manifest = JSON.parse(await readFile(join(pkg.directory, "package.json"), "utf8"));

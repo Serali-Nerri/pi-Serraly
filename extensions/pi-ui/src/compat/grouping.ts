@@ -8,6 +8,7 @@ import {
 	type Component,
 } from "@earendil-works/pi-tui";
 import { config } from "../config/config.ts";
+import { toolViewportWidth } from "../transcript/tool/result.ts";
 import { getUiScheduler } from "../scheduler.ts";
 import { resolveRendererPolicy } from "./policy.ts";
 import { TOOL_LOADING_INTERVAL_MS, toolLoadingIcon } from "../utils/tool-loading-icon.ts";
@@ -100,15 +101,8 @@ function scheduleGroupAnimation(patch: Patch): void {
 	if (patch.cancelAnimation || !patch.active || !scheduler) return;
 	patch.cancelAnimation = scheduler.schedule("group-animation", TOOL_LOADING_INTERVAL_MS, () => {
 		patch.cancelAnimation = undefined;
-		if (!patch.active) return;
-		for (const group of patch.groups) {
-			if (
-				(group.children as any[]).some(
-					(tool) => tool?.executionStarted && status(tool) === "pending",
-				)
-			)
-				group.invalidate();
-		}
+		if (!patch.active || ![...patch.groups].some((group) =>
+			(group.children as any[]).some((tool) => tool?.executionStarted && status(tool) === "pending"))) return;
 		scheduler.request();
 	});
 }
@@ -232,6 +226,10 @@ export class ToolGroupComponent extends Container {
 		this._expanded = expanded;
 		for (const tool of this.children)
 			(tool as Component & { setExpanded?: (expanded: boolean) => void }).setExpanded?.(expanded);
+	}
+
+	actionAtRow(row: number): "expand" | "collapse" | undefined {
+		return row === 1 ? this._expanded ? "collapse" : "expand" : undefined;
 	}
 
 	setHintHovered(hovered: boolean): void {
@@ -360,11 +358,12 @@ export class ToolGroupComponent extends Container {
 				const summary = toolSummary(tool);
 				const prefix = ` ${fg("dim", branch)} ${fg(color, statusIcon(toolStatus))} `;
 				const detail = fg("dim", summary.detail);
-				const mainWidth = Math.max(0, width - visibleWidth(prefix) - visibleWidth(detail));
+				const rowWidth = toolViewportWidth(width);
+				const mainWidth = Math.max(0, rowWidth - visibleWidth(prefix) - visibleWidth(detail));
 				lines.push(
 					truncateToWidth(
 						`${prefix}${fg("toolTitle", fitToolCallSummary(summary, mainWidth))}${detail}`,
-						width,
+						rowWidth,
 						"",
 					),
 				);
@@ -389,8 +388,7 @@ export class ToolGroupComponent extends Container {
 			}
 		}
 		if (this._expanded) {
-			// 展开面板统一用 user message 背景色（ccstyle 约定），不按状态区分。
-			const backgroundSlot = "userMessageBg";
+			const backgroundSlot = config.expandedCardBackground;
 			for (const line of expandedLines) {
 				lines.push(paddedBackgroundRow(theme, backgroundSlot, line, width));
 			}

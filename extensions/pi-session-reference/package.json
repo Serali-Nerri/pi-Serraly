@@ -1,0 +1,30 @@
+{
+  "name": "pi-session-reference",
+  "version": "0.2.3",
+  "private": true,
+  "type": "module",
+  "description": "Explicit read-only historical session background for pi-Serraly",
+  "license": "MIT",
+  "engines": { "node": ">=22.19.0" },
+  "files": ["dist/", "README.md"],
+  "pi": { "extensions": ["./dist/pi-session-reference.js"] },
+  "scripts": {
+    "build": "node ../../scripts/build-package.mjs",
+    "check": "tsc -p tsconfig.json",
+    "pack:check": "node ../../scripts/build-package.mjs --check",
+    "prepack": "npm run build"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-coding-agent": { "optional": true },
+    "@earendil-works/pi-tui": { "optional": true }
+  },
+  "serraly": {
+    "build": { "kind": "bundle", "entry": "./src/index.ts" },
+    "licenses": ["LICENSE", "UPSTREAM.md"],
+    "test": { "directory": "test" }
+  }
+}

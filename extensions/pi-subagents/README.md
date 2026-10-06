@@ -26,6 +26,32 @@ print/JSON/RPC 创建终端组件或 UI bridge。
 严格 schema 模式 `agentToolStrictMode: true` 让可选参数以 nullable 字段表示，
 要求传全字段；默认关闭。子代理不能再调用三个 Agent 控制工具。
 
+## 显式子代理提及
+
+输入 `@subagent:[name]` 表达当前请求的委派意图。TUI 补全叠加在宿主公开
+`addAutocompleteProvider` 上，只处理 `@subagent:` 前缀；原生文件、外部目录和
+历史会话补全继续交给已有 provider，保留其替换范围。候选直接来自当前可见
+有效 agent 注册表，遵守名称解析、配置优先级和项目信任。隐藏、含终端危险
+字符或无法原样表示为该 token 的名称不提供候选，也不悄悄改名。
+
+手动输入在 print、JSON、RPC 和 SDK 中同样有效；无需终端组件。每个有显式
+提及的请求通过 `before_agent_start` 返回可回看的 `subagent-mention` 补充消息，
+有效名称按首次出现顺序去重，以 canonical name 给出 `Agent` 的 `agent` 参数
+说明。该消息不是系统提示词、工具调用或独立通知，不启动子会话，不改变 active
+工具、权限、schema 或并发策略；无提及的请求不追加消息。未知、隐藏或不可表示
+的名称，以及本地 `Agent` 未启用、缺失或被其他实现替换时，补充消息只为相关
+提及提供安全诊断，不启用工具或要求调用无效能力。
+
+可用性同时核对本地注册的 schema 引用与宿主公开 `sourceInfo` 的所有者；
+其他扩展即使复用 schema，也不能获得本地 Agent 的委派说明。
+
+该公开补充消息通过 `details.requestBackground: true` 标记属于当前请求，
+让展示消费者将它与独立通知区分；不依赖兄弟扩展的私有事件或注册表。
+
+补全和请求说明跟随正常注册表刷新、会话导航和资源重载；shutdown 后停止拥有
+补全，旧异步发现不得发布到新会话。factory 不为此启动 timer 或 watcher。
+历史会话引用导出应排除 `subagent-mention`，避免递归传播旧委派意图。
+
 ## 配置位置与优先级
 
 所有用户级路径基于 Pi `getAgentDir()`，支持 `PI_CODING_AGENT_DIR`，默认是

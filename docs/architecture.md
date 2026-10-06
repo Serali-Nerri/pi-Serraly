@@ -1,6 +1,6 @@
 # 仓库架构
 
-## 七个维护边界
+## 八个维护边界
 
 根 package 是资源清单和开发工作区，不是总 extension factory。
 每个模块仅注册自己的能力；关闭一个入口不会通过总工厂间接重新启用它。
@@ -13,7 +13,8 @@
 | `tools` | `apply_patch` 补丁算法、文件锁、预检、提交、`apply_patch.v1` 报告；`grep`/`find`/`ls` 同名替换的 codemode 注册 | UI 历史 diff 重建 |
 | `background-shell` | 进程/日志、dock、通知、状态、同进程 reload handoff | 跨进程恢复或 UI 工具卡接管 |
 | `add-dir` | 目录作用域与存储、外部指令 prompt section、skill 路径发现、`@` 补全包装、目录 widget | 模型工具、自动 reload、cwd 切换或工具权限 |
-| `subagents` | `Agent`/`StopAgent`/`AgentStatus`、`/agents`、子会话选择/准入/可信状态、调度与关闭、专用展示 | 父工具闭包、兄弟模块私有实现、共享 MCP 连接池或跨进程任务恢复 |
+| `subagents` | `Agent`/`StopAgent`/`AgentStatus`、`/agents`、有效 agent 的显式提及/补全、子会话选择/准入/可信状态、调度与关闭、专用展示 | 父工具闭包、兄弟模块私有实现、共享 MCP 连接池或跨进程任务恢复 |
+| `session-reference` | 历史会话发现、稳定 ID 补全、只读有效上下文、请求背景消息及来源展示 | 系统提示词覆盖、任意文件引用、来源项目资源加载、工具或 Agent 执行 |
 
 共享库只承载两侧都必须逐字一致的构建期契约，不承载任一方的策略：
 
@@ -26,6 +27,9 @@
 工具契约和详细算法留在各模块 README/子系统文档。UI 的私有宿主访问只在
 `extensions/pi-ui/src/compat/`；其 host 事件只由 `src/lifecycle.ts` 注册。
 UI 的共享 scheduler 不管理 loop 定时器、后台进程或子会话资源。
+compact 工作汇总的持续更新在其工作组尾部展示，结束后成为静态记录；它不是
+单槽 live preview，不轮换 Thinking/工具正文，也不猜测收尾静默期。生命周期与
+scrollback 契约见 [UI 工作汇总](../extensions/pi-ui/docs/work-summary.md)。
 
 UI 在修改 thinking/transcript 前先做一次无副作用的宿主能力预检（只读
 descriptor/继承/extensibility，不执行 getter、不写槽位）：缺少必需方法、
@@ -42,10 +46,10 @@ instance 字段布局，实际宿主与人工视觉验收仍必需。同一预�
 ## 源码与运行树
 
 ```text
-extensions/pi-*/      七个 private npm workspace；源码、测试、包文档/许可、dist/
+extensions/pi-*/      八个 private npm workspace；源码、测试、包文档/许可、dist/
 packages/pi-*/        构建期共享库；无 Pi 资源入口
 scripts/              工作区命令、单包构建/封印和 release 组装
-test/integration/     产物、实际 loader、子会话和七入口共存
+test/integration/     产物、实际 loader、子会话和八入口共存
 docs/                 跨模块设计与开发
 ```
 
@@ -100,6 +104,8 @@ dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace
   全部打入产物，不增加根运行依赖。
 - subagents 是独立 ESM bundle，保留上游 MIT 许可及固定来源；Pi SDK、pi-ai、
   pi-tui 和 TypeBox external，不增加运行依赖或额外 worker。
+- session-reference 是独立 ESM bundle；会话发现及有效上下文使用宿主 Interface，
+  不依赖其他扩展，不持有独立执行工具、认证或来源项目 loader。
 - tools 与 ui 各自 bundle 同一份 `pi-apply-patch-protocol`：wire 常量与类型只有
   该库一处定义，两侧只保留各自的算法、阈值与展示策略。契约一致性由根
   一致性套件用真实生产者输出与真实消费者解析器互验，不做常量自证。
@@ -148,6 +154,12 @@ UI 读取公共工具元数据和已有结果。questions、background-shell、s
 工具 renderer 及 `subagent-result` 消息 renderer 保持专用展示；第三方
 Agent/StopAgent 的专用 renderer 同样保持优先，不因属于私有包而被接管。
 footer 消费宿主提供的 extension statuses，不清理其他模块的状态键。
+
+历史引用与子代理提及使用公开 autocomplete provider 叠加与请求补充消息，
+不替换总 provider 或系统提示词。明确前缀分别由对应入口处理，其他输入继续
+经过宿主和 add-dir；加载顺序不改变所有权。引用背景是当前请求的上下文记录，
+不是会话工具调用、独立通知或新的工作活动。隐藏思考、独立 usage、其他分支、
+原始附件和引用补充记录不递归进入历史引用；来源记录始终只读。
 
 后台通知、`.pi/tasks` 元数据和补丁报告由对应能力维护，UI 不改写格式。
 deferred questions/background 工具仍通过内置 `tool_search` 发现；

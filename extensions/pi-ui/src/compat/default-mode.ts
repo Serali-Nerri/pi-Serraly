@@ -1,5 +1,6 @@
 // Pure-display host compatibility. Views live in transcript/tool-renderers.ts.
 import { ToolExecutionComponent } from "@earendil-works/pi-coding-agent";
+import { visibleWidth } from "@earendil-works/pi-tui";
 import { config } from "../config/config.ts";
 import { createCcstyleTool } from "../transcript/tool-renderers.ts";
 import {
@@ -59,16 +60,18 @@ function managed(component: any): boolean {
 }
 function renderer(component: any, patch: Patch): any {
 	const kind = managedView(String(component.toolName), resolveRendererPolicy(component));
+	const name = String(component.toolName || "tool");
 	const definition = component.toolDefinition ?? component.builtInToolDefinition;
 	if (definition && typeof definition === "object") {
 		let cached = patch.byDefinition.get(definition);
-		if (!cached || cached.kind !== kind) {
-			cached = { kind, value: createCcstyleTool(definition, kind) };
+		if (!cached || cached.kind !== kind || cached.name !== name) {
+			// Pi's resolver may supply renderer functions without a business
+			// definition. Identity still belongs to the actual tool component.
+			cached = { kind, name, value: createCcstyleTool({ ...definition, name, label: definition.label ?? name }, kind) };
 			patch.byDefinition.set(definition, cached);
 		}
 		return cached.value;
 	}
-	const name = String(component.toolName || "tool");
 	let cached = patch.byName.get(name);
 	if (!cached || cached.kind !== kind) {
 		cached = { kind, value: createCcstyleTool({ name, label: name }, kind) };
@@ -125,8 +128,9 @@ export function installDefaultMode(): DefaultModeHooks {
 export function installToolExpandedBackground(): () => void {
 	patchRegistry.getOwned(TOOL_EXPANDED_BACKGROUND_PATCH, isDisposable)?.dispose();
 	const proto = ToolExecutionComponent.prototype as any;
-	requireMethods(proto, ["updateDisplay"]);
+	requireMethods(proto, ["updateDisplay", "render"]);
 	const original = captureMethod(proto, "updateDisplay");
+	const renderOriginal = captureMethod(proto, "render");
 	const boxes = new Map<any, { paddingX: number; paddingY: number; nativeBg: any; installedBg: any }>();
 	const restore = (box: any) => {
 		const saved = boxes.get(box);
@@ -145,18 +149,30 @@ export function installToolExpandedBackground(): () => void {
 		const theme = getMessageDisplayTheme();
 		const box = this.contentBox;
 		if (!box || !theme?.bg) return;
-		const installedBg = (text: string) => theme.bg("userMessageBg", text);
+		const installedBg = (text: string) => getMessageDisplayTheme().bg(config.expandedCardBackground, text);
 		boxes.set(box, { paddingX: box.paddingX, paddingY: box.paddingY, nativeBg: box.bgFn, installedBg });
 		box.paddingX = 1; box.paddingY = 1; box.setBgFn?.(installedBg);
 	};
 	const patch = { dispose() {
 		if (!active) return;
 		active = false;
+		renderStep.dispose();
 		step.dispose();
 		for (const box of boxes.keys()) restore(box);
 		patchRegistry.dispose(TOOL_EXPANDED_BACKGROUND_PATCH, patch);
 	} };
 	const step = installMethodStep(proto, "updateDisplay", () => installed);
+	const renderStep = installMethodStep(proto, "render", () => function (this: any, width: number) {
+		const lines: string[] = renderOriginal.call(this, width);
+		const policy = resolveRendererPolicy(this);
+		if (!active || !this.expanded || !policy.managed || managedView(String(this.toolName), policy) === "generic") return lines;
+		const theme = getMessageDisplayTheme();
+		if (!theme?.getBgAnsi) return lines;
+		const bg = theme.getBgAnsi(config.expandedCardBackground);
+		// Keep the native layout/hit coordinates and semantic +/- backgrounds.
+		// Restore only the outer background after a diff or ANSI reset closes it.
+		return lines.map((line) => `${bg}${line.replace(/\x1b\[(?:49|0)?m/g, (reset) => reset + bg)}${" ".repeat(Math.max(0, width - visibleWidth(line)))}\x1b[49m`);
+	});
 	patchRegistry.installOwned(TOOL_EXPANDED_BACKGROUND_PATCH, patch);
 	return patch.dispose;
 }

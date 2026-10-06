@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -93,6 +94,30 @@ test("source-only subprocesses do not require an external Pi installation", asyn
 		}
 		await rm(base, { recursive: true, force: true });
 	}
+});
+
+test("isolated npm build and validation commands are offline with registry side work disabled", async () => {
+	const base = await mkdtemp(join(tmpdir(), "serraly-npm-config-"));
+	try {
+		const env = isolatedEnvironment(base);
+		await mkdir(env.HOME, { recursive: true });
+		env.NODE_OPTIONS = `--import=${new URL("fixtures/network-guard.mjs", import.meta.url).href}`;
+		env.SERRALY_REPORT = join(base, "network-report.jsonl");
+		const result = spawnSync("npm", ["config", "get", "offline", "update-notifier", "audit", "fund"], {
+			cwd: base, env, encoding: "utf8", timeout: 10000,
+		});
+		assert.equal(result.status, 0, result.stderr);
+		const config = Object.fromEntries(result.stdout.trim().split("\n").map((line) => line.split("=").map((value) => value.trim())));
+		assert.equal(config.offline, "true");
+		assert.equal(config["update-notifier"], "false");
+		assert.equal(config.audit, "false");
+		assert.equal(config.fund, "false");
+		const report = await readFile(env.SERRALY_REPORT, "utf8").catch((error) => {
+			if (error.code === "ENOENT") return "";
+			throw error;
+		});
+		assert.equal(report, "", "npm configuration inspection must not attempt registry networking");
+	} finally { await rm(base, { recursive: true, force: true }); }
 });
 
 test("UI preview owns its stage and report paths explicitly", { timeout: 60000 }, async () => {

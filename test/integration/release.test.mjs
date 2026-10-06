@@ -28,7 +28,7 @@ async function poisonPackageManager(base) {
 	return { env: { ...isolatedEnvironment(base), PATH: bin }, marker };
 }
 
-test("release carries seven independent members prepared without a package manager", { timeout: 300000 }, async () => {
+test("release carries eight independent members prepared without a package manager", { timeout: 300000 }, async () => {
 	const base = await mkdtemp(join(tmpdir(), "serraly-release-test-"));
 	try {
 		const output = join(base, "release");

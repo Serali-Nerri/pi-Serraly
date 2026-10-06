@@ -4,7 +4,7 @@ import { getCapabilities, truncateToWidth, visibleWidth, wrapTextWithAnsi } from
 import { RenderLines, renderToolHeader, renderToolStatus, type ToolCardState, type ToolCardTheme } from "pi-ui-kit";
 import { config } from "../../config/config.ts";
 import { sanitizeToolResultText } from "../../utils/tool-result-sanitize.ts";
-import { scheduleAnimation } from "./result.ts";
+import { scheduleAnimation, setToolVisualState } from "./result.ts";
 import { toolLoadingIcon } from "../../utils/tool-loading-icon.ts";
 import { showMoreHintText } from "./show-more-hint.ts";
 import { isToolCallHovered } from "../../overlays/mouse-state.ts";
@@ -198,11 +198,15 @@ interface DiffLine {
 	sign: "+" | "-" | " ";
 	lineNumber: string;
 	content: string;
+	omission?: boolean;
 }
 
 // EditToolDetails.diff uses "+17 text", "-17 text", and " 17 text" rows.
 function parseDiff(diff: string): DiffLine[] {
-	return diff.split("\n").map((line) => {
+	const rows: DiffLine[] = diff.split("\n").map((line) => {
+		// Native Pi pads an omitted context row with a blank number gutter.
+		// Numbered source text, including literal ellipses, never matches this.
+		if (/^ {3,}\.\.\.$/.test(line)) return { sign: " ", lineNumber: "", content: "", omission: true };
 		const match = line.match(/^([+\- ])(\s*\d*)\s(.*)$/);
 		if (!match) return { sign: " ", lineNumber: "", content: line };
 		return {
@@ -211,6 +215,10 @@ function parseDiff(diff: string): DiffLine[] {
 			content: match[3],
 		};
 	});
+	// A terminal marker only says the file continues; it is not another piece
+	// of retained diff that expansion can reveal.
+	while (rows.at(-1)?.omission) rows.pop();
+	return rows;
 }
 
 function fullWidthBackground(color: Rgb, text: string, width: number): string {
@@ -240,8 +248,8 @@ export function diffPreview(diff: string, expanded: boolean, full = false): Diff
 
 		for (const row of parsed) {
 			if (output.length >= limit) break;
-			if (!row.lineNumber && row.content.trim() === "...") {
-				output.push(foreground(COLOR.gutter, `${DIFF_INDENT}    ⋮`));
+			if (row.omission) {
+				output.push(foreground(COLOR.gutter, `${DIFF_INDENT} ${"⋮".padStart(gutterWidth)}`));
 				completed++;
 				continue;
 			}
@@ -321,6 +329,10 @@ export class FileResultView implements Component {
 		return lines;
 	}
 
+	actionAtRow(row: number): "reveal" | undefined {
+		return row === this.moreRow ? "reveal" : undefined;
+	}
+
 	previewAtRow(row: number): { title: string; content: Component } | undefined {
 		return row === this.moreRow ? this.fullPreview : undefined;
 	}
@@ -353,14 +365,19 @@ export function createFileRenderer(original: any): any {
 		renderShell: "self",
 		renderCall(args: any, theme: any, context: any) {
 			if (!valid(args)) return fallback("renderCall", [args, theme, context]);
-			if (context.isPartial && context.executionStarted) scheduleAnimation(context);
-			const glyph = context.isPartial && context.executionStarted ? toolLoadingIcon() : "●";
-			return new RenderLines((width) =>
-				toolHeaderLines(theme, context, name, sanitizeToolResultText(args.path), width, glyph));
+			return {
+				render(width: number) {
+					const pending = context.isPartial && context.executionStarted;
+					if (pending) scheduleAnimation(context);
+					return toolHeaderLines(theme, context, name, sanitizeToolResultText(args.path), width, pending ? toolLoadingIcon() : "●");
+				},
+				invalidate() {},
+			};
 		},
 		renderResult(result: AgentToolResult<any>, options: any, theme: any, context: any) {
 			if (!valid(context.args)) return fallback("renderResult", [result, options, theme, context]);
 			if (options.isPartial) return pendingResult(theme, name === "write" ? "Writing…" : "Editing…");
+			setToolVisualState(context, context.isError ? "error" : "success");
 			if (context.isError) {
 				return errorResultView(theme, `${name}: ${context.args.path}`, textOf(result), context.toolCallId);
 			}

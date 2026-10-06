@@ -107,11 +107,15 @@ suite.
 
 - [ ] Native startup header untouched by this module, footer layout, cwd, runtime and extension status segments.
 - [ ] On/compact/off presentation; Thinking remains interactive in off.
-- [ ] All five settings pages, twelve settings and keyboard/focus behavior.
+- [ ] All five settings pages, thirteen settings and keyboard/focus behavior; `inputClip: 0` adaptive mode and explicit positive limits.
 - [ ] `/context` labels, six categories, text previews and Escape ownership.
 - [ ] Fullscreen hover/expansion, text selection and links; regular keyboard paths.
 - [ ] Narrow/wide resizing and light/dark theme changes without stale content.
-- [ ] File/diff cards, long-line wrapping, retained-data expansion and truncation notices.
+- [ ] File/diff cards, long-line wrapping, native leading/intermediate gutter gaps, no false expansion for trailing omissions, retained-data expansion and Result Truncation notices.
+- [ ] Single/group/compact PowerShell commands and grep/find expression+scope; POSIX/Windows filenames, CJK, combining characters and emoji fit narrow/wide summaries.
+- [ ] Stable pending bodies animate without reassembling public renderer bodies; partial/final/cancel and hover/resize remain current.
+- [ ] Exact action clicks versus identical ordinary output/diff/Thinking text; actual previews, drag selection, body collapse, links and keyboard paths.
+- [ ] Saved semantic expanded background updates existing tool/file/patch/group/message/Thinking views on repaint in light/dark themes; diff semantics, selection, hover, off mode and dedicated renderers remain intact.
 - [ ] Native Mermaid settings/fallbacks and bare-URL destinations.
 
 At CJK punctuation boundaries, `www` paths containing Markdown-active characters

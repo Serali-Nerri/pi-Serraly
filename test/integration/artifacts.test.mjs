@@ -9,7 +9,7 @@ const root = resolve(import.meta.dirname, "../..");
 
 // A host loader may supply a `require` binding, so only native ESM proves the
 // artifact's CJS interop closure is self-sufficient.
-for (const name of ["pi-add-dir", "pi-ask-user-question", "pi-background-shell", "pi-loop", "pi-subagents", "pi-tools", "pi-ui"]) {
+for (const name of ["pi-add-dir", "pi-ask-user-question", "pi-background-shell", "pi-loop", "pi-session-reference", "pi-subagents", "pi-tools", "pi-ui"]) {
 	test(`compiled ${name} entry imports as native ESM without a host require binding`, { timeout: 30000 }, async () => {
 		const packages = await discoverPackages();
 		const pkg = packages.find((candidate) => candidate.name === name);

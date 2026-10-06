@@ -10,7 +10,8 @@ import { getUiScheduler } from "../../scheduler.ts";
 const TOOL_VIEWPORT_WIDTH_RATIO = 0.8;
 
 export function toolViewportWidth(width: number): number {
-	return Math.max(1, Math.floor(width * TOOL_VIEWPORT_WIDTH_RATIO));
+	const available = Math.max(0, Math.floor(width));
+	return Math.min(available, Math.max(1, Math.floor(available * TOOL_VIEWPORT_WIDTH_RATIO), available - 24));
 }
 
 /** 与默认工具结果相同的一级缩进包装。 */
@@ -68,24 +69,22 @@ function hasExpandableResult(text: string): boolean {
 	return countLines(text) > 1;
 }
 
-const activeAnimationContexts = new Set<any>();
+const activeAnimationStates = new Set<any>();
 let cancelAnimation: (() => void) | undefined;
 
 function clearAnimation(context: any) {
 	if (!context?.state?.ccstyleAnimationScheduled) return;
 	context.state.ccstyleAnimationScheduled = false;
-	activeAnimationContexts.delete(context);
-	if (activeAnimationContexts.size === 0) {
+	activeAnimationStates.delete(context.state);
+	if (activeAnimationStates.size === 0) {
 		cancelAnimation?.();
 		cancelAnimation = undefined;
 	}
 }
 
 export function clearAllAnimations() {
-	for (const ctx of activeAnimationContexts) {
-		ctx.state.ccstyleAnimationScheduled = false;
-	}
-	activeAnimationContexts.clear();
+	for (const state of activeAnimationStates) state.ccstyleAnimationScheduled = false;
+	activeAnimationStates.clear();
 	cancelAnimation?.();
 	cancelAnimation = undefined;
 }
@@ -96,16 +95,12 @@ export function scheduleAnimation(context: any, intervalMs = TOOL_LOADING_INTERV
 	const state = (context.state ??= {});
 	if (state.ccstyleAnimationScheduled) return;
 	state.ccstyleAnimationScheduled = true;
-	activeAnimationContexts.add(context);
+	activeAnimationStates.add(state);
 	if (!cancelAnimation) {
 		cancelAnimation = scheduler.schedule("tool-animation", intervalMs, () => {
 			cancelAnimation = undefined;
-			const contexts = Array.from(activeAnimationContexts);
-			activeAnimationContexts.clear();
-			for (const ctx of contexts) {
-				ctx.state.ccstyleAnimationScheduled = false;
-				ctx.invalidate?.();
-			}
+			for (const state of activeAnimationStates) state.ccstyleAnimationScheduled = false;
+			activeAnimationStates.clear();
 			scheduler.request();
 		});
 	}
@@ -319,6 +314,10 @@ export class ExpandedToolIoView {
 		if (this.truncated.input && line.includes("│")) return "input";
 		if (this.truncated.output) return "output";
 		return null;
+	}
+
+	actionAtRow(row: number): "reveal" | undefined {
+		return this.showMoreHeaderLineIndexes().some((entry) => entry.line === row) ? "reveal" : undefined;
 	}
 
 	/** Precise header rows marked for show-more hit testing (last render). */

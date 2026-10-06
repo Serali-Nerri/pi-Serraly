@@ -62,7 +62,7 @@ RED/GREEN 只运行新增或失败的测试文件；功能完成后运行受影�
 2. **模块边界测试**：实际注册定义、renderer、文件/进程/worker 和宿主 SDK。
    外部或慢操作才允许 test double；保留真正影响断言的副作用。
 3. **产物集成**：实际编译入口、release 树、新路径 lazy import、宿主 loader
-   和类身份、资源过滤、七入口共存、脚本化 child 与合成 stdio MCP。CLI 的模块
+   和类身份、资源过滤、八入口共存、脚本化 child 与合成 stdio MCP。CLI 的模块
    计时器/UI 守卫按当前 release 成员路径归属调用，并有能触发计数的正向控制。
 4. **操作演练**：临时目录内真实文件锁、原子发布和故障中断恢复。
 5. **人工交互**：目标终端的视觉、快捷键、鼠标和焦点；自动渲染宽度检查不替代它。
@@ -85,6 +85,8 @@ GREEN。测试名说明破坏的行为。不得用源码字符串匹配代替执
 `scripts/lib/host.mjs` 拥有固定 1.0.2 宿主的查找，`scripts/lib/process.mjs`
 拥有有期限的子进程执行；UI 预览与捕获在这之上显式设置自己的 stage/report
 路径，通用环境不携带预览字段。
+隔离构建、检查、测试与打包的 npm 子进程强制离线，并关闭更新通知、audit 与 fund；
+registry 访问只属于显式依赖安装阶段，不继承操作者的 npm 配置。
 运行时测试使用空工作目录/本地合成 fixture、内存会话及脚本化 provider。
 实际 CLI/SDK worker 使用离线模式和网络拒绝 preload；拒绝环境继承到每个
 运行时子进程，包括合成 MCP。离线模式本身不禁止模型请求。
@@ -126,6 +128,11 @@ node scripts/capture.mjs /tmp/pi-ui-captures
 列、专用子代理 renderer 和 host class identity。自动宽度/ANSI 断言不替代人工
 视觉、输入和焦点验收；无 PTY 或未人工查看时必须如实报告。
 
+工作汇总的 scrollback 验收以真宿主主屏和记录终端写入的 Adapter 为 Seam：
+稳定长正文上推进汇总时钟，不能周期性清空终端历史。引用功能以真实 loader 的
+公开补全与请求上下文为 Seam，历史和 agent 注册表均来自临时 fixture；检查
+有效分支、预算、来源只读和不同入口加载顺序，不调用真实 provider。
+
 ## 分支与发布通道
 
 `main` 是稳定分支，只接收经过审阅、完整验证并完成试用观察期的版本；`dev`
@@ -141,7 +148,7 @@ node scripts/capture.mjs /tmp/pi-ui-captures
 
 ```sh
 npm run release                                  # → ~/.local/share/pi-Serraly/releases/<version>
-# 只交付部分扩展；重复 --package 选择子集，默认七个全部
+# 只交付部分扩展；重复 --package 选择子集，默认八个全部
 npm run release -- --package pi-ui
 npm run release -- --package pi-ask-user-question --package pi-subagents
 # 显式覆盖（临时验收目录或特殊 build id）
@@ -149,7 +156,7 @@ npm run release -- --build-id <id> --output /absolute/path/to/new-release
 ```
 
 选择在创建目标目录、构建或启动任何子进程之前校验：空名称、重复、未知名称和库
-名称都会直接失败。release 默认包含七个扩展；聚合 manifest 只声明被选中的入口，
+名称都会直接失败。release 默认包含八个扩展；聚合 manifest 只声明被选中的入口，
 `release.json` 记录每个成员的路径与封印摘要。
 
 release 不构建、不安装运行依赖、不携带 lock 或 `node_modules`，只复制已构建并

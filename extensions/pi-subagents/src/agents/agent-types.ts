@@ -36,6 +36,8 @@ const agents = new Map<string, AgentConfig>();
 let userAgentDir = "";
 let projectAgentDir = "";
 let sharedAgentDir = "";
+// A scan may finish after navigation/reload replaced its registry or scope.
+let discoveryGeneration = 0;
 
 export interface RegisterAgentsOptions {
   /** When true, skip built-in DEFAULT_AGENTS. */
@@ -44,6 +46,7 @@ export interface RegisterAgentsOptions {
 
 /** Register agents: defaults overlaid by user agents; hidden agents stay registered but unspawnable. */
 export function registerAgents(userAgents: Map<string, AgentConfig>, options?: RegisterAgentsOptions): void {
+  discoveryGeneration++;
   agents.clear();
 
   if (!options?.disableDefaultAgents) {
@@ -59,6 +62,7 @@ export function registerAgents(userAgents: Map<string, AgentConfig>, options?: R
 
 /** Set scan dirs for on-demand discovery; called during session_start. */
 export function setAgentScanDirs(userDir: string, projectDir: string, sharedDir?: string): void {
+  discoveryGeneration++;
   userAgentDir = userDir;
   projectAgentDir = projectDir;
   sharedAgentDir = sharedDir ?? "";
@@ -82,7 +86,10 @@ export async function discoverNewAgents(
   worktreeDir?: string,
   options?: { disableDefaultAgents?: boolean },
 ): Promise<number> {
+  const owner = discoveryGeneration;
   const merged = await scanAndMerge(options);
+  const worktreeAgents = worktreeDir ? await scanAgentFilesInDir(worktreeDir, "project") : [];
+  if (owner !== discoveryGeneration) return 0;
 
   let count = 0;
   for (const [name, config] of merged) {
@@ -93,7 +100,6 @@ export async function discoverNewAgents(
   }
 
   if (worktreeDir) {
-    const worktreeAgents = await scanAgentFilesInDir(worktreeDir, "project");
     const wtMerged = mergeAgents(new Map(), [], [], worktreeAgents);
     for (const [name, config] of wtMerged) {
       if (!agents.has(name)) {

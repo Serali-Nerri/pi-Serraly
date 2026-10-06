@@ -30,7 +30,7 @@ other jobs from running. Shutdown stops scheduling before resources are released
 | `transcript/` | Thinking and tool/file/diff/Input-Output views over captured data |
 | `overlays/` | Context and text-preview dialogs, hover/TUI state |
 | `markdown/` | One display-only transformer; native Mermaid/ordinary URLs plus narrow CJK-punctuation URL-boundary compatibility |
-| `config/` | Twelve effective settings, atomic explicit saves, panel and `/context` registration |
+| `config/` | Thirteen effective settings, atomic explicit saves, panel and `/context` registration |
 
 ## Compatibility pipeline
 
@@ -62,6 +62,35 @@ All tooling presentation domains use `compat/policy.ts`:
 Definitions, execution, tool discovery, schemas, prompts and returned content are
 outside UI ownership.
 
+The host resolver may provide renderer functions without a business definition;
+the native tool component supplies its name. Renderer-cache identity includes that
+name, rather than treating an anonymous renderer object as a tool identity.
+
+Single, grouped and compact eligible-tool summaries use the shared captured-argument
+formatter. Their viewport is the larger of 80% of terminal width and width minus
+24 columns, bounded by available columns; status, indentation and detail consume
+that same budget. `inputClip: 0` skips character preclipping, while positive limits
+remain effective. Path fitting stays POSIX-first and grapheme-safe, preserving
+filenames and separator semantics.
+
+Tool animation uses the keyed scheduler to request repaint only. Pending glyphs
+are read by the view's `render`, not captured while assembling call/result bodies;
+pending views must not enter settled caches. Real data and interaction changes
+retain normal host invalidation.
+
+Each expandable display declares the rows and actions it owns in its current
+layout. Mouse routing checks that declaration before checking the action's text
+hitbox; body text never grants action ownership. Expanded body clicks, drag
+selection, links and keyboard expansion retain their existing behavior. Native
+edit context omissions use the gutter; a trailing host omission is not retained
+hidden content. Expanded diffs remain bounded and previews never reconstruct data
+from disk.
+
+`expandedCardBackground` is a validated host semantic background token, defaulting
+to `userMessageBg`. UI-owned expanded cards, groups, message summaries and Thinking
+read the current choice on repaint. Diff change backgrounds survive the outer
+background; dedicated renderers and off-mode tool/message shells remain native.
+
 Only source-confirmed builtin write/edit definitions receive file adapters.
 Renderer-less same-name overrides use generic Input/Output and its matching
 group/compact/background decisions.
@@ -85,6 +114,11 @@ across the full session and does not write historical session data.
 Compaction watches mounted native transcript identities from the bridge. This
 places the refresh after the host rebuild even if another compaction handler
 awaits across timer turns. No extra animation timer is introduced.
+
+Compact mounts its display-only Work Summary when transcript children are added,
+before the host paints them; the bridge also reconciles rebuilt containers.
+Synthetic summary shells are not native transcript identities. Work-group and
+activity lifetime details belong to [work-summary.md](work-summary.md).
 
 Development and runtime dependency trees are owned by the repository tooling,
 not by this UI. See the [repository architecture](../../../docs/architecture.md).

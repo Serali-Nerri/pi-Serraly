@@ -1,9 +1,9 @@
 # pi-Serraly
 
-私有本地 Pi package：七个可独立启停的扩展，一个维护仓库。
+私有本地 Pi package：八个可独立启停的扩展，一个维护仓库。
 支持基线为 **Pi 1.0.2 / Node ≥22.19**。不发布 npm，不提供总 factory 再次注册能力。
 
-## 七个入口
+## 八个入口
 
 | 能力 | 运行入口 | 使用与契约 |
 | --- | --- | --- |
@@ -13,13 +13,17 @@
 | 基础工具 | `extensions/pi-tools/dist/pi-tools.js` | [`apply_patch` 与 codemode 专用的 `grep`/`find`/`ls`](extensions/pi-tools/README.md) |
 | 后台 shell | `extensions/pi-background-shell/dist/extensions/background-tasks.js` | [`bg_*`、任务 UI、通知和同进程 reload](extensions/pi-background-shell/README.md) |
 | 外部目录 | `extensions/pi-add-dir/dist/pi-add-dir.js` | [`/dir-add`、`/dir-ls`、外部指令与 skills](extensions/pi-add-dir/README.md) |
-| 子代理 | `extensions/pi-subagents/dist/pi-subagents.js` | [`Agent`、`StopAgent`、`AgentStatus`、`/agents` 与独立原生 SDK 会话](extensions/pi-subagents/README.md) |
+| 子代理 | `extensions/pi-subagents/dist/pi-subagents.js` | [`Agent`、`StopAgent`、`AgentStatus`、`/agents`、`@subagent` 与独立原生 SDK 会话](extensions/pi-subagents/README.md) |
+| 历史引用 | `extensions/pi-session-reference/dist/pi-session-reference.js` | [`@session`、只读历史上下文与明确来源](extensions/pi-session-reference/README.md) |
 
 每个扩展是独立的 private npm workspace 包，拥有自己的 manifest、构建、测试、许可
 和版本；`packages/` 下的共享库只被这些扩展在构建期 bundle。根 `pi` 显式声明空
-资源清单，安装 release 后才由聚合 manifest 声明以上七入口，可在 `pi config`
+资源清单，安装 release 后才由聚合 manifest 声明以上八入口，可在 `pi config`
 分别启停。本仓库不声明 skills、prompts 或 themes；外部 npm 扩展也不属于本仓库。
 同包发布不意味着子代理自动加载所有入口；子代理默认能力与配置见其模块文档。
+
+显式历史引用和子代理提及分别由各自入口处理；UI 不负责注入上下文或启动 Agent。
+引用历史文本可能把它作为背景发送给当前 provider，不自动执行历史指令或加载来源项目配置。
 
 Pi 默认使用 fullscreen；需要终端原生滚动历史时，可显式设置
 `"tuiMode": "regular"` 或使用 `--tui-mode regular`。

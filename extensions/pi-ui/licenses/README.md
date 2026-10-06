@@ -15,6 +15,8 @@ The UI bundle contains local views and helpers only. Pi packages remain host
 imports. The old direct grok-mermaid dependency and renderer were removed;
 standard Mermaid rendering uses the host implementation.
 
-The build copies this entire directory next to `index.js`. Source revisions and
-intentional changes are recorded in `UPSTREAM.md` files next to each module's
-license, not in a single workspace index.
+The build copies this entire directory next to the UI bundle. The tool/Thinking
+source baseline and selective presentation ports are recorded in
+`claude-style-tools-THIRD_PARTY_NOTICES.md`; shell provenance is recorded in
+`pi-session-ui-UPSTREAM.md`. The root `UPSTREAM.md` indexes retained sources but
+does not replace these module-owned notices.

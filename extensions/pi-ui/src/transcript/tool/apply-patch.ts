@@ -34,7 +34,7 @@ import {
 	toolHeaderReservedWidth,
 } from "./files.ts";
 import { describePatchTitle, fitPatchPaths, formatPatchTitle, patchDisplayPath, type PatchTitle } from "./apply-patch-title.ts";
-import { scheduleAnimation } from "./result.ts";
+import { scheduleAnimation, setToolVisualState } from "./result.ts";
 
 const FORMAT = APPLY_PATCH_FORMAT;
 // Defence thresholds of the presentation parser; the wire budgets come from the
@@ -532,16 +532,20 @@ export function createApplyPatchRenderer(
 		renderShell: "self",
 		renderCall(args: any, theme: any, context: any) {
 			if (config.mode === "off") return fallbackCall(args, theme, context);
-			if (context?.isPartial && context?.executionStarted) scheduleAnimation(context);
-			const dot = context?.isPartial && context?.executionStarted ? toolLoadingIcon() : "●";
 			// Pi builds the call slot before the result slot. Read shared state
-			// lazily at paint time, using a fresh component on every update.
-			return new RenderLines((width) => {
-				const title: PatchTitle = context?.state?.[HEADLINE] ??
-					{ status: context?.executionStarted ? "Applying patch" : "Patch" };
-				const available = Math.max(0, width - toolHeaderReservedWidth(theme, context, "apply_patch", dot));
-				return toolHeaderLines(theme, context, "apply_patch", formatPatchTitle(title, available), width, dot);
-			});
+			// and the current animation frame lazily at paint time.
+			return {
+				render(width: number) {
+					const pending = context?.isPartial && context?.executionStarted;
+					if (pending) scheduleAnimation(context);
+					const dot = pending ? toolLoadingIcon() : "●";
+					const title: PatchTitle = context?.state?.[HEADLINE] ??
+						{ status: context?.executionStarted ? "Applying patch" : "Patch" };
+					const available = Math.max(0, width - toolHeaderReservedWidth(theme, context, "apply_patch", dot));
+					return toolHeaderLines(theme, context, "apply_patch", formatPatchTitle(title, available), width, dot);
+				},
+				invalidate() {},
+			};
 		},
 		renderResult(result: any, options: any, theme: any, context: any) {
 			if (config.mode === "off") return fallbackResult(result, options, theme, context);
@@ -549,6 +553,7 @@ export function createApplyPatchRenderer(
 				setTitle(context, { status: "Applying patch" });
 				return pendingResult(theme, "Applying patch…");
 			}
+			setToolVisualState(context, context?.isError ? "error" : "success");
 			// 失败走 Pi 错误通道（details 为空）：只显示错误诊断，绝不画成功 diff。
 			if (options?.isError || context?.isError || result?.isError) {
 				setTitle(context, { status: "Failed" });

@@ -19,7 +19,7 @@ Pi 1.0.2 的展示模块，将 Claude 风格转写与会话 shell 合并为一�
 | `/ccstyle on` | Claude 风格工具/消息展示 |
 | `/ccstyle compact` | 轮次摘要及可展开过程视图，文件工具保留专用卡 |
 | `/ccstyle off` | 恢复工具/摘要原展示；**不关闭** shell、Markdown 或独立 Thinking |
-| `/ccstyle status` | 十二项有效设置 |
+| `/ccstyle status` | 十三项有效设置 |
 | `/context` | 上下文用量、来源、六分类和逐项预览 |
 
 工具 schema、prompt、exposure、执行、安全及返回数据均由业务模块或宿主拥有。
@@ -69,10 +69,24 @@ regular 的鼠标与滚动历史由终端管理，工具展开仍可使用键盘
 | `useSummaryTitlesAsThinkingTitle` | `true` |
 | `previewLines` | `3` |
 | `animationIntervalMs` | `90` |
-| `inputClip` | `100` |
+| `inputClip` | `0`（不预裁剪，按可用终端宽度展示；显式正值仍限制字符） |
+| `expandedCardBackground` | `"userMessageBg"` |
 | `expandedInputMaxLines` | `5` |
 | `expandedOutputMaxLines` | `10` |
 | `enableContextCommand` | `true` |
+
+单卡、相邻分组与 compact eligible-tool 共享摘要取值：PowerShell 显示命令，
+grep/find 显示表达式和存在的路径范围。摘要预算取终端宽度的 80% 与宽度减 24 列
+的较大值，并扣除标题、状态、分支和 detail；路径仍优先保留文件名与原分隔符。
+
+`expandedCardBackground` 接受宿主语义背景槽位：`userMessageBg`、`toolPendingBg`、
+`toolSuccessBg`、`toolErrorBg`、`customMessageBg`、`selectedBg`、`searchMatchBg`；非法值回退默认。
+它统一用于 UI 管理的展开工具/文件/补丁卡、工作组、消息和独立 Thinking；
+专用 renderer 保持自己的背景，diff 增删背景、hover 和选区仍有区别。
+
+动画帧只请求重绘，字形在 render 时读取；真实结果、展开、设置和主题更新仍正常失效。
+鼠标展开/预览只匹配展示模块声明的操作行及其文字区域，正文里的同款提示不是操作。
+原生 edit diff 的前部/中间省略显示在 gutter；尾部上下文省略不算可展开的保留内容。
 
 已删除 `dimThinkingText`、`expandedPreviewMaxLines`、`scrollStepLines`、旧 Task
 专用展示和滚轮覆盖。滚轮遵循宿主 `fullscreenWheelScrollLines`。

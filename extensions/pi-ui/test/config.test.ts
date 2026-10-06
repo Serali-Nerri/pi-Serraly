@@ -15,7 +15,8 @@ const expected = {
 	useSummaryTitlesAsThinkingTitle: true,
 	previewLines: 3,
 	animationIntervalMs: 90,
-	inputClip: 100,
+	inputClip: 0,
+	expandedCardBackground: "userMessageBg",
 	expandedInputMaxLines: 5,
 	expandedOutputMaxLines: 10,
 	enableContextCommand: true,
@@ -48,9 +49,9 @@ function loadInChild(agentDirectory: string = directory) {
 	}));
 }
 
-test("exactly twelve retained fields and defaults", () => {
+test("effective settings use adaptive summaries and the existing expanded background by default", () => {
 	assert.deepEqual(DEFAULT_CONFIG, expected);
-	assert.equal(Object.keys(DEFAULT_CONFIG).length, 12);
+	assert.equal(Object.keys(DEFAULT_CONFIG).length, 13);
 	assert.deepEqual(normalizeConfig(undefined), expected);
 	assert.deepEqual(config, expected);
 });
@@ -78,7 +79,7 @@ test("retained numeric fields are finite, floored and clamped to their bounds", 
 	});
 	assert.equal(normalizeConfig({ inputClip: 160.9 }).inputClip, 160);
 	for (const value of [NaN, Infinity, -Infinity, "160", null]) {
-		assert.equal(normalizeConfig({ inputClip: value }).inputClip, 100);
+		assert.equal(normalizeConfig({ inputClip: value }).inputClip, 0);
 	}
 	assert.equal(normalizeConfig({ animationIntervalMs: 5_000 }).animationIntervalMs, 1_000);
 });
@@ -161,7 +162,7 @@ test("explicit save preserves unknown fields and cleans all discarded keys", () 
 		...expected, mode: "compact", fileExpandedMaxLines: 200,
 	});
 	assert.deepEqual(config, { ...expected, mode: "compact", fileExpandedMaxLines: 200 });
-	assert.equal(Object.keys(config).length, 12);
+	assert.equal(Object.keys(config).length, 13);
 });
 
 test("save re-reads unknown data written since startup and ignores unknown update keys", () => {

@@ -1,7 +1,7 @@
 import { createBashToolDefinition, createEditToolDefinition, createReadToolDefinition, createWriteToolDefinition,
 	DefaultResourceLoader, ExtensionRunner, SettingsManager, initTheme, ToolExecutionComponent,
 	type ExtensionFactory } from "@earendil-works/pi-coding-agent";
-import { Container, TuiAltScreen, type Component } from "@earendil-works/pi-tui";
+import { Container, TuiAltScreen, TuiMainScreen, type Component } from "@earendil-works/pi-tui";
 import { theme } from "../../../node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/theme/theme.js";
 // Pinned host presentation entry: interactive-mode merges these before resolver fallback.
 import { withBuiltInRenderers } from "../../../node_modules/@earendil-works/pi-coding-agent/dist/core/tools/renderers/index.js";
@@ -14,6 +14,11 @@ export const strip = (text: string) => text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, 
 
 export type HarnessOptions = {
 	mode?: "on" | "compact" | "off";
+	tuiMode?: "regular" | "fullscreen";
+	columns?: number;
+	rows?: number;
+	/** Match the host's transcript-before-editor/widget rendering order. */
+	widgetsAfterTranscript?: boolean;
 	headless?: boolean;
 	/** Loaded by Pi's real registration API, in this order after the UI extension. */
 	extensionFactories?: ExtensionFactory[];
@@ -29,16 +34,18 @@ export async function harness(options: HarnessOptions = {}) {
 	const registered: any[] = [];
 	const mutations: string[] = [];
 	const widgets = new Map<string, Component>();
+	const widgetArea = new Container();
 	const root = new Container();
 	const output: string[] = [];
 	/** Every `ui.notify` call, including the ones emitted during session_start. */
 	const notices: Array<{ message: string; level: string | undefined }> = [];
-	const terminal = { columns: 100, rows: 36, write: (s: string) => output.push(s),
+	const terminal = { columns: options.columns ?? 100, rows: options.rows ?? 36, write: (s: string) => output.push(s),
 		start() {}, stop() {}, hideCursor() {}, showCursor() {}, moveBy() {}, clearLine() {}, clearFromCursor() {},
 		setTitle() {}, drainInput: async () => {}, };
-	const tui = new TuiAltScreen(terminal as any) as any;
+	const tui = (options.tuiMode === "regular" ? new TuiMainScreen(terminal as any) : new TuiAltScreen(terminal as any)) as any;
 	tui.requestRender = () => {};
 	tui.addChild(root);
+	if (options.widgetsAfterTranscript) tui.addChild(widgetArea);
 	tui.stopped = false; tui.altScreenActive = true;
 	let overlay: Component | undefined;
 	let footer: (Component & { dispose?(): void }) | undefined;
@@ -62,7 +69,14 @@ export async function harness(options: HarnessOptions = {}) {
 			theme, getToolsExpanded: () => false, getThinkingVisible: () => false,
 			notify(message: string, level?: string) { notices.push({ message, level }); }, requestRender() {},
 			setWidget(id: string, factory: any) {
-				if (!factory) widgets.delete(id); else widgets.set(id, factory(tui, theme));
+				const previous = widgets.get(id);
+				if (previous) widgetArea.removeChild(previous);
+				if (!factory) widgets.delete(id);
+				else {
+					const widget = factory(tui, theme);
+					widgets.set(id, widget);
+					if (options.widgetsAfterTranscript) widgetArea.addChild(widget);
+				}
 			},
 			setFooter(factory: any) {
 				footer?.dispose?.();
@@ -134,9 +148,9 @@ export async function harness(options: HarnessOptions = {}) {
 		return component;
 	};
 	const render = () => {
-		for (const widget of widgets.values()) widget.render(terminal.columns);
+		if (!options.widgetsAfterTranscript) for (const widget of widgets.values()) widget.render(terminal.columns);
 		tui.doRender();
-		return (tui.previousScreen as string[]).map(strip);
+		return ((tui.mode === "regular" ? tui.previousLines : tui.previousScreen) as string[]).map(strip);
 	};
 	const pointer = (x: number, y: number, type: "press" | "release" | "move" | "drag" = "press") => {
 		const button = type === "move" ? 35 : type === "drag" ? 32 : 0;
@@ -147,6 +161,6 @@ export async function harness(options: HarnessOptions = {}) {
 	return { pi, ctx, tui, root, widgets, commands, entries, registered, mutations, definitions, events, terminal, notices, toolMetadata,
 		tool, emit, render, pointer, click, flush, get overlay() { return overlay; },
 		get footer() { return footer; },
-		async close() { await emit("session_shutdown"); tui.stopSelectionAutoScroll(); tui.stopScrollbarHover(); tui.stopScrollbarDrag(); },
+		async close() { await emit("session_shutdown"); tui.stopSelectionAutoScroll?.(); tui.stopScrollbarHover?.(); tui.stopScrollbarDrag?.(); },
 	};
 }

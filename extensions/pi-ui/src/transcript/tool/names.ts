@@ -5,8 +5,20 @@ import { visibleWidth } from "@earendil-works/pi-tui";
 import { config } from "../../config/config.ts";
 import { oneLine } from "../../utils/format.ts";
 
+function clipLimit(): number {
+	return config.inputClip > 0 ? config.inputClip : Number.POSITIVE_INFINITY;
+}
+
 function clip(value: unknown): string {
-	return oneLine(value, config.inputClip);
+	const text = oneLine(value, Number.POSITIVE_INFINITY);
+	const limit = clipLimit();
+	if (text.length <= limit) return text;
+	let head = "";
+	for (const { segment } of pathSegmenter.segment(text)) {
+		if (head.length + segment.length > limit - 1) break;
+		head += segment;
+	}
+	return `${head}…`;
 }
 
 /**
@@ -14,6 +26,7 @@ function clip(value: unknown): string {
  * 逐字相同，收敛为一个共享实现。
  */
 export function humanizeToolLabel(label: string): string {
+	if (label.toLowerCase() === "powershell") return "PowerShell";
 	return label
 		.replace(/([a-z0-9])([A-Z])/g, "$1 $2")
 		.replace(/[_-]+/g, " ")
@@ -27,7 +40,7 @@ const AGENT_FAMILY_TOOL_NAMES = new Set([
 	"steer_subagent",
 ]);
 
-/** default-mode（单工具卡）与 grouping（分组卡）在 agent/bash/grep/find/read/fallback 文案上不同。 */
+/** 具名 agent 的标题变体；eligible 命令、检索与路径展示共享取值。 */
 export type ToolCallSummaryVariant = "default" | "grouping";
 
 export type ToolCallSummaryOptions = {
@@ -131,7 +144,7 @@ export function fitToolCallSummary(summary: ToolCallSummary, width: number): str
 	const prefix = summary.path.prefix;
 	const pathWidth = Math.max(0, width - visibleWidth(prefix) - 1);
 	if (pathWidth <= 0) return headToWidth(prefix, width, "…");
-	return `${prefix} ${truncatePathToWidth(summary.path.value, Math.min(pathWidth, config.inputClip))}`;
+	return `${prefix} ${truncatePathToWidth(summary.path.value, Math.min(pathWidth, clipLimit()))}`;
 }
 
 function pathSummary(
@@ -142,7 +155,7 @@ function pathSummary(
 ): ToolCallSummary {
 	const path = displayPath(value, cwd);
 	return {
-		main: `${prefix} ${truncatePathToWidth(path, config.inputClip)}`,
+		main: `${prefix} ${truncatePathToWidth(path, clipLimit())}`,
 		detail,
 		path: { prefix, value: path },
 	};
@@ -151,8 +164,7 @@ function pathSummary(
 /**
  * 单工具调用摘要（{ main, detail }）。
  *
- * default-mode 与 grouping 共用；opts.variant 保留两处各自逐字一致的输出，
- * 不改动任何现有渲染字符串。
+ * Eligible 工具共享命令、检索与路径取值；具名 agent 展示保留自己的标题语义。
  */
 export function toolCallSummary(
 	toolName: string,
@@ -211,58 +223,22 @@ export function toolCallSummary(
 			detail,
 		};
 	}
-	if (variant === "grouping") {
-		if (toolName === "bash") return { main: `Bash ${clip(args.command || "...")}`, detail: "" };
-		if (toolName === "grep") {
-			const pattern = clip(args.pattern || "...");
-			return {
-				main: `Grep ${JSON.stringify(pattern)}${args.path ? ` in ${clip(args.path)}` : ""}`,
-				detail: "",
-			};
-		}
-		if (toolName === "find") {
-			const pattern = clip(args.pattern || "...");
-			return {
-				main: `Find ${JSON.stringify(pattern)}${args.path ? ` in ${clip(args.path)}` : ""}`,
-				detail: "",
-			};
-		}
+	if (name === "bash" || name === "powershell") return { main: value("...", "command"), detail: "" };
+	if (name === "grep" || name === "find") {
+		const pattern = clip(args.pattern || "...");
+		const scope = typeof args.path === "string" && args.path ? ` in ${clip(args.path)}` : "";
+		return { main: `${title} ${JSON.stringify(pattern)}${scope}`, detail: "" };
 	}
-	if (variant === "default") {
-		const preferredPath = args.path ?? args.file_path;
-		if (typeof preferredPath === "string" && preferredPath) {
-			return pathSummary(title, preferredPath, opts.cwd);
-		}
-		const preferred =
-			args.command ??
-			args.query ??
-			args.question ??
-			args.pattern ??
-			args.url ??
-			args.name ??
-			args.tool_use_id ??
-			args.toolCallId ??
-			args.id ??
-			args.message;
-		return {
-			main:
-				preferred !== undefined && preferred !== null && typeof preferred !== "object"
-					? `${title} ${clip(preferred)}`
-					: title,
-			detail: "",
-		};
+	const preferredPath = args.path ?? args.file_path;
+	if (typeof preferredPath === "string" && preferredPath) {
+		return pathSummary(title, preferredPath, opts.cwd);
 	}
 	const preferred =
-		args.agent_id ??
-		args.path ??
-		args.file_path ??
-		args.url ??
-		args.description ??
-		args.query ??
-		args.name ??
-		args.prompt;
+		args.command ?? args.query ?? args.question ?? args.pattern ?? args.url ?? args.name ??
+		args.tool_use_id ?? args.toolCallId ?? args.id ?? args.message ?? args.description ?? args.prompt;
 	return {
-		main: `${title}${preferred === undefined ? "" : ` ${clip(preferred)}`}`,
+		main: preferred !== undefined && preferred !== null && typeof preferred !== "object"
+			? `${title} ${clip(preferred)}` : title,
 		detail: "",
 	};
 }

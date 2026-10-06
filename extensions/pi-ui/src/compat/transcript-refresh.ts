@@ -4,6 +4,7 @@ import { AssistantMessageComponent, ToolExecutionComponent } from "@earendil-wor
 import { walkComponentTree } from "./component-tree.ts";
 import { COMPACT_MODE_PATCH_KEY, patchRegistry } from "./patch-keys.ts";
 import { isMessageDisplayComponent } from "./message-display.ts";
+import { isCompactSummaryComponent } from "./compact-mode.ts";
 
 // pi-coding-agent 类型声明中 AssistantMessageComponent 仅能以 value 形式使用，
 // updateContent/lastMessage 用结构化类型访问。
@@ -85,7 +86,7 @@ export function mountedTranscriptIdentity(tui?: unknown): Set<object> {
 	const components = new Set<object>();
 	if (!tui || typeof (tui as any).getMountedRoots !== "function") return components;
 	walkComponentTree(tui, (value: any) => {
-		if (value instanceof AssistantMessageComponent || value instanceof ToolExecutionComponent ||
+		if ((value instanceof AssistantMessageComponent && !isCompactSummaryComponent(value)) || value instanceof ToolExecutionComponent ||
 			isMessageDisplayComponent(value)) components.add(value);
 	});
 	return components;
