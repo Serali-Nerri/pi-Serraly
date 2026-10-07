@@ -67,6 +67,39 @@ function copyJson(value: unknown, budget: { nodes: number; characters: number },
 	} finally { ancestors.delete(value); }
 }
 
+/** Structural checks on bounded, owned JSON only; annotations stay data and references are not resolved. */
+function schemaShape(schema: unknown): boolean {
+	if (typeof schema === "boolean") return true;
+	if (!record(schema)) return false;
+	const strings = (value: unknown): boolean => Array.isArray(value) && value.every((entry) => typeof entry === "string");
+	const types = ["null", "boolean", "object", "array", "number", "integer", "string"];
+	if (schema.type !== undefined && !(typeof schema.type === "string" ? types.includes(schema.type)
+		: Array.isArray(schema.type) && schema.type.length > 0 && schema.type.every((type) => typeof type === "string" && types.includes(type)))) return false;
+	if (schema.required !== undefined && !strings(schema.required)) return false;
+	for (const key of ["properties", "patternProperties", "$defs", "definitions", "dependentSchemas"]) {
+		const value = schema[key];
+		if (value !== undefined && (!record(value) || !Object.values(value).every(schemaShape))) return false;
+	}
+	for (const key of ["allOf", "anyOf", "oneOf", "prefixItems"]) {
+		const value = schema[key];
+		if (value !== undefined && (!Array.isArray(value) || !value.every(schemaShape))) return false;
+	}
+	for (const key of ["additionalProperties", "additionalItems", "unevaluatedProperties", "unevaluatedItems", "propertyNames", "contains", "not", "if", "then", "else", "contentSchema"]) {
+		if (schema[key] !== undefined && !schemaShape(schema[key])) return false;
+	}
+	if (schema.items !== undefined && !(Array.isArray(schema.items) ? schema.items.every(schemaShape) : schemaShape(schema.items))) return false;
+	if (schema.dependentRequired !== undefined && (!record(schema.dependentRequired) || !Object.values(schema.dependentRequired).every(strings))) return false;
+	if (schema.dependencies !== undefined && (!record(schema.dependencies)
+		|| !Object.values(schema.dependencies).every((value) => Array.isArray(value) ? strings(value) : schemaShape(value)))) return false;
+	return true;
+}
+
+function cacheControlShape(value: unknown): boolean {
+	return value === undefined || value === null || (record(value) && value.type === "ephemeral"
+		&& (value.ttl === undefined || value.ttl === "5m" || value.ttl === "1h")
+		&& Object.keys(value).every((key) => key === "type" || key === "ttl"));
+}
+
 /** Capture failures are deliberately content-free and cannot escape into the host's error reporting. */
 export function captureToolObservation(payload: unknown): ToolObservation {
 	const observedAt = new Date().toISOString();
@@ -85,19 +118,17 @@ export function captureToolObservation(payload: unknown): ToolObservation {
 			if (typeof name !== "string" || !name.trim() || typeof description !== "string" || !record(schema) || data(schema, "type") !== "object"
 				|| data(tool, "defer_loading") !== undefined || name === "__pi_deferred_placeholder__" || data(tool, "type") !== undefined)
 				throw new Error("Unknown definition");
-			const properties = data(schema, "properties"), required = data(schema, "required");
-			if ((properties !== undefined && !record(properties)) || (required !== undefined && !Array.isArray(required))) throw new Error("Malformed schema");
-			if (Array.isArray(required)) {
-				const requiredCount = arraySize(required);
-				for (let field = 0; field < requiredCount; field++)
-					if (typeof data(required, String(field)) !== "string") throw new Error("Malformed schema");
-			}
 			const definition: Record<string, unknown> = { name, description, input_schema: schema };
 			for (const field of ["strict", "eager_input_streaming", "cache_control"]) {
 				const value = data(tool, field);
 				if (value !== undefined) definition[field] = value;
 			}
-			return { name, position, description, definition: JSON.stringify(copyJson(definition, budget), undefined, 2) };
+			const owned = copyJson(definition, budget) as Record<string, unknown>;
+			if (!schemaShape(owned.input_schema)) throw new Error("Malformed schema");
+			if ((owned.strict !== undefined && typeof owned.strict !== "boolean")
+				|| (owned.eager_input_streaming !== undefined && owned.eager_input_streaming !== null && typeof owned.eager_input_streaming !== "boolean")
+				|| !cacheControlShape(owned.cache_control)) throw new Error("Malformed declaration option");
+			return { name, position, description, definition: JSON.stringify(owned, undefined, 2) };
 		};
 		const declaredTools = data(payload, "tools");
 		const tools = declaredTools === undefined ? [] : declaredTools;
@@ -145,6 +176,8 @@ export function captureToolObservation(payload: unknown): ToolObservation {
 				}
 				if (role !== "system" || declaredTools === undefined || !record(block)
 					|| Object.keys(block).some((key) => !["type", "tool", "cache_control"].includes(key))) throw new Error("Unknown native protocol");
+				const cacheControl = data(block, "cache_control");
+				if (cacheControl !== undefined && !cacheControlShape(copyJson(cacheControl, budget))) throw new Error("Malformed update option");
 				const tool = data(block, "tool"), position = `$.messages[${index}].content[${blockIndex}].tool`;
 				if (!record(tool) || Object.keys(tool).some((key) => !(type === "tool_addition" ? ["type", "definition"] : ["type", "name"]).includes(key)))
 					throw new Error("Unknown native shape");

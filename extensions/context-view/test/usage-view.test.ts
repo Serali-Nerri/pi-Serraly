@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { wheelEvent } from "./fixtures/mouse.ts";
 
 import { Theme, type ThemeColor } from "@earendil-works/pi-coding-agent";
 import { visibleWidth } from "@earendil-works/pi-tui";
@@ -1791,21 +1790,4 @@ test("formatTokens and formatPercent keep compact readable precision", () => {
 	assert.equal(formatPercent(0.004), "0.4%");
 	assert.equal(formatPercent(0.042), "4.2%");
 	assert.equal(formatPercent(0.956), "96%");
-});
-
-
-test("Usage full content consumes public wheel line deltas", () => {
-	const text = Array.from({ length: 60 }, (_, i) => `PUBLIC_WHEEL_LINE_${i}`).join("\n");
-	const view = createView(createTheme(), { usage: {
-		...usage(500), categories: [{ id: "system-prompt", label: "System Prompt", tokens: 500,
-			entries: [{ breadcrumb: ["system"], tokens: 500, text }] }],
-	} }, () => {}, () => 24);
-	view.render(80);
-	view.handleInput("\r");
-	view.render(80);
-	assert.match(stripSgr(view.render(80).join("\n")), /PUBLIC_WHEEL_LINE_0/);
-	assert.deepEqual(view.handleMouse(wheelEvent(7)), { handled: true, render: true });
-	const scrolled = stripSgr(view.render(80).join("\n"));
-	assert.doesNotMatch(scrolled, /PUBLIC_WHEEL_LINE_0(?:\s|$)/);
-	assert.match(scrolled, /PUBLIC_WHEEL_LINE_7(?:\s|$)/);
 });

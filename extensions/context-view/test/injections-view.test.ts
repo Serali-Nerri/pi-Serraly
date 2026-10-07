@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { wheelEvent } from "./fixtures/mouse.ts";
 
 import { Theme, type ThemeColor } from "@earendil-works/pi-coding-agent";
 import { visibleWidth } from "@earendil-works/pi-tui";
@@ -867,25 +866,4 @@ test("InjectionsView navigation scrolls the non-selectable total and Escape clos
 
 	view.handleInput("\u001b");
 	assert.equal(closed, true);
-});
-
-
-test("Injections preview consumes public wheel line deltas without private host settings", () => {
-	const initial = snapshot(8);
-	const first = initial.groups[0]!.items[0]!;
-	const view = new InjectionsView(createTheme(), { snapshot: {
-		...initial, groups: [{ ...initial.groups[0]!, items: [{ ...first,
-			text: Array.from({ length: 40 }, (_, i) => `preview line ${i} `).join("\n") }] }],
-	} }, () => {}, () => 24);
-	view.render(80);
-	view.handleInput("\x1b[B");
-	view.handleInput("\r");
-	const before = stripSgr(view.render(80).join("\n"));
-	assert.match(before, /preview line 0/);
-	assert.deepEqual(view.handleMouse(wheelEvent(7)), { handled: true, render: true });
-	const scrolled = stripSgr(view.render(80).join("\n"));
-	assert.doesNotMatch(scrolled, /preview line 0 /);
-	assert.match(scrolled, /preview line 7 /);
-	view.handleMouse(wheelEvent(-7));
-	assert.match(stripSgr(view.render(80).join("\n")), /preview line 0/);
 });

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { getConfigFilePath } from "../src/config.ts";
 import { test } from "node:test";
 import { deferredSchemaMarker, host, strip } from "./fixtures/host.ts";
+import { wheelEvent } from "./fixtures/mouse.ts";
 import contextView from "../src/index.ts";
 import type { ExtensionFactory } from "@earendil-works/pi-coding-agent";
 import { visibleWidth, type TuiMouseEvent, type TuiMouseEventResult } from "@earendil-works/pi-tui";
@@ -136,6 +137,15 @@ test("new unknown, malformed and failed observations replace old evidence withou
 				}
 				case 6: return { ...body, messages: [{ role: { toString() { getters++; return "user"; } }, content: "local" }] };
 				case 7: return { ...body, tools: [{ name: "broken", description: "local", input_schema: { type: "object", properties: [] } }] };
+				case 8: return { ...body, tools: [{ ...body.tools[0], input_schema: { type: "object", properties: { broken: 17 } } }] };
+				case 9: return { ...body, tools: [{ ...body.tools[0], input_schema: { type: "object", properties: {
+					broken: { anyOf: [false, { type: "array", items: { additionalProperties: 17 } }] },
+				} } }] };
+				case 10: return { ...body, tools: [{ ...body.tools[0], strict: "not-a-boolean" }] };
+				case 11: return { ...body, tools: [{ ...body.tools[0], eager_input_streaming: 1 }] };
+				case 12: return { ...body, tools: [{ ...body.tools[0], cache_control: { type: "persistent" } }] };
+				case 13: return { ...body, tools: [{ ...body.tools[0], cache_control: { type: "ephemeral", ttl: "forever" } }] };
+				case 14: return { ...body, tools: [{ ...body.tools[0], cache_control: 17 }] };
 			}
 		});
 	};
@@ -147,11 +157,11 @@ test("new unknown, malformed and failed observations replace old evidence withou
 		await h.session.prompt("First normal request.");
 		await h.session.prompt("/context tools");
 		assert.match(preview(h, "Observed fixture_tool"), /"input_schema"/);
-		for (revision = 1; revision <= 7; revision++) {
+		for (revision = 1; revision <= 14; revision++) {
 			await h.session.prompt("Next normal request.");
 			assert.equal(h.session.messages.at(-1)?.role, "assistant");
 			await h.session.prompt("/context tools");
-			assert.match(h.text(), /Unknown:/);
+			assert.match(h.text(), /Unknown:/, `malformed observation ${revision}`);
 			assert.doesNotMatch(h.text(), /Observed fixture_tool|Anthropic-shaped collapsed/);
 			const details = preview(h, "Observation details");
 			assert.match(details, /Observed at: \d{4}/);
@@ -160,7 +170,7 @@ test("new unknown, malformed and failed observations replace old evidence withou
 			assert.match(preview(h, "Registered fixture_tool"), /Exposure: direct/);
 		}
 		assert.equal(getters, 0, "read-only observation must not run payload accessors");
-		assert.equal(h.requests, 8, "decode failures do not block the ordinary transport");
+		assert.equal(h.requests, 15, "decode failures do not block the ordinary transport");
 		assert.deepEqual(h.errors, []); assert.deepEqual(h.notices, []);
 	} finally { await h.close(); }
 });
@@ -217,6 +227,9 @@ test("unparseable native updates replace effective evidence with unknown and lat
 				case 8: Object.defineProperty(block.tool, "definition", { get() { getters++; throw new Error("PRIVATE_NATIVE_ERROR"); } }); break;
 				case 9: block.tool.definition = Object.assign([], block.tool.definition); break;
 				case 10: body.tools = body.tools.filter((tool: any) => tool.name !== "__pi_deferred_placeholder__"); break;
+				case 11: block.tool.definition.input_schema = { type: "object", $defs: { broken: { patternProperties: { ".*": 17 } } } }; break;
+				case 12: block.tool.definition.strict = "not-a-boolean"; break;
+				case 13: block.cache_control = { type: "ephemeral", ttl: "forever" }; break;
 			}
 			return body;
 		});
@@ -228,7 +241,7 @@ test("unparseable native updates replace effective evidence with unknown and lat
 		await h.session.prompt("Local native search.");
 		await h.session.prompt("/context tools");
 		assert.match(preview(h, "Observed fixture_deferred"), new RegExp(deferredSchemaMarker));
-		for (revision = 1; revision <= 9; revision++) {
+		for (revision of [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13]) {
 			await h.session.prompt("Local native follow-up.");
 			await h.session.prompt("/context tools");
 			assert.match(h.text(), /Unknown:/, `unsupported native shape ${revision}`);
@@ -243,7 +256,62 @@ test("unparseable native updates replace effective evidence with unknown and lat
 		assert.match(preview(h, "Observed fixture_deferred"), new RegExp(deferredSchemaMarker), "native blocks are recognized independently of the placeholder");
 		back(h);
 		assert.ok(!rowLabels(h).some((line) => line.includes("Adapter placeholder")));
-		assert.equal(getters, 0); assert.equal(h.requests, 12); assert.deepEqual(h.errors, []); assert.deepEqual(h.notices, []);
+		assert.equal(getters, 0); assert.equal(h.requests, 15); assert.deepEqual(h.errors, []); assert.deepEqual(h.notices, []);
+	} finally { await h.close(); }
+});
+
+for (const native of [false, true]) test(`supported recursive schemas, boolean subschemas and declaration options remain inspectable (${native ? "native" : "collapsed"})`, { timeout: 15000 }, async () => {
+	let original: unknown, revision = 0;
+	const fixture: ExtensionFactory = (pi) => {
+		pi.registerTool({ name: "shape_schema", label: "shape_schema", description: "Shapeschemafixture structured input", exposure: native ? "deferred" : "direct",
+			parameters: Type.Object({
+				nested: Type.Object({ choice: Type.Union([Type.String(), Type.Null()]), tuple: Type.Tuple([Type.String(), Type.Boolean()]) }),
+				list: Type.Array(Type.Object({ value: Type.Optional(Type.Number()) })),
+			}, { additionalProperties: false }),
+			async execute() { assert.fail("Schema inspection must not run tools"); } });
+		pi.on("before_provider_request", (event) => {
+			original = event.payload;
+			const body = JSON.parse(JSON.stringify(event.payload));
+			const tool = native ? body.messages.flatMap((message: any) => Array.isArray(message.content) ? message.content : [])
+				.find((block: any) => block.type === "tool_addition" && block.tool.definition.name === "shape_schema")?.tool.definition
+				: body.tools.find((tool: any) => tool.name === "shape_schema");
+			if (!tool) return;
+			const schema = tool.input_schema;
+			schema.$defs = { anything: true, nothing: false, recursive: { properties: { next: { $ref: "#/$defs/recursive" } } } };
+			schema.properties.free = true; schema.properties.forbidden = false;
+			schema.properties.nullable = { type: ["string", "null"] };
+			schema.properties.tuple = { type: "array", prefixItems: [true, { type: "string" }], items: false, contains: true, unevaluatedItems: false };
+			schema.dependentSchemas = { nested: { required: ["list"] } };
+			schema.dependentRequired = { nested: ["list"] };
+			schema.if = { required: ["nested"] }; schema.then = true; schema.else = false;
+			// Annotation/instance data is not a subschema, even when it has schema-like keys.
+			schema["x-fixture-annotation"] = { properties: 17, marker: "STRUCTURAL_ANNOTATION" };
+			schema.properties.literal = { const: { properties: 17 } };
+			tool.strict = revision !== 1;
+			tool.eager_input_streaming = [null, false, true][revision];
+			tool.cache_control = [null, { type: "ephemeral", ttl: "5m" }, { type: "ephemeral", ttl: "1h" }][revision];
+			return body;
+		});
+	};
+	const after: ExtensionFactory = (pi) => { pi.on("before_provider_request", () => original); };
+	const h = await host({ native, tools: native, factories: [fixture, contextView, after] });
+	try {
+		if (native) h.respond({ name: "tool_search", input: { query: "Shapeschemafixture", limit: 1 } }, undefined);
+		for (revision = 0; revision < 3; revision++) {
+			await h.session.prompt("Ordinary structured local request.");
+			assert.equal(h.session.messages.at(-1)?.role, "assistant");
+			await h.session.prompt("/context tools");
+			assert.match(h.text(), native ? /Anthropic-shaped native/ : /Anthropic-shaped collapsed/);
+			assert.match(preview(h, "Observed shape_schema"), native ? /Position: \$\.messages\[/ : /Position: \$\.tools\[/);
+			const view = h.overlays.at(-1)!;
+			view.handleInput?.("\x1b[F");
+			assert.match(h.text(), /STRUCTURAL_ANNOTATION/);
+			assert.match(h.text(), new RegExp(`"strict": ${revision !== 1}`));
+			assert.match(h.text(), new RegExp(`"eager_input_streaming": ${["null", "false", "true"][revision]}`));
+			assert.match(h.text(), revision === 0 ? /"cache_control": null/ : new RegExp(`"ttl": "${revision === 1 ? "5m" : "1h"}"`));
+		}
+		assert.equal(h.requests, native ? 4 : 3); assert.equal(h.executions, 0);
+		assert.deepEqual(h.errors, []); assert.deepEqual(h.notices, []);
 	} finally { await h.close(); }
 });
 
@@ -531,6 +599,39 @@ for (const native of [false, true]) test(`observed long multilingual ${native ? 
 		assert.equal(h.requests, native ? 2 : 1); assert.equal(h.executions, 0);
 		assert.deepEqual(h.sessionManager.getEntries(), entries);
 		assert.deepEqual(await readdir(h.base, { recursive: true }), files);
+		assert.deepEqual(h.errors, []);
+	} finally { await h.close(); }
+});
+
+for (const command of ["/context usage", "/context injections"]) test(`${command} forwards public wheel deltas to long content previews`, { timeout: 15000 }, async () => {
+	const prompt = Array.from({ length: 60 }, (_, index) => `PUBLIC_WHEEL_LINE_${index}`).join("\n");
+	const fixture: ExtensionFactory = (pi) => {
+		pi.on("before_agent_start", () => ({ systemPrompt: prompt }));
+	};
+	const h = await host({ factories: [fixture, contextView] });
+	try {
+		await h.session.prompt(prompt);
+		const entries = h.sessionManager.getEntries(), active = h.session.getActiveToolNames();
+		await h.session.prompt(command);
+		const view = h.overlays.at(-1)!;
+		if (command === "/context injections") view.handleInput?.("\x1b[B");
+		else {
+			for (let step = 0; step < 30 && !h.text().split("\n").some((line) => /→.*User Messages/.test(line)); step++)
+				view.handleInput?.("\x1b[B");
+			assert.match(h.text(), /→.*User Messages/);
+		}
+		view.handleInput?.("\r");
+		assert.match(h.text(), /PUBLIC_WHEEL_LINE_0(?:\s|$)/);
+		assert.deepEqual(view.handleMouse?.(wheelEvent(7)), { handled: true, render: true });
+		const scrolled = h.text();
+		assert.doesNotMatch(scrolled, /PUBLIC_WHEEL_LINE_0(?:\s|$)/);
+		assert.match(scrolled, /PUBLIC_WHEEL_LINE_7(?:\s|$)/);
+		view.handleMouse?.(wheelEvent(-7));
+		assert.match(h.text(), /PUBLIC_WHEEL_LINE_0(?:\s|$)/);
+		back(h); assert.match(h.text(), command === "/context usage" ? /Context Usage/ : /INITIAL/);
+		assert.equal(h.requests, 1); assert.equal(h.executions, 0);
+		assert.deepEqual(h.sessionManager.getEntries(), entries);
+		assert.deepEqual(h.session.getActiveToolNames(), active);
 		assert.deepEqual(h.errors, []);
 	} finally { await h.close(); }
 });
