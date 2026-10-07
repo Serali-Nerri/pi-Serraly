@@ -1,12 +1,13 @@
 # pi-Serraly
 
-私有本地 Pi package：七个可独立启停的扩展，一个维护仓库。
+私有本地 Pi package：八个可独立启停的扩展，一个维护仓库。
 支持基线为 **Pi 1.0.4 / Node ≥22.19**。不发布 npm，不提供总 factory 再次注册能力。
 
-## 七个入口
+## 八个入口
 
 | 能力 | 运行入口 | 使用与契约 |
 | --- | --- | --- |
+| 上下文 | `extensions/context-view/dist/context-view.js` | [`/context`、Usage 估算、Initial 注入与预览](extensions/context-view/README.md) |
 | UI | `extensions/pi-ui/dist/pi-ui.js` | [工具卡、Thinking、shell、`/ccstyle`](extensions/pi-ui/README.md) |
 | 提问 | `extensions/pi-ask-user-question/dist/pi-ask-user-question.js` | [`AskUserQuestion`、对话框、AFK](extensions/pi-ask-user-question/README.md) |
 | 循环 | `extensions/pi-loop/dist/pi-loop.js` | [`/loop`、内存任务和忙闲调度](extensions/pi-loop/README.md) |
@@ -17,7 +18,7 @@
 
 每个扩展是独立的 private npm workspace 包，拥有自己的 manifest、构建、测试、许可
 和版本；`packages/` 下的共享库只被这些扩展在构建期 bundle。根 `pi` 显式声明空
-资源清单，安装 release 后才由聚合 manifest 声明以上七入口，可在 `pi config`
+资源清单，安装 release 后才由聚合 manifest 声明以上八入口，可在 `pi config`
 分别启停。本仓库不声明 skills、prompts 或 themes；外部 npm 扩展也不属于本仓库。
 同包发布不意味着子代理自动加载所有入口；子代理默认能力与配置见其模块文档。
 

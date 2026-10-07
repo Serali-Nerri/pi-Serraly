@@ -1,12 +1,13 @@
 # 仓库架构
 
-## 七个维护边界
+## 八个维护边界
 
 根 package 是资源清单和开发工作区，不是总 extension factory。
 每个模块仅注册自己的能力；关闭一个入口不会通过总工厂间接重新启用它。
 
 | 模块 | 拥有的资源 | 不拥有 |
 | --- | --- | --- |
+| `context-view` | `/context`、Usage 会话估算、冻结 Initial 注入、私有捕获与预览、显示偏好 | Footer 缓存、业务工具、主动探测、请求内容持久化、最终 wire 审计 |
 | `ui` | 展示生命周期、私有兼容补丁、shell、Markdown、Thinking、文字预览、`/ccstyle` | 上下文 Inspector、业务工具定义、执行和后台进程 |
 | `questions` | `AskUserQuestion` schema、对话框、AFK、答案/results、专用 renderer | UI 总体刷新或其他 overlay |
 | `loop` | `/loop` 解析、内存任务、忙闲调度、`local-loop` | UI scheduler、持久化恢复 |
@@ -45,10 +46,10 @@ instance 字段布局，实际宿主与人工视觉验收仍必需。同一预�
 ## 源码与运行树
 
 ```text
-extensions/pi-*/      七个 private npm workspace；源码、测试、包文档/许可、dist/
+extensions/*/         八个 private npm workspace；源码、测试、包文档/许可、dist/
 packages/pi-*/        构建期共享库；无 Pi 资源入口
 scripts/              工作区命令、单包构建/封印和 release 组装
-test/integration/     产物、实际 loader、子会话和七入口共存
+test/integration/     产物、实际 loader、子会话和八入口共存
 docs/                 跨模块设计与开发
 ```
 
@@ -94,7 +95,7 @@ dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace
 
 ## 构建闭包
 
-- UI、questions、loop、tools 是独立 ESM bundle；`diff@8.0.4` 打入补丁
+- context-view、UI、questions、loop、tools 是独立 ESM bundle；`diff@8.0.4` 打入补丁
   bundle 并携带其 BSD 文本。
 - background-shell 用 tsc 编译完整 `extensions/` + `src/`，保留 lazy import；
   根入口只是同目录转发，不另行注册能力。唯一例外是 manifest 声明的
@@ -109,7 +110,8 @@ dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace
 - ui 与 subagents 各自 bundle 同一份 `pi-config-core`：读取上限 64 KiB、严格
   UTF-8、`0600` 文件、`0700` 新父目录和 `<pid>.<uuid>` 临时名只在该库一处实现；
   加载失败回退、保存前重读合并、项目层信任状态和 log/throw 语义仍各自保留。
-  add-dir 继续使用自己的异步锁定 store，不迁移到该库。
+  context-view 也 bundle 该库的 64 KiB 有界读取；验证、默认回退和每次文件修订的警告由查看器拥有，
+  显式偏好创建用独占 `wx` 写入而非替换式原子保存。add-dir 继续使用自己的异步锁定 store，不迁移到该库。
 - ui、questions、background-shell 与 subagents 共用 `pi-ui-kit` 的卡语法：`● title
   summary` 标题行与 `  ⎿ message` 结果状态行只有该库一处定义，运行/成功/失败/取消
   用语义主题角色和状态文字区分，不集中任何 renderer。ui、questions、subagents
@@ -146,6 +148,12 @@ dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace
 - 正式更新创建新目录，不能覆写旧 release。在途 worker 不会读到半更新产物。
 
 ## 跨模块交互
+
+context-view 与 UI 可独立选择、按任意顺序共存：只有 context-view 注册 `/context`，
+UI 只注册 `/ccstyle`。查看器在公开 `before_agent_start` / `context` 事件中被动
+冻结本 runtime 的首份 Initial；未捕获时只显示 session estimate / not captured，
+不从会话恢复为观测证据、不发送消息、执行工具或修改请求。Usage 按需重放当前分支
+组成估算；模型、预览与缓存不与 Footer 合并。
 
 UI 读取公共工具元数据和已有结果。questions、background-shell、subagents 的
 工具 renderer 及 `subagent-result` 消息 renderer 保持专用展示；第三方

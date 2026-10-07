@@ -19,11 +19,12 @@ Each change follows this order:
 
 ## Project Structure & Module Organization
 
-`pi-Serraly` is a private npm workspace with seven independent Pi extensions. Target Node ≥22.19 and Pi 1.0.4.
+`pi-Serraly` is a private npm workspace with eight independent Pi extensions. Target Node ≥22.19 and Pi 1.0.4.
 
 ```text
 .
 ├── extensions/
+│   ├── context-view/          # src/, test/, dist/ (built)
 │   ├── pi-ui/                 # src/, test/, dist/ (built)
 │   ├── pi-ask-user-question/  # src/, test/
 │   ├── pi-loop/               # src/, test/

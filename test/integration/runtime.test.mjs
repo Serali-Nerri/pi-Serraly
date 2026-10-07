@@ -13,7 +13,7 @@ after(async () => { await stage?.cleanup(); });
 
 // Break caught: a missing compiled entry/lazy module or a release that still loads
 // through workspace dependencies cannot reach any real loader scenario.
-test("release manifest exposes only seven compiled extensions, never companion skills", async () => {
+test("release manifest exposes only eight compiled extensions, never companion skills", async () => {
 	const manifest = JSON.parse(await readFile(join(stage.release, "package.json"), "utf8"));
 	assert.deepEqual(manifest.pi, { extensions: releaseEntries });
 });
@@ -25,8 +25,14 @@ for (const name of names) {
 }
 
 for (const [order, selection] of [["manifest", [...names]], ["reversed", [...names].reverse()]]) {
-	test(`seven compiled entries coexist without duplicate tools/commands (${order} order)`, { timeout: 30000 }, async () => {
+	test(`eight compiled entries coexist without duplicate tools/commands (${order} order)`, { timeout: 30000 }, async () => {
 		await sdkScenario(stage, "inventory", { names: selection });
+	});
+}
+
+for (const selection of [["context-view"], ["context-view", "pi-ui"], ["pi-ui", "context-view"]]) {
+	test(`passive /context and retained /ccstyle through real TUI commands (${selection.join(" → ")})`, { timeout: 30000 }, async () => {
+		await sdkScenario(stage, "context-view", { names: selection });
 	});
 }
 
@@ -54,7 +60,7 @@ test("mounted package footer preserves local-loop/background statuses and dock/U
 });
 
 for (const mode of ["print", "json", "rpc"]) {
-	test(`compiled seven-entry package in bundled CLI ${mode} has no UI-owned stdout/timer/prototype pollution`, { timeout: 30000 }, async () => {
+	test(`compiled eight-entry package in bundled CLI ${mode} has no UI-owned stdout/timer/prototype pollution`, { timeout: 30000 }, async () => {
 		const sandbox = await sandboxFixture(stage.release);
 		try {
 			let records;

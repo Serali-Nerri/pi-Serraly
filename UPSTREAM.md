@@ -5,6 +5,7 @@
 
 | 扩展 | 上游 | 固定来源 | 许可 |
 | --- | --- | --- | --- |
+| [`context-view`](extensions/context-view/README.md) | [dimk90/pi-context-view](https://github.com/dimk90/pi-context-view) | 0.6.0，`0eb5f9773c91b63b873da4d9ca6fa6caf795e91a`（非 v0.6.0 标签提交） | MIT / Dmitry Makarov |
 | [`pi-ui`](extensions/pi-ui/README.md) | minuque/pi-cc-extensions、tifandotme/pi-extensions、OldSuns/pi-open-tui、MarkedJS | 见下 | MIT（按来源分别保留） |
 | [`pi-background-shell`](extensions/pi-background-shell/README.md) | [ismailsaleekh/pi-background-tasks](https://github.com/ismailsaleekh/pi-background-tasks) | `471f1dcae7ff13d8f989e4c056bdff1e6b01f1ef`；npm `pi-background-tasks@2.6.8` | ISC |
 | [`pi-add-dir`](extensions/pi-add-dir/README.md) | [HenryQW/pi-harness](https://github.com/HenryQW/pi-harness) | `4d9ed14b8016abcecb3d97af8c28ca37a3ca265f` | MIT |
@@ -12,6 +13,7 @@
 
 模块内记录（含完整变更清单与固定来源）：
 
+- `context-view`：[UPSTREAM.md](extensions/context-view/UPSTREAM.md)
 - `pi-ui`：[licenses/README.md](extensions/pi-ui/licenses/README.md)
 - `pi-background-shell`：[UPSTREAM.md](extensions/pi-background-shell/UPSTREAM.md)
 - `pi-add-dir`：[UPSTREAM.md](extensions/pi-add-dir/UPSTREAM.md)

@@ -50,6 +50,23 @@ test("a subset release declares and ships exactly the selected members", { timeo
 	assert.deepEqual(Object.keys(pair.record.packages), ["pi-ask-user-question", "pi-subagents"]);
 });
 
+test("context-view can be released alone or together with UI, with only its host peers", { timeout: 120000 }, async () => {
+	const viewer = await release("context-view-only", ["context-view"]);
+	assert.deepEqual(viewer.manifest.pi.extensions, ["./extensions/context-view/dist/context-view.js"]);
+	assert.deepEqual(Object.keys(viewer.record.packages), ["context-view"]);
+	assert.deepEqual(Object.keys(viewer.manifest.peerDependencies).sort(),
+		["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui"]);
+	assert.equal(await present(join(viewer.output, "extensions/pi-ui")), false);
+	assert.match(await readFile(join(viewer.output, "extensions/context-view/dist/LICENSE"), "utf8"), /Dmitry Makarov/);
+	assert.match(await readFile(join(viewer.output, "extensions/context-view/dist/UPSTREAM.md"), "utf8"), /0eb5f9773c91b63b873da4d9ca6fa6caf795e91a/);
+
+	const pair = await release("context-view-ui", ["context-view", "pi-ui"]);
+	assert.deepEqual(pair.manifest.pi.extensions, [
+		"./extensions/context-view/dist/context-view.js", "./extensions/pi-ui/dist/pi-ui.js",
+	]);
+	assert.deepEqual(Object.keys(pair.record.packages), ["context-view", "pi-ui"]);
+});
+
 test("invalid selections fail before any target, staging or build side effect", { timeout: 120000 }, async () => {
 	for (const [label, packages, pattern] of [
 		["an unknown package", ["pi-nope"], /unknown package/i],

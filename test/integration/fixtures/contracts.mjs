@@ -1,5 +1,6 @@
 // Hand-derived public registration contracts, NOT imported from implementation.
 export const entriesByName = {
+	"context-view": "./dist/context-view.js",
 	"pi-add-dir": "./dist/pi-add-dir.js",
 	"pi-ask-user-question": "./dist/pi-ask-user-question.js",
 	"pi-background-shell": "./dist/extensions/background-tasks.js",
@@ -11,6 +12,7 @@ export const entriesByName = {
 export const names = Object.keys(entriesByName);
 export const releaseEntries = names.map((name) => `./extensions/${name}/${entriesByName[name].slice(2)}`);
 export const toolsByName = {
+	"context-view": [],
 	"pi-add-dir": [],
 	"pi-ask-user-question": ["AskUserQuestion"],
 	"pi-background-shell": ["bg_kill", "bg_logs", "bg_run", "bg_status"],
@@ -20,6 +22,7 @@ export const toolsByName = {
 	"pi-ui": [],
 };
 export const commandsByName = {
+	"context-view": ["context"],
 	"pi-add-dir": ["dir-add", "dir-ls"],
 	"pi-ask-user-question": [],
 	"pi-background-shell": ["bg", "bg-clear", "bg-tasks", "jobs", "kill", "logs", "tasks"],

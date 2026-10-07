@@ -466,6 +466,43 @@ if (scenario === "filters") {
 	const h = await open();
 	try {
 		if (scenario === "inventory") inventory(h, config.names ?? allNames);
+		else if (scenario === "context-view") {
+			inventory(h, config.names);
+			const state = globalThis[Symbol.for("serraly.sdk-fixture")];
+			const ui = await mount(h);
+			const plain = (component) => component.render(100).join("\n").replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
+			try {
+				assert.equal(ui.mounted.has("footer"), config.names.includes("pi-ui"));
+				const entries = h.session.sessionManager.getEntries();
+				for (const args of ["", "usage", "injections"]) {
+					await h.session.prompt("/context" + (args ? " " + args : ""));
+					assert.match(plain(ui.interactions.at(-1).component), /Not captured.*Session estimate/s);
+				}
+				assert.deepEqual(h.session.sessionManager.getEntries(), entries);
+				assert.equal(state.providerCalls ?? 0, 0, "opening before capture never starts an agent turn");
+				await h.session.prompt("Local synthetic reply");
+				assert.equal(state.providerCalls, 1);
+				const capturedEntries = h.session.sessionManager.getEntries();
+				await h.session.prompt("/context injections");
+				assert.doesNotMatch(plain(ui.interactions.at(-1).component), /Not captured/);
+				const view = ui.interactions.at(-1).component;
+				view.handleInput("\x1b[B"); view.handleInput("\r"); view.render(40); view.handleInput("\x1b");
+				await h.session.prompt("/context usage");
+				assert.match(plain(ui.interactions.at(-1).component), /Context Usage/);
+				if (config.names.includes("pi-ui")) {
+					await h.session.prompt("/ccstyle panel");
+					assert.match(plain(ui.interactions.at(-1).component), /Original renderers/);
+					assert.ok(ui.mounted.has("footer"), "viewer does not replace UI's Footer");
+				}
+				assert.deepEqual(h.session.sessionManager.getEntries(), capturedEntries);
+				await h.session.reload();
+				assert.deepEqual(h.session.extensionRunner.getRegisteredCommands().map((item) => item.invocationName).sort(),
+					config.names.flatMap((name) => commandsByName[name]).sort(), "reload retains unique command ownership in TUI mode");
+				await h.session.prompt("/context injections");
+				assert.match(plain(ui.interactions.at(-1).component), /Not captured.*Session estimate/s);
+				assert.equal(state.providerCalls, 1);
+			} finally { ui.dispose(); }
+		}
 		else if (scenario === "subagents-contracts") {
 			inventory(h, config.names ?? allNames);
 			await assert.rejects(execute(h, "Agent", { prompt: "fixture", agent: "no-such-agent" }), /Unknown agent type: no-such-agent/);
