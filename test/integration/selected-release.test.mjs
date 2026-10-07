@@ -6,6 +6,8 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 import { isolatedEnvironment } from "../../scripts/lib/environment.mjs";
 import { createRelease, validateRelease } from "../../scripts/lib/package.mjs";
+import { hostPackage } from "../../scripts/lib/host.mjs";
+import { sdkScenario } from "./helpers/runtime.mjs";
 
 const root = resolve(import.meta.dirname, "../..");
 const base = await mkdtemp(join(tmpdir(), "serraly-selected-release-"));
@@ -50,7 +52,7 @@ test("a subset release declares and ships exactly the selected members", { timeo
 	assert.deepEqual(Object.keys(pair.record.packages), ["pi-ask-user-question", "pi-subagents"]);
 });
 
-test("context-view can be released alone or together with UI, with only its host peers", { timeout: 120000 }, async () => {
+test("context-view can be released alone or together with UI, retaining full tools diagnostics in both loader orders", { timeout: 120000 }, async () => {
 	const viewer = await release("context-view-only", ["context-view"]);
 	assert.deepEqual(viewer.manifest.pi.extensions, ["./extensions/context-view/dist/context-view.js"]);
 	assert.deepEqual(Object.keys(viewer.record.packages), ["context-view"]);
@@ -65,6 +67,11 @@ test("context-view can be released alone or together with UI, with only its host
 		"./extensions/context-view/dist/context-view.js", "./extensions/pi-ui/dist/pi-ui.js",
 	]);
 	assert.deepEqual(Object.keys(pair.record.packages), ["context-view", "pi-ui"]);
+	for (const [selected, names] of [[viewer, ["context-view"]], [pair, ["context-view", "pi-ui"]], [pair, ["pi-ui", "context-view"]]]) {
+		for (const native of [false, true]) for (const codemodeMode of ["on", "only"]) {
+			await sdkScenario({ release: selected.output, host: hostPackage() }, "context-tools", { names, native, codemodeMode });
+		}
+	}
 });
 
 test("invalid selections fail before any target, staging or build side effect", { timeout: 120000 }, async () => {

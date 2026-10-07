@@ -91,10 +91,43 @@ class ToolsView {
 		}
 		for (const declaration of input.observation?.declarations ?? []) {
 			this.rows.push({ label: `Observed ${declaration.name} · ${declaration.position}`, text: [
-				`Observed definition: ${declaration.name}`, `Position: ${declaration.position}`,
+				`Observed effective definition: ${declaration.name}`, `Position: ${declaration.position}`,
 				`Observed at: ${input.observation!.observedAt}`,
 				"Stage: before_provider_request (this extension's handler). Not final wire or provider acceptance.",
 				declaration.definition,
+			].join("\n\n") });
+			if (declaration.name === "codemode") this.rows.push({ label: `Codemode description · ${declaration.position}.description`, text: [
+				"Description content: inline signatures, when present, are not independent declarations.",
+				`Position: ${declaration.position}.description`, `Observed at: ${input.observation!.observedAt}`,
+				"Stage: before_provider_request (this extension's handler). Not final wire or provider acceptance.",
+				"Codemode only can hide active eager declarations while listing signatures here. Absence is not an error verdict.",
+				"Codemode searchTools returns content without activation; tool_search can activate matching deferred tools.",
+				declaration.description,
+			].join("\n\n") });
+		}
+		for (const declaration of input.observation?.initialDeclarations ?? []) {
+			this.rows.push({ label: `Baseline ${declaration.name} · ${declaration.position}`, text: [
+				"Initial baseline in this native payload; not necessarily effective after the ordered updates.",
+				`Position: ${declaration.position}`, `Observed at: ${input.observation!.observedAt}`,
+				"Stage: before_provider_request (this extension's handler). Not final wire or provider acceptance.",
+				declaration.definition,
+			].join("\n\n") });
+		}
+		for (const [index, update] of (input.observation?.updates ?? []).entries()) {
+			this.rows.push({ label: `Update ${update.kind === "addition" ? "+" : "−"} ${update.name} · ${index + 1} · ${update.position}`, text: [
+				`Native ${update.kind}: ${update.name}`, `Protocol order: ${index + 1}`, `Position: ${update.position}`,
+				`Observed at: ${input.observation!.observedAt}`,
+				"Stage: before_provider_request (this extension's handler). Not final wire or provider acceptance.",
+				"History in this observation payload only. A historical addition is not necessarily effective now.",
+				update.declaration?.definition ?? "This protocol record withdraws the independent declaration.",
+			].join("\n\n") });
+		}
+		for (const position of input.observation?.placeholders ?? []) {
+			this.rows.push({ label: `Adapter placeholder · ${position}`, text: [
+				"Known adapter placeholder: __pi_deferred_placeholder__", `Position: ${position}`,
+				`Observed at: ${input.observation!.observedAt}`,
+				"Stage: before_provider_request (this extension's handler). Not final wire or provider acceptance.",
+				"Never callable; excluded from effective declarations. This is transport scaffolding, not a registered tool.",
 			].join("\n\n") });
 		}
 		this.navigator = new ListNavigator(this.rows.length, 1);

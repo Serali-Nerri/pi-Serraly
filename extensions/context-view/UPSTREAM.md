@@ -12,7 +12,8 @@ bundle 入口及自有显示偏好文件；使用仓库固定 Pi 1.0.4 / TypeScr
 wheel 不读取宿主私有字段；使用公开归一化鼠标事件及固定 raw fallback。
 本地 Tools 增强使用公开工具库存/active 与 before_provider_request 的最新进程内单槽观测；
 不把 Usage / Initial 改为请求记录器，不用注册 schema 代替声明，不主动探测或修改 loadout。
-支持范围及未知/原生增量边界由 [README](README.md#工具诊断) 定义。
+原生增删的 baseline/按序历史/有效集合、adapter placeholder 与 codemode 描述预览是本地增强，
+支持范围及未知边界由 [README](README.md#工具诊断) 定义。
 
 不保留静默探测、空用户消息、探测 abort/消息清洗/身份持久化、旧键迁移及相关失效测试。
 未捕获时显示 session estimate / not captured，不伪造观测。

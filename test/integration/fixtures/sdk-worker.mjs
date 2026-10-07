@@ -18,12 +18,59 @@ const cwd = process.cwd(), agentDir = process.env.PI_CODING_AGENT_DIR, release =
 // Members come from the packed release manifest, keyed by package name.
 const releaseManifest = JSON.parse(await readFile(join(release, "package.json"), "utf8"));
 const entryByName = Object.fromEntries(releaseManifest.pi.extensions.map((entry) => [entry.split("/")[2], join(release, entry.slice(2))]));
+// A standalone packed consumer points at the installed sealed entry, not a workspace or release copy.
+if (config.packedContextEntry) entryByName["context-view"] = config.packedContextEntry;
 const allNames = Object.keys(entryByName).sort();
 const baseline = Object.fromEntries(["getCallRenderer", "getResultRenderer", "getRenderShell", "updateDisplay"].map((name) => [name, SDK.ToolExecutionComponent.prototype[name]]));
 const report = (phase, extra = {}) => import("node:fs").then(({ appendFileSync }) => appendFileSync(process.env.SERRALY_REPORT, JSON.stringify({ phase, ...extra }) + "\n"));
 const credentials = AuthStorage.inMemory();
 const modelRuntime = await SDK.ModelRuntime.create({ credentials, modelsPath: null,
 	modelsStorePath: join(process.env.TMPDIR, "models-cache.json"), allowModelNetwork: false, refreshOnCreate: false });
+
+// Request-local fake transport for the real adapter. No global SDK/provider/fetch replacement.
+const schemaMarker = "CV_ARTIFACT_DEFERRED_C83D";
+const toolState = { requests: 0, executions: 0, replies: [], latestBody: undefined, withdraw: false };
+function contextToolsFixture(pi) {
+	pi.registerTool({ name: "context_eager", label: "Eager", description: "Benign local eager operation",
+		parameters: { type: "object", properties: {} }, async execute() {
+			toolState.executions++; return { content: [{ type: "text", text: "local-eager-done" }], details: {} };
+		} });
+	pi.registerTool({ name: "context_deferred", label: "Deferred", description: "Xylophoton ledger lookup", exposure: "deferred",
+		parameters: { type: "object", properties: { [schemaMarker]: { type: "string" } } },
+		async execute() { assert.fail("Viewing/searching must not execute deferred business tools"); } });
+	pi.on("before_agent_start", () => {
+		if (toolState.withdraw) pi.setActiveTools(pi.getActiveTools().filter((name) => name !== "context_deferred"));
+	});
+}
+async function registerContextAdapter() {
+	// pi-ai's public api/* export is import-only; require.resolve cannot select it.
+	const { streamSimple } = await import(pathToFileURL(join(dirname(host), "pi-ai/dist/api/anthropic-messages.js")).href);
+	const fetch = async (_input, init) => {
+		toolState.requests++;
+		const body = toolState.latestBody = JSON.parse(String(init.body));
+		const reply = toolState.replies.shift();
+		const events = [
+			{ type: "message_start", message: { id: `msg_${toolState.requests}`, type: "message", role: "assistant", content: [], model: body.model,
+				stop_reason: null, stop_sequence: null, usage: { input_tokens: 10, output_tokens: 0 } } },
+			{ type: "content_block_start", index: 0, content_block: reply ? { type: "tool_use", id: `call_${toolState.requests}`, name: reply.name, input: {} } : { type: "text", text: "" } },
+			{ type: "content_block_delta", index: 0, delta: reply ? { type: "input_json_delta", partial_json: JSON.stringify(reply.input) } : { type: "text_delta", text: "Local adapter reply." } },
+			{ type: "content_block_stop", index: 0 },
+			{ type: "message_delta", delta: { stop_reason: reply ? "tool_use" : "end_turn", stop_sequence: null }, usage: { output_tokens: 4 } },
+			{ type: "message_stop" },
+		];
+		return new Response(events.map((event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`).join(""), {
+			status: 200, headers: { "content-type": "text/event-stream" },
+		});
+	};
+	modelRuntime.registerProvider("context-adapter-fixture", {
+		api: "context-adapter-fixture", apiKey: "fixture", baseUrl: "https://example.invalid",
+		models: [{ id: "local", name: "Local adapter fixture", reasoning: false, input: ["text"], contextWindow: 65536, maxTokens: 2048,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+			compat: { supportsMidConvoSystemMessages: config.native, supportsMidConvoToolChanges: config.native } }],
+		streamSimple: (model, context, options) => streamSimple({ ...model, api: "anthropic-messages" }, context,
+			{ ...options, fetch, apiKey: "fixture", maxRetries: 0, timeoutMs: 5000 }),
+	});
+}
 
 async function open(names = config.names ?? allNames, packageFilter = config.packageFilter, discoverSettings = false) {
 	if (packageFilter !== undefined) {
@@ -41,14 +88,16 @@ async function open(names = config.names ?? allNames, packageFilter = config.pac
 		additionalExtensionPaths: [join(import.meta.dirname, "sdk-provider.js"), "builtin:tool-search", "builtin:codemode",
 			...(!discoverSettings && packageFilter === undefined ? names.map((name) => entryByName[name]) : [])],
 		extensionFactories: [{ name: "tool-search", builtin: true, factory: SDK.createToolSearchExtension() },
-			{ name: "codemode", builtin: true, factory: SDK.createCodemodeExtension() }],
+			{ name: "codemode", builtin: true, factory: SDK.createCodemodeExtension(scenario === "context-tools" ? { models: false } : {}) },
+			...(scenario === "context-tools" ? [{ name: "context-diagnostics-fixture", factory: contextToolsFixture }] : [])],
 	});
 	await loader.reload();
 	const loaded = loader.getExtensions();
 	assert.deepEqual(loaded.errors, [], "actual loader resolves compiled entry and lazy/native closure");
 	assert.deepEqual(loader.getSkills().skills, [], "packaged release declares no skills, so no companion skill activates");
 	for (const { name, config } of loaded.runtime.pendingProviderRegistrations) modelRuntime.registerProvider(name, config);
-	const model = modelRuntime.getModel("serraly-fixture", "fixture");
+	if (scenario === "context-tools") await registerContextAdapter();
+	const model = scenario === "context-tools" ? modelRuntime.getModel("context-adapter-fixture", "local") : modelRuntime.getModel("serraly-fixture", "fixture");
 	assert.ok(model);
 	const { session } = await SDK.createAgentSession({ cwd, agentDir, modelRuntime, model,
 		resourceLoader: loader, settingsManager, sessionManager: SDK.SessionManager.inMemory(cwd), thinkingLevel: "off" });
@@ -64,7 +113,7 @@ async function open(names = config.names ?? allNames, packageFilter = config.pac
 }
 
 function inventory(h, names) {
-	const extensions = h.loader.getExtensions().extensions.filter((extension) => extension.path.startsWith(release));
+	const extensions = h.loader.getExtensions().extensions.filter((extension) => extension.path.startsWith(release) || extension.path === config.packedContextEntry);
 	assert.equal(extensions.length, names.length, "each manifest entry loads exactly once");
 	const registeredTools = extensions.flatMap((extension) => [...extension.tools.keys()]).sort();
 	const expectedTools = names.flatMap((name) => toolsByName[name]).sort();
@@ -216,6 +265,80 @@ async function contracts(h) {
 		ui.nextAction = (component) => component.handleInput("\u001b");
 		const cancelled = await execute(h, "AskUserQuestion", questionArgs);
 		assert.deepEqual(cancelled.details, { questions: questionArgs.questions, answers: {}, cancelled: true });
+	} finally { ui.dispose(); }
+}
+
+async function contextTools(h) {
+	inventory(h, config.names);
+	const ui = await mount(h);
+	const component = () => ui.interactions.at(-1).component;
+	const plain = () => component().render(100).join("\n").replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
+	const preview = (label) => {
+		component().handleInput("\x1b[H");
+		for (let step = 0; step < 80; step++) {
+			if (plain().split("\n").some((line) => line.includes("›") && line.includes(label))) {
+				component().handleInput("\r"); return plain();
+			}
+			component().handleInput("\x1b[B");
+		}
+		assert.fail("Missing public diagnostic row: " + label);
+	};
+	try {
+		const initialEntries = h.session.sessionManager.getEntries();
+		await h.session.prompt("/context tools"); assert.match(plain(), /Not yet observed/);
+		assert.deepEqual(h.session.sessionManager.getEntries(), initialEntries);
+		await h.session.prompt("Local adapter plan.");
+		assert.equal(toolState.requests, 1);
+		assert.doesNotMatch(JSON.stringify(toolState.latestBody), new RegExp(schemaMarker), "schema-only marker absent globally initially");
+		await h.session.prompt("/context tools");
+		assert.match(plain(), config.native ? /Anthropic-shaped native/ : /Anthropic-shaped collapsed/);
+		assert.match(preview("Registered context_eager"), /Active: active/);
+		component().handleInput("\x1b");
+		preview("Codemode description"); component().handleInput("\x1b[F");
+		if (config.codemodeMode === "only") {
+			assert.match(plain(), /context_eager/);
+			assert.ok(!toolState.latestBody.tools.some((tool) => tool.name === "context_eager"));
+		} else {
+			component().handleInput("\x1b");
+			assert.match(preview("Observed context_eager"), /input_schema/);
+		}
+		toolState.replies.push({ name: "codemode", input: { code: '// @options: {"timeout_ms":3000}\ntext(await tools.context_eager({})); text(await searchTools("Xylophoton", {limit: 1}));' } }, undefined);
+		const active = h.session.getActiveToolNames();
+		await h.session.prompt("Run the benign call and pure search.");
+		assert.equal(toolState.executions, 1);
+		assert.deepEqual(h.session.getActiveToolNames(), active);
+		const result = h.session.messages.filter((message) => message.role === "toolResult" && message.toolName === "codemode").at(-1);
+		assert.match(JSON.stringify(result), /Script completed.*local-eager-done/s);
+		assert.match(JSON.stringify(result), new RegExp(schemaMarker));
+		assert.ok(!toolState.latestBody.tools.some((tool) => tool.name === "context_deferred"));
+		toolState.replies.push({ name: "tool_search", input: { query: "Xylophoton", limit: 1 } }, undefined);
+		await h.session.prompt("Load the local deferred definition.");
+		await h.session.prompt("/context tools");
+		assert.match(preview("Observed context_deferred"), new RegExp(schemaMarker));
+		component().handleInput("\x1b");
+		if (config.native) {
+			assert.match(preview("Update + context_deferred"), /Position: \$\.messages\[/);
+			component().handleInput("\x1b");
+			assert.match(preview("Adapter placeholder"), /Never callable/);
+		}
+		toolState.withdraw = true;
+		await h.session.prompt("Withdraw the local deferred definition.");
+		await h.session.prompt("/context tools");
+		assert.match(preview("Registered context_deferred"), /Active: inactive/);
+		component().handleInput("\x1b");
+		if (config.native) assert.match(preview("Update − context_deferred"), /tool\.name/);
+		const requests = toolState.requests, entries = h.session.sessionManager.getEntries();
+		for (const view of ["usage", "injections"]) await h.session.prompt("/context " + view);
+		if (config.names.includes("pi-ui")) {
+			await h.session.prompt("/ccstyle panel");
+			assert.match(plain(), /Original renderers/); assert.ok(ui.mounted.has("footer"));
+		}
+		assert.deepEqual(h.session.sessionManager.getEntries(), entries);
+		await h.session.reload();
+		await h.session.prompt("/context tools"); assert.match(plain(), /Not yet observed/);
+		await h.session.prompt("/context injections"); assert.match(plain(), /Not captured.*Session estimate/s);
+		assert.equal(toolState.requests, requests); assert.equal(toolState.executions, 1);
+		assert.equal(entries.filter((entry) => entry.type === "custom").length, 0);
 	} finally { ui.dispose(); }
 }
 
@@ -466,6 +589,7 @@ if (scenario === "filters") {
 	const h = await open();
 	try {
 		if (scenario === "inventory") inventory(h, config.names ?? allNames);
+		else if (scenario === "context-tools") await contextTools(h);
 		else if (scenario === "context-view") {
 			inventory(h, config.names);
 			const state = globalThis[Symbol.for("serraly.sdk-fixture")];

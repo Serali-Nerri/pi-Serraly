@@ -23,7 +23,7 @@ type Reply = { name: string; input?: Record<string, unknown> } | undefined;
 /** Real SDK/session/command boundary; only the terminal and request-local transport are scripted. */
 export async function host(options: {
 	factories?: ExtensionFactory[]; mode?: "tui" | "print"; tools?: boolean; native?: boolean;
-	inputs?: string[][]; sessionManager?: SessionManager;
+	inputs?: string[][]; sessionManager?: SessionManager; codemodeMode?: "on" | "only";
 } = {}) {
 	assert.ok(process.env.PI_CODING_AGENT_DIR, "Use the isolated runner");
 	const base = await mkdtemp(join(process.env.TMPDIR!, "context-view-host-"));
@@ -65,7 +65,7 @@ export async function host(options: {
 			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 			compat: { supportsMidConvoSystemMessages: options.native ?? false, supportsMidConvoToolChanges: options.native ?? false } }],
 	});
-	const settingsManager = SettingsManager.inMemory({ cacheWarming: "off", codemode: { mode: "on" }, compaction: { enabled: false }, retry: { enabled: false },
+	const settingsManager = SettingsManager.inMemory({ cacheWarming: "off", codemode: { mode: options.codemodeMode ?? "on" }, compaction: { enabled: false }, retry: { enabled: false },
 		enableAnalytics: false, enableInstallTelemetry: false, defaultProjectTrust: "never" });
 	const fixture: ExtensionFactory = (pi) => {
 		pi.registerTool({ name: "fixture_tool", label: "fixture_tool", description: "Local operation", exposure: "direct",

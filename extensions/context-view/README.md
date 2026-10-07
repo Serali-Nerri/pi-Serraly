@@ -35,23 +35,31 @@ Tools 将打开视图时采样的 `getAllTools()` 库存、来源、Tool Exposur
 观测显示时间，不用当前选择模型猜测实际路由；事件只有 payload，没有请求身份或严格用途。
 来源未知，可能包括 cache warming。它不是最终 wire、已发送或 provider 已接受的证明。
 
-当前支持 **Anthropic-shaped collapsed 顶层 `tools[i]`** 的定义、实际 `input_schema` 和位置预览。
-原生增量（adapter placeholder 或结构化 tool_addition / tool_removal）明确显示
-**Unknown / native updates unimplemented**，不把顶层缺项解释为缺声明。
-其他格式、畸形定义及解码失败显示 Unknown；尚未触发 handler 则为 Not yet observed。
-每次新观测替换旧槽位，即使解码失败也不继续显示旧定义。库存信息不是请求证据，
-不拿注册 schema 填充观测。普通消息里的 schema 不作为独立声明；没有独立声明不等于
-schema 在所有内容中不可见。完整原生增量与 codemode 内联归属不属于当前支持范围。
+支持 **Anthropic-shaped collapsed 顶层 `tools[i]`** 与 **原生增量**：system 消息中的
+`tool_addition.tool.definition` / `tool_removal.tool.name`，展示实际 `input_schema` 与具体路径。
+从顶层初始定义开始，按 payload 消息、block 顺序应用移除与同名重定义；只有整份声明协议
+可靠解码时才展示 **effective declarations**。原生初始 baseline 与更新历史单列保留位置、
+顺序与原定义，不把初始/历史新增累计为当前有效集合。已知 `__pi_deferred_placeholder__` 的 adapter 形状单列标为
+placeholder，排除在有效声明及注册/推导可调用库存之外；其他 deferred 定义或未知结构不猜测。
+其他格式、畸形/不完整的原生协议及解码失败显示 Unknown（不宣称有效集合）；
+尚未触发 handler 则为 Not yet observed。每次新观测替换旧槽位，即使失败也不继续显示旧定义。
+库存信息不是请求证据，不拿注册 schema 填充观测。
+
+观测到的 **codemode description** 有独立预览；其中的内联签名属于描述内容，不另计独立声明，
+不做通用签名 AST 解析。codemode `only` 可隐藏 active eager 的独立声明而保留描述内联；
+active 但无独立声明不自动判错。真实 `tool_search` 可激活匹配延期工具，codemode
+`searchTools` 是纯搜索、返回签名但不激活。普通消息、schema 字符串和搜索结果始终是内容，
+不会因含工具名/schema 而成为协议声明；没有独立声明不等于 schema 在所有内容中不可见。
 
 内部调用资格仅按曝光模式与 active **推导**，不是执行验证：direct 仅 active 时可调用；
 codemode / deferred 即使 inactive 仍可内部调用；model-only 可以 active / 有声明但不可内部调用；
 hidden 与 inactive direct 不可内部调用。active 不是 callable 或声明的别名，集合差异不自动判错。
-Enter 预览选中库存元数据或观测定义，Esc 返回；`u` / `i` 回到 Usage / Initial，方向键、
+Enter 预览选中库存元数据、有效观测定义、按序更新记录、placeholder 或 codemode 描述，Esc 返回；`u` / `i` 回到 Usage / Initial，方向键、
 PgUp/PgDn、Home/End 与 wheel 沿用查看器导航。长 schema 与多语言文本在预览中换行并可滚动。
 
 handler 同步复制所需工具声明数据（name、description、input_schema 及已知的
 strict / eager_input_streaming / cache_control 字段），不保留无关 envelope、整个 payload、
-消息或历史引用。只读自身数据属性，不调用 accessor / toJSON；结构或复制超过 20,000 节点、
+消息引用；增删历史只来自当前 payload，不是跨请求历史。只读自身数据属性，不调用 accessor / toJSON；结构或复制超过 20,000 节点、
 64 层或约 2 MiB 字符预算时整份观测为 Unknown，不呈现部分成功结果。不改写或 freeze
 业务对象；后续 handler 原地/替换改写不改变已捕获内容。捕获失败静默降级，不阻断请求、
 不通过日志或通知泄漏内容。仅本 runtime 最新一份观测留在内存，reload / restart / 新 runtime

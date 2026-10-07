@@ -25,6 +25,19 @@ function preview(h: Awaited<ReturnType<typeof host>>, label: string) {
 
 function back(h: Awaited<ReturnType<typeof host>>) { h.overlays.at(-1)!.handleInput?.("\x1b"); }
 
+function rowLabels(h: Awaited<ReturnType<typeof host>>) {
+	const view = h.overlays.at(-1)!;
+	view.handleInput?.("\x1b[H");
+	const labels: string[] = [];
+	for (let step = 0; step < 80; step++) {
+		const selected = h.text().split("\n").find((line) => line.includes("›"))!;
+		if (labels.at(-1) === selected) break;
+		labels.push(selected);
+		view.handleInput?.("\x1b[B");
+	}
+	return labels;
+}
+
 test("Tools is reachable from Usage and explains unobserved inventory without touching the host", { timeout: 15000 }, async () => {
 	const h = await host({ tools: true, inputs: [["t"]] });
 	try {
@@ -152,47 +165,137 @@ test("new unknown, malformed and failed observations replace old evidence withou
 	} finally { await h.close(); }
 });
 
-test("real native declarations are explicitly unknown/unimplemented rather than misreported missing", { timeout: 15000 }, async () => {
-	let original: unknown;
-	const before: ExtensionFactory = (pi) => {
-		pi.on("before_provider_request", (event) => {
-			original = event.payload;
-			const body = event.payload as any;
-			// On the update request, exercise recognition of real structured blocks independently of the placeholder.
-			if (body.messages.some((message: any) => Array.isArray(message.content) && message.content.some((block: any) => block.type === "tool_addition")))
-				return { ...body, tools: body.tools.filter((tool: any) => tool.name !== "__pi_deferred_placeholder__") };
-		});
-	};
-	const after: ExtensionFactory = (pi) => {
-		pi.on("before_provider_request", () => original);
-	};
-	const h = await host({ tools: true, native: true, factories: [before, contextView, after] });
+test("real native additions expose schema positions and distinguish the adapter placeholder from effective tools", { timeout: 15000 }, async () => {
+	const h = await host({ tools: true, native: true });
 	try {
 		await h.session.prompt("First native local plan.");
 		assert.ok(h.bodies[0].tools.some((tool: any) => tool.name === "__pi_deferred_placeholder__"));
+		assert.doesNotMatch(JSON.stringify(h.observedBodies[0]), new RegExp(deferredSchemaMarker), "schema-only marker absent globally before loading");
 		await h.session.prompt("/context tools");
-		assert.match(preview(h, "Observation details"), /Unknown.*native updates unimplemented/s);
+		assert.match(preview(h, "Observation details"), /Anthropic-shaped native.*effective declarations/s);
+		back(h);
+		assert.match(preview(h, "Adapter placeholder"), /Never callable.*excluded from effective declarations/s);
 		back(h);
 		assert.doesNotMatch(h.text(), /Registered __pi_deferred_placeholder__|Observed __pi_deferred_placeholder__/);
 		h.respond({ name: "tool_search", input: { query: "Quasarledger", limit: 1 } }, undefined);
 		await h.session.prompt("Next native local plan.");
 		assert.match(JSON.stringify(h.bodies[2].messages), /tool_addition/);
-		assert.match(JSON.stringify(h.bodies[2].messages), new RegExp(deferredSchemaMarker));
 		await h.session.prompt("/context tools");
 		assert.match(preview(h, "Registered fixture_deferred"), /Active: active/);
 		back(h);
-		assert.match(preview(h, "Observation details"), /Unknown.*native updates unimplemented/s);
-		assert.doesNotMatch(h.text(), /missing declaration|incorrect|failed loading/i);
+		const definition = preview(h, "Observed fixture_deferred");
+		assert.match(definition, /Position: \$\.messages\[\d+\]\.content\[\d+\]\.tool\.definition/);
+		assert.match(definition, new RegExp(deferredSchemaMarker));
+		back(h);
+		assert.match(preview(h, "Update + fixture_deferred"), /Native addition.*input_schema/s);
+		assert.equal(h.executions, 0);
+		for (let index = 0; index < h.requests; index++) {
+			assert.deepEqual(h.bodies[index].tools, h.observedBodies[index].tools);
+			assert.deepEqual(h.bodies[index].messages, h.observedBodies[index].messages, "native protocol unchanged; SDK moves betas to headers after observation");
+		}
 		assert.deepEqual(h.errors, []);
 	} finally { await h.close(); }
 });
 
-test("the handler owns its schema snapshot while later in-place and replacement handlers reach the transport", { timeout: 15000 }, async () => {
+test("unparseable native updates replace effective evidence with unknown and later handlers still deliver the real request", { timeout: 15000 }, async () => {
+	let revision = 0, original: unknown, getters = 0;
+	const before: ExtensionFactory = (pi) => {
+		pi.on("before_provider_request", (event) => {
+			original = event.payload;
+			if (!revision) return;
+			const body = JSON.parse(JSON.stringify(event.payload));
+			const message = body.messages.find((message: any) => message.content?.some?.((block: any) => block.type === "tool_addition"));
+			const block = message.content.find((block: any) => block.type === "tool_addition");
+			switch (revision) {
+				case 1: block.tool.unrecognized_definitions = []; break;
+				case 2: block.tool.type = "tool_reference"; break;
+				case 3: block.tool.definition = null; break;
+				case 4: message.role = "user"; break;
+				case 5: delete body.tools; break;
+				case 6: body.tools.find((tool: any) => tool.name === "__pi_deferred_placeholder__").description = "Not the known placeholder"; break;
+				case 7: block.tool.definition.defer_loading = true; break;
+				case 8: Object.defineProperty(block.tool, "definition", { get() { getters++; throw new Error("PRIVATE_NATIVE_ERROR"); } }); break;
+				case 9: block.tool.definition = Object.assign([], block.tool.definition); break;
+				case 10: body.tools = body.tools.filter((tool: any) => tool.name !== "__pi_deferred_placeholder__"); break;
+			}
+			return body;
+		});
+	};
+	const after: ExtensionFactory = (pi) => { pi.on("before_provider_request", () => original); };
+	const h = await host({ tools: true, native: true, factories: [before, contextView, after] });
+	try {
+		h.respond({ name: "tool_search", input: { query: "Quasarledger", limit: 1 } }, undefined);
+		await h.session.prompt("Local native search.");
+		await h.session.prompt("/context tools");
+		assert.match(preview(h, "Observed fixture_deferred"), new RegExp(deferredSchemaMarker));
+		for (revision = 1; revision <= 9; revision++) {
+			await h.session.prompt("Local native follow-up.");
+			await h.session.prompt("/context tools");
+			assert.match(h.text(), /Unknown:/, `unsupported native shape ${revision}`);
+			assert.ok(!rowLabels(h).some((line) => /Observed fixture|Update [+−]|Adapter placeholder/.test(line)));
+			assert.match(preview(h, "Observation details"), /Observed at:/);
+			assert.doesNotMatch(h.text(), /PRIVATE_NATIVE_ERROR|effective declarations/);
+			assert.equal(h.session.messages.at(-1)?.role, "assistant");
+		}
+		revision = 10;
+		await h.session.prompt("Local native protocol without scaffolding at observation.");
+		await h.session.prompt("/context tools");
+		assert.match(preview(h, "Observed fixture_deferred"), new RegExp(deferredSchemaMarker), "native blocks are recognized independently of the placeholder");
+		back(h);
+		assert.ok(!rowLabels(h).some((line) => line.includes("Adapter placeholder")));
+		assert.equal(getters, 0); assert.equal(h.requests, 12); assert.deepEqual(h.errors, []); assert.deepEqual(h.notices, []);
+	} finally { await h.close(); }
+});
+
+test("native removal and same-name redefinitions fold in protocol order without turning history into current tools", { timeout: 15000 }, async () => {
+	let revision = 0;
+	const change: ExtensionFactory = (pi) => {
+		const define = (version: string) => pi.registerTool({ name: "fixture_version", label: "Version", description: version,
+			parameters: Type.Object({ value: Type.String({ description: version }) }),
+			async execute() { assert.fail("History inspection must not run tools"); } });
+		define("VERSION_ONE");
+		pi.on("before_agent_start", () => {
+			if (revision === 1 || revision === 4) pi.setActiveTools(pi.getActiveTools().filter((name) => name !== "fixture_version"));
+			if (revision === 2 || revision === 3) {
+				define(revision === 2 ? "VERSION_TWO" : "VERSION_THREE");
+				pi.setActiveTools([...pi.getActiveTools(), "fixture_version"]);
+			}
+		});
+	};
+	const h = await host({ tools: true, native: true, factories: [change, contextView] });
+	try {
+		for (revision = 0; revision <= 4; revision++) {
+			await h.session.prompt("Next local version plan.");
+			await h.session.prompt("/context tools");
+			if (revision === 0 || revision === 2 || revision === 3) {
+				assert.match(preview(h, "Observed fixture_version"), new RegExp(["VERSION_ONE", "", "VERSION_TWO", "VERSION_THREE"][revision]!));
+				back(h);
+			} else assert.ok(!rowLabels(h).some((line) => line.includes("Observed fixture_version")), "withdrawn definition is not effective");
+		}
+		assert.match(preview(h, "Baseline fixture_version"), /Initial baseline.*not necessarily effective.*VERSION_ONE/s);
+		back(h);
+		const labels = rowLabels(h).filter((line) => line.includes("Update") && line.includes("fixture_version"));
+		assert.deepEqual(labels.map((line) => /Update ([+−])/.exec(line)![1]), ["−", "+", "+", "−"]);
+		assert.match(preview(h, "Update + fixture_version"), /VERSION_TWO/, "old additions remain inspectable as history");
+		back(h);
+		assert.match(preview(h, "Update − fixture_version"), /Position: \$\.messages\[\d+\]\.content\[\d+\]\.tool\.name/);
+		back(h);
+		assert.ok(!rowLabels(h).some((line) => line.includes("Observed fixture_version")));
+		assert.match(JSON.stringify(h.bodies.at(-1).messages), /tool_removal.*tool_addition/s, "real adapter emits both protocols");
+		assert.equal(h.requests, 5); assert.equal(h.executions, 0); assert.deepEqual(h.errors, []);
+	} finally { await h.close(); }
+});
+
+for (const native of [false, true]) test(`the handler owns ${native ? "native addition" : "collapsed"} schema while later in-place and replacement handlers reach the transport`, { timeout: 15000 }, async () => {
 	let replacement = false;
+	const target = (body: any) => native
+		? body.messages.flatMap((message: any) => Array.isArray(message.content) ? message.content : []).find((block: any) => block.type === "tool_addition")?.tool.definition
+			?? body.tools.find((tool: any) => tool.name === "fixture_tool")
+		: body.tools.find((tool: any) => tool.name === "fixture_tool");
 	const before: ExtensionFactory = (pi) => {
 		pi.on("before_provider_request", (event) => {
 			const body = event.payload as any;
-			const tool = body.tools.find((tool: any) => tool.name === "fixture_tool");
+			const tool = target(body);
 			tool.input_schema.properties.AT_OBSERVER_指令 = { type: "string", description: "Observed here." };
 			tool.unrelated_envelope = { text: "UNNEEDED_PRIVATE_ENVELOPE" };
 		});
@@ -200,24 +303,28 @@ test("the handler owns its schema snapshot while later in-place and replacement 
 	const later: ExtensionFactory = (pi) => {
 		pi.on("before_provider_request", (event) => {
 			const body = event.payload as any;
-			const tool = body.tools.find((tool: any) => tool.name === "fixture_tool");
+			const tool = target(body);
 			assert.equal(Object.isFrozen(body), false); assert.equal(Object.isFrozen(tool.input_schema.properties), false);
-			if (replacement) return { ...body, tools: body.tools.map((item: any) => item.name === "fixture_tool"
-				? { ...item, input_schema: { type: "object", properties: { AFTER_REPLACEMENT: { type: "number" } } } } : item) };
+			if (replacement) {
+				const rewritten = JSON.parse(JSON.stringify(body));
+				target(rewritten).input_schema = { type: "object", properties: { AFTER_REPLACEMENT: { type: "number" } } };
+				return rewritten;
+			}
 			delete tool.input_schema.properties.AT_OBSERVER_指令;
 			tool.input_schema.properties.AFTER_IN_PLACE = { type: "boolean" };
 		});
 	};
-	const h = await host({ factories: [before, contextView, later] });
+	const h = await host({ native, tools: native, factories: [before, contextView, later] });
 	try {
+		if (native) h.respond({ name: "tool_search", input: { query: "Quasarledger", limit: 1 } }, undefined);
 		for (replacement of [false, true]) {
 			await h.session.prompt("A normal local request.");
 			await h.session.prompt("/context tools");
-			const text = preview(h, "Observed fixture_tool");
+			const text = preview(h, native ? "Observed fixture_deferred" : "Observed fixture_tool");
 			assert.match(text, /AT_OBSERVER_指令/);
 			assert.doesNotMatch(text, /AFTER_IN_PLACE|AFTER_REPLACEMENT|UNNEEDED_PRIVATE_ENVELOPE/);
-			assert.match(JSON.stringify(h.bodies.at(-1).tools), replacement ? /AFTER_REPLACEMENT/ : /AFTER_IN_PLACE/);
-			assert.doesNotMatch(JSON.stringify(h.bodies.at(-1).tools), /AT_OBSERVER/);
+			assert.match(JSON.stringify(target(h.bodies.at(-1))), replacement ? /AFTER_REPLACEMENT/ : /AFTER_IN_PLACE/);
+			assert.doesNotMatch(JSON.stringify(target(h.bodies.at(-1))), /AT_OBSERVER/);
 			assert.equal(h.session.messages.at(-1)?.role, "assistant");
 		}
 		await h.session.prompt("/context usage");
@@ -226,11 +333,11 @@ test("the handler owns its schema snapshot while later in-place and replacement 
 		const view = h.overlays.at(-1)!;
 		view.handleInput?.("\x1b[B"); view.handleInput?.("\r");
 		assert.doesNotMatch(h.text(), /AT_OBSERVER|AFTER_IN_PLACE|AFTER_REPLACEMENT/, "canonical transcript estimates are not request observations");
-		assert.equal(h.requests, 2); assert.deepEqual(h.errors, []);
+		assert.equal(h.requests, native ? 3 : 2); assert.deepEqual(h.errors, []);
 	} finally { await h.close(); }
 });
 
-test("observation stays latest-only and process-local across public reload and independent runtimes", { timeout: 15000 }, async () => {
+for (const native of [false, true]) test(`observation stays latest-only and process-local across public reload and independent runtimes (${native ? "native" : "collapsed"})`, { timeout: 15000 }, async () => {
 	let counter = 0;
 	const change: ExtensionFactory = (pi) => {
 		pi.on("before_provider_request", (event) => {
@@ -238,7 +345,7 @@ test("observation stays latest-only and process-local across public reload and i
 			body.tools.find((tool: any) => tool.name === "fixture_tool").description = ++counter === 1 ? "FIRST_PRIVATE_SCHEMA" : "LATEST_PRIVATE_SCHEMA";
 		});
 	};
-	const h = await host({ factories: [change, contextView] });
+	const h = await host({ native, factories: [change, contextView] });
 	try {
 		const agentFiles = await readdir(process.env.PI_CODING_AGENT_DIR!, { recursive: true });
 		await h.session.prompt("First ordinary request.");
@@ -298,6 +405,48 @@ test("tool inventory's derived callability agrees with benign real nested calls,
 	} finally { await h.close(); }
 });
 
+for (const native of [false, true]) test(`real codemode only keeps eager active with inline description, executes benign calls and searches without activating deferred tools (${native ? "native" : "collapsed"})`, { timeout: 15000 }, async () => {
+	const h = await host({ tools: true, codemodeMode: "only", native });
+	try {
+		await h.session.prompt("Local inline plan.");
+		assert.doesNotMatch(JSON.stringify(h.observedBodies[0]), new RegExp(deferredSchemaMarker), "schema-only marker initially absent from the whole observation");
+		assert.ok(h.session.getActiveToolNames().includes("fixture_tool"));
+		assert.ok(!h.bodies[0].tools.some((tool: any) => tool.name === "fixture_tool"));
+		assert.match(h.bodies[0].tools.find((tool: any) => tool.name === "codemode").description, /fixture_tool/);
+		await h.session.prompt("/context tools");
+		assert.match(preview(h, "Registered fixture_tool"), /Active: active.*Derived internal callability: yes/s);
+		back(h);
+		assert.ok(!rowLabels(h).some((line) => /Observed fixture_tool|Observed fixture_catalog|Observed fixture_deferred/.test(line)));
+		const description = preview(h, "Codemode description");
+		assert.match(description, /Description content.*not independent declarations/s);
+		const view = h.overlays.at(-1)!;
+		view.handleInput?.("\x1b[F");
+		assert.match(h.text(), /fixture_tool/, "inline signatures inspectable in their own description preview");
+		assert.doesNotMatch(h.text(), new RegExp(deferredSchemaMarker));
+		h.respond({ name: "codemode", input: { code: '// @options: {"timeout_ms":3000}\ntext(await tools.fixture_tool({})); text(await tools.fixture_catalog({}));' } }, undefined);
+		await h.session.prompt("Run the benign inline calls.");
+		const result = () => h.session.messages.filter((message) => message.role === "toolResult" && message.toolName === "codemode").at(-1)!;
+		assert.match(JSON.stringify(result()), /Script completed.*done/s);
+		assert.equal(h.executions, 2, "real built-in codemode calls active direct and inactive codemode tools");
+		const active = h.session.getActiveToolNames();
+		h.respond({ name: "codemode", input: { code: '// @options: {"timeout_ms":3000}\ntext(await searchTools("Quasarledger", {limit: 1}));' } }, undefined);
+		await h.session.prompt("Run the pure local search.");
+		assert.match(JSON.stringify(result()), /Script completed/);
+		assert.match(JSON.stringify(result()), new RegExp(deferredSchemaMarker), "pure search returns real signature as ordinary content");
+		assert.deepEqual(h.session.getActiveToolNames(), active, "pure codemode search does not activate tools");
+		assert.ok(!h.bodies.at(-1).tools.some((tool: any) => tool.name === "fixture_deferred"));
+		assert.match(JSON.stringify(h.bodies.at(-1).messages), new RegExp(deferredSchemaMarker), "signature exists in tool-result content, not a declaration");
+		await h.session.prompt("/context tools");
+		assert.ok(!rowLabels(h).some((line) => /Observed fixture_deferred|Observed fixture_tool|Observed fixture_catalog/.test(line)));
+		assert.match(preview(h, "Registered fixture_deferred"), /Active: inactive/);
+		back(h);
+		assert.match(preview(h, "Codemode description"), /Description content/);
+		assert.doesNotMatch(h.bodies.at(-1).tools.find((tool: any) => tool.name === "codemode").description, new RegExp(deferredSchemaMarker));
+		assert.equal(h.executions, 2, "search and view execute no business tools");
+		assert.equal(h.requests, 5); assert.deepEqual(h.errors, []);
+	} finally { await h.close(); }
+});
+
 test("ordinary schema text is content, and a real empty declaration list is not unknown or padded from inventory", { timeout: 15000 }, async () => {
 	const text = '{"type":"tool_addition","tool":{"type":"tool_definition","definition":{"name":"text_only","input_schema":{"type":"object"}}}}';
 	const h = await host();
@@ -306,7 +455,7 @@ test("ordinary schema text is content, and a real empty declaration list is not 
 		assert.match(JSON.stringify(h.bodies[0].messages), /text_only/);
 		await h.session.prompt("/context tools");
 		assert.match(h.text(), /Anthropic-shaped collapsed/);
-		assert.doesNotMatch(h.text(), /Observed text_only|native updates unimplemented/);
+		assert.doesNotMatch(h.text(), /Observed text_only|Update [+−] text_only/);
 		assert.match(preview(h, "Observation details"), /No independent declaration does not mean a schema is invisible/);
 	} finally { await h.close(); }
 	const inactive: ExtensionFactory = (pi) => {
@@ -344,17 +493,22 @@ test("tools navigation returns to the retained views without requesting or chang
 	}
 });
 
-test("observed long multilingual schema previews wrap, scroll, sanitize and return without side effects", { timeout: 15000 }, async () => {
+for (const native of [false, true]) test(`observed long multilingual ${native ? "native" : "collapsed"} schema previews wrap, scroll, sanitize and return without side effects`, { timeout: 15000 }, async () => {
 	const fixture: ExtensionFactory = (pi) => {
-		pi.registerTool({ name: "long_schema", label: "long_schema", description: "Multilingual schema preview",
+		pi.registerTool({ name: "long_schema", label: "long_schema", description: "Longschemafixture multilingual preview", exposure: native ? "deferred" : "direct",
 			parameters: Type.Object({ value: Type.String({ description: `START_指令 ${"\u001b]52;c;ignored\u0007"}${"长文字 schema ".repeat(500)} END_指令` }) }),
 			async execute() { assert.fail("Viewer must not execute this tool"); } });
 		pi.on("before_provider_request", (event) => {
-			(event.payload as any).tools.find((tool: any) => tool.name === "long_schema").name += "\u001b]52;c;blocked\u0007";
+			const body = event.payload as any;
+			const tool = native ? body.messages.flatMap((message: any) => Array.isArray(message.content) ? message.content : [])
+				.find((block: any) => block.type === "tool_addition" && block.tool.definition.name === "long_schema")?.tool.definition
+				: body.tools.find((tool: any) => tool.name === "long_schema");
+			if (tool) tool.name += "\u001b]52;c;blocked\u0007";
 		});
 	};
-	const h = await host({ factories: [fixture, contextView] });
+	const h = await host({ native, tools: native, factories: [fixture, contextView] });
 	try {
+		if (native) h.respond({ name: "tool_search", input: { query: "Longschemafixture", limit: 1 } }, undefined);
 		await h.session.prompt("One ordinary request.");
 		const entries = h.sessionManager.getEntries(), files = await readdir(h.base, { recursive: true });
 		await h.session.prompt("/context tools");
@@ -364,16 +518,17 @@ test("observed long multilingual schema previews wrap, scroll, sanitize and retu
 		const view = h.overlays.at(-1)! as typeof h.overlays[number] & { handleMouse(event: TuiMouseEvent): TuiMouseEventResult | undefined };
 		for (const width of [40, 80, 120]) {
 			for (const line of view.render(width)) assert.ok(visibleWidth(line) <= width, `schema fits ${width}`);
-			view.handleInput?.("\x1b[H"); const start = h.text();
-			view.handleInput?.("\x1b[6~"); assert.notEqual(h.text(), start, "PgDn scrolls the preview");
-			view.handleInput?.("\x1b[F"); assert.match(h.text(), /END_指令/);
-			view.handleInput?.("\x1b[H"); assert.equal(h.text(), start, "Home restores the start");
+			const frame = () => strip(view.render(width).join("\n"));
+			view.handleInput?.("\x1b[H"); const start = frame();
+			view.handleInput?.("\x1b[6~"); assert.notEqual(frame(), start, "PgDn scrolls the preview");
+			view.handleInput?.("\x1b[F"); assert.match(frame(), /END_指令/);
+			view.handleInput?.("\x1b[H"); assert.equal(frame(), start, "Home restores the start");
 			assert.deepEqual(view.handleMouse({ type: "wheel", wheelDelta: 7 } as TuiMouseEvent), { handled: true, render: true });
-			assert.notEqual(h.text(), start, "public logical wheel delta scrolls");
-			assert.doesNotMatch(h.text(), /\u001b\]52|\u0007/, "no executable OSC or control bytes");
+			assert.notEqual(frame(), start, "public logical wheel delta scrolls");
+			assert.doesNotMatch(frame(), /\u001b\]52|\u0007/, "no executable OSC or control bytes");
 		}
 		back(h); assert.match(h.text(), /Tool Diagnostics/);
-		assert.equal(h.requests, 1); assert.equal(h.executions, 0);
+		assert.equal(h.requests, native ? 2 : 1); assert.equal(h.executions, 0);
 		assert.deepEqual(h.sessionManager.getEntries(), entries);
 		assert.deepEqual(await readdir(h.base, { recursive: true }), files);
 		assert.deepEqual(h.errors, []);

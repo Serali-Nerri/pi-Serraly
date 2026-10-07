@@ -155,7 +155,9 @@ UI 只注册 `/ccstyle`。查看器在公开 `before_agent_start` / `context` �
 不从会话恢复为观测证据、不发送消息、执行工具或修改请求。Usage 按需重放当前分支
 组成估算；模型、预览与缓存不与 Footer 合并。Tools 分开呈现打开视图时的公开宿主库存/active
 与本扩展 `before_provider_request` handler 同步复制的最新工具声明；只支持可靠识别的
-Anthropic collapsed 顶层定义，原生增量暂标 unknown/unimplemented。未知/失败也替换旧观测，
+Anthropic collapsed 顶层定义与原生增删协议，按 payload 顺序推导可证明的有效集合；
+本次 payload 内的更新位置/历史、adapter placeholder 与 codemode 描述内容分别归属。
+未知/失败不宣称有效集合，也替换旧观测，
 不持有整份请求历史，不从会话重放或其他 runtime 继承；来源可能包括 warming，不作最终 wire
 或发送/接受声明。具体预览、推导调用资格与支持边界由模块 README 定义。
 

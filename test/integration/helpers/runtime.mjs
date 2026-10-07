@@ -51,6 +51,7 @@ export async function sandboxFixture(release, config = {}) {
 		await writeFile(join(env.PI_CODING_AGENT_DIR, "settings.json"), JSON.stringify({
 			theme: "dark", hideThinkingBlock: true, defaultTools: ["+tool_search", "+codemode"],
 			defaultProvider: "serraly-fixture", defaultModel: "fixture", cacheWarming: "off",
+			codemode: { mode: config.codemodeMode ?? "on" },
 			compaction: { enabled: false }, retry: { enabled: false },
 			enableInstallTelemetry: false, enableAnalytics: false, defaultProjectTrust: "never",
 			packages: config.packageFilter === undefined ? [] : [{ source: release, extensions: config.packageFilter }],
