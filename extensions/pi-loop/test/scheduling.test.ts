@@ -264,7 +264,7 @@ test("agent_start cancels the pre-start delivery watchdog", (t) => {
 	assert.doesNotThrow(() => h.tick(5000));
 });
 
-test("the command returns a promise for the Pi 1.0.2 command contract", async (t) => {
+test("the command returns a promise for the Pi 1.0.4 command contract", async (t) => {
 	const h = loopHarness(t);
 	h.emit("session_start");
 	const result = h.command("1m check");

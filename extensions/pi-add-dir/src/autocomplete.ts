@@ -3,7 +3,7 @@ import type { AutocompleteItem, AutocompleteProvider, AutocompleteSuggestions } 
 import { isWithinDir, type AddedDir } from "./directories.ts";
 import { hasUnsafeDisplayCharacters, sanitize } from "./presentation.ts";
 
-// Mirrors the separators Pi 1.0.2 treats as prose/path boundaries: whitespace (including the
+// Mirrors the separators Pi 1.0.4 treats as prose/path boundaries: whitespace (including the
 // non-ASCII spaces `\s` matches), `"'=`, and punctuation in CJK scripts.
 const PATH_DELIMITERS = new Set(['"', "'", "="]);
 const WHITESPACE = /\s/u;

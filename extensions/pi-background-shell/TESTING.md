@@ -2,7 +2,7 @@
 
 ## Commands
 
-Use the root npm workspace dependencies with Node >=22.19.0, Pi **1.0.2** and
+Use the root npm workspace dependencies with Node >=22.19.0, Pi **1.0.4** and
 TypeBox **1.3.27**. Do not install a separate module dependency tree. Wildcard
 host peers are packaging policy, not a compatibility claim for other Pi versions.
 Dependency installation and release staging belong to the root development guide.

@@ -5,7 +5,7 @@ import { discoverPackages, root, selectExtensions } from "./packages.mjs";
 import { SEAL_PATH, copyPackageArtifact, verifyPackageArtifact } from "./package-artifacts.mjs";
 
 /** Acceptance is pinned to the qualified host; an explicit override must match. */
-export const expectedHostVersion = "1.0.2";
+export const expectedHostVersion = "1.0.4";
 
 const sha256 = (buffer) => createHash("sha256").update(buffer).digest("hex");
 const byName = (a, b) => a.name.localeCompare(b.name);

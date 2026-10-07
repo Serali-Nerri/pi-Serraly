@@ -17,7 +17,7 @@ The original [ISC LICENSE](LICENSE) is retained unchanged. Upstream authorship r
 - Source backup recorded by the parent: `/tmp/pi-serraly-stage-two-sources-20261002-000556`.
 - Imported the complete tracked `src/`, `extensions/`, `tests/`, `scripts/`, `docs/`, strict TypeScript configs, package metadata, changelog and license; excluded `.git`, `node_modules`, `.pi`, `dist` and the source lockfile.
 - Runtime business source and source-fork structure are unchanged, including the existing `.js` ESM specifiers used by NodeNext compilation and both reload ownership symbols. No stylistic rewrite or forced bundle.
-- Intentional adaptations: private workspace manifest and Pi 1.0.2 dev pins; runtime peers limited to coding-agent/TUI/TypeBox (pi-ai is test-only); isolated test-script runner; hoisted dependency resolution in package fixtures; shipping CHANGELOG with its provenance links; refreshed source/docs/package gates. Root scripts own release staging and the thin entry wrapper. No global deployment, live requests or source-reference edits.
+- Intentional adaptations: private workspace manifest and Pi 1.0.4 dev pins; runtime peers limited to coding-agent/TUI/TypeBox (pi-ai is test-only); isolated test-script runner; hoisted dependency resolution in package fixtures; shipping CHANGELOG with its provenance links; refreshed source/docs/package gates. Root scripts own release staging and the thin entry wrapper. No global deployment, live requests or source-reference edits.
 
 Current validation commands, coverage and limitations are in [TESTING.md](TESTING.md).
 

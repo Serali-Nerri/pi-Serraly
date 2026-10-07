@@ -1,6 +1,6 @@
 # pi-ui
 
-Pi 1.0.2 的展示模块，将 Claude 风格转写与会话 shell 合并为一个独立入口。
+Pi 1.0.4 的展示模块，将 Claude 风格转写与会话 shell 合并为一个独立入口。
 本模块不注册或执行业务工具。工具自带 renderer 优先；真实内置工具以
 `sourceInfo` 区分，同名扩展覆盖不会被误接管。文件/补丁卡的标题与结果状态行
 使用共享 `pi-ui-kit` 的卡语法，diff/IO 正文、hover/hitbox、展开对象和动画帧
@@ -28,7 +28,7 @@ UI 只展示已经返回或保存的数据；不读当前磁盘补全历史 diff
 
 ## 宿主能力预检
 
-兼容补丁按引用替换 Pi 1.0.2 的展示方法（工具/助手/容器/三种摘要组件的
+兼容补丁按引用替换 Pi 1.0.4 的展示方法（工具/助手/容器/三种摘要组件的
 `render`、`updateDisplay`、`createResultRegion`、`dispatchMouseToLayout` 等）。
 每个 TUI `session_start` 在 thinking 与 transcript 修改之前做一次无写入预检：
 只读 descriptor、继承与 extensibility，不执行 getter，也不写任何槽位。

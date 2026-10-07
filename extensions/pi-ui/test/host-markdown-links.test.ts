@@ -51,7 +51,7 @@ function assertPlainSuffix(lines: string[], suffix: string) {
 	}
 }
 
-test("real Pi 1.0.2 Markdown keeps CJK punctuation outside corrected OSC 8 targets", () => {
+test("real Pi 1.0.4 Markdown keeps CJK punctuation outside corrected OSC 8 targets", () => {
 	const source = "看 https://example.com/a，和 https://b.com/x. 结束";
 	assert.deepEqual(render(source, { native: true }).targets, ["https://example.com/a，和", "https://b.com/x"]);
 	const out = render(source);

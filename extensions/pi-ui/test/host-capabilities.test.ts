@@ -19,7 +19,7 @@ const branch = BranchSummaryMessageComponent.prototype as any;
 const skill = SkillInvocationMessageComponent.prototype as any;
 const compaction = CompactionSummaryMessageComponent.prototype as any;
 
-test("the untouched Pi 1.0.2 host satisfies every required display capability", () => {
+test("the untouched Pi 1.0.4 host satisfies every required display capability", () => {
 	assert.deepEqual(probeHostCapabilities(), { ok: true, missing: [] });
 	requireHostCapabilities();
 });
