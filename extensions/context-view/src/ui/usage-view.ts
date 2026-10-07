@@ -165,8 +165,8 @@ interface BlockBody {
 }
 
 /** Open the Usage view as a fullscreen overlay. */
-export async function showUsageView(context: ExtensionCommandContext, input: UsageViewInput): Promise<void> {
-	await context.ui.custom<void>(
+export async function showUsageView(context: ExtensionCommandContext, input: UsageViewInput): Promise<"tools" | undefined> {
+	return context.ui.custom<"tools" | undefined>(
 		(tui, theme, _keybindings, done) => {
 			const view = new UsageView(theme, input, done, () => tui.terminal.rows);
 			return {
@@ -174,7 +174,7 @@ export async function showUsageView(context: ExtensionCommandContext, input: Usa
 				invalidate: () => view.invalidate(),
 				handleMouse: (event: TuiMouseEvent) => view.handleMouse(event),
 				handleInput: (data: string) => {
-					view.handleInput(data);
+					if (data === "t") done("tools"); else view.handleInput(data);
 					tui.requestRender();
 				},
 			};
@@ -424,6 +424,7 @@ export class UsageView {
 	private dashboardHints(width: number): Array<readonly [string, string]> {
 		const hints: Array<readonly [string, string]> = [
 			[STEP_KEY_HINT, "Navigate"],
+			["t", "Tools"],
 			["Enter", "Preview"],
 		];
 		if (this.canToggleMapScale(width)) hints.push(["Z", "Zoom"]);

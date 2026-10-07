@@ -226,7 +226,8 @@ test("UsageView renders the 16x16 map and matching category legend with semantic
 	assert.equal(plain[descriptionIndex]?.indexOf("Estimated context"), 2);
 	assert.match(lines[descriptionIndex] ?? "", /\u001b\[38;2;16;17;18m  Estimated context/);
 	assert.equal(plain[hintsIndex]?.indexOf("↑↓"), 2);
-	assert.match(plain[hintsIndex] ?? "", /↑↓\/jk Navigate · Enter Preview · Z Zoom · Esc Close/);
+	for (const action of ["↑↓/jk Navigate", "t Tools", "Enter Preview", "Z Zoom", "Esc Close"])
+		assert.ok((plain[hintsIndex] ?? "").includes(action), `dashboard offers ${action}`);
 	assert.match(lines[hintsIndex] ?? "", /\u001b\[38;2;16;17;18mEsc/);
 	assert.match(lines[hintsIndex] ?? "", /\u001b\[38;2;7;8;9m Close/);
 

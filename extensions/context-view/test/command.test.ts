@@ -29,24 +29,25 @@ test("parseContextCommand defaults to Usage and accepts the explicit grammar", (
 	assert.deepEqual(parseContextCommand(""), { type: "view", view: "usage" });
 	assert.deepEqual(parseContextCommand(" Usage "), { type: "view", view: "usage" });
 	assert.deepEqual(parseContextCommand("injections"), { type: "view", view: "injections" });
+	assert.deepEqual(parseContextCommand("tools"), { type: "view", view: "tools" });
 	assert.deepEqual(parseContextCommand(" CONFIG "), { type: "config" });
 	assert.equal(parseContextCommand("runtime").type, "invalid");
 	assert.equal(parseContextCommand("runtime on").type, "invalid");
 	assert.equal(parseContextCommand("runtime off").type, "invalid");
 	assert.deepEqual(parseContextCommand("usage extra"), {
 		type: "invalid",
-		message: "Usage: /context [usage|injections|config]",
+		message: "Usage: /context [usage|injections|tools|config]",
 	});
 });
 
 test("command registration and completions expose the supported grammar", () => {
 	assert.equal(
 		CONTEXT_COMMAND_DESCRIPTION,
-		"[usage|injections|config] - Inspect context usage, injections",
+		"[usage|injections|tools|config] - Inspect context usage, injections, tools",
 	);
 	assert.deepEqual(
 		getContextArgumentCompletions("")?.map((item) => item.value),
-		["usage", "injections", "config"],
+		["usage", "injections", "tools", "config"],
 	);
 	assert.deepEqual(
 		getContextArgumentCompletions("inj")?.map((item) => item.value),
@@ -76,11 +77,13 @@ test("reportTuiOnly names the refused view instead of the whole command", () => 
 
 	reportTuiOnly(context, "usage");
 	reportTuiOnly(context, "injections");
+	reportTuiOnly(context, "tools");
 
 	// Only views are refused; /context config needs no UI and runs in every mode.
 	assert.deepEqual(notified, [
 		{ message: "/context usage is available in TUI mode only.", type: "warning" },
 		{ message: "/context injections is available in TUI mode only.", type: "warning" },
+		{ message: "/context tools is available in TUI mode only.", type: "warning" },
 	]);
 });
 

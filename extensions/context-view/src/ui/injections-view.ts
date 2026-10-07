@@ -65,8 +65,8 @@ interface InjectionColumns {
 export async function showInjectionsView(
 	context: ExtensionCommandContext,
 	input: InjectionsViewInput,
-): Promise<void> {
-	await context.ui.custom<void>(
+): Promise<"tools" | undefined> {
+	return context.ui.custom<"tools" | undefined>(
 		(tui, theme, _keybindings, done) => {
 			const view = new InjectionsView(theme, input, done, () => tui.terminal.rows);
 			return {
@@ -74,7 +74,7 @@ export async function showInjectionsView(
 				invalidate: () => view.invalidate(),
 				handleMouse: (event: TuiMouseEvent) => view.handleMouse(event),
 				handleInput: (data: string) => {
-					view.handleInput(data);
+					if (data === "t") done("tools"); else view.handleInput(data);
 					tui.requestRender();
 				},
 			};
@@ -206,6 +206,7 @@ export class InjectionsView {
 			this.fit(
 				hintRow(this.theme, [
 					[STEP_KEY_HINT, "Navigate"],
+					["t", "Tools"],
 					["Enter", "Preview"],
 					["Esc", "Close"],
 				]),

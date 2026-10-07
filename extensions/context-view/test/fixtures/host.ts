@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import {
-	createAgentSession, DefaultResourceLoader, initTheme, ModelRuntime, SessionManager, SettingsManager,
+	createAgentSession, createCodemodeExtension, createToolSearchExtension, DefaultResourceLoader, initTheme, ModelRuntime, SessionManager, SettingsManager,
 	type ExtensionFactory,
 } from "@earendil-works/pi-coding-agent";
 import { registerApiProvider, unregisterApiProviders } from "@earendil-works/pi-ai/compat";
@@ -16,27 +16,36 @@ import contextView from "../../src/index.ts";
 
 export const strip = (text: string) => text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
 
+// This marker occurs only in the deferred parameter schema, never in prompts, descriptions or replies.
+export const deferredSchemaMarker = "CV_DEFERRED_SCHEMA_74AF";
+type Reply = { name: string; input?: Record<string, unknown> } | undefined;
+
 /** Real SDK/session/command boundary; only the terminal and request-local transport are scripted. */
-export async function host(options: { factories?: ExtensionFactory[]; mode?: "tui" | "print" } = {}) {
+export async function host(options: {
+	factories?: ExtensionFactory[]; mode?: "tui" | "print"; tools?: boolean; native?: boolean;
+	inputs?: string[][]; sessionManager?: SessionManager;
+} = {}) {
 	assert.ok(process.env.PI_CODING_AGENT_DIR, "Use the isolated runner");
 	const base = await mkdtemp(join(process.env.TMPDIR!, "context-view-host-"));
 	const cwd = join(base, "cwd"), agentDir = join(base, "agent");
 	await mkdir(cwd, { recursive: true });
 	await mkdir(agentDir, { recursive: true });
 	let requests = 0, executions = 0, runs = 0;
-	const bodies: unknown[] = [];
-	const api = "context-view-test-anthropic";
-	const providerOwner = "context-view-test";
+	const bodies: any[] = [], observedBodies: any[] = [], replies: Reply[] = [];
+	const nested: { callable: string[]; outcomes: Record<string, boolean | undefined> }[] = [];
+	const api = `context-view-test-${basename(base)}`;
+	const providerOwner = api;
 	const fetch: typeof globalThis.fetch = async (_input, init) => {
 		requests++;
 		const body = JSON.parse(String(init?.body));
 		bodies.push(body);
+		const reply = replies.shift();
 		const events = [
 			{ type: "message_start", message: { id: `msg_${requests}`, type: "message", role: "assistant", content: [], model: body.model, stop_reason: null, stop_sequence: null, usage: { input_tokens: 10, output_tokens: 0 } } },
-			{ type: "content_block_start", index: 0, content_block: { type: "text", text: "" } },
-			{ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "Local fixture reply." } },
+			{ type: "content_block_start", index: 0, content_block: reply ? { type: "tool_use", id: `call_${requests}`, name: reply.name, input: {} } : { type: "text", text: "" } },
+			{ type: "content_block_delta", index: 0, delta: reply ? { type: "input_json_delta", partial_json: JSON.stringify(reply.input ?? {}) } : { type: "text_delta", text: "Local fixture reply." } },
 			{ type: "content_block_stop", index: 0 },
-			{ type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 4 } },
+			{ type: "message_delta", delta: { stop_reason: reply ? "tool_use" : "end_turn", stop_sequence: null }, usage: { output_tokens: 4 } },
 			{ type: "message_stop" },
 		];
 		return new Response(events.map((e) => `event: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`).join(""), {
@@ -53,23 +62,57 @@ export async function host(options: { factories?: ExtensionFactory[]; mode?: "tu
 	modelRuntime.registerProvider("context-view-fixture", {
 		api, apiKey: "fixture", baseUrl: "https://example.invalid",
 		models: [{ id: "local", name: "Local fake model", reasoning: false, input: ["text"], contextWindow: 65536, maxTokens: 2048,
-			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }],
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+			compat: { supportsMidConvoSystemMessages: options.native ?? false, supportsMidConvoToolChanges: options.native ?? false } }],
 	});
-	const settingsManager = SettingsManager.inMemory({ cacheWarming: "off", compaction: { enabled: false }, retry: { enabled: false },
+	const settingsManager = SettingsManager.inMemory({ cacheWarming: "off", codemode: { mode: "on" }, compaction: { enabled: false }, retry: { enabled: false },
 		enableAnalytics: false, enableInstallTelemetry: false, defaultProjectTrust: "never" });
 	const fixture: ExtensionFactory = (pi) => {
 		pi.registerTool({ name: "fixture_tool", label: "fixture_tool", description: "Local operation", exposure: "direct",
 			parameters: Type.Object({}), async execute() { executions++; return { content: [{ type: "text", text: "done" }], details: {} }; } });
-		pi.on("before_agent_start", () => ({ systemPrompt: `${++runs === 1 ? "FIRST" : "SECOND"}_CJK_指令\n\nLocal fixture prompt.` }));
-		pi.on("context", (event) => ({ messages: [...event.messages,
+		if (options.tools) {
+			for (const [name, exposure, description] of [
+				["fixture_deferred", "deferred", "Quasarledger inventory lookup"],
+				["fixture_catalog", "codemode", "Local catalog operation"],
+				["fixture_model_only", "model-only", "Local model-only operation"],
+				["fixture_hidden", "hidden", "Local unreachable operation"],
+				["fixture_inactive_direct", "direct", "Local inactive operation"],
+			] as const) {
+				pi.registerTool({ name, label: name, exposure, description,
+					...(name === "fixture_inactive_direct" ? { defaultActive: false } : {}),
+					parameters: name === "fixture_deferred" ? Type.Object({ [deferredSchemaMarker]: Type.Optional(Type.String()) }) : Type.Object({}),
+					async execute() { executions++; return { content: [{ type: "text", text: "done" }], details: {} }; },
+				});
+			}
+			pi.registerTool({ name: "fixture_nested", label: "fixture_nested", description: "Benign local callability check",
+				parameters: Type.Object({}), async execute(_id, _args, _signal, _update, ctx) {
+					const record = { callable: ctx.tools.map((tool) => tool.name), outcomes: {} as Record<string, boolean | undefined> };
+					for (const name of ["fixture_tool", "fixture_deferred", "fixture_catalog", "fixture_model_only", "fixture_hidden", "fixture_inactive_direct"])
+						record.outcomes[name] = (await ctx.executeTool(name, {})).isError;
+					nested.push(record);
+					return { content: [{ type: "text", text: "Local check complete." }], details: {} };
+				} });
+			pi.on("session_start", () => pi.setActiveTools([...pi.getActiveTools(), "tool_search", "codemode"]));
+			pi.on("before_provider_request", (event) => { observedBodies.push(JSON.parse(JSON.stringify(event.payload))); });
+		}
+		// A forced systemPrompt collapses the host transcript even in native mode.
+		if (!options.native) pi.on("before_agent_start", () => ({ systemPrompt: `${++runs === 1 ? "FIRST" : "SECOND"}_CJK_指令\n\nLocal fixture prompt.` }));
+		if (!options.native) pi.on("context", (event) => ({ messages: [...event.messages,
 			{ role: "custom", customType: "fixture-injection", content: "INITIAL_PRIVATE_CONTENT", display: false, timestamp: 1234 }] }));
 	};
 	const loader = new DefaultResourceLoader({ cwd, agentDir, settingsManager, noExtensions: true,
 		noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true,
-		extensionFactories: [fixture, ...options.factories ?? [contextView]] });
+		additionalExtensionPaths: options.tools ? ["builtin:codemode", "builtin:tool-search"] : [],
+		extensionFactories: [
+			...(options.tools ? [
+				{ name: "codemode", builtin: true, factory: createCodemodeExtension({ models: false }) },
+				{ name: "tool-search", builtin: true, factory: createToolSearchExtension() },
+			] : []),
+			{ name: "diagnostic-fixtures", factory: fixture }, ...options.factories ?? [contextView],
+		] });
 	await loader.reload();
 	assert.deepEqual(loader.getExtensions().errors, []);
-	const sessionManager = SessionManager.inMemory(cwd);
+	const sessionManager = options.sessionManager ?? SessionManager.inMemory(cwd);
 	const { session } = await createAgentSession({ cwd, agentDir, modelRuntime, model: modelRuntime.getModel("context-view-fixture", "local"),
 		settingsManager, resourceLoader: loader, sessionManager, noTools: "builtin", thinkingLevel: "off" });
 	const errors: unknown[] = [], notices: string[] = [], overlays: Component[] = [];
@@ -88,13 +131,15 @@ export async function host(options: { factories?: ExtensionFactory[]; mode?: "tu
 				for (const width of [40, 80, 120]) for (const line of component.render(width))
 					assert.ok(visibleWidth(line) <= width, `overlay fits ${width}`);
 				overlays.push(component);
-				queueMicrotask(() => done(undefined));
+				const inputs = options.inputs?.shift() ?? [];
+				queueMicrotask(() => { for (const input of inputs) component.handleInput?.(input); done(undefined); });
 			});
 		},
 	};
 	await session.bindExtensions({ uiContext, mode: options.mode ?? "tui", onError: (error) => errors.push(error) });
 	return {
-		session, sessionManager, loader, settingsManager, credentials, overlays, notices, errors, bodies, base,
+		session, sessionManager, loader, settingsManager, credentials, overlays, notices, errors, bodies, observedBodies, nested, base,
+		respond(...plan: Reply[]) { replies.push(...plan); },
 		get requests() { return requests; }, get executions() { return executions; },
 		text() { return strip(overlays.at(-1)!.render(100).join("\n")); },
 		async close() {

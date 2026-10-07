@@ -23,11 +23,19 @@ import {
 import { readAutoCompactReserveTokens } from "./settings.ts";
 import { showInjectionsView } from "./ui/injections-view.ts";
 import { showUsageView } from "./ui/usage-view.ts";
+import { showToolsView } from "./ui/tools-view.ts";
 import { computeUsage, toReportedUsage } from "./usage.ts";
+import { captureToolObservation, type ToolObservation } from "./tool-observation.ts";
 
 export default function (pi: ExtensionAPI) {
 	const capture = new InitialCaptureState();
 	const configStore = new ConfigStore();
+	let latestTools: ToolObservation | undefined;
+
+	pi.on("before_provider_request", (event) => {
+		latestTools = captureToolObservation(event.payload);
+		// No return: the public handler chain retains its own payload unchanged.
+	});
 
 	pi.on("before_agent_start", (event) => {
 		// The chained prompt here already carries additions from extensions loaded
@@ -67,41 +75,50 @@ export default function (pi: ExtensionAPI) {
 				reportTuiOnly(ctx, command.view);
 				return;
 			}
-			const initial = resolveInitialCapture(pi, capture, ctx);
-			if (command.view === "injections") {
-				await showInjectionsView(ctx, {
-					snapshot: initial.snapshot,
-					degradedReason: initial.degradedReason,
-				});
-				return;
-			}
-			// Loaded only for the Usage view, the sole consumer of configured colors.
-			const loadedConfig = configStore.load();
-			// ReadonlySessionManager lacks buildSessionContext(); use pi's exported builder.
-			const messages = buildSessionContext(ctx.sessionManager.getEntries(), ctx.sessionManager.getLeafId()).messages;
-			const current = buildUsageSnapshot({
-				messages,
-				initial: initial.snapshot,
-				systemPrompt: ctx.getSystemPrompt(),
-				options: ctx.getSystemPromptOptions(),
-				allTools: pi.getAllTools(),
-				activeToolNames: pi.getActiveTools(),
-				promptSources: collectPromptSources(pi.getAllTools(), pi.getCommands()),
-			});
-			await showUsageView(ctx, {
-				usage: computeUsage({
-					snapshot: current,
+			let view: "usage" | "injections" | "tools" | undefined = command.view;
+			while (view !== undefined) {
+				if (view === "tools") {
+					view = await showToolsView(ctx, {
+						tools: pi.getAllTools(), active: pi.getActiveTools(), sampledAt: new Date().toISOString(), observation: latestTools,
+					});
+					continue;
+				}
+				const initial = resolveInitialCapture(pi, capture, ctx);
+				if (view === "injections") {
+					view = await showInjectionsView(ctx, {
+						snapshot: initial.snapshot,
+						degradedReason: initial.degradedReason,
+					});
+					continue;
+				}
+				// Loaded only for the Usage view, the sole consumer of configured colors.
+				const loadedConfig = configStore.load();
+				// ReadonlySessionManager lacks buildSessionContext(); use pi's exported builder.
+				const messages = buildSessionContext(ctx.sessionManager.getEntries(), ctx.sessionManager.getLeafId()).messages;
+				const current = buildUsageSnapshot({
 					messages,
-					reported: toReportedUsage(ctx.getContextUsage()),
-					modelLabel: ctx.model?.id,
-					autoCompactReserveTokens: readAutoCompactReserveTokens(ctx),
-				}),
-				degradedReason: initial.degradedReason,
-				// Reported inside the view: a notification would stay hidden behind the fullscreen overlay.
-				notices: loadedConfig.warnings,
-				categoryColors: loadedConfig.config.categoryColors,
-				mapSize: loadedConfig.config.mapSize,
-			});
+					initial: initial.snapshot,
+					systemPrompt: ctx.getSystemPrompt(),
+					options: ctx.getSystemPromptOptions(),
+					allTools: pi.getAllTools(),
+					activeToolNames: pi.getActiveTools(),
+					promptSources: collectPromptSources(pi.getAllTools(), pi.getCommands()),
+				});
+				view = await showUsageView(ctx, {
+					usage: computeUsage({
+						snapshot: current,
+						messages,
+						reported: toReportedUsage(ctx.getContextUsage()),
+						modelLabel: ctx.model?.id,
+						autoCompactReserveTokens: readAutoCompactReserveTokens(ctx),
+					}),
+					degradedReason: initial.degradedReason,
+					// Reported inside the view: a notification would stay hidden behind the fullscreen overlay.
+					notices: loadedConfig.warnings,
+					categoryColors: loadedConfig.config.categoryColors,
+					mapSize: loadedConfig.config.mapSize,
+				});
+			}
 		},
 	});
 }

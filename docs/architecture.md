@@ -7,7 +7,7 @@
 
 | 模块 | 拥有的资源 | 不拥有 |
 | --- | --- | --- |
-| `context-view` | `/context`、Usage 会话估算、冻结 Initial 注入、私有捕获与预览、显示偏好 | Footer 缓存、业务工具、主动探测、请求内容持久化、最终 wire 审计 |
+| `context-view` | `/context`、Usage 会话估算、冻结 Initial 注入、工具声明最新单槽观测与诊断、私有预览、显示偏好 | Footer 缓存、业务工具、主动探测、请求内容持久化、最终 wire 审计 |
 | `ui` | 展示生命周期、私有兼容补丁、shell、Markdown、Thinking、文字预览、`/ccstyle` | 上下文 Inspector、业务工具定义、执行和后台进程 |
 | `questions` | `AskUserQuestion` schema、对话框、AFK、答案/results、专用 renderer | UI 总体刷新或其他 overlay |
 | `loop` | `/loop` 解析、内存任务、忙闲调度、`local-loop` | UI scheduler、持久化恢复 |
@@ -153,7 +153,11 @@ context-view 与 UI 可独立选择、按任意顺序共存：只有 context-vie
 UI 只注册 `/ccstyle`。查看器在公开 `before_agent_start` / `context` 事件中被动
 冻结本 runtime 的首份 Initial；未捕获时只显示 session estimate / not captured，
 不从会话恢复为观测证据、不发送消息、执行工具或修改请求。Usage 按需重放当前分支
-组成估算；模型、预览与缓存不与 Footer 合并。
+组成估算；模型、预览与缓存不与 Footer 合并。Tools 分开呈现打开视图时的公开宿主库存/active
+与本扩展 `before_provider_request` handler 同步复制的最新工具声明；只支持可靠识别的
+Anthropic collapsed 顶层定义，原生增量暂标 unknown/unimplemented。未知/失败也替换旧观测，
+不持有整份请求历史，不从会话重放或其他 runtime 继承；来源可能包括 warming，不作最终 wire
+或发送/接受声明。具体预览、推导调用资格与支持边界由模块 README 定义。
 
 UI 读取公共工具元数据和已有结果。questions、background-shell、subagents 的
 工具 renderer 及 `subagent-result` 消息 renderer 保持专用展示；第三方

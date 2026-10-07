@@ -10,24 +10,25 @@ import type { ConfigCreationResult } from "./config.ts";
 import type { InitialSnapshot } from "./model.ts";
 import { normalizePreviewText } from "./text.ts";
 
-const COMMAND_USAGE = "Usage: /context [usage|injections|config]";
+const COMMAND_USAGE = "Usage: /context [usage|injections|tools|config]";
 /**
  * Slash-command palette text, kept beside the grammar it describes.
  * RegisteredCommand has no argumentHint; mimic pi's `<hint> — <description>` style.
  */
 export const CONTEXT_COMMAND_DESCRIPTION =
-	"[usage|injections|config] - Inspect context usage, injections";
+	"[usage|injections|tools|config] - Inspect context usage, injections, tools";
 /** Cap for reported messages, which may quote configuration files and OS error text. */
 const MAX_REPORTED_MESSAGE_LENGTH = 500;
 const DEFAULT_VIEW: ContextView = "usage";
 const ARGUMENT_OPTIONS = [
 	{ value: "usage", label: "usage", description: "Show estimated context usage" },
 	{ value: "injections", label: "injections", description: "Explore initial context injections" },
+	{ value: "tools", label: "tools", description: "Inspect tool inventory and latest declarations" },
 	{ value: "config", label: "config", description: "Create config file populated with defaults" },
 ] satisfies AutocompleteItem[];
 
 /** The focused view a `/context` invocation requests. */
-export type ContextView = "usage" | "injections";
+export type ContextView = "usage" | "injections" | "tools";
 
 /** Parsed `/context` argument grammar. */
 export type ContextCommand =
@@ -52,6 +53,9 @@ export function parseContextCommand(argumentsText: string): ContextCommand {
 	}
 	if (words.length === 1 && words[0] === "injections") {
 		return { type: "view", view: "injections" };
+	}
+	if (words.length === 1 && words[0] === "tools") {
+		return { type: "view", view: "tools" };
 	}
 	if (words.length === 1 && words[0] === "config") {
 		return { type: "config" };
