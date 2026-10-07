@@ -3,7 +3,7 @@
   "version": "0.2.2",
   "private": true,
   "type": "module",
-  "description": "Tool cards, Thinking, shell, /ccstyle and /context for the private pi-Serraly workspace",
+  "description": "Tool cards, Thinking, shell and /ccstyle for the private pi-Serraly workspace",
   "license": "MIT",
   "engines": {
     "node": ">=22.19.0"

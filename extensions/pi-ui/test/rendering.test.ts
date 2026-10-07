@@ -20,7 +20,7 @@ const result = (text: string, isError = false, details?: any) => ({ content: [{ 
 test("only rendering commands are registered and native tools are untouched", async () => {
 	const h = await harness();
 	try {
-		assert.deepEqual([...h.commands.keys()].sort(), ["ccstyle", "context"]);
+		assert.deepEqual([...h.commands.keys()].sort(), ["ccstyle"]);
 		assert.deepEqual(h.registered, []); assert.deepEqual(h.mutations, []);
 		assert.equal(h.events.has("tool_result"), false);
 		assert.equal(h.events.has("before_agent_start"), false);

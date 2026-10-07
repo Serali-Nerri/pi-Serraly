@@ -65,7 +65,7 @@ try {
 	assert.deepEqual(session.getActiveToolNames(), ["read"], "unchanged default leaves manual disable intact");
 	const loaded = loader.getExtensions().extensions.find((extension) => extension.path === process.env.PI_UI_STAGE);
 	assert.equal(loaded.tools.size, 0, "UI never re-registers tools across actual reloads");
-	assert.deepEqual([...loaded.commands.keys()].sort(), ["ccstyle", "context"]);
+	assert.deepEqual([...loaded.commands.keys()].sort(), ["ccstyle"]);
 	assert.equal(SDK.ToolExecutionComponent.prototype.getCallRenderer, original, "print-mode reload stays unpatched");
 } finally { await session.extensionRunner.emit({ type: "session_shutdown" }); session.dispose(); }
 stored = { ...stored, defaultTools: ["read"] };

@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { buildSessionProjection, type SessionEntry } from "@earendil-works/pi-coding-agent";
 import { createContextSnapshotStore, readContextSnapshot } from "../src/state/context-snapshot.ts";
-import { collectContextBreakdown } from "../src/state/context.ts";
 
 function entry(id: string, message: unknown, parentId: string | null = null): any {
 	return { type: "message", id, parentId, timestamp: "2026-01-01T00:00:00Z", message };
@@ -43,14 +42,11 @@ test("snapshot distinguishes an actual usage anchor from estimated trailing cont
 	assert.equal(readContextSnapshot(context([assistant("a"), user("u", "", "a")], { tokens: 100, percent: 10, contextWindow: 1_000 })).source, "usage");
 });
 
-test("standalone usage contributes neither a context anchor nor category content", () => {
+test("standalone usage contributes neither a context anchor nor context tokens", () => {
 	const usage = { type: "usage", id: "bill", parentId: "u", timestamp: "2026-01-01T00:00:00Z", kind: "cache_warm", provider: "test", model: "synthetic", usage: { input: 99_999, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 99_999 } } as SessionEntry;
 	const ctx = context([user("u"), usage], { tokens: 2, percent: 0.2, contextWindow: 1_000 });
 	assert.equal(readContextSnapshot(ctx).source, "estimate");
 	assert.equal(readContextSnapshot(ctx).tokens, 2);
-	const breakdown = collectContextBreakdown(ctx, []);
-	assert.equal(breakdown.parts.find((part) => part.label === "Context")!.tokens, 2);
-	assert.doesNotMatch(breakdown.previews.contextFiles, /cache_warm|99.?999/);
 	const billingOnly = { ...usage, parentId: null };
 	assert.deepEqual(readContextSnapshot(context([billingOnly], { tokens: 0, percent: 0, contextWindow: 1_000 })), {
 		tokens: undefined, contextWindow: 1_000, percent: undefined, source: "unknown",
@@ -62,7 +58,6 @@ test("usage from an excluded branch cannot turn active context into actual usage
 	const ctx = context(entries, { tokens: 3, percent: 0.3, contextWindow: 1_000 }, "active");
 	assert.equal(readContextSnapshot(ctx).source, "estimate");
 	assert.equal(readContextSnapshot(ctx).tokens, 3);
-	assert.doesNotMatch(collectContextBreakdown(ctx, []).previews.contextFiles, /done/);
 });
 
 test("context edits invalidate retained usage, then post-edit usage restores an actual anchor", () => {
@@ -70,9 +65,6 @@ test("context edits invalidate retained usage, then post-edit usage restores an 
 	const entries = [user("u", "long original text"), assistant("a", 100, "stop", "u"), edit];
 	const ctx = context(entries, { tokens: 2, percent: 0.2, contextWindow: 1_000 });
 	assert.equal(readContextSnapshot(ctx).source, "estimate");
-	assert.equal(collectContextBreakdown(ctx, []).hasReliablePiUsage, false);
-	assert.match(collectContextBreakdown(ctx, []).previews.contextFiles, /tiny/);
-	assert.doesNotMatch(collectContextBreakdown(ctx, []).previews.contextFiles, /long original/);
 	entries.push(assistant("new", 50, "stop", "edit"));
 	assert.equal(readContextSnapshot(context(entries, { tokens: 50, percent: 5, contextWindow: 1_000 })).source, "usage");
 });

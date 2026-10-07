@@ -11,16 +11,17 @@ Pi 1.0.4 的展示模块，将 Claude 风格转写与会话 shell 合并为一�
 - Footer、其他扩展状态、Git 和 runtime 信息。启动头由 Pi 原生渲染，本模块不覆盖。
 - 常规工具卡、相邻分组、compact 轮次、文件/diff 卡及已返回内容的展开预览。
 - Thinking 标题、预览、动画、独立耗时及全会话历史耗时恢复。
-- 全屏鼠标展开/hover、正文拖选与链接；共享文字预览及 `/context` 六分类。
+- 全屏鼠标展开/hover、正文拖选与链接；文字预览、滚动与退出。
+
+本模块只注册 `/ccstyle`，不拥有上下文 Inspector 或注册 `/context`。
 
 | 命令 | 行为 |
 | --- | --- |
-| `/ccstyle`、`/ccstyle panel` | 五页设置面板 |
+| `/ccstyle`、`/ccstyle panel` | 四页设置面板 |
 | `/ccstyle on` | Claude 风格工具/消息展示 |
 | `/ccstyle compact` | 轮次摘要及可展开过程视图，文件工具保留专用卡 |
 | `/ccstyle off` | 恢复工具/摘要原展示；**不关闭** shell、Markdown 或独立 Thinking |
-| `/ccstyle status` | 十三项有效设置 |
-| `/context` | 上下文用量、来源、六分类和逐项预览 |
+| `/ccstyle status` | 十二项有效设置 |
 
 工具 schema、prompt、exposure、执行、安全及返回数据均由业务模块或宿主拥有。
 UI 只展示已经返回或保存的数据；不读当前磁盘补全历史 diff，不隐藏工具自己的
@@ -73,7 +74,6 @@ regular 的鼠标与滚动历史由终端管理，工具展开仍可使用键盘
 | `expandedCardBackground` | `"userMessageBg"` |
 | `expandedInputMaxLines` | `5` |
 | `expandedOutputMaxLines` | `10` |
-| `enableContextCommand` | `true` |
 
 单卡、相邻分组与 compact eligible-tool 共享摘要取值：PowerShell 显示命令，
 grep/find 显示表达式和存在的路径范围。摘要预算取终端宽度的 80% 与宽度减 24 列
@@ -100,8 +100,8 @@ grep/find 显示表达式和存在的路径范围。摘要预算取终端宽度�
 使用原生行内代码标签，保持字面文本及点击目标一致。
 
 累计计费扫描全会话，包含独立 usage（`cache_warm` 和未知 kind）；独立 usage
-不进入上下文分类或最近 assistant 缓存命中率。上下文使用活动投影；
-未知显示 `?`，不显示为实测零。来源标签只在 `/context` 显示。
+不进入 Footer 上下文用量或最近 assistant 缓存命中率。Footer 上下文使用活动投影，
+保留用量快照缓存及模型、会话与上下文变化后的失效；未知显示 `?`，不显示为实测零。
 
 ## 维护索引
 

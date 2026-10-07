@@ -296,7 +296,7 @@ export default function (pi) {
 		},
 	});
 	pi.on("session_start", async (_event, ctx) => {
-		assert.deepEqual(pi.getCommands().map((command) => command.name).sort(), ["ccstyle", "context"]);
+		assert.deepEqual(pi.getCommands().map((command) => command.name).sort(), ["ccstyle"]);
 		if (richFixture) assert.deepEqual(pi.getActiveTools().slice().sort(), ["edit", "read", "write"]);
 		else assert.deepEqual(pi.getActiveTools(), ["read"]);
 		assert.ok(pi.getAllTools().every((tool) => tool.sourceInfo?.source === "builtin"), "UI does not re-register tools");
@@ -431,7 +431,7 @@ async function main() {
 		"Usage: node scripts/preview.mjs [regular|fullscreen] [default|rich]");
 	assert.ok(process.stdin.isTTY && process.stdout.isTTY, "Preview needs a terminal; use scripts/capture.mjs for automated PTY captures");
 	const sandbox = await createSandbox({ scenario });
-	console.error(`Isolated Pi ${expectedVersion}; local offline scripted provider only. /ccstyle status, /ccstyle panel, /context, /quit.\nTemporary sandbox: ${sandbox.base}`);
+	console.error(`Isolated Pi ${expectedVersion}; local offline scripted provider only. /ccstyle status, /ccstyle panel, /quit.\nTemporary sandbox: ${sandbox.base}`);
 	if (scenario === "rich") console.error(`Rich profile: built-in read/write/edit use only ${sandbox.cwd}; files are removed on exit. Native OSC8 links target reserved example.invalid.`);
 	try {
 		const child = spawn(process.execPath, cliArguments(sandbox, ["--tui-mode", mode, "Show the synthetic fixture"]),

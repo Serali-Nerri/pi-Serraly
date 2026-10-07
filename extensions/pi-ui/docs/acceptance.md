@@ -35,8 +35,8 @@ the terminal.
 
 The default profile uses a local scripted provider, a real built-in `read` call,
 Thinking, Markdown, tables, code and Unicode. Try `/ccstyle status`,
-`/ccstyle on`, `/ccstyle compact`, `/ccstyle off`, `/ccstyle panel`, `/context`,
-and `/quit`. Escape closes panels and previews.
+`/ccstyle on`, `/ccstyle compact`, `/ccstyle off`, `/ccstyle panel`,
+and `/quit`. Escape closes panels and text previews; UI does not register `/context`.
 
 The optional `rich` profile uses Pi's built-in `read`, `write` and `edit` tools.
 It reads `rich-seed.txt`, creates `rich-preview.ts`, then edits known content,
@@ -69,7 +69,7 @@ at 80 columns.
 | --- | --- |
 | Factory and CLI | Compiled ESM loading, pinned host version, no factory-time UI timers/patches or business tool registration, command surface and help without session/provider startup. |
 | Print/JSON/RPC | Scripted built-in read loop and extension commands; native prototypes/protocol output, no shell/bridge/UI timers. RPC `hasUI=true` alone does not activate terminal features. |
-| SDK lifecycle and reload | In-memory settings/auth/sessions, repeated TUI activation and cleanup, one shared scheduler, inactive no-UI contexts, panel/context factories, real reload and defaultTools transitions. |
+| SDK lifecycle and reload | In-memory settings/auth/sessions, repeated TUI activation and cleanup, one shared scheduler, inactive no-UI contexts, settings panel and text previews, real reload and defaultTools transitions. |
 | Renderer and class identity | Public `registerToolRenderer` resolution in extension load order, built-in renderer merging, same-name overrides, rendererless and custom tools; host-created tool/TUI instances share imported prototypes and installed patches; built-in, codemode and MCP definitions preserve renderer ownership and retained/truncated output without MCP execution. |
 | HTML export | Real `AgentSession.exportToHtml()` output includes synthetic tool input and retained output through public renderers; isolated sessions never request a model. |
 | Markdown and state | Real-host destinations, literal text, code/target preservation, reference definitions and container boundaries; billing/context and Thinking persistence use synthetic session data. |
@@ -107,8 +107,8 @@ suite.
 
 - [ ] Native startup header untouched by this module, footer layout, cwd, runtime and extension status segments.
 - [ ] On/compact/off presentation; Thinking remains interactive in off.
-- [ ] All five settings pages, thirteen settings and keyboard/focus behavior; `inputClip: 0` adaptive mode and explicit positive limits.
-- [ ] `/context` labels, six categories, text previews and Escape ownership.
+- [ ] All four settings pages, twelve settings and keyboard/focus behavior; `inputClip: 0` adaptive mode and explicit positive limits.
+- [ ] Mouse-driven text previews, keyboard navigation, scrolling and Escape ownership.
 - [ ] Fullscreen hover/expansion, text selection and links; regular keyboard paths.
 - [ ] Narrow/wide resizing and light/dark theme changes without stale content.
 - [ ] File/diff cards, long-line wrapping, native leading/intermediate gutter gaps, no false expansion for trailing omissions, retained-data expansion and Result Truncation notices.

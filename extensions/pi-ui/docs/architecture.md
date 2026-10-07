@@ -2,8 +2,9 @@
 
 ## Ownership
 
-`src/index.ts` registers Markdown, `/context`, and the UI lifecycle. Factory
-loading has no UI timers or prototype patches.
+`src/index.ts` registers Markdown and the UI lifecycle. The lifecycle registers
+only `/ccstyle`; UI does not own a context Inspector or register `/context`.
+Factory loading has no UI timers or prototype patches.
 
 `src/lifecycle.ts` owns one host subscription per event, a local domain router,
 one `pi-ui-bridge`, the current context/generation, presentation commands and
@@ -28,9 +29,9 @@ other jobs from running. Shutdown stops scheduling before resources are released
 | `state/` | Billing/context snapshots and Thinking timing/persistence controller |
 | `shell/` | Footer view, captured host identity/liveness, statuses, bounded Git/runtime queries and generation guards |
 | `transcript/` | Thinking and tool/file/diff/Input-Output views over captured data |
-| `overlays/` | Context and text-preview dialogs, hover/TUI state |
+| `overlays/` | Text-preview dialogs, hover/TUI state |
 | `markdown/` | One display-only transformer; native Mermaid/ordinary URLs plus narrow CJK-punctuation URL-boundary compatibility |
-| `config/` | Thirteen effective settings, atomic explicit saves, panel and `/context` registration |
+| `config/` | Twelve effective settings, atomic explicit saves and four-page Style/Files/Thinking/UI panel |
 
 ## Compatibility pipeline
 
@@ -104,8 +105,9 @@ public usage event.
 
 Context uses the active projected history, invalidates anchors after edits or
 compaction, and distinguishes actual usage anchors, mixed estimates, estimates
-and unknown. Footer and inspector share the snapshot contract. Billing entries
-do not enter the context projection or latest-assistant cache ratio.
+and unknown. Footer owns the context snapshot cache; leaf/session/model changes
+and lifecycle invalidation refresh it. Billing entries do not enter the context
+projection or latest-assistant cache ratio.
 
 Thinking duration entries keep `claude-style-tools-thinking-duration` and
 `{messageTimestamp, contentIndex, durationMs}`. Restoration reads `getEntries()`

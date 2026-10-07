@@ -53,25 +53,24 @@ function mountPanel() {
 	};
 }
 
-test("five-page panel exposes current settings and omits discarded controls", async () => {
+test("four-page panel exposes current settings and omits discarded controls", async () => {
 	const panel = mountPanel();
 	const pages = [
 		["Mode", "Original renderers"],
 		["Write preview lines", "Edit preview lines", "Expanded file lines"],
 		["Summary titles", "Preview lines", "Animation interval (ms)"],
 		["Summary characters (0 = auto)", "Input preview lines", "Output preview lines", "Expanded card background"],
-		["Context inspector"],
 	];
 	for (const labels of pages) {
 		const text = panel.text();
-		assert.ok(text.includes("Style / Files / Thinking / UI / Feature"));
+		assert.equal(panel.component.render(120)[2], "Style / Files / Thinking / UI");
 		for (const label of labels) assert.ok(text.includes(label), label);
-		for (const label of ["Dim thinking", "Extended preview lines", "Scroll lines"]) assert.ok(!text.includes(label));
+		for (const label of ["Dim thinking", "Extended preview lines", "Scroll lines", "Context inspector"]) assert.ok(!text.includes(label));
 		panel.input("\t");
 	}
 	assert.ok(panel.text().includes("Original renderers"));
 	panel.input("\x1b[Z");
-	assert.ok(panel.text().includes("Context inspector"));
+	assert.ok(panel.text().includes("Expanded card background"));
 	assert.equal(panel.changes, 0);
 	assert.deepEqual(readdirSync(directory), []);
 	panel.input("\x1b");
@@ -79,13 +78,14 @@ test("five-page panel exposes current settings and omits discarded controls", as
 	assert.equal(panel.closed, true);
 });
 
-test("mouse tabs use the original five-page layout and request a render", async () => {
+test("mouse tabs select retained pages and ignore the area after the last tab", async () => {
 	const panel = mountPanel();
 	panel.text();
 	assert.deepEqual(panel.mouse(18, 2), { handled: true, render: true });
 	assert.ok(panel.text().includes("Summary titles"));
-	assert.deepEqual(panel.mouse(33, 2), { handled: true, render: true });
-	assert.ok(panel.text().includes("Context inspector"));
+	assert.deepEqual(panel.mouse(28, 2), { handled: true, render: true });
+	assert.equal(panel.mouse(33, 2), undefined);
+	assert.ok(panel.text().includes("Expanded card background"));
 	assert.equal(panel.mouse(7, 2), undefined);
 	assert.deepEqual(readdirSync(directory), []);
 	panel.input("\x1b");
@@ -163,13 +163,11 @@ test("renderer exclusions remain editable and cancel does not save", async () =>
 	await panel.completion;
 });
 
-test("retained thinking and context toggles save on their original pages", async () => {
+test("retained thinking toggle saves on its original page", async () => {
 	const panel = mountPanel();
 	panel.input("\t"); panel.input("\t"); panel.input("\r");
 	assert.equal(config.useSummaryTitlesAsThinkingTitle, false);
-	panel.input("\t"); panel.input("\t"); panel.input("\r");
-	assert.equal(config.enableContextCommand, false);
-	assert.equal(panel.changes, 2);
+	assert.equal(panel.changes, 1);
 	panel.input("\x1b");
 	await panel.completion;
 });
@@ -194,7 +192,7 @@ test("numeric and exclusion submenus propagate focus for the terminal cursor", a
 
 test("panel lines fit narrow widths across all pages and editable inputs", async () => {
 	const panel = mountPanel();
-	for (let page = 0; page < 5; page++) {
+	for (let page = 0; page < 4; page++) {
 		for (const width of [1, 8, 20, 60]) {
 			for (const line of panel.component.render(width)) assert.ok(visibleWidth(line) <= width);
 		}

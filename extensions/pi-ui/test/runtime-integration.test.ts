@@ -72,7 +72,7 @@ for (const mode of ["print", "json"] as const) {
 		const sandbox: Sandbox = await createSandbox();
 		try {
 			const args = mode === "print" ? ["--print"] : ["--mode", "json"];
-			const result = await runChild(sandbox, cliArguments(sandbox, [...args, "/ccstyle status", "/context", "Show the synthetic fixture"]));
+			const result = await runChild(sandbox, cliArguments(sandbox, [...args, "/ccstyle status", "Show the synthetic fixture"]));
 			assert.equal(result.code, 0, result.stderr);
 			assert.equal(result.stderr, "");
 			const entries: Diagnostic[] = await reports(sandbox);
@@ -81,7 +81,6 @@ for (const mode of ["print", "json"] as const) {
 			assert.equal(final.timers, 0);
 			assert.deepEqual(final.calls, []);
 			assert.ok(final.notices.some((notice) => /mode=on/.test(notice.message)), "/ccstyle status executed");
-			assert.ok(final.notices.some((notice) => /Source: Estimated/.test(notice.message)), "/context fallback is labelled an estimate");
 			const start = entries.find((entry) => entry.phase === "session-start");
 			assert.equal(start?.hasUI, false);
 			if (mode === "print") assert.match(result.stdout, /Stage-one fixture complete/);
@@ -140,8 +139,8 @@ test("bundled RPC: hasUI=true is not TUI; exact command surface, handled command
 		assert.equal(state.sessionFile, undefined);
 		assert.equal(state.model.provider, "stage-one-fixture");
 		const commands = await request("commands", "get_commands");
-		assert.deepEqual(commands.commands.map((command: any) => command.name).sort(), ["ccstyle", "context"]);
-		for (const [id, message] of [["status", "/ccstyle status"], ["context", "/context"], ["panel", "/ccstyle panel"]]) {
+		assert.deepEqual(commands.commands.map((command: any) => command.name).sort(), ["ccstyle"]);
+		for (const [id, message] of [["status", "/ccstyle status"], ["panel", "/ccstyle panel"]]) {
 			assert.equal((await request(id, "prompt", { message })).disposition, "handled");
 		}
 		assert.equal((await request("run", "prompt", { message: "Show the synthetic fixture" })).disposition, "started");
@@ -197,7 +196,7 @@ assert.deepEqual(loaded.errors, []);
 assert.equal(loaded.extensions.length, 3);
 const uiExtension = loaded.extensions.find((extension) => extension.path === process.env.PI_UI_STAGE);
 assert.equal(uiExtension.tools.size, 0);
-assert.deepEqual([...uiExtension.commands.keys()].sort(), ["ccstyle", "context"]);
+assert.deepEqual([...uiExtension.commands.keys()].sort(), ["ccstyle"]);
 assert.equal(uiExtension.flags.size, 0);
 assert.equal(uiExtension.shortcuts.size, 0);
 for (const [event, handlers] of uiExtension.handlers) assert.equal(handlers.length, 1, "one lifecycle router: " + event);
@@ -248,19 +247,7 @@ try {
 	assert.deepEqual([...mounted.keys()], []);
 	await session.prompt("/ccstyle status");
 	assert.match(notices.at(-1).message, /mode=on/);
-	// Actual in-memory manager + command context; deliberately remove every
-	// fallback source to exercise Unknown rather than Pi's default system prompt.
-	const ctx = session.extensionRunner.createCommandContext();
-	const empty = Object.defineProperties(Object.create(ctx), {
-		getSystemPrompt: { value: () => "" }, getSystemPromptOptions: { value: () => ({ selectedTools: [], contextFiles: [], skills: [] }) },
-		getContextUsage: { value: () => undefined },
-	});
-	await uiExtension.commands.get("context").handler("", empty);
-	assert.match(notices.at(-1).message, /Context: unknown.*Source: Unknown/);
-	sessionManager.appendMessage({ role: "user", content: "A synthetic message without provider usage.", timestamp: 1700000000000 });
-	await uiExtension.commands.get("context").handler("", empty);
-	assert.match(notices.at(-1).message, /Source: Estimated/);
-	assert.equal(state.providerCalls, 0, "status and inspector never request a model");
+	assert.equal(state.providerCalls, 0, "status never requests a model");
 	const events = [];
 	const unsubscribe = session.subscribe((event) => events.push(event));
 	await session.prompt("Show the synthetic fixture");
@@ -285,8 +272,8 @@ try {
 		await session.prompt("/ccstyle off");
 		await session.prompt("/ccstyle on");
 		await session.prompt("/ccstyle panel");
-		await session.prompt("/context");
-		assert.ok(overlays.length >= 3);
+		assert.match(overlays.at(-1).render(80).join("\n"), /Original renderers/, "settings panel opens in each TUI cycle");
+		assert.equal(state.providerCalls, 2, "style commands and panel never request a model");
 		// A second routed start while active replaces, rather than stacks, owners.
 		const restartOffset = state.calls.length;
 		await session.extensionRunner.emit({ type: "session_start", reason: "reload" });
@@ -308,11 +295,11 @@ try {
 	await session.extensionRunner.emit({ type: "session_shutdown" });
 	assert.deepEqual(errors, []);
 	assert.ok(!notices.some((notice) => notice.type === "warning" || notice.type === "error"), JSON.stringify(notices));
-	state.report("sdk-complete", { cycles: 3, unknownAndEstimate: true, overlays: overlays.length });
+	state.report("sdk-complete", { cycles: 3, overlays: overlays.length });
 } finally { await session.extensionRunner.emit({ type: "session_shutdown" }); session.dispose(); }
 `;
 
-test("Pi SDK in-memory boundaries: factory surface, Unknown/Estimated context, routed bridge/header/footer and cleanup", { timeout: 30000 }, async () => {
+test("Pi SDK in-memory boundaries: sole ccstyle command, routed bridge/footer and cleanup", { timeout: 30000 }, async () => {
 	const sandbox: Sandbox = await createSandbox();
 	try {
 		const worker = join(sandbox.base, "sdk-worker.mjs");

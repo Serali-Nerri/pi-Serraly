@@ -19,7 +19,6 @@ const expected = {
 	expandedCardBackground: "userMessageBg",
 	expandedInputMaxLines: 5,
 	expandedOutputMaxLines: 10,
-	enableContextCommand: true,
 };
 const discarded = { dimThinkingText: true, expandedPreviewMaxLines: 999, scrollStepLines: 50 };
 let directory: string;
@@ -51,20 +50,20 @@ function loadInChild(agentDirectory: string = directory) {
 
 test("effective settings use adaptive summaries and the existing expanded background by default", () => {
 	assert.deepEqual(DEFAULT_CONFIG, expected);
-	assert.equal(Object.keys(DEFAULT_CONFIG).length, 13);
+	assert.equal(Object.keys(DEFAULT_CONFIG).length, 12);
 	assert.deepEqual(normalizeConfig(undefined), expected);
 	assert.deepEqual(config, expected);
 });
 
 test("discarded and unrelated keys never enter runtime configuration or status", () => {
-	const input = { ...discarded, unrelated: { enabled: true }, mode: "compact", inputClip: 160 };
+	const input = { ...discarded, enableContextCommand: false, unrelated: { enabled: true }, mode: "compact", inputClip: 160 };
 	assert.deepEqual(normalizeConfig(input), { ...expected, mode: "compact", inputClip: 160 });
 	setConfig(input as never);
 	assert.deepEqual(config, { ...expected, mode: "compact", inputClip: 160 });
 	const status = formatConfigStatus();
 	assert.deepEqual(status.split(" · ").map((entry) => entry.split("=")[0]), Object.keys(expected));
 	assert.ok(status.includes("excludeRenderers=none"));
-	for (const key of [...Object.keys(discarded), "unrelated"]) assert.ok(!status.includes(key));
+	for (const key of [...Object.keys(discarded), "enableContextCommand", "unrelated"]) assert.ok(!status.includes(key));
 });
 
 test("retained numeric fields are finite, floored and clamped to their bounds", () => {
@@ -84,13 +83,13 @@ test("retained numeric fields are finite, floored and clamped to their bounds", 
 	assert.equal(normalizeConfig({ animationIntervalMs: 5_000 }).animationIntervalMs, 1_000);
 });
 
-test("mode and retained booleans require the documented types", () => {
+test("mode and the thinking toggle require the documented types", () => {
 	for (const mode of ["on", "compact", "off"]) assert.equal(normalizeConfig({ mode }).mode, mode);
 	for (const mode of ["unknown", new String("off"), true, 0]) assert.equal(normalizeConfig({ mode }).mode, "on");
-	assert.deepEqual(normalizeConfig({ useSummaryTitlesAsThinkingTitle: false, enableContextCommand: false }), {
-		...expected, useSummaryTitlesAsThinkingTitle: false, enableContextCommand: false,
+	assert.deepEqual(normalizeConfig({ useSummaryTitlesAsThinkingTitle: false }), {
+		...expected, useSummaryTitlesAsThinkingTitle: false,
 	});
-	assert.deepEqual(normalizeConfig({ useSummaryTitlesAsThinkingTitle: "false", enableContextCommand: 0 }), expected);
+	assert.deepEqual(normalizeConfig({ useSummaryTitlesAsThinkingTitle: "false" }), expected);
 	for (const value of [null, [], "off", 10]) assert.deepEqual(normalizeConfig(value), expected);
 });
 
@@ -153,16 +152,16 @@ test("invalid startup JSON falls back to defaults without overwriting the file",
 });
 
 test("explicit save preserves unknown fields and cleans all discarded keys", () => {
-	const contents = JSON.stringify({ ...discarded, unrelated: { nested: [1, "two", null] }, futureFlag: false });
+	const contents = JSON.stringify({ ...discarded, unrelated: { nested: [1, "two", null] }, enableContextCommand: false, futureFlag: false });
 	writeFileSync(configPath(), contents);
 	updateConfig({ mode: "compact", fileExpandedMaxLines: 200 });
 	const stored = JSON.parse(readFileSync(configPath(), "utf8"));
 	assert.deepEqual(stored, {
-		unrelated: { nested: [1, "two", null] }, futureFlag: false,
+		unrelated: { nested: [1, "two", null] }, enableContextCommand: false, futureFlag: false,
 		...expected, mode: "compact", fileExpandedMaxLines: 200,
 	});
 	assert.deepEqual(config, { ...expected, mode: "compact", fileExpandedMaxLines: 200 });
-	assert.equal(Object.keys(config).length, 13);
+	assert.equal(Object.keys(config).length, 12);
 });
 
 test("save re-reads unknown data written since startup and ignores unknown update keys", () => {

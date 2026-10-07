@@ -24,7 +24,6 @@ export interface Config {
 	expandedCardBackground: ThemeBg;
 	expandedInputMaxLines: number;
 	expandedOutputMaxLines: number;
-	enableContextCommand: boolean;
 }
 
 export const DEFAULT_CONFIG: Config = {
@@ -40,7 +39,6 @@ export const DEFAULT_CONFIG: Config = {
 	expandedCardBackground: "userMessageBg",
 	expandedInputMaxLines: 5,
 	expandedOutputMaxLines: 10,
-	enableContextCommand: true,
 };
 
 // Migration-only keys: never expose or execute them; remove them on explicit save.
@@ -74,8 +72,8 @@ export function normalizeConfig(input: unknown): Config {
 				? 0 : Math.max(bounds[0], Math.min(bounds[1], Math.floor(value)));
 		}
 	}
-	for (const key of ["useSummaryTitlesAsThinkingTitle", "enableContextCommand"] as const) {
-		if (typeof source[key] === "boolean") result[key] = source[key];
+	if (typeof source.useSummaryTitlesAsThinkingTitle === "boolean") {
+		result.useSummaryTitlesAsThinkingTitle = source.useSummaryTitlesAsThinkingTitle;
 	}
 	return result;
 }

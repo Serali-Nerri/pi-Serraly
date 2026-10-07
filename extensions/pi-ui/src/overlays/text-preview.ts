@@ -4,21 +4,21 @@ import { Key, Markdown, matchesKey, visibleWidth, type Component, type TuiMouseE
 import { mouseBaseButton, parseSgrMousePacket } from "../utils/sgr-mouse.ts";
 import { padLine } from "../utils/format.ts";
 
-export function mouseInput(event: TuiMouseEvent): string | undefined {
+function mouseInput(event: TuiMouseEvent): string | undefined {
 	if (event.type === "click") return undefined;
 	const button = event.type === "wheel" ? (event.wheelDelta ?? 0) < 0 ? 64 : 65
 		: event.type === "move" ? 35 : (event.button === "left" ? 0 : 3) + (event.type === "drag" ? 32 : 0);
 	return `\x1b[<${button};${event.screenX + 1};${event.screenY + 1}${event.type === "release" ? "m" : "M"}`;
 }
 
-export function normalizePreviewText(text: string): string {
+function normalizePreviewText(text: string): string {
 	return text
 		.replace(/\r\n?/g, "\n")
 		.replace(/\t/g, "  ")
 		.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
 }
 
-export type DialogBounds = { left: number; top: number; width: number };
+type DialogBounds = { left: number; top: number; width: number };
 
 /** 1-based terminal hitbox of the [esc] close button on the dialog title row (row 2 of the box). */
 export function escCloseHitbox(bounds: DialogBounds): {
@@ -33,18 +33,11 @@ export function escCloseHitbox(bounds: DialogBounds): {
 	};
 }
 
-let activeContextOverlays = 0;
+let activeTextPreviews = 0;
 
-/** Every inspector interaction uses this scope, including the category dialog. */
-export async function withTextPreviewActivity<T>(show: () => Promise<T>): Promise<T> {
-	activeContextOverlays++;
-	try { return await show(); }
-	finally { activeContextOverlays--; }
-}
-
-/** fullscreen 输入包装用于把鼠标事件继续传给当前 context 主弹框或文本预览 overlay。 */
+/** fullscreen 输入包装用于把鼠标事件继续传给当前文本预览 overlay。 */
 export function hasActiveTextPreview(): boolean {
-	return activeContextOverlays > 0;
+	return activeTextPreviews > 0;
 }
 
 export async function showTextPreview(
@@ -53,7 +46,7 @@ export async function showTextPreview(
 	rawContent: string | Component,
 ): Promise<void> {
 	const content = typeof rawContent === "string" ? normalizePreviewText(rawContent) : "";
-	activeContextOverlays++;
+	activeTextPreviews++;
 	try {
 		await ctx.ui.custom(
 			(tui, theme, _keybindings, done) => {
@@ -248,6 +241,6 @@ export async function showTextPreview(
 			},
 		);
 	} finally {
-		activeContextOverlays--;
+		activeTextPreviews--;
 	}
 }

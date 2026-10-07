@@ -2,7 +2,7 @@ import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { Input, matchesKey, SettingsList, truncateToWidth, type SettingItem } from "@earendil-works/pi-tui";
 import { config, EXPANDED_CARD_BACKGROUND_SLOTS, updateConfig, type Config } from "./config.ts";
 
-const sections = ["Style", "Files", "Thinking", "UI", "Feature"] as const;
+const sections = ["Style", "Files", "Thinking", "UI"] as const;
 const fields: Array<Array<[keyof Config, string, string[]]>> = [
 	[["mode", "Mode", ["on", "compact", "off"]], ["excludeRenderers", "Original renderers", []]],
 	[["writePreviewLines", "Write preview lines", ["0", "4", "10", "24", "40"]],
@@ -15,7 +15,6 @@ const fields: Array<Array<[keyof Config, string, string[]]>> = [
 	 ["expandedInputMaxLines", "Input preview lines", ["5", "10", "20", "40"]],
 	 ["expandedOutputMaxLines", "Output preview lines", ["10", "20", "40", "80"]],
 	 ["expandedCardBackground", "Expanded card background", [...EXPANDED_CARD_BACKGROUND_SLOTS]]],
-	[["enableContextCommand", "Context inspector", ["true", "false"]]],
 ];
 
 export async function showStylePanel(ctx: ExtensionCommandContext, changed: () => void): Promise<void> {

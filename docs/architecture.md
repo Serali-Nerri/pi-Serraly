@@ -7,7 +7,7 @@
 
 | 模块 | 拥有的资源 | 不拥有 |
 | --- | --- | --- |
-| `ui` | 展示生命周期、私有兼容补丁、shell、Markdown、Thinking、`/context` | 业务工具定义、执行和后台进程 |
+| `ui` | 展示生命周期、私有兼容补丁、shell、Markdown、Thinking、文字预览、`/ccstyle` | 上下文 Inspector、业务工具定义、执行和后台进程 |
 | `questions` | `AskUserQuestion` schema、对话框、AFK、答案/results、专用 renderer | UI 总体刷新或其他 overlay |
 | `loop` | `/loop` 解析、内存任务、忙闲调度、`local-loop` | UI scheduler、持久化恢复 |
 | `tools` | `apply_patch` 补丁算法、文件锁、预检、提交、`apply_patch.v1` 报告；`grep`/`find`/`ls` 同名替换的 codemode 注册 | UI 历史 diff 重建 |

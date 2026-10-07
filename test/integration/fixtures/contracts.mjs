@@ -26,7 +26,7 @@ export const commandsByName = {
 	"pi-loop": ["loop"],
 	"pi-subagents": ["agents"],
 	"pi-tools": [],
-	"pi-ui": ["ccstyle", "context"],
+	"pi-ui": ["ccstyle"],
 };
 export const questionArgs = { questions: [{ question: "Which local database?", header: "Database", options: [
 	{ label: "SQLite", description: "Embedded local database." },

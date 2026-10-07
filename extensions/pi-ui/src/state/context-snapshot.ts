@@ -8,11 +8,6 @@ export type ContextSnapshot = {
 	source: "usage" | "mixed" | "estimate" | "unknown";
 };
 export type ContextSnapshotContext = Pick<ExtensionContext, "sessionManager" | "getContextUsage" | "model" | "getSystemPrompt">;
-export type ContextSnapshotOptions = {
-	projection?: SessionProjection;
-	/** The inspector includes fallback prompt/tools absent from legacy transcripts. */
-	estimatedTokens?: number;
-};
 
 type ContextEstimate = { tokens: number; trailingTokens: number; lastUsageIndex: number | null };
 const finiteNonnegative = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0;
@@ -66,16 +61,8 @@ function estimateProjectedContext(projection: SessionProjection, branch?: Sessio
 	return { tokens, trailingTokens: tokens, lastUsageIndex: null };
 }
 
-export function hasContextUsageAnchor(projection: SessionProjection, branch?: SessionEntry[]): boolean {
-	return estimateProjectedContext(projection, branch).lastUsageIndex !== null;
-}
-
-export function contextSourceLabel(source: ContextSnapshot["source"]): string {
-	return { usage: "Actual", mixed: "Mixed (actual + estimated)", estimate: "Estimated", unknown: "Unknown" }[source];
-}
-
-function computeContextSnapshot(ctx: ContextSnapshotContext, options: ContextSnapshotOptions): ContextSnapshot {
-	const projection = options.projection ?? ctx.sessionManager.buildSessionProjection();
+function computeContextSnapshot(ctx: ContextSnapshotContext): ContextSnapshot {
+	const projection = ctx.sessionManager.buildSessionProjection();
 	const branch = ctx.sessionManager.getBranch?.();
 	const estimate = estimateProjectedContext(projection, branch);
 	const usage = ctx.getContextUsage();
@@ -98,7 +85,7 @@ function computeContextSnapshot(ctx: ContextSnapshotContext, options: ContextSna
 		// Rebuild a complete estimate, ignoring obsolete usage on retained messages.
 		const fullEstimate = estimateAllContext(projection);
 		const prompt = !hasSystem && typeof ctx.getSystemPrompt === "function" ? ctx.getSystemPrompt() : "";
-		const fallback = options.estimatedTokens ?? fullEstimate + Math.ceil(prompt.length / 4);
+		const fallback = fullEstimate + Math.ceil(prompt.length / 4);
 		if (finiteNonnegative(fallback) && fallback > 0) { tokens = fallback; source = "estimate"; }
 	}
 	if (tokens === 0 && !hasAnchor && !hasSystem) { tokens = undefined; source = "unknown"; }
@@ -109,21 +96,21 @@ function computeContextSnapshot(ctx: ContextSnapshotContext, options: ContextSna
  * (which itself projects history). Lifecycle may invalidate at routed boundaries.
  */
 export function createContextSnapshotStore(): {
-	read(ctx: ContextSnapshotContext, options?: ContextSnapshotOptions): ContextSnapshot;
+	read(ctx: ContextSnapshotContext): ContextSnapshot;
 	invalidate(ctx?: Pick<ContextSnapshotContext, "sessionManager">): void;
 } {
 	let cache = new WeakMap<object, { key: string; snapshot: ContextSnapshot }>();
 	return {
-		read(ctx, options = {}) {
+		read(ctx) {
 			const manager = ctx.sessionManager;
 			const leaf = manager.getLeafId?.();
 			const key = `${manager.getSessionId?.() ?? ""}:${leaf ?? ""}:${ctx.model?.provider ?? ""}:${ctx.model?.id ?? ""}:${ctx.model?.contextWindow ?? 0}`;
-			// Minimal test contexts without a leaf/version and inspector overrides
-			// use fresh reads. Real session managers expose an append-only leaf.
-			const cacheable = typeof manager.getLeafId === "function" && !options.projection && options.estimatedTokens === undefined;
+			// Contexts without a leaf/version use fresh reads.
+			// Real session managers expose an append-only leaf.
+			const cacheable = typeof manager.getLeafId === "function";
 			const hit = cacheable ? cache.get(manager) : undefined;
 			if (hit?.key === key) return hit.snapshot;
-			const snapshot = computeContextSnapshot(ctx, options);
+			const snapshot = computeContextSnapshot(ctx);
 			if (cacheable) cache.set(manager, { key, snapshot });
 			return snapshot;
 		},
@@ -135,6 +122,6 @@ export function createContextSnapshotStore(): {
 }
 
 const defaultStore = createContextSnapshotStore();
-/** Shared shell/inspector contract. No subscriptions or resources at creation. */
+/** Footer snapshot cache. No subscriptions or resources at creation. */
 export const readContextSnapshot = defaultStore.read;
 export const invalidateContextSnapshot = defaultStore.invalidate;

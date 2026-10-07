@@ -7,7 +7,7 @@
 
 | 能力 | 运行入口 | 使用与契约 |
 | --- | --- | --- |
-| UI | `extensions/pi-ui/dist/pi-ui.js` | [工具卡、Thinking、shell、`/ccstyle`、`/context`](extensions/pi-ui/README.md) |
+| UI | `extensions/pi-ui/dist/pi-ui.js` | [工具卡、Thinking、shell、`/ccstyle`](extensions/pi-ui/README.md) |
 | 提问 | `extensions/pi-ask-user-question/dist/pi-ask-user-question.js` | [`AskUserQuestion`、对话框、AFK](extensions/pi-ask-user-question/README.md) |
 | 循环 | `extensions/pi-loop/dist/pi-loop.js` | [`/loop`、内存任务和忙闲调度](extensions/pi-loop/README.md) |
 | 基础工具 | `extensions/pi-tools/dist/pi-tools.js` | [`apply_patch` 与 codemode 专用的 `grep`/`find`/`ls`](extensions/pi-tools/README.md) |
