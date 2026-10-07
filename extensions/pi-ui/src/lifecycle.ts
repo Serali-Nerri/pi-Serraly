@@ -185,9 +185,7 @@ export function registerUiLifecycle(pi: ExtensionAPI): void {
 				case "agent_settled": transcript?.compact.activitySettled(); break;
 				case "message_start": {
 					const message = event.message;
-					const background = message.role === "custom" && typeof message.details === "object" &&
-						message.details !== null && (message.details as Record<string, unknown>).requestBackground === true;
-					if (message.role === "user" || (message.role === "custom" && message.display && !background)) {
+					if (message.role === "user" || (message.role === "custom" && message.display)) {
 						transcript?.compact.groupBoundary();
 					}
 					break;

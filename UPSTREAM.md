@@ -38,11 +38,3 @@
 
 `pi-ui-kit` 的工具卡渲染改自 pi-cc-extensions，许可通知随库复制；`pi-config-core`
 与 `pi-apply-patch-protocol` 为自有代码。详见各包的 `UPSTREAM.md`。
-
-## 自有引用扩展
-
-`pi-session-reference` 与 `pi-subagents` 的提及功能为本地原创实现，行为参考
-pi-cc-extensions v0.9.10 的 reference 入口，不保留其实现代码或旧 ABI。
-历史引用的来源说明见
-[`pi-session-reference/UPSTREAM.md`](extensions/pi-session-reference/UPSTREAM.md)；
-子代理提及的当前契约见模块 README。

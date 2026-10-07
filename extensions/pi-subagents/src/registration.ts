@@ -1,5 +1,5 @@
 import { Type, type TSchema } from "typebox";
-import type { ExtensionAPI, ExtensionCommandContext, SourceInfo } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { formatAgentTypeDescriptions, getVisibleAgentInfos } from "./agents/agent-types.js";
 import { executeAgentTool, executeStopAgentTool } from "./agents/tool-execution.js";
@@ -17,29 +17,13 @@ import { getStore } from "./shell.js";
 // providers without strict mode (e.g. local Ollama).
 const CONSTRAINED_SAMPLING = { type: "json_schema", strict: "prefer" } as const;
 
-// Capture ownership immediately after post-bind registration, before a foreign
-// extension can replace Agent while retaining its public schema. No schema
-// fields are added; the factory cannot query the runtime inventory yet.
-const agentSchemas = new WeakMap<ExtensionAPI, TSchema>();
-const agentSources = new WeakMap<ExtensionAPI, SourceInfo>();
-
-export function hasUsableLocalAgent(pi: ExtensionAPI): boolean {
-  const tool = pi.getAllTools().find((entry) => entry.name === "Agent");
-  const owner = agentSources.get(pi);
-  return tool !== undefined && tool.parameters === agentSchemas.get(pi)
-    && owner !== undefined && tool.sourceInfo.path === owner.path
-    && tool.sourceInfo.source === owner.source && tool.sourceInfo.scope === owner.scope
-    && tool.sourceInfo.origin === owner.origin && tool.sourceInfo.baseDir === owner.baseDir
-    && tool.exposure === "direct" && pi.getActiveTools().includes("Agent");
-}
-
 // --- Agent tool registration — dynamic enum for agent types ---
 
 /**
  * Register (or re-register) the Agent tool with current agent types.
  * Call again from session_start after user/project agents load.
  */
-export function registerAgentTool(pi: ExtensionAPI, runtimeBound = false): void {
+export function registerAgentTool(pi: ExtensionAPI): void {
   const settings = getStore().agent;
   const visible = getVisibleAgentInfos();
   const types = visible.map((info) => info.name);
@@ -125,13 +109,7 @@ export function registerAgentTool(pi: ExtensionAPI, runtimeBound = false): void 
       );
     },
   };
-  agentSchemas.set(pi, params);
   pi.registerTool(tool);
-  if (runtimeBound) {
-    const registered = pi.getAllTools().find((entry) => entry.name === "Agent" && entry.parameters === params);
-    if (registered) agentSources.set(pi, { ...registered.sourceInfo });
-    else agentSources.delete(pi);
-  }
 }
 
 // --- Tool/Command/Message registration ---

@@ -71,7 +71,7 @@ export function ensureManagerAndWidget(hasUI = true): void {
   }
 }
 
-export async function scanAndRegisterAgents(ctx: ExtensionContext, isCurrent: () => boolean = () => true): Promise<void> {
+export async function scanAndRegisterAgents(ctx: ExtensionContext): Promise<void> {
   const agentDir = getAgentDir();
   const userAgentDir = path.join(agentDir, "agents");
   const projectTrusted = ctx.isProjectTrusted();
@@ -85,10 +85,10 @@ export async function scanAndRegisterAgents(ctx: ExtensionContext, isCurrent: ()
 
   const merged = await scanAndMerge({ disableDefaultAgents: disableDefaults });
 
-  if (isCurrent()) registerAgents(merged, { disableDefaultAgents: disableDefaults });
+  registerAgents(merged, { disableDefaultAgents: disableDefaults });
 }
 
-export async function loadConfigAndRegisterAgents(ctx: ExtensionContext, isCurrent: () => boolean = () => true): Promise<void> {
+export async function loadConfigAndRegisterAgents(ctx: ExtensionContext): Promise<void> {
   // Project config (.pi/subagents-lite.json) loads only in trusted projects,
   // mirroring the .pi/agents scan-dir gate in scanAndRegisterAgents.
   const projectDir = ctx.isProjectTrusted() ? path.join(ctx.cwd, ".pi") : undefined;
@@ -97,7 +97,7 @@ export async function loadConfigAndRegisterAgents(ctx: ExtensionContext, isCurre
   // side effects.
   getStore().reload();
   ensureManagerAndWidget(ctx.hasUI && ctx.mode === "tui");
-  await scanAndRegisterAgents(ctx, isCurrent);
+  await scanAndRegisterAgents(ctx);
 }
 
 // --- Event listener setup ---
@@ -215,15 +215,12 @@ export function setupEventListeners(pi: ExtensionAPI): void {
   });
 
   let unregisterTerminalInput: (() => void) | undefined;
-  let generation = 0;
 
   pi.on("session_start", async (_event: unknown, ctx: ExtensionContext) => {
-    const owner = ++generation;
     setSessionCtx(ctx);
-    await loadConfigAndRegisterAgents(ctx, () => owner === generation);
-    if (owner !== generation) return;
+    await loadConfigAndRegisterAgents(ctx);
     // Re-register with updated agent type list (now includes user/project agents)
-    registerAgentTool(pi, true);
+    registerAgentTool(pi);
     // ctrl+o syncs compact mode with tool expansion (push-based, no polling)
     if (ctx.hasUI && ctx.mode === "tui" && !unregisterTerminalInput) {
       unregisterTerminalInput = ctx.ui.onTerminalInput(createNavInputHandler(ctx));
@@ -232,15 +229,7 @@ export function setupEventListeners(pi: ExtensionAPI): void {
     getStore().notifyToolsExpanded(false);
   });
 
-  pi.on("session_tree", async (_event, ctx) => {
-    const owner = ++generation;
-    await scanAndRegisterAgents(ctx, () => owner === generation);
-  });
-
   pi.on("session_shutdown", async (event: SessionShutdownEvent, ctx: ExtensionContext) => {
-    generation++;
-    setAgentScanDirs("", "");
-    registerAgents(new Map(), { disableDefaultAgents: true });
     unregisterTerminalInput?.();
     unregisterTerminalInput = undefined;
     const currentManager = getManager();

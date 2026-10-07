@@ -134,12 +134,6 @@ export function createExternalAutocompleteProvider(
 					? local.prefix
 					: undefined;
 			if (!token) return local ?? null;
-			// Explicit namespaces can belong to another provider. Its public file
-			// classification keeps these out of external probes, without changing
-			// ordinary relative files when the provider merely disables Tab triggering.
-			if (/^@[a-z][a-z0-9_-]*:/i.test(token) && current.shouldTriggerFileCompletion?.(lines, cursorLine, cursorCol) === false) {
-				return local ?? null;
-			}
 
 			const quoted = token.startsWith('@"');
 			const query = token.slice(quoted ? 2 : 1);

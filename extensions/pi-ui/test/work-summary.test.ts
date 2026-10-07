@@ -177,7 +177,7 @@ test("compact process rows keep shared command and expression summaries in a wid
 	} finally { await h.close(); }
 });
 
-test("request background stays in the current group while standalone notifications divide groups", async (t) => {
+test("standalone notifications divide work groups and stay visible", async (t) => {
 	const h = await harness({ mode: "compact" });
 	t.mock.timers.enable({ apis: ["Date"], now: 1_800_000_000_000 });
 	try {
@@ -189,10 +189,6 @@ test("request background stays in the current group while standalone notificatio
 		};
 		addCall("bash", "first");
 		t.mock.timers.tick(1_000);
-		const background: any = { role: "custom", customType: "session-reference", display: true,
-			content: "REQUEST BACKGROUND", details: { requestBackground: true }, timestamp: Date.now() };
-		await h.emit("message_start", { type: "message_start", message: background });
-		h.root.addChild(new CustomMessageComponent(background));
 		addCall("grep", "second");
 		assert.match(h.render().join("\n"), /bash×1, grep×1/);
 		const notification: any = { role: "custom", customType: "test-notification", display: true,
@@ -208,7 +204,6 @@ test("request background stays in the current group while standalone notificatio
 		assert.doesNotMatch(summaries[0]!, /find×1/);
 		assert.match(summaries[1]!, /Running.*find×1/);
 		assert.doesNotMatch(summaries[1]!, /bash×1|grep×1/);
-		assert.match(visible.join("\n"), /REQUEST BACKGROUND/);
 		assert.match(visible.join("\n"), /STANDALONE NOTIFICATION/);
 	} finally { await h.close(); }
 });

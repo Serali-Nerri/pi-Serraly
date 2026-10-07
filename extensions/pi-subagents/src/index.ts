@@ -12,7 +12,6 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { setPiInstance, isInsideSubagentSpawn } from "./shell.js";
 import { registerTools } from "./registration.js";
 import { setupEventListeners } from "./events.js";
-import { setupSubagentMentions } from "./mentions.js";
 
 export default function (pi: ExtensionAPI) {
   // Subagents re-load this extension under their own pi/runtime. Stay inert
@@ -20,6 +19,5 @@ export default function (pi: ExtensionAPI) {
   if (isInsideSubagentSpawn()) return;
   setPiInstance(pi);
   registerTools(pi);
-  setupSubagentMentions(pi);
   setupEventListeners(pi);
 }
