@@ -44,7 +44,7 @@ function requireWindows(): void {
     process.platform,
     'win32',
     `the Windows integration suite must run on Windows; saw ${process.platform}. ` +
-      'Run it through the windows-latest CI job (npm run test:windows).',
+      'Run npm run test:windows on Windows.',
   );
 }
 
@@ -314,7 +314,7 @@ void describe('windows integration', { concurrency: false }, () => {
     assert.equal(ignoresShell.dialect, 'cmd');
 
     const bashPath = process.env['PI_BG_TEST_BASH'];
-    assert.ok(bashPath, 'PI_BG_TEST_BASH must point at Git Bash in Windows CI');
+    assert.ok(bashPath, 'PI_BG_TEST_BASH must point at Git Bash on Windows');
     const opted = shellInvocation('echo ok', 'win32', {
       ComSpec: 'C:\\Windows\\System32\\cmd.exe',
       PI_BG_SHELL: 'bash',
@@ -328,7 +328,7 @@ void describe('windows integration', { concurrency: false }, () => {
   void it('runs a non-login bash so profile banners cannot pollute captured output', async () => {
     requireWindows();
     const bashPath = process.env['PI_BG_TEST_BASH'];
-    assert.ok(bashPath, 'PI_BG_TEST_BASH must point at Git Bash in Windows CI');
+    assert.ok(bashPath, 'PI_BG_TEST_BASH must point at Git Bash on Windows');
     await withTempDir(async (home) => {
       await writeFile(join(home, '.bash_profile'), 'echo PROFILE_BANNER\n', 'utf8');
       const result = spawnSync(bashPath, ['-c', 'echo REAL_OUTPUT'], {

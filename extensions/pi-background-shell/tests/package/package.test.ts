@@ -1259,8 +1259,8 @@ void describe('package', { concurrency: false }, () => {
   void it('typechecks standalone with the full monorepo strictness vendored locally', async () => {
     // The package is published both from this monorepo and as a standalone git
     // repo. A parent `../../tsconfig.base.json` does not exist in the standalone
-    // checkout, so `extends` must point at a locally vendored copy. CI proved
-    // that a missing base silently drops `skipLibCheck` and makes `tsc` walk
+    // checkout, so `extends` must point at a locally vendored copy. A missing
+    // base silently drops `skipLibCheck` and makes `tsc` walk
     // node_modules type definitions.
     const tsconfig = parseJsonValue(await text('tsconfig.json'));
     assert.ok(isObject(tsconfig));

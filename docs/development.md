@@ -174,29 +174,25 @@ consumer 目录里以 `--offline --ignore-scripts --legacy-peer-deps` 安装本�
 再由开发树外的真实宿主 loader 加载。该 fixture 证明包的独立性与 bundled 闭包，
 不投影 registry 依赖图，也不安装宿主 peer。
 
-## Node 门禁与 CI
+## Node 门禁与本地验收
 
 所有根入口（`check`、`build`、`test`、`pack:check`、`release`）在开始任何工作前
 调用同一个 `scripts/lib/node-version.mjs` 门禁：低于 `>=22.19.0` 的运行环境直接
 失败并说明基线，不做降级、重试或“跳过该项”。无法解析的版本字符串同样 fail
 closed。包 manifest 的 `engines.node` 与该门禁必须一致。
 
-CI 与本地共用同一入口，不复制命令：
+本地验收使用统一根入口：
 
 ```sh
 npm ci --ignore-scripts --include=optional --legacy-peer-deps
 npm run verify
 ```
 
-`.github/workflows/ci.yml` 在 Ubuntu 上以 Node **24.12.0** 跑一次完整
-`npm run verify`（npm 11.7.0），并把固定的宿主 Pi 1.0.4 安装到 runner 的
-临时目录（在工作区之外），通过 `PI_UI_HOST_PACKAGE` 指向它；HOME、agent
-目录与缓存都在 runner 临时目录内，不接触真实配置。只有
-安装锁定开发依赖和该宿主时允许访问 registry，测试与 release 阶段保持网络拒绝。
-CI 权限只有 `contents: read`，没有部署或发布凭据。
+本仓库不配置 CI。使用实际启动 managed Pi 的运行时完成本地验收，
 `>=22.19.0` 保留为工具链启动下限，不作为本项目每次交付的多版本资格声明。
-本地不另外安装 Node 22.19 或重复切换 nvm 验收；若以后承诺分发到不同运行时，
-再增加有明确目标的 CI 兼容性任务。
+不另外安装 Node 22.19 或重复切换 nvm 验收；若以后承诺分发到不同运行时，
+再明确对应的兼容性验收目标。registry 访问仅属于显式依赖安装阶段，
+测试与 release 阶段保持网络拒绝。
 
 ## 更新与回滚
 

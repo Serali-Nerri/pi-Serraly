@@ -15,7 +15,7 @@ The original [ISC LICENSE](LICENSE) is retained unchanged. Upstream authorship r
 - Read-only local fork reference: `/home/thelya/Work/Scripts/bg`.
 - Actual fork HEAD: `86c52d3b5d9f9ab92b843868293495d17ec5d878` (clean), superseding the earlier plan's `f8d056a` baseline.
 - Source backup recorded by the parent: `/tmp/pi-serraly-stage-two-sources-20261002-000556`.
-- Imported the complete tracked `src/`, `extensions/`, `tests/`, `scripts/`, `docs/`, strict TypeScript configs, package metadata, changelog and license; excluded `.git`, `node_modules`, `.pi`, `dist` and the source lockfile.
+- Imported the complete tracked `src/`, `extensions/`, `tests/`, `scripts/`, `docs/`, strict TypeScript configs, package metadata, changelog and license; excluded `.git`, `.github` workflows, `node_modules`, `.pi`, `dist` and the source lockfile.
 - Runtime business source and source-fork structure are unchanged, including the existing `.js` ESM specifiers used by NodeNext compilation and both reload ownership symbols. No stylistic rewrite or forced bundle.
 - Intentional adaptations: private workspace manifest and Pi 1.0.4 dev pins; runtime peers limited to coding-agent/TUI/TypeBox (pi-ai is test-only); isolated test-script runner; hoisted dependency resolution in package fixtures; shipping CHANGELOG with its provenance links; refreshed source/docs/package gates. Root scripts own release staging and the thin entry wrapper. No global deployment, live requests or source-reference edits.
 

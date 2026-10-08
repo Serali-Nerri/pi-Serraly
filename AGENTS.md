@@ -57,8 +57,7 @@ Run from the repository root:
 - `node scripts/preview.mjs regular` — preview UI with temporary data.
 
 Every root entry point refuses to start below Node 22.19.0 (`scripts/lib/node-version.mjs`);
-`.github/workflows/ci.yml` runs `npm run verify` once on Node 24.12.0 with a pinned host
-outside the workspace. Local acceptance uses the actual managed Pi host/runtime; the
+this repository has no CI workflows. Local acceptance uses the actual managed Pi host/runtime; the
 22.19 lower bound is a startup constraint, not a mandatory local compatibility matrix.
 Registry access belongs to the dependency-install phase only.
 

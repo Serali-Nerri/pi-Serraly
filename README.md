@@ -43,8 +43,8 @@ node scripts/test.mjs --package pi-subagents --list
 
 验证使用临时 HOME/agent/cwd、合成会话、离线脚本化 provider 和本地 fixture，
 不读取真实 auth/session/settings，也不发送真实模型请求。
-根入口在 Node 低于 **22.19** 时直接失败；CI 只在 Node **24.12.0** 上运行一轮
-`npm run verify`，本地使用实际 managed Pi 的运行时，不重复执行 Node 矩阵。
+根入口在 Node 低于 **22.19** 时直接失败；本仓库不配置 CI。
+本地验收使用实际 managed Pi 的运行时，不重复执行 Node 矩阵。
 安装阶段之外保持网络拒绝。
 命令、测试层级、release 和更新/回滚流程见[开发指南](docs/development.md)。
 真实配置切换须另行授权。
