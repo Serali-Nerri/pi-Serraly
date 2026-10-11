@@ -210,7 +210,7 @@ function walk(root) {
 export default function (pi) {
 	const state = globalThis[key];
 	assert.ok(state, "guard extension must precede UI");
-	assert.equal(VERSION, "1.0.4");
+	assert.equal(VERSION, "1.1.0");
 	assert.equal(state.timers, 0, "UI factory starts no timers");
 	unpatched(state);
 	state.report("factory", { version: VERSION });

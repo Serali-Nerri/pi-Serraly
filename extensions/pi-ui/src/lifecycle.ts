@@ -182,7 +182,7 @@ export function registerUiLifecycle(pi: ExtensionAPI): void {
 			switch (name) {
 				case "agent_start": transcript?.compact.activityStart(); shell.agentStart(); break;
 				case "agent_end": shell.agentEnd(context); break;
-				case "agent_settled": transcript?.compact.activitySettled(); break;
+				case "agent_settled": transcript?.compact.activitySettled(Boolean(event?.aborted)); break;
 				case "message_start": {
 					const message = event.message;
 					if (message.role === "user" || (message.role === "custom" && message.display)) {

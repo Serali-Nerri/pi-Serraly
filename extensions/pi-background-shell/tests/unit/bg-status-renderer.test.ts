@@ -58,6 +58,8 @@ test('registered bg_status renders host lookup errors and successful task lists 
     expanded: false,
     showImages: false,
     isError: true,
+    durationMs: undefined,
+    outputPad: 1,
   } satisfies Parameters<NonNullable<ToolDefinition['renderResult']>>[3];
   const cases = [
     {
@@ -93,7 +95,7 @@ test('registered bg_status renders host lookup errors and successful task lists 
     },
   ];
   for (const item of cases) {
-    // Pi 1.0.4 reports thrown tool errors as text content with details: {}.
+    // Pi 1.1.0 reports thrown tool errors as text content with details: {}.
     // isError is in the fourth renderer argument, not the result or options.
     const card = tool.renderResult(
       { content: [{ type: 'text', text: item.text }], details: item.details },

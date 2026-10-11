@@ -151,6 +151,7 @@ function buildMessagesSummary(
 	query?: CompactThinkingQuery,
 	runningActiveOverride?: boolean,
 	workDurationMs?: number,
+	aborted = false,
 ): string {
 	const parts: string[] = [];
 	const counts = new Map<string, number>();
@@ -195,6 +196,8 @@ function buildMessagesSummary(
 	runningActive = runningActiveOverride ?? runningActive;
 	if (runningActive) {
 		parts.push(durationMs > 0 ? `Running... · ${formatThoughtDuration(durationMs)}` : "Running...");
+	} else if (aborted) {
+		parts.push(durationMs > 0 ? `Cancelled after ${formatThoughtDuration(durationMs)}` : "Cancelled");
 	} else if (durationMs > 0) parts.push(`Ran for ${formatThoughtDuration(durationMs)}`);
 	for (const [name, count] of counts) parts.push(`${name}×${count}`);
 	return parts.join(", ");
@@ -204,8 +207,9 @@ export function buildMessageSummary(
 	message: any,
 	query?: CompactThinkingQuery,
 	workDurationMs?: number,
+	aborted = false,
 ): string {
-	return buildMessagesSummary([message], query, undefined, workDurationMs);
+	return buildMessagesSummary([message], query, undefined, workDurationMs, aborted);
 }
 
 function fallbackTheme(): any {
@@ -454,7 +458,7 @@ export type CompactModeHooks = {
 	/** Reconcile owned summary displays after the host mounts/rebuilds transcript. */
 	reconcile(root: unknown): void;
 	activityStart(): void;
-	activitySettled(): void;
+	activitySettled(aborted?: boolean): void;
 	groupBoundary(): void;
 	userWait(waiting: boolean): void;
 	/** 会话事件后同步：所有权、全局展开状态、已挂载组件。 */
@@ -694,6 +698,8 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		active: boolean;
 		suppressedToolIds: Set<string>;
 		clock?: WorkClock;
+		/** 收尾时记录中止结局，保证重绘结论稳定。 */
+		settledAborted?: boolean;
 		summaryComponent?: any;
 		summaryParent?: { children: any[] };
 	};
@@ -766,6 +772,7 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 			deps.query,
 			runningActive,
 			round ? roundWallMs(round) : undefined,
+			round?.settledAborted === true,
 		);
 
 	const stopRoundTick = (): void => {
@@ -1283,10 +1290,13 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 			waitingDepth = 0;
 			activityClock = createClock(activityStartedAt);
 		},
-		activitySettled() {
+		activitySettled(aborted = false) {
 			if (!patch.active) return;
 			activityActive = false;
-			if (activeRound) finishRound(activeRound);
+			if (activeRound) {
+				if (aborted) activeRound.settledAborted = true;
+				finishRound(activeRound);
+			}
 			for (const clock of unfinishedClocks) finishClock(clock);
 			waitingDepth = 0;
 		},

@@ -1,4 +1,4 @@
-# pi-ui architecture — Pi 1.0.4
+# pi-ui architecture — Pi 1.1.0
 
 ## Ownership
 
@@ -73,6 +73,16 @@ formatter. Their viewport is the larger of 80% of terminal width and width minus
 that same budget. `inputClip: 0` skips character preclipping, while positive limits
 remain effective. Path fitting stays POSIX-first and grapheme-safe, preserving
 filenames and separator semantics.
+
+Pi 1.1.0 carries `outputPad` in the tool render context and requires self-shell
+renderers to apply it themselves. Managed self-shell cards take their leading
+indent from that value instead of a fixed column, keeping the indent inside the
+viewport budget; `default`-shell expansions stay flush and let the host Box pad
+them. An absent value falls back to the host default of one column, so the layout
+is unchanged unless the operator chooses another padding. Settled bash/PowerShell
+results also append the host-recorded `Took` duration, read from `durationMs`
+rather than a renderer clock so the value is monotonic and survives reload; a
+result stored without one omits the line.
 
 Tool animation uses the keyed scheduler to request repaint only. Pending glyphs
 are read by the view's `render`, not captured while assembling call/result bodies;

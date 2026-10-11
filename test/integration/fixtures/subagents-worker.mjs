@@ -11,7 +11,7 @@ const host = process.argv[2], scenario = process.argv[3];
 const SDK = await import(pathToFileURL(join(host, "dist/index.js")).href);
 const require = createRequire(join(host, "package.json"));
 const TUI = await import(pathToFileURL(require.resolve("@earendil-works/pi-tui")).href);
-// Pi 1.0.4 declares AuthStorage but does not export it from its SDK root.
+// Pi 1.1.0 declares AuthStorage but does not export it from its SDK root.
 // TEST ONLY pinned import, always in-memory; no credentials file is read.
 const { AuthStorage } = await import(pathToFileURL(join(host, "dist/core/auth-storage.js")).href);
 const config = JSON.parse(await readFile(process.env.SERRALY_CONFIG, "utf8"));

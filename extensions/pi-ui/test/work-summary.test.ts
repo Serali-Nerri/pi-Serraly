@@ -464,3 +464,18 @@ test("a closed group refreshed during user waiting never acquires another pause"
 		assert.match(h.render().join("\n"), /Ran for 2s, bash×1/);
 	} finally { await h.close(); }
 });
+
+test("a cancelled run settles as cancelled work, not completed work", async (t) => {
+	const h = await harness({ mode: "compact" });
+	t.mock.timers.enable({ apis: ["Date"], now: 1_800_000_000_000 });
+	try {
+		await h.emit("agent_start", { type: "agent_start" });
+		h.root.addChild(new AssistantMessageComponent(assistantMessage([
+			{ type: "toolCall", name: "bash", id: "check", arguments: { command: "local check" } },
+		], Date.now()), true));
+		h.render();
+		t.mock.timers.tick(2_000);
+		await h.emit("agent_settled", { type: "agent_settled", aborted: true });
+		assert.match(h.render().join("\n"), /Cancelled after 2s, bash×1/);
+	} finally { await h.close(); }
+});

@@ -23,7 +23,7 @@ Additional selective presentation adaptations use the read-only reference
   remains in use; no upstream rich-diff/highlighting stack is included.
 - `a644f86`: validated semantic `expandedCardBackground` for UI-owned views.
 
-These are selective behavior ports to the current Pi 1.0.4 interfaces, not whole
+These are selective behavior ports to the current Pi 1.1.0 interfaces, not whole
 commit imports or a replacement of the v0.8.69 + `26aa98df` source baseline.
 
 Copyright (c) 2026 minuque. Licensed under MIT; the complete license is in

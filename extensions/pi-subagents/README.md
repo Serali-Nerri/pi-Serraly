@@ -2,7 +2,7 @@
 
 独立入口 `dist/pi-subagents/index.js`，在 Pi 中注册 **`Agent`、`StopAgent`、
 `AgentStatus`** 和 **`/agents`**。三工具使用宿主默认的 direct exposure，注册后
-active；UI 模块只管展示，不执行或代管子代理。支持基线是 Pi **1.0.4**、
+active；UI 模块只管展示，不执行或代管子代理。支持基线是 Pi **1.1.0**、
 TypeBox **1.3.27**、Node **≥22.19**。来源与许可见 [UPSTREAM.md](UPSTREAM.md)
 及 [LICENSE](LICENSE)；构建、隔离和 release/替换流程见[开发指南](../../docs/development.md)。
 
@@ -159,7 +159,9 @@ exclude_tools: [mcp__docs__delete_page]
 未设置 tools 或显式 `tools: true` 的继承模式不把启动时 registry 快照当白名单，
 延迟注册的 MCP 工具可按原生 exposure 使用。`tools: false` 或空数组禁止所有
 工具，包括 Pi 内置工具。工具数组是实际注册/调用准入，而不只是隐藏 active
-schema。显式布尔值会替换低优先级文件的工具数组限制。精确 `exclude_tools`
+schema。显式布尔值会替换低优先级文件的工具数组限制。工具数组只接受普通工具名；
+`+name`/`-name` 修饰符只属于 Pi 的 `--tools` 与 `defaultTools`，写进 agent 的
+工具数组会让该子代理启动失败。精确 `exclude_tools`
 交给 SDK，包含后续才注册的
 exact MCP 名称。数组 whitelist 优先于普通 excludes；三个 Agent 控制工具无论
 如何都不会授予子会话。inactive 工具不等于禁止调用：codemode/deferred 可能

@@ -1,7 +1,7 @@
 /**
  * Host capability preflight for the private display patches.
  *
- * Pi 1.0.4 exposes the interactive components as classes whose methods are
+ * Pi 1.1.0 exposes the interactive components as classes whose methods are
  * replaced by reference. Before any patch is installed this module verifies that
  * every required method exists and can be replaced, and every patch target is
  * extensible so its pipeline registry can be installed. The probe writes nothing and
@@ -30,7 +30,7 @@ export class HostCapabilityError extends Error {
 	readonly capabilities: readonly string[];
 
 	constructor(capabilities: readonly string[]) {
-		super(`Pi 1.0.4 host cannot be patched for display: ${capabilities.join(", ")}; native rendering retained`);
+		super(`Pi 1.1.0 host cannot be patched for display: ${capabilities.join(", ")}; native rendering retained`);
 		this.name = "HostCapabilityError";
 		this.capabilities = [...capabilities];
 	}

@@ -5,7 +5,7 @@ import { syncBuiltinESMExports } from 'node:module';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { Theme, type ThemeColor } from '@earendil-works/pi-coding-agent';
-import { TuiAltScreen, TuiMainScreen, visibleWidth, type Terminal } from '@earendil-works/pi-tui';
+import { TuiAltScreen, TuiMainScreen, visibleWidth, type ProgramStatus, type Terminal } from '@earendil-works/pi-tui';
 import {
   BackgroundTasksManager,
   TASK_MANAGER_OVERLAY_OPTIONS,
@@ -218,6 +218,7 @@ class MemoryTerminal implements Terminal {
   clearScreen(): void {}
   setTitle(_title: string): void {}
   setProgress(_active: boolean): void {}
+  setProgramStatus(_status: ProgramStatus): void {}
 }
 
 /** Render also starts a wide-layout preview read; wait for real asynchronous file IO. */

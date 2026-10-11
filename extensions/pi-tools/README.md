@@ -6,11 +6,11 @@
 
 三个搜索工具复用 `@earendil-works/pi-coding-agent` 公共 `createGrepToolDefinition`/`createFindToolDefinition`/`createLsToolDefinition` 的 name、参数、执行与结果契约，覆盖同名内置定义，`exposure: "codemode"`，共用命名空间 `filesystem`，并去掉宿主 renderer（交互模式仍按名称补回内置卡片）。它们注册时不会进入活动工具集：默认不声明给模型，但可通过启用 `codemode` 后的脚本（`tools.grep`、`tools.find`、`tools.ls`）调用；显式激活（如 `defaultTools`）同样有效。
 
-`codemode` 工具默认不启用；建议配置 `{"defaultTools": ["+codemode"]}`。`--tools codemode` 是注册表 allowlist，会同时过滤掉其他扩展工具，不能用来“只启用 codemode”。
+`codemode` 工具默认不启用；建议配置 `{"defaultTools": ["+codemode"]}`。`--tools codemode` 是注册表 allowlist，会同时过滤掉其他扩展工具，不能用来“只启用 codemode”；单次运行要增量启用则用 `pi --tools +codemode`。
 
 ## grep、find、ls
 
-三者的参数、默认限制、忽略规则和截断行为与 Pi 1.0.4 的内置实现一致，执行使用调用时的 `ctx.cwd`：
+三者的参数、默认限制、忽略规则和截断行为与 Pi 1.1.0 的内置实现一致，执行使用调用时的 `ctx.cwd`：
 
 | 工具 | 参数 | 默认限制 |
 | --- | --- | --- |
@@ -22,7 +22,7 @@
 
 `apply_patch` 支持 UTF-8 文本文件的新增、修改、删除和移动，以及一份补丁的多个文件操作。保留已有文件的 BOM、各行换行符和普通权限位。支持 grammar 的模型/接口接收 apply_patch 的 Lark 语法；其他接口使用相同工具的 JSON 参数。
 
-开发与测试基线为 Pi **1.0.4**、TypeBox **1.3.27**、Node **≥22.19**。
+开发与测试基线为 Pi **1.1.0**、TypeBox **1.3.27**、Node **≥22.19**。
 `apply_patch` 不启动后台进程、不执行 shell 命令、不发送网络请求或遥测。
 
 ## 模型可见工具定义

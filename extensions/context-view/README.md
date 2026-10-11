@@ -1,6 +1,6 @@
 # context-view
 
-独立的 Pi 1.0.4 扩展，保留 pi-context-view 的 Usage、Initial 注入、配置和内容预览。
+独立的 Pi 1.1.0 扩展，保留 pi-context-view 的 Usage、Initial 注入、配置和内容预览。
 入口为 `dist/context-view.js`，只注册 `context` 命令，不注册业务工具。
 可单独选择，也可与 pi-ui 按任意顺序共存；pi-ui 的 Footer 与 `/ccstyle` 不由本模块接管。
 安装与选择性 release 遵循[仓库开发指南](../../docs/development.md)，不要将开发 dist 加入真实 settings。

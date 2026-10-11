@@ -1050,7 +1050,7 @@ for (const failure of ["persistence", "finalization", "shutdown hook repaint"] a
 	});
 }
 
-test("visible reasoning and Pi 1.0.4 per-run overrides retain the native Markdown renderer", () => {
+test("visible reasoning and Pi 1.1.0 per-run overrides retain the native Markdown renderer", () => {
 	const host = runtime();
 	const ctx = themeCtx();
 	const message = { ...thinkingMessage(500, false), content: [

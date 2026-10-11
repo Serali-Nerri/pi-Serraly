@@ -19,7 +19,7 @@ test("release manifest exposes only eight compiled extensions, never companion s
 });
 
 for (const name of names) {
-	test(`compiled ${name} loads independently through Pi 1.0.4`, { timeout: 30000 }, async () => {
+	test(`compiled ${name} loads independently through Pi 1.1.0`, { timeout: 30000 }, async () => {
 		await sdkScenario(stage, "inventory", { names: [name] });
 	});
 }

@@ -2,6 +2,7 @@
 import { Text, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { config } from "../config/config.ts";
 import { oneLine } from "../utils/format.ts";
+import { formatDuration } from "../shell/utils.ts";
 import { isToolCallHovered } from "../overlays/mouse-state.ts";
 import { createApplyPatchRenderer } from "./tool/apply-patch.ts";
 import { createFileRenderer } from "./tool/files.ts";
@@ -31,6 +32,15 @@ function fallback(tool: any, slot: "renderCall" | "renderResult", args: any[], t
 	return new Text(text, 0, 0);
 }
 
+/** Native Pi reports a recorded duration only for the shell tools. */
+const DURATION_TOOLS = new Set(["bash", "powershell"]);
+
+/** Pi 1.1.0 requires `renderShell: "self"` renderers to apply outputPad themselves; the host default is one column. */
+function outputPadOf(context: any): number {
+	const pad = context?.outputPad;
+	return typeof pad === "number" && Number.isFinite(pad) ? Math.max(0, Math.floor(pad)) : 1;
+}
+
 /** Presentation functions only; never register or mutate the original definition. */
 function createGenericRenderer(original: any): any {
 	const name = original.name;
@@ -54,8 +64,9 @@ function createGenericRenderer(original: any): any {
 					const glyph = pending ? pendingIcon(name) : settledIcon(name, state);
 					const icon = state === "success" ? `\x1b[38;2;80;220;100m${glyph}\x1b[39m` : theme.fg(toolIconColor(context), glyph);
 					const viewport = toolViewportWidth(width);
-					const lead = expanded ? "" : " ";
-					const available = Math.max(0, viewport - visibleWidth(icon) - 1 - (expanded ? 0 : 1) - visibleWidth(summary.detail));
+					const pad = expanded ? 0 : outputPadOf(context);
+					const lead = " ".repeat(pad);
+					const available = Math.max(0, viewport - pad - visibleWidth(icon) - 1 - visibleWidth(summary.detail));
 					cachedWidth = width;
 					cachedLine = truncateToWidth(`${lead}${icon} ${theme.fg("toolTitle", fitToolCallSummary(summary, available))}${theme.fg("dim", summary.detail)}`, viewport, "");
 					return [cachedLine];
@@ -67,9 +78,10 @@ function createGenericRenderer(original: any): any {
 			if (config.mode === "off") return fallback(original, "renderResult", [result, options, theme, context], textFromResult(result));
 			const expanded = isToolExpanded(options, context);
 			const error = Boolean(options?.isError || context?.isError);
+			const pad = expanded ? 0 : outputPadOf(context);
 			setToolVisualState(context, options?.isPartial ? "pending" : error ? "error" : "success");
 			const text = textFromResult(result, expanded);
-			if (options?.isPartial && !text.trim()) return new Text(theme.fg("muted", expanded ? "↳ Pending…" : "   ↳ Pending…"), 0, 0);
+			if (options?.isPartial && !text.trim()) return new Text(theme.fg("muted", expanded ? "↳ Pending…" : `${ " ".repeat(pad)}  ↳ Pending…`), 0, 0);
 			const args = context?.args;
 			if (expanded) return renderExpandedToolResult(text, theme, error, context?.lastComponent, args, true);
 			const count = outputLineCount(result) || countLines(text);
@@ -79,18 +91,27 @@ function createGenericRenderer(original: any): any {
 			const prefix = expandable ? theme.fg("dim", " • ") : "";
 			const hint = expandable ? prefix + theme.fg("dim", showMoreHintText()) : "";
 			const hoveredHint = expandable ? prefix + theme.fg("text", showMoreHintText()) : "";
+			const duration = !options?.isPartial && DURATION_TOOLS.has(name) &&
+				typeof context?.durationMs === "number" && Number.isFinite(context.durationMs)
+				? context.durationMs : undefined;
+			const resultPrefix = `${" ".repeat(pad)}  ↳ `;
 			let cachedWidth: number | undefined;
-			let normal: string | undefined;
-			let hovered: string | undefined;
+			let normal: string[] | undefined;
+			let hovered: string[] | undefined;
 			return {
 				actionAtRow(row: number) { return expandable && row === 0 ? "expand" : undefined; },
 				render(width: number) {
 					if (cachedWidth !== width || normal === undefined) {
 						cachedWidth = width;
-						normal = theme.fg(error ? "error" : "muted", renderCollapsedToolResultToWidth(summary, hint, width));
-						hovered = theme.fg(error ? "error" : "muted", renderCollapsedToolResultToWidth(summary, hoveredHint, width));
+						const lines = (collapsedHint: string) => {
+							const rendered = [theme.fg(error ? "error" : "muted", renderCollapsedToolResultToWidth(summary, collapsedHint, width, resultPrefix))];
+							if (duration !== undefined) rendered.push(`${ " ".repeat(pad)}${ theme.fg("muted", `Took ${ formatDuration(duration)}`)}`);
+							return rendered;
+						};
+						normal = lines(hint);
+						hovered = lines(hoveredHint);
 					}
-					return [isToolCallHovered(context?.toolCallId) ? hovered! : normal];
+					return isToolCallHovered(context?.toolCallId) ? hovered! : normal;
 				},
 				invalidate() { cachedWidth = undefined; normal = undefined; hovered = undefined; },
 			};

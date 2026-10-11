@@ -147,7 +147,7 @@ test("bundled RPC: hasUI=true is not TUI; exact command surface, handled command
 		await waitFor((record) => record.type === "agent_settled");
 		const messages = await request("messages", "get_messages");
 		assert.ok(messages.messages.some((message: any) => message.role === "toolResult" && message.toolName === "read" && !message.isError));
-		child.stdin.end(); // Pi 1.0.4 RPC's documented explicit exit mechanism.
+		child.stdin.end(); // Pi 1.1.0 RPC's documented explicit exit mechanism.
 		assert.equal(await closed, 0, stderr);
 		buffer += decoder.end();
 		assert.equal(buffer, "", "strict JSONL final record is LF terminated");
@@ -178,7 +178,7 @@ const SDK = await import(pathToFileURL(join(host, "dist/index.js")).href);
 const require = createRequire(join(host, "package.json"));
 const { TuiMainScreen, visibleWidth } = await import(pathToFileURL(require.resolve("@earendil-works/pi-tui")).href);
 const { ModelRuntime, SessionManager, SettingsManager, DefaultResourceLoader, createAgentSession } = SDK;
-// 1.0.4 declares AuthStorage.inMemory in dist/core/auth-storage.d.ts but does
+// 1.1.0 declares AuthStorage.inMemory in dist/core/auth-storage.d.ts but does
 // not re-export AuthStorage from its SDK root. This test-only import is pinned.
 const { AuthStorage } = await import(pathToFileURL(join(host, "dist/core/auth-storage.js")).href);
 const cwd = process.cwd(), agentDir = process.env.PI_CODING_AGENT_DIR, base = process.env.TMPDIR;

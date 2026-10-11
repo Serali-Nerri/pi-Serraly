@@ -17,6 +17,7 @@ export function isolatedEnvironment(base) {
 		PI_CODING_AGENT_DIR: join(base, "agent"), PI_OFFLINE: "1",
 		PI_SKIP_VERSION_CHECK: "1", PI_TELEMETRY: "0",
 		PI_IMAGE_PROTOCOL: "none", PI_HYPERLINKS: "0", PI_TRUE_COLOR: "1",
+		PI_PROGRAM_STATUS: "0",
 		GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: "/dev/null", GIT_CEILING_DIRECTORIES: base,
 		NODE_COMPILE_CACHE: join(base, "compile-cache"),
 		NPM_CONFIG_USERCONFIG: join(base, "npm-userconfig"),

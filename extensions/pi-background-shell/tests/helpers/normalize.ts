@@ -4,6 +4,7 @@ export const isolatedTestEnv = {
   PI_OFFLINE: '1',
   PI_SKIP_VERSION_CHECK: '1',
   PI_TELEMETRY: '0',
+  PI_PROGRAM_STATUS: '0',
   CI: '1',
 } as const;
 

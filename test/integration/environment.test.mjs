@@ -20,7 +20,7 @@ test("test subprocesses receive resolved host code but no inherited credentials 
 	const { isolatedRun } = await import(new URL("../../scripts/lib/workspace.mjs", import.meta.url).href);
 	const base = await realpath(await mkdtemp(join(tmpdir(), "serraly-env-observation-")));
 	const managedRoot = join(base, "install");
-	const directory = join(managedRoot, "releases/1.0.4/node_modules/@earendil-works/pi-coding-agent");
+	const directory = join(managedRoot, "releases/1.1.0/node_modules/@earendil-works/pi-coding-agent");
 	const canaries = {
 		HOME: "/synthetic/user-home", PI_CODING_AGENT_DIR: "/synthetic/user-agent",
 		AWS_SECRET_ACCESS_KEY: "synthetic-canary", AWS_SESSION_TOKEN: "synthetic-canary",
@@ -33,10 +33,10 @@ test("test subprocesses receive resolved host code but no inherited credentials 
 	try {
 		await mkdir(join(directory, "dist/bundle"), { recursive: true });
 		await writeFile(join(directory, "package.json"), JSON.stringify({
-			name: "@earendil-works/pi-coding-agent", version: "1.0.4", bin: { pi: "dist/bundle/cli.js" },
+			name: "@earendil-works/pi-coding-agent", version: "1.1.0", bin: { pi: "dist/bundle/cli.js" },
 		}));
 		await writeFile(join(directory, "dist/bundle/cli.js"), "// Fixture code; never launched.\n");
-		await writeFile(join(managedRoot, "current-version"), "1.0.4\n");
+		await writeFile(join(managedRoot, "current-version"), "1.1.0\n");
 		for (const [key, value] of Object.entries(canaries)) {
 			if (value === undefined) delete process.env[key];
 			else process.env[key] = value;

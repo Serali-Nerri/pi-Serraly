@@ -71,7 +71,7 @@ function harness(queries: ShellQueries = { git: async () => emptyGitStatus(), ru
 		removedFooter: () => removedFooter, unsubscribed: () => unsubscribed };
 }
 
-// Model Pi 1.0.4: all context getters and the captured public liveness query
+// Model Pi 1.1.0: all context getters and the captured public liveness query
 // reject after runner invalidation, even if the manager and session ID survive.
 function invalidatableContext(base: ExtensionContext, onProbe = () => {}) {
 	let active = true;

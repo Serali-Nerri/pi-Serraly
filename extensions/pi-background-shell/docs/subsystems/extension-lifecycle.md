@@ -22,6 +22,6 @@ Task-change and periodic footer updates isolate presentation failures from child
 
 ## SDK embedding
 
-The supported development baseline is Pi 1.0.4. An SDK host must call `bindExtensions()` with counted bindings, for example `{ onError, ... }`, and provide the normal `session_start` after reload. Empty/mode-only binding is not a supported handoff path. Dispose through `AgentSessionRuntime.dispose()` or another awaited host lifecycle that emits `session_shutdown`; direct `AgentSession.dispose()` does not emit the awaited shutdown event needed for child cleanup. Rebind session-local subscriptions and extension bindings after runtime session replacement.
+The supported development baseline is Pi 1.1.0. An SDK host must call `bindExtensions()` with counted bindings, for example `{ onError, ... }`, and provide the normal `session_start` after reload. Empty/mode-only binding is not a supported handoff path. Dispose through `AgentSessionRuntime.dispose()` or another awaited host lifecycle that emits `session_shutdown`; direct `AgentSession.dispose()` does not emit the awaited shutdown event needed for child cleanup. Rebind session-local subscriptions and extension bindings after runtime session replacement.
 
 Normal TUI/RPC/print/JSON modes supply lifecycle bindings. Reload is a live same-process handoff, not reconstitution from metadata. See [runtime](background-task-runtime.md), [testing](../../TESTING.md) and [gate design](docs-freshness-gate.md).
