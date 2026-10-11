@@ -13,7 +13,7 @@ after(async () => { await stage?.cleanup(); });
 
 // Break caught: a missing compiled entry/lazy module or a release that still loads
 // through workspace dependencies cannot reach any real loader scenario.
-test("release manifest exposes only eight compiled extensions, never companion skills", async () => {
+test("release manifest exposes only seven compiled extensions, never companion skills", async () => {
 	const manifest = JSON.parse(await readFile(join(stage.release, "package.json"), "utf8"));
 	assert.deepEqual(manifest.pi, { extensions: releaseEntries });
 });
@@ -25,7 +25,7 @@ for (const name of names) {
 }
 
 for (const [order, selection] of [["manifest", [...names]], ["reversed", [...names].reverse()]]) {
-	test(`eight compiled entries coexist without duplicate tools/commands (${order} order)`, { timeout: 30000 }, async () => {
+	test(`seven compiled entries coexist without duplicate tools/commands (${order} order)`, { timeout: 30000 }, async () => {
 		await sdkScenario(stage, "inventory", { names: selection });
 	});
 }
@@ -43,13 +43,13 @@ test("compiled subagents alone validates real control tools without spawning and
 test("actual package settings can disable each compiled entry independently, including UI", { timeout: 60000 }, async () => {
 	await sdkScenario(stage, "filters", {}, 55000);
 });
-test("builtin tool_search discovers still-deferred questions/background tools", { timeout: 30000 }, async () => {
+test("builtin tool_search discovers still-deferred background tools", { timeout: 30000 }, async () => {
 	await sdkScenario(stage, "discovery");
 });
 test("compiled external-directory commands load context, skills, and widget through the real host reload boundary", { timeout: 30000 }, async () => {
 	await sdkScenario(stage, "add-dir");
 });
-test("compiled apply_patch contract and immutable report survive UI modes; real question dialog answers/cancels", { timeout: 30000 }, async () => {
+test("compiled apply_patch contract and immutable report survive UI modes", { timeout: 30000 }, async () => {
 	await sdkScenario(stage, "contracts");
 });
 test("compiled background tools complete, notify once, retain same process on reload, stop and clean up", { timeout: 30000 }, async () => {
@@ -60,7 +60,7 @@ test("mounted package footer preserves local-loop/background statuses and dock/U
 });
 
 for (const mode of ["print", "json", "rpc"]) {
-	test(`compiled eight-entry package in bundled CLI ${mode} has no UI-owned stdout/timer/prototype pollution`, { timeout: 30000 }, async () => {
+	test(`compiled seven-entry package in bundled CLI ${mode} has no UI-owned stdout/timer/prototype pollution`, { timeout: 30000 }, async () => {
 		const sandbox = await sandboxFixture(stage.release);
 		try {
 			let records;
@@ -91,7 +91,7 @@ for (const mode of ["print", "json", "rpc"]) {
 // defaults to fullscreen; explicit regular/fullscreen selections still work.
 for (const [selection, mode] of [["default", "fullscreen"], ["regular", "regular"], ["fullscreen", "fullscreen"]]) {
 	for (const width of selection === "default" ? [80] : [40, 80, 120]) {
-		test(`final release under bundled CLI ${selection}/${width}: host-owned TUI rows protect question/bg and real subagents renderers`,
+		test(`final release under bundled CLI ${selection}/${width}: host-owned TUI rows protect bg and real subagents renderers`,
 			{ timeout: 40000, skip: ptyAvailability() }, async () => {
 				const sandbox = await sandboxFixture(stage.release, { tui: true });
 				try {
@@ -101,7 +101,7 @@ for (const [selection, mode] of [["default", "fullscreen"], ["regular", "regular
 					const result = await captureReleasePty(sandbox, cliArgs(sandbox, stage.host, [...modeArgs, "Local fixture tool sequence"]), width);
 					assert.ok(result.reports.some((report) => report.phase === "host-identity" && report.tuiMode === mode), JSON.stringify(result.reports));
 					assert.ok(result.reports.some((report) => report.phase === "host-identity" && report.fullscreen === (mode === "fullscreen")));
-					assert.ok(result.reports.some((report) => report.phase === "settled" && report.providerCalls === 7));
+					assert.ok(result.reports.some((report) => report.phase === "settled" && report.providerCalls === 6));
 					assert.ok(result.reports.some((report) => report.phase === "shutdown"));
 					assert.ok(!result.reports.some((report) => ["network-denied", "fixture-error"].includes(report.phase)));
 					assert.match(result.ansi, /Subagent Result/);

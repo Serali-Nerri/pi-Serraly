@@ -10,8 +10,8 @@ import { root } from "../../scripts/lib/packages.mjs";
 import { entriesByName } from "./fixtures/contracts.mjs";
 
 /**
- * The four tool-card consumers register their own renderers; the shared kit owns
- * only the card chrome. These probes call the real factory, take the registered
+ * The tool-card consumers register their own renderers; the shared kit owns only
+ * the card chrome. These probes call the real factory, take the registered
  * renderCall/renderResult components and assert the shared syntax plus the
  * information each tool must keep.
  */
@@ -19,7 +19,6 @@ import { entriesByName } from "./fixtures/contracts.mjs";
 initTheme("dark", false);
 
 const packageDirectories = {
-	questions: "extensions/pi-ask-user-question",
 	background: "extensions/pi-background-shell",
 	subagents: "extensions/pi-subagents",
 	ui: "extensions/pi-ui",
@@ -69,36 +68,7 @@ function assertCardSyntax(lines, { title, summary, status }, label) {
 }
 
 for (const width of [1, 8, 40, 80]) {
-	test(`questions, background and subagents cards keep the shared syntax at width ${width}`, async () => {
-		const questions = await registered("questions");
-		const ask = questions.tools.get("AskUserQuestion");
-		const questionArgs = {
-			questions: [
-				{ header: "Scope", question: "Which scope?", options: [{ label: "Local" }, { label: "Global" }] },
-				{ header: "Deploy", question: "Deploy where?", options: [{ label: "Now" }] },
-			],
-		};
-		const call = render(ask.renderCall(questionArgs, theme, { isPartial: true }), width);
-		assert.ok(call.every((line) => visibleWidth(line) <= width), "questions call stays in width");
-		if (width >= 20) assert.ok(plain(call)[0].startsWith("● AskUserQuestion"), JSON.stringify(plain(call)));
-		if (width >= 80) assert.equal(plain(call)[0], "● AskUserQuestion 2 questions (Scope, Deploy)");
-		const answered = render(ask.renderResult({
-			content: [{ type: "text", text: "answered" }],
-			details: {
-				questions: questionArgs.questions,
-				answers: { "Which scope?": "Local", "Deploy where?": "Now" },
-				annotations: { "Which scope?": { notes: "kept local" } },
-			},
-		}, {}, theme), width);
-		assert.ok(answered.every((line) => visibleWidth(line) <= width), "questions result stays in width");
-		if (width >= 80) {
-			const text = plain(answered);
-			assert.match(text.join("\n"), /Scope: Local/);
-			assert.match(text.join("\n"), /notes: kept local/);
-		}
-		const cancelled = render(ask.renderResult({ content: [{ type: "text", text: "" }], details: { questions: questionArgs.questions, answers: {}, cancelled: true } }, {}, theme), width);
-		if (width >= 80) assert.match(plain(cancelled)[0], /^  ⎿ No answer/);
-
+	test(`background and subagents cards keep the shared syntax at width ${width}`, async () => {
 		const background = await registered("background", "dist/extensions/background-tasks.js");
 		const logs = background.tools.get("bg_logs");
 		const logsCall = render(logs.renderCall({ taskId: "task-123" }, theme), width);
@@ -171,11 +141,9 @@ test("hostile task text cannot inject terminal control sequences through the sha
 });
 
 test("every consumer card survives a one-column render", async () => {
-	const questions = await registered("questions");
 	const background = await registered("background", "dist/extensions/background-tasks.js");
 	const subagents = await registered("subagents");
 	const cards = [
-		questions.tools.get("AskUserQuestion").renderCall({ questions: [{ header: "S", question: "q", options: [{ label: "a" }] }] }, theme),
 		background.tools.get("bg_logs").renderCall({ taskId: "task-1" }, theme),
 		subagents.tools.get("Agent").renderCall({ agent: "general-purpose" }, theme),
 	];

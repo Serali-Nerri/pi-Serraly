@@ -66,7 +66,7 @@ RED/GREEN 只运行新增或失败的测试文件；功能完成后运行受影�
 2. **模块边界测试**：实际注册定义、renderer、文件/进程/worker 和宿主 SDK。
    外部或慢操作才允许 test double；保留真正影响断言的副作用。
 3. **产物集成**：实际编译入口、release 树、新路径 lazy import、宿主 loader
-   和类身份、资源过滤、八入口共存、脚本化 child 与合成 stdio MCP。CLI 的模块
+   和类身份、资源过滤、七入口共存、脚本化 child 与合成 stdio MCP。CLI 的模块
    计时器/UI 守卫按当前 release 成员路径归属调用，并有能触发计数的正向控制。
 4. **操作演练**：临时目录内真实文件锁、原子发布和故障中断恢复。
 5. **人工交互**：目标终端的视觉、快捷键、鼠标和焦点；自动渲染宽度检查不替代它。
@@ -150,16 +150,16 @@ node scripts/capture.mjs /tmp/pi-ui-captures
 
 ```sh
 npm run release                                  # → ~/.local/share/pi-Serraly/releases/<version>
-# 只交付部分扩展；重复 --package 选择子集，默认八个全部
+# 只交付部分扩展；重复 --package 选择子集，默认七个全部
 npm run release -- --package context-view
 npm run release -- --package context-view --package pi-ui
-npm run release -- --package pi-ask-user-question --package pi-subagents
+npm run release -- --package pi-loop --package pi-subagents
 # 显式覆盖（临时验收目录或特殊 build id）
 npm run release -- --build-id <id> --output /absolute/path/to/new-release
 ```
 
 选择在创建目标目录、构建或启动任何子进程之前校验：空名称、重复、未知名称和库
-名称都会直接失败。release 默认包含八个扩展；聚合 manifest 只声明被选中的入口，
+名称都会直接失败。release 默认包含七个扩展；聚合 manifest 只声明被选中的入口，
 `release.json` 记录每个成员的路径与封印摘要。
 
 release 不构建、不安装运行依赖、不携带 lock 或 `node_modules`，只复制已构建并

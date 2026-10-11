@@ -26,10 +26,10 @@ test("policy respects actual source, dedicated renderers and off/exclusion first
 });
 
 for (const mode of ["on", "compact"] as const) {
-	test(`${mode} preserves question/Agent/StopAgent/bg/custom native cards outside aggregate/background/mouse`, async () => {
+	test(`${mode} preserves Agent/StopAgent/bg/custom native cards outside aggregate/background/mouse`, async () => {
 		const h = await harness({ mode });
 		try {
-			for (const [index, name] of ["AskUserQuestion", "Agent", "StopAgent", "bg_run", "future"].entries()) {
+			for (const [index, name] of ["Agent", "StopAgent", "bg_run", "future"].entries()) {
 				const renderer = (label: string) => () => new Text(label, 0, 0);
 				const definition = {
 					name, label: name, parameters: {}, description: "Original", exposure: "deferred",

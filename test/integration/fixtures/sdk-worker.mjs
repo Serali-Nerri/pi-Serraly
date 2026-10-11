@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { toolsByName, commandsByName, questionArgs, patchInput } from "./contracts.mjs";
+import { toolsByName, commandsByName, patchInput } from "./contracts.mjs";
 
 const host = process.argv[2], scenario = process.argv[3];
 const SDK = await import(pathToFileURL(join(host, "dist/index.js")).href);
@@ -221,20 +221,6 @@ async function contracts(h) {
 	assert.match(listingText, /codemode-listing\.txt/);
 	assert.match(listingText, /codemode-listing\.txt:1: codemode listing marker/);
 	assert.match(listingText, /"find":"find"/);
-	const q = h.session.getToolDefinition("AskUserQuestion");
-	assert.equal(q.executionMode, "sequential");
-	assert.equal(q.namespace.name, "questions");
-	assert.deepEqual(q.parameters.required, ["questions"]);
-	assert.equal(q.parameters.properties.questions.minItems, 1);
-	assert.equal(q.parameters.properties.questions.maxItems, 4);
-	assert.deepEqual(q.parameters.properties.questions.items.required, ["question", "header", "options"]);
-	assert.equal(q.parameters.properties.questions.items.properties.header.maxLength, 12);
-	assert.equal(q.parameters.properties.questions.items.properties.options.minItems, 2);
-	assert.equal(q.parameters.properties.questions.items.properties.options.maxItems, 4);
-	const nonTui = await execute(h, "AskUserQuestion", questionArgs);
-	assert.deepEqual(nonTui.details, { questions: questionArgs.questions, answers: {} });
-	assert.deepEqual(nonTui.content, [{ type: "text", text: "Error: AskUserQuestion requires the interactive TUI; no answer was collected. Ask the user in plain text instead." }]);
-	await assert.rejects(execute(h, "AskUserQuestion", { questions: [{ ...questionArgs.questions[0], options: [questionArgs.questions[0].options[0]] }] }), /must have 2-4 options/);
 	const ui = await mount(h);
 	try {
 		const ctx = h.session.extensionRunner.createCommandContext();
@@ -257,14 +243,6 @@ async function contracts(h) {
 			row.updateResult({ ...result, isError: false }); row.setExpanded(true); row.render(80);
 			assert.deepEqual(result, frozen, "UI does not mutate model result or immutable patch report");
 		}
-		ui.nextAction = (component) => { component.handleInput("\u001b[B"); component.handleInput("\r"); };
-		const answered = await execute(h, "AskUserQuestion", questionArgs);
-		assert.deepEqual(answered.details, { questions: questionArgs.questions,
-			answers: { "Which local database?": "Postgres" }, annotations: { "Which local database?": { preview: "SELECT 1;" } } });
-		assert.equal(answered.content[0].text, 'Your questions have been answered: "Which local database?"="Postgres" selected preview:\nSELECT 1;. You can now continue with these answers in mind.');
-		ui.nextAction = (component) => component.handleInput("\u001b");
-		const cancelled = await execute(h, "AskUserQuestion", questionArgs);
-		assert.deepEqual(cancelled.details, { questions: questionArgs.questions, answers: {}, cancelled: true });
 	} finally { ui.dispose(); }
 }
 
@@ -578,7 +556,6 @@ if (scenario === "filters") {
 				assert.deepEqual((await execute(h, "bg_status", {})).details.tasks, [], "UI-disabled package retains background execution");
 				const patch = await execute(h, "apply_patch", { input: patchInput });
 				assert.equal(patch.details.format, "apply_patch.v1", "UI-disabled package retains file mutation/report contract");
-				assert.equal((await execute(h, "AskUserQuestion", questionArgs)).details.questions.length, 1);
 			} else {
 				mounted = await mount(h);
 				assert.ok(mounted.mounted.has("footer"), "disabling a business entry does not disable UI");
@@ -655,9 +632,9 @@ if (scenario === "filters") {
 		else if (scenario === "add-dir") await addDir(h);
 		else if (scenario === "discovery") {
 			inventory(h, allNames);
-			const searched = await execute(h, "tool_search", { query: "+AskUserQuestion +bg_run" });
-			assert.ok(searched.content[0].text.includes("AskUserQuestion"));
-			for (const name of ["AskUserQuestion", "bg_run"]) assert.ok(h.session.getActiveToolNames().includes(name), "tool_search discovers and activates " + name);
+			const searched = await execute(h, "tool_search", { query: "+bg_logs +bg_run" });
+			assert.ok(searched.content[0].text.includes("bg_logs"));
+			for (const name of ["bg_logs", "bg_run"]) assert.ok(h.session.getActiveToolNames().includes(name), "tool_search discovers and activates " + name);
 		} else assert.fail("Unknown worker scenario " + scenario);
 	} finally { await h.close(); }
 }

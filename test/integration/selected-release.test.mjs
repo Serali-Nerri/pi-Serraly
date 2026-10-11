@@ -44,12 +44,12 @@ test("a subset release declares and ships exactly the selected members", { timeo
 	assert.deepEqual(background.manifest.pi.extensions, ["./extensions/pi-background-shell/dist/extensions/background-tasks.js"]);
 	assert.deepEqual(Object.keys(background.record.packages), ["pi-background-shell"]);
 
-	const pair = await release("questions-subagents", ["pi-ask-user-question", "pi-subagents"]);
+	const pair = await release("loop-subagents", ["pi-loop", "pi-subagents"]);
 	assert.deepEqual(pair.manifest.pi.extensions, [
-		"./extensions/pi-ask-user-question/dist/pi-ask-user-question.js",
+		"./extensions/pi-loop/dist/pi-loop.js",
 		"./extensions/pi-subagents/dist/pi-subagents.js",
 	]);
-	assert.deepEqual(Object.keys(pair.record.packages), ["pi-ask-user-question", "pi-subagents"]);
+	assert.deepEqual(Object.keys(pair.record.packages), ["pi-loop", "pi-subagents"]);
 });
 
 test("context-view can be released alone or together with UI, retaining full tools diagnostics in both loader orders", { timeout: 120000 }, async () => {

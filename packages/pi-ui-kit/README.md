@@ -49,6 +49,6 @@ owning extension. It has no Pi resources and uses no private host API: `ToolCard
 is the public slice of Pi's theme that the card needs, and Pi's `Theme` satisfies it
 structurally.
 
-Consumers: `pi-ui`, `pi-ask-user-question`, `pi-background-shell` (bundled into its
+Consumers: `pi-ui`, `pi-background-shell` (bundled into its
 tsc output as a stateless leaf) and `pi-subagents`. Provenance:
 [UPSTREAM.md](./UPSTREAM.md).

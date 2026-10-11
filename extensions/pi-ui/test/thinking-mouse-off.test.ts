@@ -120,7 +120,7 @@ for (const mode of ["on", "off"] as const) {
 	test(`${mode}: protected dedicated tools preserve native mouse handlers`, async () => {
 		const h = await harness({ mode });
 		try {
-			for (const name of ["AskUserQuestion", "Agent", "StopAgent", "bg_run", "future"]) {
+			for (const name of ["Agent", "StopAgent", "bg_run", "future"]) {
 				h.root.clear();
 				const definition = {
 					name, label: name, description: "Fixture", parameters: {}, renderShell: "self",

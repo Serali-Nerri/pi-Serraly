@@ -75,15 +75,7 @@ export default function (pi) {
 				state.tui = tui; queueMicrotask(() => done(undefined));
 				return { render: () => [], invalidate() {} };
 			});
-			// Mount the module's REAL question component through the host custom UI;
-			// drive Enter on it, never replace the dialog's answer with a mock.
-			const original = ctx.ui.custom;
-			ctx.ui.custom = (factory, options) => original((tui, theme, keys, done) => {
-				const component = factory(tui, theme, keys, done);
-				queueMicrotask(() => component.handleInput?.("\r"));
-				return component;
-			}, options);
-			pi.setActiveTools([...pi.getActiveTools(), "AskUserQuestion", "bg_status"]);
+			pi.setActiveTools([...pi.getActiveTools(), "bg_status"]);
 		}
 		report("session-start", { mode: ctx.mode, uiCalls: state.uiCalls, timers: state.timers });
 	});
@@ -102,13 +94,13 @@ export default function (pi) {
 	pi.on("agent_end", (_event, ctx) => {
 		if (ctx.mode === "tui") {
 			const rows = walk(state.tui).filter((component) => component instanceof ToolExecutionComponent);
-			assert.equal(rows.length, 6, "six genuine agent tool executions created six host-owned rows");
+			assert.equal(rows.length, 5, "five genuine agent tool executions created five host-owned rows");
 			const names = rows.map((row) => row.toolName).sort();
-			assert.deepEqual(names, ["Agent", "AskUserQuestion", "StopAgent", "apply_patch", "bg_status", "read"]);
+			assert.deepEqual(names, ["Agent", "StopAgent", "apply_patch", "bg_status", "read"]);
 			for (const row of rows) {
 				assert.equal(Object.getPrototypeOf(row), state.toolPrototype, "live host ToolExecutionComponent instance identity");
 				for (const width of [40, 80, 120]) for (const line of row.render(width)) assert.ok(visibleWidth(line) <= width);
-				if (["Agent", "StopAgent", "AskUserQuestion", "bg_status"].includes(row.toolName)) {
+				if (["Agent", "StopAgent", "bg_status"].includes(row.toolName)) {
 					assert.equal(row.getCallRenderer(), row.toolDefinition.renderCall, "dedicated call renderer protected: " + row.toolName);
 					assert.equal(row.getResultRenderer(), row.toolDefinition.renderResult, "dedicated result renderer protected: " + row.toolName);
 					assert.notEqual(row[Symbol.for("claude-style-tools.component-tool-render-mode")], true, "no generic group/background takeover");

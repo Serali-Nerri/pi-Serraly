@@ -1,6 +1,6 @@
 # 仓库架构
 
-## 八个维护边界
+## 七个维护边界
 
 根 package 是资源清单和开发工作区，不是总 extension factory。
 每个模块仅注册自己的能力；关闭一个入口不会通过总工厂间接重新启用它。
@@ -9,7 +9,6 @@
 | --- | --- | --- |
 | `context-view` | `/context`、Usage 会话估算、冻结 Initial 注入、工具声明最新单槽观测与诊断、私有预览、显示偏好 | Footer 缓存、业务工具、主动探测、请求内容持久化、最终 wire 审计 |
 | `ui` | 展示生命周期、私有兼容补丁、shell、Markdown、Thinking、文字预览、`/ccstyle` | 上下文 Inspector、业务工具定义、执行和后台进程 |
-| `questions` | `AskUserQuestion` schema、对话框、AFK、答案/results、专用 renderer | UI 总体刷新或其他 overlay |
 | `loop` | `/loop` 解析、内存任务、忙闲调度、`local-loop` | UI scheduler、持久化恢复 |
 | `tools` | `apply_patch` 补丁算法、文件锁、预检、提交、`apply_patch.v1` 报告；`grep`/`find`/`ls` 同名替换的 codemode 注册 | UI 历史 diff 重建 |
 | `background-shell` | 进程/日志、dock、通知、状态、同进程 reload handoff | 跨进程恢复或 UI 工具卡接管 |
@@ -46,10 +45,10 @@ instance 字段布局，实际宿主与人工视觉验收仍必需。同一预�
 ## 源码与运行树
 
 ```text
-extensions/*/         八个 private npm workspace；源码、测试、包文档/许可、dist/
+extensions/*/         七个 private npm workspace；源码、测试、包文档/许可、dist/
 packages/pi-*/        构建期共享库；无 Pi 资源入口
 scripts/              工作区命令、单包构建/封印和 release 组装
-test/integration/     产物、实际 loader、子会话和八入口共存
+test/integration/     产物、实际 loader、子会话和七入口共存
 docs/                 跨模块设计与开发
 ```
 
@@ -95,7 +94,7 @@ dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace
 
 ## 构建闭包
 
-- context-view、UI、questions、loop、tools 是独立 ESM bundle；`diff@8.0.4` 打入补丁
+- context-view、UI、loop、tools 是独立 ESM bundle；`diff@8.0.4` 打入补丁
   bundle 并携带其 BSD 文本。
 - background-shell 用 tsc 编译完整 `extensions/` + `src/`，保留 lazy import；
   根入口只是同目录转发，不另行注册能力。唯一例外是 manifest 声明的
@@ -112,9 +111,9 @@ dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace
   加载失败回退、保存前重读合并、项目层信任状态和 log/throw 语义仍各自保留。
   context-view 也 bundle 该库的 64 KiB 有界读取；验证、默认回退和每次文件修订的警告由查看器拥有，
   显式偏好创建用独占 `wx` 写入而非替换式原子保存。add-dir 继续使用自己的异步锁定 store，不迁移到该库。
-- ui、questions、background-shell 与 subagents 共用 `pi-ui-kit` 的卡语法：`● title
+- ui、background-shell 与 subagents 共用 `pi-ui-kit` 的卡语法：`● title
   summary` 标题行与 `  ⎿ message` 结果状态行只有该库一处定义，运行/成功/失败/取消
-  用语义主题角色和状态文字区分，不集中任何 renderer。ui、questions、subagents
+  用语义主题角色和状态文字区分，不集中任何 renderer。ui、subagents
   直接 bundle 该库；background-shell 的 `src/ui/tool-cards.ts` 是唯一引用 kit 的
   无状态叶（只接收展示输入，不读 registry/config），tsc 之后由共享 builder 按
   manifest 的 `serraly.build.bundles` 把它内联为同一位置的
@@ -161,13 +160,13 @@ Anthropic collapsed 顶层定义与原生增删协议，按 payload 顺序推导
 不持有整份请求历史，不从会话重放或其他 runtime 继承；来源可能包括 warming，不作最终 wire
 或发送/接受声明。具体预览、推导调用资格与支持边界由模块 README 定义。
 
-UI 读取公共工具元数据和已有结果。questions、background-shell、subagents 的
+UI 读取公共工具元数据和已有结果。background-shell、subagents 的
 工具 renderer 及 `subagent-result` 消息 renderer 保持专用展示；第三方
 Agent/StopAgent 的专用 renderer 同样保持优先，不因属于私有包而被接管。
 footer 消费宿主提供的 extension statuses，不清理其他模块的状态键。
 
 后台通知、`.pi/tasks` 元数据和补丁报告由对应能力维护，UI 不改写格式。
-deferred questions/background 工具仍通过内置 `tool_search` 发现；
+deferred background 工具仍通过内置 `tool_search` 发现；
 `defaultTools: ["+tool_search"]` 是用户选择，不由安装脚本隐式重写。
 tools 模块以同名扩展覆盖内置 `grep`/`find`/`ls`，exposure 为 `codemode`：
 默认不直接声明给模型，启用内置 `codemode` 后由脚本调用，显式激活仍然有效。
