@@ -1,6 +1,6 @@
 import { appendFileSync, readFileSync } from "node:fs";
 import { createAssistantMessageEventStream } from "@earendil-works/pi-ai";
-import { patchInput } from "./contracts.mjs";
+import { questionArgs, patchInput } from "./contracts.mjs";
 
 export function report(phase, extra = {}) {
 	appendFileSync(process.env.SERRALY_REPORT, JSON.stringify({ phase, ...extra }) + "\n");
@@ -32,6 +32,7 @@ export function registerScriptedProvider(pi, state) {
 					const results = context.messages.filter((item) => item.role === "toolResult");
 					const plan = config.tui ? [
 						{ name: "read", arguments: { path: "seed.txt" } },
+						{ name: "ask_user_question", arguments: questionArgs },
 						{ name: "bg_status", arguments: {} },
 						{ name: "Agent", arguments: { prompt: "fixture", agent: "no-such-agent" } },
 						{ name: "StopAgent", arguments: { agent_id: "missing" } },

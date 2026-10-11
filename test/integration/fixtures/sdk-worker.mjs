@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { toolsByName, commandsByName, patchInput } from "./contracts.mjs";
+import { toolsByName, commandsByName, questionArgs, patchInput } from "./contracts.mjs";
 
 const host = process.argv[2], scenario = process.argv[3];
 const SDK = await import(pathToFileURL(join(host, "dist/index.js")).href);
@@ -126,11 +126,12 @@ function inventory(h, names) {
 	assert.ok(active.includes("tool_search"), "builtin discovery remains enabled by +tool_search");
 	for (const name of ["read", "bash", "edit", "write"]) assert.ok(active.includes(name), "+tool_search retains default built-ins");
 	const exposures = { apply_patch: "direct", grep: "codemode", find: "codemode", ls: "codemode",
-		Agent: "direct", StopAgent: "direct", AgentStatus: "direct" };
+		Agent: "direct", StopAgent: "direct", AgentStatus: "direct", ask_user_question: "model-only" };
 	for (const tool of h.session.getAllTools().filter((tool) => expectedTools.includes(tool.name))) {
 		const exposure = exposures[tool.name] ?? "deferred";
 		assert.equal(tool.exposure, exposure);
-		assert.equal(active.includes(tool.name), exposure === "direct", "only direct tools are initially active");
+		assert.equal(active.includes(tool.name), exposure === "direct" || exposure === "model-only",
+			"direct and model-only tools are initially active");
 	}
 	const subagents = extensions.find((extension) => extension.path.endsWith("/pi-subagents/dist/pi-subagents.js"));
 	assert.equal(extensions.filter((extension) => extension.messageRenderers.has("subagent-result")).length, subagents ? 1 : 0,
@@ -221,8 +222,27 @@ async function contracts(h) {
 	assert.match(listingText, /codemode-listing\.txt/);
 	assert.match(listingText, /codemode-listing\.txt:1: codemode listing marker/);
 	assert.match(listingText, /"find":"find"/);
+	const ask = h.session.getToolDefinition("ask_user_question");
+	assert.equal(ask.exposure, "model-only");
+	assert.equal(ask.executionMode, "sequential");
+	assert.equal(ask.promptSnippet, undefined);
+	assert.equal(ask.promptGuidelines, undefined);
+	assert.deepEqual(ask.parameters.required, ["questions"]);
+	assert.equal(ask.parameters.properties.questions.minItems, 1);
+	assert.equal(ask.parameters.properties.questions.maxItems, 4);
+	assert.deepEqual(ask.parameters.properties.questions.items.required, ["question", "header", "options"]);
+	assert.equal(ask.parameters.properties.questions.items.properties.header.maxLength, 16);
+	assert.equal(ask.parameters.properties.questions.items.properties.options.minItems, 2);
+	assert.equal(ask.parameters.properties.questions.items.properties.options.maxItems, 4);
+	assert.equal(ask.parameters.properties.questions.items.properties.options.items.properties.label.maxLength, 60);
+	const noUi = await execute(h, "ask_user_question", questionArgs);
+	assert.deepEqual(noUi.details, { answers: [], cancelled: true, error: "no_ui" });
 	const ui = await mount(h);
 	try {
+		const tooFew = await execute(h, "ask_user_question", {
+			questions: [{ ...questionArgs.questions[0], options: [questionArgs.questions[0].options[0]] }],
+		});
+		assert.equal(tooFew.details.error, "empty_options");
 		const ctx = h.session.extensionRunner.createCommandContext();
 		for (const mode of ["compact", "off", "on"]) {
 			await command(h, "ccstyle").handler(mode, ctx);
@@ -243,6 +263,18 @@ async function contracts(h) {
 			row.updateResult({ ...result, isError: false }); row.setExpanded(true); row.render(80);
 			assert.deepEqual(result, frozen, "UI does not mutate model result or immutable patch report");
 		}
+		// Drive the real compiled dialog through the host custom UI: Enter picks the
+		// first option, Escape abandons the questionnaire.
+		ui.nextAction = (component) => component.handleInput("\r");
+		const answered = await execute(h, "ask_user_question", questionArgs);
+		assert.deepEqual(answered.details, {
+			answers: [{ questionIndex: 0, question: "Which local database?", kind: "option", answer: "SQLite" }], cancelled: false,
+		});
+		assert.equal(answered.content[0].text,
+			'User has answered your questions: "Which local database?"="SQLite". You can now continue with the user\'s answers in mind.');
+		ui.nextAction = (component) => component.handleInput("\u001b");
+		const declined = await execute(h, "ask_user_question", questionArgs);
+		assert.deepEqual(declined.details, { answers: [], cancelled: true });
 	} finally { ui.dispose(); }
 }
 
@@ -334,6 +366,12 @@ async function mount(h) {
 	const mounted = new Map(), statuses = new Map(), interactions = [];
 	const editor = new TUI.Input(); tui.setFocus(editor);
 	const state = { tui, editor, mounted, statuses, interactions, nextAction: undefined, dispose() { for (const component of mounted.values()) component.dispose?.(); } };
+	const keybindings = { matches: (data, name) => TUI.matchesKey(data, {
+		"tui.select.confirm": "enter", "tui.input.submit": "enter", "tui.select.cancel": "escape",
+		"tui.select.up": "up", "tui.select.down": "down", "tui.input.newLine": "shift+enter",
+		"tui.editor.cursorUp": "up", "tui.editor.cursorDown": "down",
+		"tui.editor.deleteToLineStart": "ctrl+u", "app.editor.external": "ctrl+g",
+	}[name] ?? name) };
 	const ui = { ...h.session.extensionRunner.getUIContext(), theme,
 		getToolsExpanded: () => false, getThinkingVisible: () => false, getEditorText: () => "", setEditorText() {},
 		onTerminalInput: () => () => {}, requestRender() {}, setTitle() {}, notify() {},
@@ -350,7 +388,7 @@ async function mount(h) {
 			return new Promise((resolve) => {
 				let component, handle;
 				const done = (value) => { if (handle) handle.hide(); else tui.setFocus(editor); component?.dispose?.(); resolve(value); };
-				component = factory(tui, theme, {}, done);
+				component = factory(tui, theme, keybindings, done);
 				if (options.overlay) handle = tui.showOverlay(component, options.overlayOptions);
 				else tui.setFocus(component);
 				interactions.push({ component, options, handle });

@@ -9,6 +9,7 @@
 | [`pi-ui`](extensions/pi-ui/README.md) | minuque/pi-cc-extensions、tifandotme/pi-extensions、OldSuns/pi-open-tui、MarkedJS | 见下 | MIT（按来源分别保留） |
 | [`pi-background-shell`](extensions/pi-background-shell/README.md) | [ismailsaleekh/pi-background-tasks](https://github.com/ismailsaleekh/pi-background-tasks) | `471f1dcae7ff13d8f989e4c056bdff1e6b01f1ef`；npm `pi-background-tasks@2.6.8` | ISC |
 | [`pi-add-dir`](extensions/pi-add-dir/README.md) | [HenryQW/pi-harness](https://github.com/HenryQW/pi-harness) | `4d9ed14b8016abcecb3d97af8c28ca37a3ca265f` | MIT |
+| [`pi-ask-user-question`](extensions/pi-ask-user-question/README.md) | [juicesharp/rpiv-mono](https://github.com/juicesharp/rpiv-mono) | 2.12.0，`68d9a0014b70006d7b04b57933752338a2716db7`（`packages/rpiv-ask-user-question`） | MIT / juicesharp |
 | [`pi-subagents`](extensions/pi-subagents/README.md) | [AlexParamonov/pi-subagents-lite](https://github.com/AlexParamonov/pi-subagents-lite) | v1.15.1，`0a9ad2f14562daeec2b5d815fbdf42695f2e7f11` | MIT |
 
 模块内记录（含完整变更清单与固定来源）：
@@ -17,6 +18,7 @@
 - `pi-ui`：[licenses/README.md](extensions/pi-ui/licenses/README.md)
 - `pi-background-shell`：[UPSTREAM.md](extensions/pi-background-shell/UPSTREAM.md)
 - `pi-add-dir`：[UPSTREAM.md](extensions/pi-add-dir/UPSTREAM.md)
+- `pi-ask-user-question`：[UPSTREAM.md](extensions/pi-ask-user-question/UPSTREAM.md)
 - `pi-subagents`：[UPSTREAM.md](extensions/pi-subagents/UPSTREAM.md)
 
 ## pi-ui

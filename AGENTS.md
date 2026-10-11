@@ -19,13 +19,14 @@ Each change follows this order:
 
 ## Project Structure & Module Organization
 
-`pi-Serraly` is a private npm workspace with seven independent Pi extensions. Target Node ≥22.19 and Pi 1.1.0.
+`pi-Serraly` is a private npm workspace with eight independent Pi extensions. Target Node ≥22.19 and Pi 1.1.0.
 
 ```text
 .
 ├── extensions/
 │   ├── context-view/          # src/, test/, dist/ (built)
 │   ├── pi-ui/                 # src/, test/, dist/ (built)
+│   ├── pi-ask-user-question/  # src/, test/
 │   ├── pi-loop/               # src/, test/
 │   ├── pi-tools/              # src/, test/fixtures/
 │   ├── pi-background-shell/   # src/, extensions/, tests/, scripts/
@@ -64,7 +65,7 @@ See `docs/development.md` for release preparation and additional commands.
 
 ## Coding Style & Naming Conventions
 
-Use strict TypeScript and ESM. Preserve local formatting: tabs in UI/loop/tools; two spaces in background-shell/subagents. Retain neighboring quote styles and import extensions. Use camelCase functions/variables, PascalCase types/classes, and descriptive kebab-case filenames.
+Use strict TypeScript and ESM. Preserve local formatting: tabs in UI/questions/loop/tools; two spaces in background-shell/subagents. Retain neighboring quote styles and import extensions. Use camelCase functions/variables, PascalCase types/classes, and descriptive kebab-case filenames.
 
 ## Testing Guidelines
 

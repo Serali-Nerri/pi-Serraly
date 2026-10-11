@@ -58,11 +58,12 @@ export default function (pi) {
 		assert.deepEqual(ours.map((tool) => tool.name).sort(), Object.values(toolsByName).flat().sort());
 		assert.ok(pi.getActiveTools().includes("tool_search"));
 		const exposures = { apply_patch: "direct", grep: "codemode", find: "codemode", ls: "codemode",
-			Agent: "direct", StopAgent: "direct", AgentStatus: "direct" };
+			Agent: "direct", StopAgent: "direct", AgentStatus: "direct", ask_user_question: "model-only" };
 		for (const tool of ours) {
 			const exposure = exposures[tool.name] ?? "deferred";
 			assert.equal(tool.exposure, exposure);
-			assert.equal(pi.getActiveTools().includes(tool.name), exposure === "direct", "only direct tools are initially active");
+			assert.equal(pi.getActiveTools().includes(tool.name), exposure === "direct" || exposure === "model-only",
+				"direct and model-only tools are initially active");
 		}
 		if (ctx.mode !== "tui") {
 			state.unpatched(); assert.equal(state.timers, 0); assert.deepEqual(state.uiCalls, []);
@@ -75,6 +76,14 @@ export default function (pi) {
 				state.tui = tui; queueMicrotask(() => done(undefined));
 				return { render: () => [], invalidate() {} };
 			});
+			// Mount the module's REAL question dialog through the host custom UI;
+			// drive Enter on it, never replace the dialog's answer with a mock.
+			const original = ctx.ui.custom;
+			ctx.ui.custom = (factory, options) => original((tui, theme, keys, done) => {
+				const component = factory(tui, theme, keys, done);
+				queueMicrotask(() => component.handleInput?.("\r"));
+				return component;
+			}, options);
 			pi.setActiveTools([...pi.getActiveTools(), "bg_status"]);
 		}
 		report("session-start", { mode: ctx.mode, uiCalls: state.uiCalls, timers: state.timers });
@@ -94,9 +103,9 @@ export default function (pi) {
 	pi.on("agent_end", (_event, ctx) => {
 		if (ctx.mode === "tui") {
 			const rows = walk(state.tui).filter((component) => component instanceof ToolExecutionComponent);
-			assert.equal(rows.length, 5, "five genuine agent tool executions created five host-owned rows");
+			assert.equal(rows.length, 6, "six genuine agent tool executions created six host-owned rows");
 			const names = rows.map((row) => row.toolName).sort();
-			assert.deepEqual(names, ["Agent", "StopAgent", "apply_patch", "bg_status", "read"]);
+			assert.deepEqual(names, ["Agent", "StopAgent", "apply_patch", "ask_user_question", "bg_status", "read"]);
 			for (const row of rows) {
 				assert.equal(Object.getPrototypeOf(row), state.toolPrototype, "live host ToolExecutionComponent instance identity");
 				for (const width of [40, 80, 120]) for (const line of row.render(width)) assert.ok(visibleWidth(line) <= width);
