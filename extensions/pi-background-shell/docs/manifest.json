@@ -417,7 +417,7 @@
     },
     {
       "path": "docs/getting-started.md",
-      "sha256": "ff8886fc551faff4833d69a10dc7412e654472deac92b74c90312739c211b36c"
+      "sha256": "e01c437a02ef063efb3408bf1680f646a3f0882e01a037d05f13a453621d3e7b"
     },
     {
       "path": "docs/operations/configuration.md",
@@ -445,7 +445,7 @@
     },
     {
       "path": "TESTING.md",
-      "sha256": "437f74f308cc4c3d982cb2998446681c70c0dbf2db2734cc2b748e206e062268"
+      "sha256": "764ad81982aa8209b78641fa252af0a465f86e14f865783d25073e2a2ba14807"
     },
     {
       "path": "UPSTREAM.md",

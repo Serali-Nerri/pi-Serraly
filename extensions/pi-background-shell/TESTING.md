@@ -28,7 +28,7 @@ npm run test:sdk --workspace pi-background-shell
 ```
 
 Other focused scripts are `typecheck`, `test:type-safety`, `test:unit`, `test:rpc`,
-`test:component`, `test:package`, `test:agent-loop`, `test:pty`, `test:docs` and
+`test:component`, `test:package`, `test:agent-loop`, `test:docs` and
 `smoke`. `pack:check` and `payload:check` inspect existing artifacts. Run
 `docs:generate` after reviewing governed source/prose changes and `docs:verify` to
 check freshness. These are alternatives by scope, not a checklist to execute in full.
@@ -36,7 +36,7 @@ check freshness. These are alternatives by scope, not a checklist to execute in 
 `check` runs static TypeScript and docs verification only. `npm test --workspace
 pi-background-shell` runs the unit/SDK/RPC/component/package suites; type-safety is
 covered by the package suite and remains available as `test:type-safety` for focused
-debugging. `test:full` also runs PTY and scripted-provider tests. Module `verify`
+debugging. `test:full` also runs scripted-provider tests. Module `verify`
 builds once, then runs `check`, `test:full` and CLI smoke; the build already validates
 the sealed artifact and payload. Module-only commands do not replace root
 verification and release integration.
@@ -122,8 +122,8 @@ certify visual appearance, focus, mouse behavior or resize restoration in a real
 
 ## Platform and acceptance limits
 
-PTY tests require `/usr/bin/expect` and deliverable raw-mode stdin; missing support
-produces an explicit skip reason. Component/SDK/RPC suites remain required.
+Component/SDK/RPC suites remain required. Interactive dock behavior has no
+automated PTY suite; the manual checks above own that coverage.
 Run `npm run test:windows --workspace pi-background-shell` on Windows for native
 quoting/tree/durability qualification; that script intentionally refuses Linux.
 Linux mocks do not establish native Windows behavior or reload continuity.
