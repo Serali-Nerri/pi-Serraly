@@ -1,17 +1,89 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { UserMessageComponent } from "@earendil-works/pi-coding-agent";
+import { AssistantMessageComponent, UserMessageComponent, type ExtensionContext } from "@earendil-works/pi-coding-agent";
+// Pinned host helper: component factories keep this reference across renderer replacement.
+import { createInteractiveTuiReference } from "../../../node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/tui-renderer.js";
 import { HStack, MouseRegion, ScrollView, Text, TuiAltScreen, VStack, setCapabilityOverrides, sliceByColumn, visibleWidth } from "@earendil-works/pi-tui";
 import { setToolMouseTui } from "../src/overlays/mouse-state.ts";
 import { harness, strip } from "./harness.ts";
 
 const work = () => new Text(Array.from({ length: 12 }, (_, i) => `Work output ${i}`).join("\n"), 0, 0);
+const assistant = () => new AssistantMessageComponent({
+	role: "assistant", content: [{ type: "text", text: Array.from({ length: 12 }, (_, i) => `Assistant output ${i}`).join("\n") }],
+	api: "openai-responses", provider: "fixture", model: "fixture", stopReason: "stop", timestamp: 0,
+	usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0,
+		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+});
 
-test("fullscreen pins the first body line by viewed history, replacing it only after the next instruction crosses the top", async () => {
+test("sticky jumps follow the interactive host's forwarding reference without granting an inactive renderer ownership", async () => {
+	const h = await harness({ rows: 8 });
+	let renderer = h.tui;
+	const reference = createInteractiveTuiReference(() => renderer);
+	const ui: ExtensionContext["ui"] = h.ctx.ui;
+	const setWidget = ui.setWidget.bind(ui);
+	const setFooter = ui.setFooter.bind(ui);
+	ui.setWidget = (key, factory, options) => typeof factory === "function"
+		? setWidget(key, (_tui, theme) => factory(reference, theme), options)
+		: setWidget(key, factory, options);
+	ui.setFooter = (factory) => setFooter(factory && ((_tui, theme, data) => factory(reference, theme, data)));
+	const replacement = new TuiAltScreen(h.terminal as any) as any;
+	replacement.requestRender = () => {};
+	replacement.stopped = false;
+	replacement.altScreenActive = true;
+	const renderReplacement = () => {
+		for (const widget of h.widgets.values()) widget.render(h.terminal.columns);
+		replacement.doRender();
+		return replacement.getScreenLines().map(strip) as string[];
+	};
+	const replacementPointer = (release = false) => replacement.handleViewportInput(`\x1b[<0;3;1${release ? "m" : "M"}`);
+	try {
+		// Re-enter the public lifecycle with the reference passed by InteractiveMode,
+		// not the raw renderer supplied by the general fixture's UI factories.
+		await h.emit("session_start");
+		h.root.addChild(new UserMessageComponent("Forwarded instruction\nOriginal second line"));
+		h.root.addChild(work());
+		const scroll = new ScrollView(h.root, { primary: true });
+		h.tui.setLayoutRoot(scroll);
+		h.render();
+		h.tui.scrollToTop();
+		h.tui.scrollBy(5);
+		assert.equal(h.render()[0]!.trim(), "Forwarded instruction");
+		h.click(2, 0);
+		assert.equal(h.tui.viewportTop, 0, "native pointer input jumps through the forwarding reference");
+		assert.equal(h.render()[2]!.trim(), "Original second line");
+
+		h.tui.scrollBy(5);
+		h.render();
+		h.pointer(2, 0);
+		// Native mode replacement reuses the transcript layout and its ScrollView.
+		// Even shared scroll identity must not let the old renderer own new frames.
+		replacement.setLayoutRoot(scroll);
+		renderer = replacement;
+		h.pointer(2, 0, "release");
+		assert.equal(scroll.scrollTop, 5, "a press captured by the previous renderer cannot jump after replacement");
+		assert.equal(renderReplacement()[0]!.trim(), "Forwarded instruction");
+		h.click(2, 0);
+		assert.equal(scroll.scrollTop, 5, "inactive native pointer input cannot acquire the active sticky target");
+		assert.doesNotMatch(h.render()[0]!, /Forwarded instruction/, "an inactive renderer paints only its native frame");
+		replacementPointer();
+		assert.equal(renderReplacement()[0]!.trim(), "Forwarded instruction");
+		h.render();
+		replacementPointer(true);
+		assert.equal(replacement.viewportTop, 0, "an old renderer's repaint cannot erase the active sticky press");
+		assert.equal(renderReplacement()[2]!.trim(), "Original second line");
+	} finally {
+		await h.close();
+		replacement.stopSelectionAutoScroll();
+		replacement.stopScrollbarHover();
+		replacement.stopScrollbarDrag();
+	}
+});
+
+test("fullscreen pins only user instructions by viewed history, replacing them after the next body crosses the top", async () => {
 	const h = await harness({ rows: 8 });
 	try {
 		h.root.addChild(new UserMessageComponent("First instruction\nSecond body line"));
-		h.root.addChild(work());
+		h.root.addChild(assistant());
 		h.root.addChild(new UserMessageComponent("Next instruction"));
 		h.root.addChild(work());
 		h.render();
@@ -22,12 +94,43 @@ test("fullscreen pins the first body line by viewed history, replacing it only a
 		h.tui.scrollBy(1);
 		assert.equal(h.render()[0]!.trim(), "First instruction", "the body is now above the viewport");
 		assert.doesNotMatch(h.render()[0]!, /Second body line/);
-		h.tui.scrollBy(14);
+		h.tui.scrollBy(4);
+		assert.equal(h.render()[0]!.trim(), "First instruction", "native assistant prompt zones are not user instructions");
+		h.click(2, 0);
+		assert.equal(h.tui.viewportTop, 0, "the instruction still jumps to its original user row, not the assistant");
+		h.tui.scrollBy(17);
 		assert.equal(h.render()[0]!.trim(), "First instruction", "the next instruction has not crossed yet");
-		h.tui.scrollBy(2);
+		h.tui.scrollBy(1);
+		assert.equal(h.render()[0]!.trim(), "First instruction", "a later body at the viewport top is not above it yet");
+		h.tui.scrollBy(1);
 		assert.equal(h.render()[0]!.trim(), "Next instruction");
-		h.tui.scrollBy(-16);
+		h.click(2, 0);
+		assert.equal(h.tui.viewportTop, 17, "the next instruction jumps to its own leading spacer");
+		h.tui.scrollBy(-15);
 		assert.equal(h.render()[0]!.trim(), "First instruction", "viewing history does not retain the newest prompt");
+	} finally { await h.close(); }
+});
+
+test("native nested message offsets determine the jump row, and an empty user cannot replace an instruction", async () => {
+	const h = await harness({ rows: 8, columns: 40 });
+	try {
+		const scroll = new ScrollView(new VStack([
+			new Text("pre\npre", 0, 0),
+			new HStack([
+				{ component: new Text("side\nside\nside\nside\nside", 0, 0), basis: 6, shrink: 0 },
+				{ component: new UserMessageComponent("Offset instruction", undefined, 0), grow: 1 },
+			], { align: "end" }),
+			assistant(),
+			new UserMessageComponent(""),
+			work(),
+		]), { primary: true });
+		h.tui.setLayoutRoot(scroll);
+		h.render();
+		scroll.scrollTo(22);
+		assert.equal(h.render()[0]!.trim(), "Offset instruction", "assistant and empty user rows do not replace the actual instruction");
+		h.click(2, 0);
+		assert.equal(scroll.scrollTop, 4, "the prompt starts below both the outer prefix and the HStack alignment offset");
+		assert.match(h.render()[1]!, /Offset instruction/, "jumping reveals the original native body after its spacer");
 	} finally { await h.close(); }
 });
 

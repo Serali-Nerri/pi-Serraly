@@ -1,5 +1,5 @@
-import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { TuiAltScreen, compositeTuiLine, sliceByColumn, stripTerminalSequences, visibleWidth, type Component, type ScrollView, type TuiMouseEvent } from "@earendil-works/pi-tui";
+import { UserMessageComponent, type ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { Container, TuiAltScreen, compositeTuiLine, sliceByColumn, stripTerminalSequences, visibleWidth, type Component, type ScrollView, type TuiMouseEvent } from "@earendil-works/pi-tui";
 import type { LayoutBox, LayoutFrame } from "@earendil-works/pi-tui/dist/layout.js";
 import { config } from "../config/config.ts";
 import { getToolMouseTui } from "../overlays/mouse-state.ts";
@@ -8,10 +8,10 @@ import { installMethodStep } from "./method-pipeline.ts";
 import { clearToolMouseHover } from "./mouse/interaction.ts";
 import { patchRegistry, STICKY_USER_MESSAGE_OWNER } from "./patch-keys.ts";
 
-// Pi already marks user-message zones for prompt navigation. Consume those native
-// zones from the layout's unpainted transcript; never decorate saved components.
-const PROMPT_START = /^\x1b\]133;A(?:\x07|\x1b\\)/;
-const PROMPT_END = /^\x1b\]133;[BC](?:\x07|\x1b\\)/;
+// Pinned native Container.render cache: ordinary transcript Containers are opaque
+// LayoutBox leaves. Their captured child heights preserve message provenance without
+// re-rendering components or decorating saved/rendered text with extra markers.
+type NativeContainerLayout = { width: number; children: Array<{ component: Component; height: number }> };
 
 function scrollViewBox(box: LayoutBox, scrollView: ScrollView): LayoutBox | undefined {
 	if (box.scrollView === scrollView) return box;
@@ -22,20 +22,43 @@ function scrollViewBox(box: LayoutBox, scrollView: ScrollView): LayoutBox | unde
 	return undefined;
 }
 
-function instructionAbove(lines: readonly string[], top: number): { text: string; sourceRow: number } | undefined {
-	let inPrompt = false;
-	let sourceRow = 0;
+function instructionAbove(box: LayoutBox, scrollView: ScrollView, top: number, tui: TuiAltScreen): { text: string; sourceRow: number } | undefined {
 	let selected: { text: string; sourceRow: number } | undefined;
-	for (let row = 0; row < lines.length && row < top; row++) {
-		const line = lines[row]!;
-		if (PROMPT_START.test(line)) { inPrompt = true; sourceRow = row; }
-		else if (PROMPT_END.test(line)) inPrompt = false;
-		if (!inPrompt) continue;
-		const text = stripTerminalSequences(line).trim();
-		if (!text) continue;
-		selected = { text, sourceRow };
-		inPrompt = false;
+	const nativeTui = tui as unknown as { implicitDocument: Component; mouseLayout?: NativeContainerLayout };
+	function visitComponent(component: Component, lines: readonly string[], sourceRow: number, width: number) {
+		if (sourceRow >= top) return;
+		// Assistant messages emit the same OSC133 zones. Only actual native user
+		// components can supply an instruction, including the spacer's jump row.
+		if (component instanceof UserMessageComponent) {
+			for (let row = 0; row < lines.length && sourceRow + row < top; row++) {
+				const text = stripTerminalSequences(lines[row]!).trim();
+				if (!text) continue;
+				if (!selected || sourceRow >= selected.sourceRow) selected = { text, sourceRow };
+				break;
+			}
+			return;
+		}
+		const container = component === nativeTui.implicitDocument ? tui : component;
+		if (!(container instanceof Container) || (container !== tui && container.render !== Container.prototype.render)) return;
+		const native = (container as unknown as { mouseLayout?: NativeContainerLayout }).mouseLayout;
+		if (native?.width !== width) return;
+		let offset = 0;
+		for (const child of native.children) {
+			visitComponent(child.component, lines.slice(offset, offset + child.height), sourceRow + offset, width);
+			offset += child.height;
+		}
 	}
+	function visitBox(child: LayoutBox) {
+		if (child.scrollView) return; // Nested scroll content has its own row coordinates.
+		if (child.children.length) {
+			for (const nested of child.children) visitBox(nested);
+			return;
+		}
+		const sourceRow = child.rect.y - box.rect.y + scrollView.scrollTop;
+		const offset = child.lineOffset ?? 0;
+		visitComponent(child.component, (child.lines ?? []).slice(offset, offset + child.rect.height), sourceRow, child.rect.width);
+	}
+	for (const child of box.children) visitBox(child);
 	return selected;
 }
 
@@ -52,6 +75,13 @@ export function installStickyUserMessage(ctx: ExtensionContext) {
 	type Hit = { tui: any; layout: LayoutFrame; scrollView: ScrollView; top: number; row: number; x: number; right: number; sourceRow: number; text: string };
 	let frame: Hit | undefined;
 	let gesture: Hit | undefined;
+	function isCurrentRenderer(tui: any): boolean {
+		const current = getToolMouseTui();
+		// Component factories receive a stable forwarding reference, not this
+		// renderer. Layout identity also separates renderers sharing a ScrollView.
+		return current?.mode === "fullscreen" && current.currentLayout === tui.currentLayout &&
+			current.getPrimaryScrollView?.() === tui.getPrimaryScrollView();
+	}
 	function sameTarget(previous: Hit | undefined, current: Hit): boolean {
 		return !!previous && previous.tui === current.tui && previous.scrollView === current.scrollView &&
 			previous.layout.root.component === current.layout.root.component &&
@@ -61,7 +91,7 @@ export function installStickyUserMessage(ctx: ExtensionContext) {
 	}
 	function valid(hit: Hit | undefined, event: TuiMouseEvent): hit is Hit {
 		return !!hit && active && patchRegistry.owns(ownerKey, owner) && frame === hit &&
-			hit.tui === getToolMouseTui() && hit.tui.currentLayout === hit.layout &&
+			isCurrentRenderer(hit.tui) && hit.tui.currentLayout === hit.layout &&
 			config.mode !== "off" && config.stickyUserMessage && hit.scrollView.scrollTop === hit.top &&
 			hit.layout.width === hit.tui.terminal.columns && hit.layout.height === hit.tui.terminal.rows &&
 			event.screenY === hit.row && event.screenX >= hit.x && event.screenX < hit.right;
@@ -108,7 +138,7 @@ export function installStickyUserMessage(ctx: ExtensionContext) {
 			this: any, screen: string[], layout: LayoutFrame, width: number,
 		) {
 			const result = next.call(this, screen, layout, width) as string[];
-			if (!active || !patchRegistry.owns(ownerKey, owner) || this !== getToolMouseTui()) return result;
+			if (!active || !patchRegistry.owns(ownerKey, owner) || !isCurrentRenderer(this)) return result;
 			const pressed = gesture;
 			gesture = undefined;
 			frame = undefined;
@@ -122,7 +152,7 @@ export function installStickyUserMessage(ctx: ExtensionContext) {
 			// decorations share the only row, retain its visible native target.
 			if (this.scrollToEndIndicatorRect?.row === row) return result;
 			const top = scrollView.scrollTop + row - box.rect.y;
-			const instruction = instructionAbove(box.scrollContentLines, top);
+			const instruction = instructionAbove(box, scrollView, top, this);
 			if (!instruction) return result;
 			const x = Math.max(0, box.clip.x);
 			let right = Math.min(width, box.clip.x + box.clip.width);

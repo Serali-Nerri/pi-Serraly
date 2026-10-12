@@ -77,6 +77,8 @@ function expand(card: any): void {
 	walkComponentTree(getToolMouseTui(), (other) => {
 		if (other === card || !other.expanded || typeof other.setExpanded !== "function") return;
 		if (other === card[COMPACT_ROUND_PARENT]) return;
+		if (card[COMPACT_ROUND_PARENT] && other[COMPACT_ROUND_PARENT] === card[COMPACT_ROUND_PARENT] &&
+			isCompactAssistantComponent(other)) return;
 		// A nested action can close other cards, never the card containing it.
 		if (containsCard(other, card)) return;
 		if ((other instanceof ToolExecutionComponent && resolveRendererPolicy(other).managed) || other instanceof ToolGroupComponent ||

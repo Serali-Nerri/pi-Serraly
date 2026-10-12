@@ -17,7 +17,7 @@ import {
 	ToolExecutionComponent,
 	type Theme,
 } from "@earendil-works/pi-coding-agent";
-import { Container, MouseRegion, truncateToWidth, visibleWidth, Spacer, type TuiMouseEvent } from "@earendil-works/pi-tui";
+import { Container, MouseRegion, Spacer, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { config } from "../config/config.ts";
 import { getUiScheduler } from "../scheduler.ts";
 import { resolveRendererPolicy } from "./policy.ts";
@@ -29,8 +29,8 @@ import { getMessageDisplayTheme } from "./message-display.ts";
 import { getToolMouseTui } from "../overlays/mouse-state.ts";
 import { showMoreHintText } from "../transcript/tool/show-more-hint.ts";
 import { scheduleAnimation } from "../transcript/tool/result.ts";
-import { paddedBackgroundRow } from "./grouping.ts";
-import { hasVisibleText, stripBackgroundAnsi } from "../utils/ansi-text.ts";
+import { ThinkingPreviewBlock } from "../transcript/thinking.ts";
+import { stripBackgroundAnsi } from "../utils/ansi-text.ts";
 import { walkComponentTree } from "./component-tree.ts";
 import {
 	ASSISTANT_REENTRY_KEY,
@@ -52,6 +52,8 @@ export type CompactThinkingQuery = {
 
 export const COMPACT_ROUND_PARENT = Symbol.for("claude-style-tools.compact-round-parent");
 export const COMPACT_LOCAL_EXPANSION = Symbol.for("claude-style-tools.compact-local-expansion");
+/** 卡片已放进所属消息的内容槽，独立槽位不再重复渲染。 */
+export const COMPACT_EMBEDDED = Symbol.for("claude-style-tools.compact-embedded");
 
 type CompactThinkingTheme = Pick<Theme, "fg" | "italic" | "bold">;
 
@@ -222,198 +224,16 @@ function themeOf(): any {
 	return getMessageDisplayTheme() ?? fallbackTheme();
 }
 
-/** RGB → HSL（h∈[0,1), l/s∈[0,1]）。 */
-function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
-	r /= 255;
-	g /= 255;
-	b /= 255;
-	const max = Math.max(r, g, b);
-	const min = Math.min(r, g, b);
-	const l = (max + min) / 2;
-	if (max === min) return [0, 0, l];
-	const d = max - min;
-	const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-	let h: number;
-	switch (max) {
-		case r:
-			h = (g - b) / d + (g < b ? 6 : 0);
-			break;
-		case g:
-			h = (b - r) / d + 2;
-			break;
-		default:
-			h = (r - g) / d + 4;
-	}
-	return [h / 6, l, s];
-}
-
-/** HSL → RGB（h∈[0,1)，l/s∈[0,1]）。 */
-function hslToRgb(h: number, l: number, s: number): [number, number, number] {
-	if (s === 0) {
-		const v = Math.round(l * 255);
-		return [v, v, v];
-	}
-	const hue2rgb = (p: number, q: number, t: number): number => {
-		if (t < 0) t += 1;
-		if (t > 1) t -= 1;
-		if (t < 1 / 6) return p + (q - p) * 6 * t;
-		if (t < 1 / 2) return q;
-		if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-		return p;
-	};
-	const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-	const p = 2 * l - q;
-	return [
-		Math.round(hue2rgb(p, q, h + 1 / 3) * 255),
-		Math.round(hue2rgb(p, q, h) * 255),
-		Math.round(hue2rgb(p, q, h - 1 / 3) * 255),
-	];
-}
-
-/** 内部 tool call card 背景：在所选语义背景基础上按 HSL 变暗（l×0.7），
- *  与外卡片形成嵌套层次；非 RGB 色或已足够暗时原样返回。 */
-function darkenBgAnsi(theme: any, slot: string): string {
-	const prefix = typeof theme?.getBgAnsi === "function" ? String(theme.getBgAnsi(slot)) : "";
-	const m = prefix.match(/48;2;(\d+);(\d+);(\d+)/);
-	if (!m) return prefix;
-	const [h, l, s] = rgbToHsl(Number(m[1]), Number(m[2]), Number(m[3]));
-	if (l <= 0.05) return prefix; // 已足够暗，不再变暗
-	const [r, g, b] = hslToRgb(h, l * 0.7, s);
-	return `\x1b[48;2;${r};${g};${b}m`;
-}
-
-/** 工具卡深色行：左右内缩（左 2 右 3 格，含工具卡自身 padding），背景只到内容区，
- *  修复行尾 reset 截断。 */
-function toolCardBgRow(
-	theme: any,
-	slot: string,
-	bgAnsi: string,
-	line: string,
-	width: number,
-): string {
-	const leftInset = 2;
-	const rightInset = 3;
-	const contentWidth = Math.max(0, width - leftInset - rightInset);
-	// 深色块内左右各 1 格内部 padding；去掉行首原有空格后重新对齐
-	const text = stripBackgroundAnsi(line).replace(/^ +/, "");
-	const innerPad = 2;
-	const clipped = truncateToWidth(text, Math.max(0, contentWidth - innerPad), "");
-	const pad = Math.max(0, contentWidth - innerPad - visibleWidth(clipped));
-	const body = ` ${clipped}${" ".repeat(pad)} `;
-	const stable = body.replace(/\x1b\[(?:0)?m/g, (reset) => reset + bgAnsi);
-	const outerBg = typeof theme?.getBgAnsi === "function" ? String(theme.getBgAnsi(slot)) : "";
-	const inset = (n: number) => (outerBg ? `${outerBg}${" ".repeat(n)}\x1b[49m` : " ".repeat(n));
-	return `${inset(leftInset)}${bgAnsi}${stable}\x1b[49m${inset(rightInset)}`;
-}
-
-/** compact 展开卡：外卡片保持所选语义背景原色；内部 tool call card
- *  背景更深一层且只覆盖内容区（左右内缩、上下限首尾文本行），形成嵌套层次。
- *  hits：非工具子卡（thinking）的行区间，供展开后点击 hint。 */
-function layoutExpandedToolCard(
-	theme: any,
-	children: any[],
-	width: number,
-): { lines: string[]; hits: Array<{ child: any; start: number; end: number; sourceRow: number; inset: number }> } {
+/** Background only: native columns, rows and input routing remain unchanged. */
+function processBackgroundLines(lines: string[], width: number): string[] {
+	const theme = themeOf();
 	const slot = config.expandedCardBackground;
-	const toolBgAnsi = darkenBgAnsi(theme, slot);
-	const innerWidth = Math.max(0, width - 2);
-	const lines: string[] = [];
-	const hits: Array<{ child: any; start: number; end: number; sourceRow: number; inset: number }> = [];
-	const isThinkingPreview = (child: any) => typeof child?.setHintHovered === "function";
-	lines.push(paddedBackgroundRow(theme, slot, "", width));
-	// 展开不再显示摘要行：跳过第一个 child 的首行空白，避免白占一行
-	let skipLeadingBlank = true;
-	for (const child of children) {
-		const childLines = child.render(innerWidth);
-		// 展开的 thinking 与 tool 一样走嵌套深色卡，避免贴在外卡同色底上看不见。
-		const nest = child.__ccToolCard || (isThinkingPreview(child) && child.expanded === true);
-		if (!nest) {
-			let start = 0;
-			if (skipLeadingBlank) {
-				while (start < childLines.length && !hasVisibleText(childLines[start])) start++;
-				skipLeadingBlank = false;
-			}
-			for (let i = start; i < childLines.length; i++) {
-				hits.push({ child, start: lines.length, end: lines.length + 1, sourceRow: i, inset: 1 });
-				lines.push(paddedBackgroundRow(theme, slot, childLines[i], width));
-			}
-			continue;
-		}
-		// 工具卡：前导 1 空行 + 首尾文本行之间的内容区（深色）；不保留尾随，
-		// 相邻工具卡之间正好 1 空行，底部由卡片 padding 收尾。
-		skipLeadingBlank = false;
-		let first = -1;
-		let last = -1;
-		for (let i = 0; i < childLines.length; i++) {
-			if (hasVisibleText(childLines[i])) {
-				if (first < 0) first = i;
-				last = i;
-			}
-		}
-		if (first < 0) {
-			for (const line of childLines) {
-				lines.push(paddedBackgroundRow(theme, slot, line, width));
-			}
-			continue;
-		}
-		lines.push(paddedBackgroundRow(theme, slot, "", width));
-		// 子卡片内部上下各 1 行深色 padding
-		lines.push(toolCardBgRow(theme, slot, toolBgAnsi, "", width));
-		for (let i = first; i <= last; i++) {
-			hits.push({ child, start: lines.length, end: lines.length + 1, sourceRow: i,
-				inset: 3 - (stripBackgroundAnsi(childLines[i]).match(/^ */)?.[0].length ?? 0) });
-			lines.push(toolCardBgRow(theme, slot, toolBgAnsi, childLines[i], width));
-		}
-		lines.push(toolCardBgRow(theme, slot, toolBgAnsi, "", width));
-	}
-	lines.push(paddedBackgroundRow(theme, slot, "", width));
-	return { lines, hits };
-}
-
-function compactRoundCard(
-	cardItems: Array<{ child?: any; tool?: any }>,
-	toolRender: (tool: any, width: number) => string[],
-): any {
-	const children: any[] = [];
-	for (const item of cardItems) {
-		if (item.child) children.push(item.child);
-		else if (item.tool) {
-			const tool = item.tool;
-			children.push({
-				__ccToolCard: true,
-				handleMouse: (event: TuiMouseEvent) => tool.handleMouse?.(event),
-				render: (innerWidth: number) => toolRender(tool, innerWidth),
-				invalidate: () => tool.invalidate?.(),
-			});
-		}
-	}
-	let layout: ReturnType<typeof layoutExpandedToolCard> | undefined;
-	return {
-		children,
-		render(width: number): string[] {
-			layout = layoutExpandedToolCard(themeOf(), children, width);
-			return ["", ...layout.lines];
-		},
-		handleMouse(event: TuiMouseEvent) {
-			const hit = layout?.hits.find((hit) => event.y - 1 >= hit.start && event.y - 1 < hit.end);
-			if (!hit) return undefined;
-			return new MouseRegion(hit.child, () => undefined).handleMouse({ ...event,
-				x: event.x - hit.inset, y: hit.sourceRow, width: Math.max(1, event.width - 2),
-			});
-		},
-		childAtRow(localRow: number, width: number) {
-			if (localRow < 1) return null;
-			const row = localRow - 1;
-			const { hits } = layoutExpandedToolCard(themeOf(), children, width);
-			for (const hit of hits) {
-				if (row >= hit.start && row < hit.end) return hit.child;
-			}
-			return null;
-		},
-		invalidate() {
-			for (const child of children) child.invalidate?.();
-		},
-	};
+	const bg = theme.getBgAnsi?.(slot) ?? "";
+	return lines.map((line) => {
+		const text = stripBackgroundAnsi(line);
+		const row = text + " ".repeat(Math.max(0, width - visibleWidth(text)));
+		return bg ? `${bg}${row.replace(/\x1b\[(?:0)?m/g, (reset) => reset + bg)}\x1b[49m` : theme.bg?.(slot, row) ?? row;
+	});
 }
 
 function isAssistantComponent(value: any): boolean {
@@ -698,7 +518,6 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		messages: Map<any, any>;
 		proseMessages: Map<any, any>;
 		active: boolean;
-		suppressedToolIds: Set<string>;
 		clock?: WorkClock;
 		/** 收尾时记录中止结局，保证重绘结论稳定。 */
 		settledAborted?: boolean;
@@ -717,7 +536,6 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 	let messageClocks = new WeakMap<object, WorkClock>();
 	let roundByComponent = new WeakMap<object, CompactRound>();
 	const rounds = new Set<CompactRound>();
-	const expandedRoundToolIds = new Set<string>();
 	let uiRef: { requestRender?: (force?: boolean) => void } | undefined;
 	let cancelRoundTick: (() => void) | undefined;
 
@@ -920,6 +738,68 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 	const withoutStopStatus = (message: any): any =>
 		messageStopStatus(message) ? { ...message, stopReason: "toolUse" } : message;
 
+	/** Thinking keeps the process background exactly as when it renders standalone. */
+	const backgroundize = (child: any, anchor: any): any => {
+		if (!(child instanceof ThinkingPreviewBlock) && !(child.child && typeof child.onMouse === "function")) return child;
+		if (child instanceof ThinkingPreviewBlock) (child as any)[COMPACT_ROUND_PARENT] = anchor;
+		const view = new MouseRegion(child, () => undefined);
+		view.render = (width) => processBackgroundLines(child.render(width), width);
+		return view;
+	};
+
+	/** A placed card renders through its own native renderer; the group only hosts it. */
+	const placeToolView = (tool: any): any => ({
+		render(width: number) {
+			const lines = patch.toolOriginalRender.call(tool, width);
+			return resolveRendererPolicy(tool).compactable ? processBackgroundLines(lines, width) : lines;
+		},
+		handleMouse(event: any) {
+			return typeof tool.handleMouse === "function" ? tool.handleMouse(event) : undefined;
+		},
+		invalidate() {},
+	});
+
+	/**
+	 * Place a message's own cards at their recorded content indices. Native text
+	 * and Thinking order stays untouched; only the card slots between them move.
+	 */
+	const placeMessageContent = (
+		component: any,
+		message: any,
+		anchor: any,
+		toolsById: Map<string, any>,
+	): void => {
+		const container = component?.contentContainer;
+		if (!container || !Array.isArray(container.children)) return;
+		const natives = [...container.children];
+		const placed = new Set<string>();
+		const output: any[] = [];
+		const cursor = { i: 0 };
+		const takeNative = (): void => {
+			while (cursor.i < natives.length && natives[cursor.i] instanceof Spacer) output.push(natives[cursor.i++]);
+			if (cursor.i < natives.length) output.push(backgroundize(natives[cursor.i++], anchor));
+		};
+		let inThinkingRun = false;
+		for (const item of Array.isArray(message?.content) ? message.content : []) {
+			if (item?.type === "thinking") {
+				if (!String(item.thinking ?? "").trim()) continue;
+				if (!inThinkingRun) { takeNative(); inThinkingRun = true; }
+				continue;
+			}
+			inThinkingRun = false;
+			if (item?.type === "text" && String(item.text ?? "").trim()) { takeNative(); continue; }
+			if (item?.type !== "toolCall" || typeof item.id !== "string" || placed.has(item.id)) continue;
+			const tool = toolsById.get(item.id);
+			// Only managed cards join the group; dedicated/excluded renderers stay native.
+			if (!tool || !resolveRendererPolicy(tool).managed) continue;
+			placed.add(item.id);
+			tool[COMPACT_EMBEDDED] = true;
+			output.push(placeToolView(tool));
+		}
+		while (cursor.i < natives.length) output.push(backgroundize(natives[cursor.i++], anchor));
+		container.children = output;
+	};
+
 	const renderRound = (round: CompactRound): void => {
 		const messages = roundMessages(round);
 		const stopStatus = roundStopStatus(messages);
@@ -927,23 +807,22 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		// Running 时每次 render 重算时长（含挂钟下限）；结束后固定。
 		const getSummary = () => summarize(roundMessages(round), round.active, round);
 		const summary = getSummary();
-		for (const id of round.suppressedToolIds) expandedRoundToolIds.delete(id);
-		round.suppressedToolIds.clear();
-
 		for (const [component, message] of round.messages) {
 			component.lastMessage = round.proseMessages.get(component) ?? message;
 			ensureAssistantSetExpanded(component);
-			// Only the anchor owns expansion. Otherwise the host's single-card
-			// policy can collapse a sibling assistant when opening a child tool.
-			if (component !== round.anchor) component.expanded = false;
+			// Members share a logical expansion owner, not a physical panel.
+			component.expanded = round.anchor.expanded === true;
+			component[COMPACT_ROUND_PARENT] = round.anchor;
 			component[ASSISTANT_TOGGLE_ROUND_KEY] = (expanded: boolean) => {
 				round.anchor.expanded = expanded;
-				if (!expanded) {
-					for (const id of round.suppressedToolIds) expandedRoundToolIds.delete(id);
-					round.suppressedToolIds.clear();
-				}
 				renderRound(round);
 			};
+		}
+		const ids = roundToolCallIds(round);
+		for (const tool of trackedToolComponents) {
+			if (!ids.has(tool.toolCallId)) continue;
+			delete tool[COMPACT_EMBEDDED];
+			tool[COMPACT_ROUND_PARENT] = round.anchor;
 		}
 
 		if (round.anchor.expanded === true) {
@@ -951,101 +830,36 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 			for (const tool of trackedToolComponents) {
 				if (typeof tool?.toolCallId === "string") toolsById.set(tool.toolCallId, tool);
 			}
-			const cardItems: Array<{ child?: any; tool?: any }> = [];
-			const placedToolIds = new Set<string>();
-			const takeAssistantRun = (kids: any[], cursor: { i: number }) => {
-				while (cursor.i < kids.length && kids[cursor.i] instanceof Spacer) {
-					cardItems.push({ child: kids[cursor.i++] });
-				}
-				if (cursor.i < kids.length) cardItems.push({ child: kids[cursor.i++] });
-			};
-			const placeTool = (id: string, fallbackName?: string) => {
-				const tool = toolsById.get(id);
-				if (!tool || !resolveRendererPolicy(tool).compactable) return;
-				if (placedToolIds.has(id)) return;
-				placedToolIds.add(id);
-				tool[COMPACT_ROUND_PARENT] = round.anchor;
-				cardItems.push({ tool });
-			};
 			for (const [component, message] of round.messages) {
-				passThroughAssistant(component, withoutStopStatus(message));
-				component.lastMessage = round.proseMessages.get(component) ?? message;
-				const kids = Array.isArray(component.contentContainer?.children)
-					? [...component.contentContainer.children]
-					: [];
-				component.contentContainer?.clear?.();
-				const cursor = { i: 0 };
-				let inThinkingRun = false;
-				for (const item of Array.isArray(message?.content) ? message.content : []) {
-					if (item?.type === "thinking") {
-						if (!String(item.thinking ?? "").trim()) continue;
-						if (!inThinkingRun) {
-							takeAssistantRun(kids, cursor);
-							inThinkingRun = true;
-						}
-						continue;
-					}
-					inThinkingRun = false;
-					if (item?.type === "text" && String(item.text ?? "").trim()) {
-						takeAssistantRun(kids, cursor);
-						continue;
-					}
-					if (item?.type === "toolCall" && typeof item.id === "string") {
-						placeTool(item.id, item.name);
-					}
-				}
-				while (cursor.i < kids.length) cardItems.push({ child: kids[cursor.i++] });
+				const original = round.proseMessages.get(component) ?? message;
+				passThroughAssistant(component, withoutStopStatus(original));
+				component.lastMessage = original;
+				placeMessageContent(component, original, round.anchor, toolsById);
 			}
-			const ids = new Set([...roundToolCallIds(round)].filter((id) => {
-				const tool = toolsById.get(id);
-				return tool && resolveRendererPolicy(tool).compactable;
-			}));
-			for (const id of ids) {
-				round.suppressedToolIds.add(id);
-				expandedRoundToolIds.add(id);
-				if (!placedToolIds.has(id)) placeTool(id);
-			}
-			// Round 展开只打开外层卡片。普通工具保持折叠，避免长输出递归撑满屏幕。
 			for (const tool of trackedToolComponents) {
-				if (
-					!ids.has(tool.toolCallId) ||
-					tool.expanded !== true || tool[COMPACT_LOCAL_EXPANSION] === true
-				) {
-					continue;
-				}
+				if (!ids.has(tool.toolCallId) || !resolveRendererPolicy(tool).compactable) continue;
+				// Opening the group does not recursively open long tool output.
+				if (tool.expanded !== true || tool[COMPACT_LOCAL_EXPANSION] === true) continue;
 				if (typeof tool.setExpanded === "function") tool.setExpanded(false);
 				else {
 					tool.expanded = false;
 					tool.updateDisplay?.();
 				}
 			}
-			// Native prose stays outside the process card, including when the
-			// thinking anchor itself becomes the final response.
-			for (const [component, message] of round.proseMessages) renderAssistantWithoutThinking(component, message);
-			round.anchor.contentContainer.addChild(
-				compactRoundCard(cardItems, (tool, innerWidth) =>
-					patch.toolOriginalRender.call(tool, innerWidth),
-				),
-			);
-			// 展开卡内工具会显示 error，外层仍挂 abort/length，避免只藏在折叠工具里。
-			appendStopStatus(round.anchor, stopStatus);
+			const last = [...round.messages.keys()].at(-1);
+			appendStopStatus(last, stopStatus);
 			return;
 		}
 
 		for (const [component, message] of round.messages) {
-			if (component === round.anchor) {
-				const prose = round.proseMessages.get(component);
-				renderAssistantWithoutThinking(component, prose ?? withoutStopStatus(message));
-				component.lastMessage = prose ?? message;
-				// 空摘要不挂行（getter 在 Running 启动瞬间也可能短暂为空）
-				if (!round.summaryParent && (summary || round.active)) compactAssistantLine(component, getSummary, deps.query);
-				// 折叠时工具行被隐藏：abort/error/length 必须挂在摘要外层。
-				if (!round.summaryParent) appendStopStatus(component, stopStatus);
-			} else {
-				const prose = round.proseMessages.get(component);
-				if (prose) renderAssistantWithoutThinking(component, prose);
-				else component.contentContainer?.clear?.();
-			}
+			const original = round.proseMessages.get(component) ?? message;
+			renderAssistantWithoutThinking(component, withoutStopStatus(original));
+			component.lastMessage = original;
+			if (component !== round.anchor) continue;
+			// 空摘要不挂行（getter 在 Running 启动瞬间也可能短暂为空）
+			if (!round.summaryParent && (summary || round.active)) compactAssistantLine(component, getSummary, deps.query);
+			// 折叠时工具行被隐藏：abort/error/length 必须挂在摘要外层。
+			if (!round.summaryParent) appendStopStatus(component, stopStatus);
 		}
 	};
 
@@ -1067,9 +881,10 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		for (const tool of trackedToolComponents) {
 			delete tool[COMPACT_ROUND_PARENT];
 			delete tool[COMPACT_LOCAL_EXPANSION];
+			delete tool[COMPACT_EMBEDDED];
 		}
+		for (const component of trackedAssistantComponents) delete component[COMPACT_ROUND_PARENT];
 		activeRound = undefined;
-		expandedRoundToolIds.clear();
 		deps.query?.setCompactSummaryActive?.(false);
 		stopRoundTick();
 	};
@@ -1119,7 +934,6 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 					messages: new Map(),
 					proseMessages: new Map(),
 					active: true,
-					suppressedToolIds: new Set(),
 					clock: clockFor(this, message),
 				};
 				roundByComponent.set(this, round);
@@ -1130,7 +944,6 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 					messages: new Map(),
 					proseMessages: new Map(),
 					active: true,
-					suppressedToolIds: new Set(),
 					clock: clockFor(this, message),
 				};
 				roundByComponent.set(this, round);
@@ -1180,11 +993,16 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		if (!patch.active || config.mode !== "compact") {
 			return patch.toolOriginalRender.call(this, width);
 		}
+		if (!resolveRendererPolicy(this).managed) return patch.toolOriginalRender.call(this, width);
+		// The group paints this card in its recorded message slot.
+		if (this[COMPACT_EMBEDDED] === true) return [];
 		if (!resolveRendererPolicy(this).compactable) return patch.toolOriginalRender.call(this, width);
 		// The shared policy governs grouped process rendering, not semantic counting.
-		if (expandedRoundToolIds.has(String(this.toolCallId ?? ""))) return [];
+		if (this[COMPACT_ROUND_PARENT]?.expanded === true) {
+			return processBackgroundLines(patch.toolOriginalRender.call(this, width), width);
+		}
 		// 普通工具折叠时不显示独立行（摘要行已统计），独立展开走原 renderer。
-		if (this.expanded === true) {
+		if (this.expanded === true && !this[COMPACT_ROUND_PARENT]) {
 			return patch.toolOriginalRender.call(this, width);
 		}
 		return [];
@@ -1198,7 +1016,7 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 			patch.active &&
 			config.mode === "compact" &&
 			resolveRendererPolicy(this).compactable &&
-			expandedRoundToolIds.has(String(this.toolCallId ?? "")) && this[COMPACT_LOCAL_EXPANSION] !== true
+			this[COMPACT_ROUND_PARENT]?.expanded === true && this[COMPACT_LOCAL_EXPANSION] !== true
 		) {
 			this.expanded = false;
 		}
@@ -1206,6 +1024,15 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		if (!patch.active) return result;
 		knownTranscriptComponents.add(this);
 		trackedToolComponents.add(this);
+		if (config.mode === "compact") {
+			for (const round of rounds) {
+				if (!roundToolCallIds(round).has(this.toolCallId)) continue;
+				this[COMPACT_ROUND_PARENT] = round.anchor;
+				// A card mounted after expansion still needs its recorded slot.
+				if (round.anchor.expanded === true && this[COMPACT_EMBEDDED] !== true) renderRound(round);
+				break;
+			}
+		}
 		return result;
 	};
 
@@ -1222,10 +1049,10 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		for (const step of steps.reverse()) step.dispose();
 		patchRegistry.dispose(COMPACT_MODE_PATCH_KEY, patch);
 		for (const component of trackedAssistantComponents) detachAssistantExpansion(component);
+		resetRounds();
 		trackedAssistantComponents.clear();
 		trackedToolComponents.clear();
 		hoveredAssistantComponent = undefined;
-		resetRounds();
 		roundByComponent = new WeakMap();
 		for (const clock of unfinishedClocks) finishClock(clock);
 		activityClock = undefined;

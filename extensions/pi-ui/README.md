@@ -10,6 +10,8 @@ Pi 1.1.0 的展示模块，将 Claude 风格转写与会话 shell 合并为一�
 
 - Footer、其他扩展状态、Git 和 runtime 信息。启动头由 Pi 原生渲染，本模块不覆盖。
 - 常规工具卡、相邻分组、compact 轮次、文件/diff 卡及已返回内容的展开预览。
+- compact 折叠保留文件卡和单行尾部汇总；展开在原会话位置恢复过程内容，
+  不把普通工具集中搬到一个面板，过程说明和 write/edit/apply_patch 卡保持原顺序。
 - Thinking 标题、预览、动画、独立耗时及全会话历史耗时恢复。
 - 全屏鼠标展开/hover、正文拖选与链接；文字预览、滚动与退出。
 - fullscreen 且 ccstyle 为 `on` 或 `compact` 时，默认置顶已滚出视口上沿的用户消息正文首行。

@@ -30,8 +30,9 @@ Further selective behavior adaptations reference
 [v1.0.1, `0188b76f`](https://github.com/minuque/pi-cc-extensions/tree/0188b76f2597772bea3b42075857e030d9a89666):
 
 - `4f37369`: fullscreen sticky user-message first lines. The local implementation
-  consumes Pi 1.1.0's native prompt zones, preserves saved messages, and bounds
-  pointer input horizontally as well as vertically; the scrollbar is excluded.
+  selects native user-message components through Pi 1.1.0's layout and preserves
+  saved messages. Pointer input is bounded horizontally as well as vertically;
+  the scrollbar is excluded.
 - `e1fbcd6` / `d669a32`: replayed user-message boundaries and child expansion
   without closing other members of the same Work Group.
 - `5a7d542`: fullscreen expansion stops bottom-following at the current viewport.

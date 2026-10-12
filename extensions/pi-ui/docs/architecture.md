@@ -46,7 +46,12 @@ Only an owned prototype value is restored.
 
 Thinking decorates hidden native runs after Pi builds its message content. Visible
 reasoning, per-run overrides, native Markdown and errors stay with Pi. Compact
-then composes the process presentation. Tool background and compact display steps
+controls Work Group visibility in the original transcript positions rather than
+collecting member content into one anchor panel. Expanded Thinking, progress text,
+ordinary tools and standalone file/dedicated cards retain their recorded order,
+including a message's own content order around its tool calls.
+Final prose stays native, and nested-operation records do not become new cards.
+Tool background and compact display steps
 share the same tool update dispatcher. No rendering tool is re-registered.
 
 Domain installation retains reverse-order cleanup and capability failure
@@ -117,13 +122,18 @@ Fullscreen sticky user prompts are enabled by `stickyUserMessage` by default,
 only in `on` and `compact` modes. The first body line is pinned once its message
 passes above the viewport; a later user message takes over under the same
 positional condition. Clicking the drawn line returns to its original message.
+The active renderer is identified through the current primary ScrollView and
+layout, not object equality with the extension's stable TUI reference: the
+interactive host passes a forwarding reference to component factories.
 Sticky hit-testing is bounded to the current painted row and horizontal span,
 never the scrollbar column. An ordinary repaint retains a press only while its
 instruction, layout root and geometry remain unchanged; scrolling, resizing and
 replacement invalidate it. Moving onto sticky text clears any previous tool-card
 hover, even though sticky input is handled before ordinary component dispatch.
-The frame consumes Pi's native prompt zones without
-patching user-message content. Frame and mouse patches obey the same capability,
+The frame identifies native user messages through the host layout (native
+`UserMessageComponent` boxes and container layout heights); assistant content is
+never a user instruction. It neither scans OSC prompt zones nor patches
+user-message content. Frame and mouse patches obey the same capability,
 branded ownership and identity-safe cleanup rules; no display marker may escape
 to the terminal or modify saved message content.
 The pinned layout-frame shape is inspected locally; runtime imports stay on the
