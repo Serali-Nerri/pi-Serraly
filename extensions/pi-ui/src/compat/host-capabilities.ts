@@ -80,6 +80,8 @@ const REQUIREMENTS: readonly Requirement[] = [
 		[BranchSummaryMessageComponent, "BranchSummaryMessageComponent"]]
 		.flatMap(([component, owner]) => ["updateDisplay", "render"].map((name) => requirement(owner as string, (component as { prototype: object }).prototype, name))),
 	requirement("TuiAltScreen", TuiAltScreen.prototype, "dispatchMouseToLayout"),
+	requirement("TuiAltScreen", TuiAltScreen.prototype, "compositeScrollToEndIndicator"),
+	requirement("TuiAltScreen", TuiAltScreen.prototype, "clearComponentMouseGesture"),
 	requirement("AssistantMessageComponent", ASSISTANT, "handleMouse", true),
 	requirement("SkillInvocationMessageComponent", SkillInvocationMessageComponent.prototype, "handleMouse", true),
 	requirement("CompactionSummaryMessageComponent", CompactionSummaryMessageComponent.prototype, "handleMouse", true),

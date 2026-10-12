@@ -14,7 +14,8 @@ const fields: Array<Array<[keyof Config, string, string[]]>> = [
 	[["inputClip", "Summary characters (0 = auto)", ["0", "40", "80", "100", "160"]],
 	 ["expandedInputMaxLines", "Input preview lines", ["5", "10", "20", "40"]],
 	 ["expandedOutputMaxLines", "Output preview lines", ["10", "20", "40", "80"]],
-	 ["expandedCardBackground", "Expanded card background", [...EXPANDED_CARD_BACKGROUND_SLOTS]]],
+	 ["expandedCardBackground", "Expanded card background", [...EXPANDED_CARD_BACKGROUND_SLOTS]],
+	 ["stickyUserMessage", "Sticky user message", ["true", "false"]]],
 ];
 
 export async function showStylePanel(ctx: ExtensionCommandContext, changed: () => void): Promise<void> {

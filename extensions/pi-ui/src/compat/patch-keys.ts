@@ -43,6 +43,7 @@ export const TOOL_GROUPING_GENERATION_KEY = Symbol.for("claude-style-tools.tool-
 export const UI_LIFECYCLE_OWNER = Symbol.for("pi-ui.lifecycle-owner");
 export const TRANSCRIPT_OWNER = Symbol.for("claude-style-tools.rendering-owner");
 export const NATIVE_MOUSE_OWNER = Symbol.for("claude-style-tools.native-mouse");
+export const STICKY_USER_MESSAGE_OWNER = Symbol.for("pi-ui.sticky-user-message");
 
 /**
  * 全部自有所有权槽位。只允许本模块写入的品牌值；未标记的值（即使带
@@ -51,7 +52,7 @@ export const NATIVE_MOUSE_OWNER = Symbol.for("claude-style-tools.native-mouse");
 export const OWNERSHIP_SLOTS: readonly symbol[] = [
 	COMPACT_MODE_PATCH_KEY, COMPACT_THINKING_OWNER, GLOBAL_TOOL_RENDER_PATCH,
 	TOOL_EXPANDED_BACKGROUND_PATCH, MESSAGE_DISPLAY_PATCH, TOOL_GROUPING_PATCH_KEY,
-	UI_LIFECYCLE_OWNER, NATIVE_MOUSE_OWNER, TRANSCRIPT_OWNER,
+	UI_LIFECYCLE_OWNER, NATIVE_MOUSE_OWNER, TRANSCRIPT_OWNER, STICKY_USER_MESSAGE_OWNER,
 ];
 
 /**

@@ -38,7 +38,7 @@ function mouse(type: TuiMouseEvent["type"], x: number, y: number, height: number
 		width: 100, height, shift: false, alt: false, ctrl: false, clickCount: 1 };
 }
 
-test("fullscreen on → off: hidden Thinking keeps its hint hitbox, hover, expansion and collapse", async () => {
+test("fullscreen on → off: hidden Thinking keeps its title, hint hitbox, hover, expansion and collapse", async () => {
 	const h = await harness({ mode: "on" });
 	try {
 		const assistant: any = new AssistantMessageComponent(message(1_001), true);
@@ -59,7 +59,16 @@ test("fullscreen on → off: hidden Thinking keeps its hint hitbox, hover, expan
 		assert.ok(!lines.some((line) => line.includes("THINKING_BODY_0")), "long thinking remains hidden");
 		assert.ok(h.tui.previousScreen[hint.y].includes(h.ctx.ui.theme.fg("dim", action)));
 
-		// The title and the closing ')' are outside the explicit action's cell hitbox.
+		const title = target(lines, "Thought");
+		h.click(title.x, title.y);
+		lines = h.render();
+		assert.ok(lines.some((line) => line.includes("THINKING_BODY_0")), "the title remains an independent off-mode action");
+		const titleBody = target(lines, "THINKING_BODY_19");
+		h.click(titleBody.x, titleBody.y);
+		lines = h.render();
+		hint = target(lines, action);
+
+		// The adjacent prefix and closing ')' are outside the hint's cell hitbox.
 		for (const x of [hint.x - 1, hint.x + visibleWidth(action)]) {
 			h.pointer(x, hint.y, "move");
 			h.render();

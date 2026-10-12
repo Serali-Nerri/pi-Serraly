@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { AssistantMessageComponent, ToolExecutionComponent } from "@earendil-works/pi-coding-agent";
+import { AssistantMessageComponent, ToolExecutionComponent, UserMessageComponent } from "@earendil-works/pi-coding-agent";
+import { MouseRegion, Text, TuiAltScreen } from "@earendil-works/pi-tui";
 import { harness } from "./harness.ts";
 import {
 	COMPACT_MODE_PATCH_KEY, COMPACT_THINKING_OWNER, GLOBAL_TOOL_RENDER_PATCH, isOwnedPatch,
 	MESSAGE_DISPLAY_PATCH, TOOL_EXPANDED_BACKGROUND_PATCH, TOOL_GROUPING_PATCH_KEY,
-	UI_LIFECYCLE_OWNER, NATIVE_MOUSE_OWNER, TRANSCRIPT_OWNER,
+	UI_LIFECYCLE_OWNER, NATIVE_MOUSE_OWNER, TRANSCRIPT_OWNER, STICKY_USER_MESSAGE_OWNER,
 } from "../src/compat/patch-keys.ts";
 import { METHOD_PIPELINE_KEY } from "../src/compat/method-pipeline.ts";
 
@@ -20,6 +21,7 @@ const ownershipSlots: ReadonlyArray<readonly [string, symbol]> = [
 	["lifecycle", UI_LIFECYCLE_OWNER],
 	["native-mouse", NATIVE_MOUSE_OWNER],
 	["transcript", TRANSCRIPT_OWNER],
+	["sticky-user-message", STICKY_USER_MESSAGE_OWNER],
 ];
 
 const globalSlot = (key: symbol) => (globalThis as Record<PropertyKey, unknown>)[key];
@@ -151,6 +153,47 @@ test("own patches are branded, hand over between generations and are removed on 
 	try {
 		assert.equal(isOwnedPatch(globalSlot(key)), true, "a new generation installs its own owner");
 	} finally { await second.close(); }
+});
+
+test("sticky decorations relinquish a replaced owner and leave external wrappers untouched", async () => {
+	const key = STICKY_USER_MESSAGE_OWNER;
+	const proto = TuiAltScreen.prototype as any;
+	const nativeFrame = proto.compositeScrollToEndIndicator, nativeMouse = proto.dispatchMouseToLayout;
+	const h = await harness({ rows: 8 });
+	let foreignDisposed = 0, nativeClicks = 0;
+	const foreignSlot = { dispose() { foreignDisposed++; } };
+	const frame = proto.compositeScrollToEndIndicator, mouse = proto.dispatchMouseToLayout;
+	const foreignFrame = function (this: any, ...args: any[]) { return frame.apply(this, args); };
+	const foreignMouse = function (this: any, ...args: any[]) { return mouse.apply(this, args); };
+	try {
+		h.root.addChild(new UserMessageComponent("Owned instruction"));
+		h.root.addChild(new MouseRegion(new Text(Array.from({ length: 12 }, (_, i) => `Native body ${i}`).join("\n"), 0, 0), (event) => {
+			if (event.type === "click") nativeClicks++;
+			return { handled: true };
+		}));
+		h.render();
+		h.tui.scrollToTop();
+		h.tui.scrollBy(5);
+		assert.equal(h.render()[0]!.trim(), "Owned instruction");
+		proto.compositeScrollToEndIndicator = foreignFrame;
+		proto.dispatchMouseToLayout = foreignMouse;
+		(globalThis as Record<PropertyKey, unknown>)[key] = foreignSlot;
+		assert.doesNotMatch(h.render()[0]!, /Owned instruction/, "an owner no longer installed cannot decorate a frame");
+		await h.close();
+		assert.equal(proto.compositeScrollToEndIndicator, foreignFrame);
+		assert.equal(proto.dispatchMouseToLayout, foreignMouse);
+		assert.equal(globalSlot(key), foreignSlot);
+		assert.equal(foreignDisposed, 0);
+		h.render();
+		h.click(2, 0);
+		assert.equal(nativeClicks, 1, "captured wrappers are inert and leave the host's input active after shutdown");
+		assert.equal(h.tui.viewportTop, 5);
+	} finally {
+		await h.close();
+		delete (globalThis as Record<PropertyKey, unknown>)[key];
+		proto.compositeScrollToEndIndicator = nativeFrame;
+		proto.dispatchMouseToLayout = nativeMouse;
+	}
 });
 
 test("an externally replaced wrapper or slot survives shutdown", async () => {

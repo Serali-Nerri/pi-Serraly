@@ -24,6 +24,7 @@ export interface Config {
 	expandedCardBackground: ThemeBg;
 	expandedInputMaxLines: number;
 	expandedOutputMaxLines: number;
+	stickyUserMessage: boolean;
 }
 
 export const DEFAULT_CONFIG: Config = {
@@ -39,6 +40,7 @@ export const DEFAULT_CONFIG: Config = {
 	expandedCardBackground: "userMessageBg",
 	expandedInputMaxLines: 5,
 	expandedOutputMaxLines: 10,
+	stickyUserMessage: true,
 };
 
 // Migration-only keys: never expose or execute them; remove them on explicit save.
@@ -75,6 +77,7 @@ export function normalizeConfig(input: unknown): Config {
 	if (typeof source.useSummaryTitlesAsThinkingTitle === "boolean") {
 		result.useSummaryTitlesAsThinkingTitle = source.useSummaryTitlesAsThinkingTitle;
 	}
+	if (typeof source.stickyUserMessage === "boolean") result.stickyUserMessage = source.stickyUserMessage;
 	return result;
 }
 

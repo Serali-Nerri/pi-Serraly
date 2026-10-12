@@ -40,6 +40,7 @@ const loader = new SDK.DefaultResourceLoader({ cwd, agentDir: process.env.PI_COD
 	}],
 });
 await loader.reload();
+assert.deepEqual(loader.getExtensions().errors, [], "the external UI stage must load through the real host loader");
 const create = async (tools) => (await SDK.createAgentSession({
 	cwd, agentDir: process.env.PI_CODING_AGENT_DIR, modelRuntime: runtime, settingsManager: settings,
 	resourceLoader: loader, sessionManager: SDK.SessionManager.inMemory(cwd),

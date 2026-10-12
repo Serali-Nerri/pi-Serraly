@@ -237,6 +237,7 @@ export class ThinkingPreviewBlock implements Component {
 	private _expanded: boolean;
 	private hintHovered = false;
 	private actionRow: number | undefined;
+	private titleWidths: number[] = [];
 	private collapsedMemo:
 		| {
 				width: number;
@@ -290,6 +291,11 @@ export class ThinkingPreviewBlock implements Component {
 		return !this._expanded && row === this.actionRow ? "expand" : undefined;
 	}
 
+	actionAtPoint(row: number, x: number): "expand" | undefined {
+		const width = this.titleWidths[row] ?? 0;
+		return !this._expanded && x >= this.padding && x < this.padding + width ? "expand" : undefined;
+	}
+
 	setHintHovered(hovered: boolean): void {
 		if (this.hintHovered !== hovered) this.collapsedMemo = undefined;
 		this.hintHovered = hovered;
@@ -300,7 +306,13 @@ export class ThinkingPreviewBlock implements Component {
 			? undefined
 			: hiddenPreviewHint(hiddenLines, Boolean(this.text) && config.previewLines <= 0);
 		this.actionRow = undefined;
-		if (!hint) return new Text(this.heading, padding, 0).render(width);
+		this.titleWidths = [];
+		if (!hint) {
+			const lines = new Text(this.heading, padding, 0).render(width);
+			this.titleWidths = lines.map((line) =>
+				Math.max(0, visibleWidth(line.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "").trimEnd()) - padding));
+			return lines;
+		}
 		const rawHint = hint.prefix + hint.action + hint.suffix;
 		const contentWidth = Math.max(1, width - padding * 2);
 		const headingBudget = Math.max(0, contentWidth - visibleWidth(rawHint));
@@ -308,6 +320,7 @@ export class ThinkingPreviewBlock implements Component {
 			visibleWidth(this.heading) > headingBudget
 				? truncateToWidth(this.heading, headingBudget, "")
 				: this.heading;
+		this.titleWidths = [visibleWidth(clipped)];
 		const action = this.paint(this.hintHovered ? "text" : "dim", hint.action);
 		const lines = new Text(
 			clipped + this.paint("dim", hint.prefix) + action + this.paint("dim", hint.suffix),

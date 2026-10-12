@@ -196,6 +196,7 @@ test("long file hint opens an overlay without changing its captured contents", a
 		const write = h.tool("write", "w", { path: "snapshot.ts", content }, result("ok"));
 		let lines = h.render(); let row = lines.findIndex((line) => line.includes("click to show more"));
 		h.click(lines[row]!.indexOf("click to show more"), row); assert.equal(write.expanded, true);
+		h.tui.scrollToBottom();
 		lines = h.render(); row = lines.findIndex((line) => line.includes("click to show more"));
 		h.click(lines[row]!.indexOf("click to show more"), row);
 		assert.ok(h.overlay);
@@ -302,9 +303,9 @@ test("compact rounds retain file styling and support nested native mouse input",
 		h.tool("read", "r", { path: "source.ts" }, result("NESTED_BODY\nsecond line"));
 		const write = h.tool("write", "w", { path: "output.ts", content: "const done = true;" }, result("ok"));
 		let lines = h.render();
-		assert.match(lines.join("\n"), /read×1/);
+		assert.match(lines.join("\n"), /Read 1 file/);
 		assert.match(lines.join("\n"), /write \(output.ts\)/);
-		let row = lines.findIndex((line) => line.includes("read×1"));
+		let row = lines.findIndex((line) => line.includes("Read 1 file"));
 		h.click(lines[row]!.indexOf("click to show more"), row);
 		assert.equal(assistant.expanded, true); assert.equal(write.expanded, false);
 		lines = h.render();
@@ -330,7 +331,7 @@ test("compact child details collapse on a single click without closing the round
 		h.root.addChild(assistant);
 		const read = h.tool("read", "r", { path: "source.ts" }, result("NESTED_BODY"));
 		let lines = h.render();
-		let row = lines.findIndex((line) => line.includes("read×1"));
+		let row = lines.findIndex((line) => line.includes("Read 1 file"));
 		h.click(lines[row]!.indexOf("click to show more"), row);
 		lines = h.render();
 		row = lines.findIndex((line) => line.includes("1 line loaded"));

@@ -19,6 +19,7 @@ const expected = {
 	expandedCardBackground: "userMessageBg",
 	expandedInputMaxLines: 5,
 	expandedOutputMaxLines: 10,
+	stickyUserMessage: true,
 };
 const discarded = { dimThinkingText: true, expandedPreviewMaxLines: 999, scrollStepLines: 50 };
 let directory: string;
@@ -50,7 +51,7 @@ function loadInChild(agentDirectory: string = directory) {
 
 test("effective settings use adaptive summaries and the existing expanded background by default", () => {
 	assert.deepEqual(DEFAULT_CONFIG, expected);
-	assert.equal(Object.keys(DEFAULT_CONFIG).length, 12);
+	assert.equal(Object.keys(DEFAULT_CONFIG).length, 13);
 	assert.deepEqual(normalizeConfig(undefined), expected);
 	assert.deepEqual(config, expected);
 });
@@ -83,13 +84,15 @@ test("retained numeric fields are finite, floored and clamped to their bounds", 
 	assert.equal(normalizeConfig({ animationIntervalMs: 5_000 }).animationIntervalMs, 1_000);
 });
 
-test("mode and the thinking toggle require the documented types", () => {
+test("mode and the thinking and sticky toggles require the documented types", () => {
 	for (const mode of ["on", "compact", "off"]) assert.equal(normalizeConfig({ mode }).mode, mode);
 	for (const mode of ["unknown", new String("off"), true, 0]) assert.equal(normalizeConfig({ mode }).mode, "on");
 	assert.deepEqual(normalizeConfig({ useSummaryTitlesAsThinkingTitle: false }), {
 		...expected, useSummaryTitlesAsThinkingTitle: false,
 	});
 	assert.deepEqual(normalizeConfig({ useSummaryTitlesAsThinkingTitle: "false" }), expected);
+	assert.deepEqual(normalizeConfig({ stickyUserMessage: false }), { ...expected, stickyUserMessage: false });
+	for (const stickyUserMessage of ["false", 0, null]) assert.deepEqual(normalizeConfig({ stickyUserMessage }), expected);
 	for (const value of [null, [], "off", 10]) assert.deepEqual(normalizeConfig(value), expected);
 });
 
@@ -161,7 +164,7 @@ test("explicit save preserves unknown fields and cleans all discarded keys", () 
 		...expected, mode: "compact", fileExpandedMaxLines: 200,
 	});
 	assert.deepEqual(config, { ...expected, mode: "compact", fileExpandedMaxLines: 200 });
-	assert.equal(Object.keys(config).length, 12);
+	assert.equal(Object.keys(config).length, 13);
 });
 
 test("save re-reads unknown data written since startup and ignores unknown update keys", () => {

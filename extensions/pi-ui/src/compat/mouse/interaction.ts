@@ -35,12 +35,17 @@ export function hintHit(line: string, x: number): boolean {
 	return x >= start && x < start + visibleWidth(match[0]);
 }
 
-function clearHover(): void { hovered?.clear(); hovered = undefined; }
+export function clearToolMouseHover(): boolean {
+	const previous = hovered;
+	hovered = undefined;
+	previous?.clear();
+	return previous !== undefined;
+}
 
 function hover(key: unknown, set: (value: boolean) => void): boolean {
 	hoverVisited = true;
 	if (hovered?.key === key) return false;
-	clearHover(); set(true);
+	clearToolMouseHover(); set(true);
 	hovered = { key, clear: () => set(false) };
 	return true;
 }
@@ -52,22 +57,39 @@ function isCardActive(card: any): boolean {
 	return isFullscreen() && (card instanceof ThinkingPreviewBlock || config.mode !== "off");
 }
 
+function holdViewport(): void {
+	const tui = getToolMouseTui();
+	if (tui?.mode !== "fullscreen") return;
+	tui.getPrimaryScrollView().scrollTo(tui.viewportTop, { disableFollow: true });
+}
+
+function containsCard(container: any, card: any): boolean {
+	let found = false;
+	walkComponentTree(container, (child) => {
+		if (child === card) found = true;
+		if (found) return false;
+	});
+	return found;
+}
+
 function expand(card: any): void {
+	holdViewport();
 	walkComponentTree(getToolMouseTui(), (other) => {
 		if (other === card || !other.expanded || typeof other.setExpanded !== "function") return;
 		if (other === card[COMPACT_ROUND_PARENT]) return;
-		if (card instanceof ThinkingPreviewBlock && isCompactAssistantComponent(other)) return;
+		// A nested action can close other cards, never the card containing it.
+		if (containsCard(other, card)) return;
 		if ((other instanceof ToolExecutionComponent && resolveRendererPolicy(other).managed) || other instanceof ToolGroupComponent ||
 			other instanceof ThinkingPreviewBlock || isCompactAssistantComponent(other)) {
 			other[COMPACT_LOCAL_EXPANSION] = false; other.setExpanded(false); other.invalidate?.();
 		}
 	});
 	card[COMPACT_LOCAL_EXPANSION] = true;
-	card.setExpanded(true); card.invalidate?.(); clearHover();
+	card.setExpanded(true); card.invalidate?.(); clearToolMouseHover();
 }
 
 function openPreview(preview: Preview): void {
-	clearHover();
+	clearToolMouseHover();
 	void showTextPreview(activeContext, preview.title, preview.content).catch((error: unknown) =>
 		activeContext?.ui?.notify(error instanceof Error ? error.message : String(error), "error"));
 }
@@ -78,7 +100,8 @@ function cardEvent(card: any, event: TuiMouseEvent, line: string, setHover: (val
 	const available = card.expanded
 		? action === "collapse" || (action === "reveal" && preview !== undefined)
 		: action === "expand" || action === "reveal";
-	const hit = available && hintHit(line, event.x);
+	const titleHit = card instanceof ThinkingPreviewBlock && card.actionAtPoint(event.y, event.x) === "expand";
+	const hit = titleHit || (available && hintHit(line, event.x));
 	if (event.type === "move") {
 		const changed = hit && hover(preview?.title ?? card, setHover);
 		return hit ? { handled: true, render: changed } : undefined;
@@ -89,8 +112,9 @@ function cardEvent(card: any, event: TuiMouseEvent, line: string, setHover: (val
 	if (preview && action === "reveal" && hit && card.expanded) { openPreview(preview); return { handled: true }; }
 	if (!card.expanded && hit) { expand(card); return { handled: true }; }
 	if (card.expanded) {
+		holdViewport();
 		card[COMPACT_LOCAL_EXPANSION] = false;
-		card.setExpanded(false); card.invalidate?.(); clearHover(); return { handled: true };
+		card.setExpanded(false); card.invalidate?.(); clearToolMouseHover(); return { handled: true };
 	}
 	return undefined;
 }
@@ -131,7 +155,7 @@ export function installToolMouseInteraction(ctx: any): () => void {
 	};
 	const installation = { dispose() {
 		if (disposed) return;
-		disposed = true; clearHover();
+		disposed = true; clearToolMouseHover();
 		for (const { proto, key, original, installed } of patches.reverse()) {
 			if (proto[key] === installed) {
 				if (original === undefined) delete proto[key]; else proto[key] = original;
@@ -193,7 +217,7 @@ export function installToolMouseInteraction(ctx: any): () => void {
 		patch("TuiAltScreen", TuiAltScreen.prototype, "dispatchMouseToLayout", (original) => function (this: any, event: TuiMouseEvent) {
 			hoverVisited = false;
 			const result = original.call(this, event);
-			if (event.type === "move" && !hoverVisited && hovered) { clearHover(); this.requestRender(); }
+			if (event.type === "move" && !hoverVisited && clearToolMouseHover()) this.requestRender();
 			return result;
 		});
 	} catch (error) {

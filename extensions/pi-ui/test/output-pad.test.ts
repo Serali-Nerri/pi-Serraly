@@ -2,6 +2,7 @@
 // `renderShell: "self"` renderers to apply that indent themselves.
 import assert from "node:assert/strict";
 import test from "node:test";
+import { setConfig } from "../src/config/config.ts";
 import { createCcstyleTool } from "../src/transcript/tool-renderers.ts";
 import { toolViewportWidth } from "../src/transcript/tool/result.ts";
 import { strip } from "./harness.ts";
@@ -11,6 +12,7 @@ const theme = { fg: (_color: string, text: string) => text } as any;
 const result = { content: [{ type: "text", text: "done" }], isError: false } as any;
 
 function card(name: string, args: any, outputPad: number) {
+	setConfig({ mode: "on" });
 	const renderer = createCcstyleTool({ name, label: name, parameters: {} } as any, "generic");
 	const context = {
 		args, cwd: "/tmp", expanded: false, isPartial: false, executionStarted: false,

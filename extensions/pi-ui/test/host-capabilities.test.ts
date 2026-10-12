@@ -164,7 +164,7 @@ test("the public probe rejects nonextensible targets with own writable methods w
 			export class CompactionSummaryMessageComponent { updateDisplay() {} render() {} }
 			export class BranchSummaryMessageComponent { updateDisplay() {} render() {} }
 			export class Container { addChild() {} removeChild() {} clear() {} }
-			export class TuiAltScreen { dispatchMouseToLayout() {} }
+			export class TuiAltScreen { dispatchMouseToLayout() {} compositeScrollToEndIndicator() {} clearComponentMouseGesture() {} }
 			// ${constrain.name}
 		`)}`;
 		const host = await import(hostUrl);
@@ -212,7 +212,7 @@ test("the public probe rejects nonextensible targets with own writable methods w
 test("the probe covers every host prototype the compat domains patch", () => {
 	for (const [owner, target, names] of [
 		["Container", Container.prototype as any, ["addChild", "removeChild", "clear"]],
-		["TuiAltScreen", TuiAltScreen.prototype as any, ["dispatchMouseToLayout"]],
+		["TuiAltScreen", TuiAltScreen.prototype as any, ["dispatchMouseToLayout", "compositeScrollToEndIndicator", "clearComponentMouseGesture"]],
 		["ToolExecutionComponent", tool, ["hasRendererDefinition", "getRenderShell", "getCallRenderer", "getResultRenderer", "updateDisplay", "render", "createResultRegion"]],
 		["AssistantMessageComponent", assistant, ["updateContent", "render"]],
 		["SkillInvocationMessageComponent", skill, ["updateDisplay", "render"]],

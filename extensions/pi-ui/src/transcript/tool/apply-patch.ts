@@ -34,7 +34,7 @@ import {
 	toolHeaderReservedWidth,
 } from "./files.ts";
 import { describePatchTitle, fitPatchPaths, formatPatchTitle, patchDisplayPath, type PatchTitle } from "./apply-patch-title.ts";
-import { scheduleAnimation, setToolVisualState } from "./result.ts";
+import { resolveToolVisualState, scheduleAnimation, setToolVisualState } from "./result.ts";
 
 const FORMAT = APPLY_PATCH_FORMAT;
 // Defence thresholds of the presentation parser; the wire budgets come from the
@@ -536,7 +536,7 @@ export function createApplyPatchRenderer(
 			// and the current animation frame lazily at paint time.
 			return {
 				render(width: number) {
-					const pending = context?.isPartial && context?.executionStarted;
+					const pending = resolveToolVisualState(context) === "pending";
 					if (pending) scheduleAnimation(context);
 					const dot = pending ? toolLoadingIcon() : "●";
 					const title: PatchTitle = context?.state?.[HEADLINE] ??

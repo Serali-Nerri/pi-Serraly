@@ -237,6 +237,7 @@ test("long diff lines wrap inside the card and only overflow into the overlay wh
 		let row = lines.findIndex((line) => line.includes("click to show more"));
 		h.click(lines[row]!.indexOf("click to show more"), row);
 		assert.equal(big.expanded, true);
+		h.tui.scrollToBottom();
 		lines = h.render();
 		row = lines.findIndex((line) => line.includes("click to show more"));
 		assert.ok(row >= 0, lines.join("\n"));

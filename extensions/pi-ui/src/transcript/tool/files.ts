@@ -4,7 +4,7 @@ import { getCapabilities, truncateToWidth, visibleWidth, wrapTextWithAnsi } from
 import { RenderLines, renderToolHeader, renderToolStatus, type ToolCardState, type ToolCardTheme } from "pi-ui-kit";
 import { config } from "../../config/config.ts";
 import { sanitizeToolResultText } from "../../utils/tool-result-sanitize.ts";
-import { scheduleAnimation, setToolVisualState } from "./result.ts";
+import { resolveToolVisualState, scheduleAnimation, setToolVisualState } from "./result.ts";
 import { toolLoadingIcon } from "../../utils/tool-loading-icon.ts";
 import { showMoreHintText } from "./show-more-hint.ts";
 import { isToolCallHovered } from "../../overlays/mouse-state.ts";
@@ -364,14 +364,16 @@ export function createFileRenderer(original: any): any {
 		...original,
 		renderShell: "self",
 		renderCall(args: any, theme: any, context: any) {
-			if (!valid(args)) return fallback("renderCall", [args, theme, context]);
+			const nativeCall = valid(args) ? undefined : fallback("renderCall", [args, theme, context]);
+			const path = typeof args?.path === "string" ? sanitizeToolResultText(args.path) : undefined;
 			return {
 				render(width: number) {
-					const pending = context.isPartial && context.executionStarted;
+					const pending = resolveToolVisualState(context) === "pending";
+					if (nativeCall && !pending) return nativeCall.render(width);
 					if (pending) scheduleAnimation(context);
-					return toolHeaderLines(theme, context, name, sanitizeToolResultText(args.path), width, pending ? toolLoadingIcon() : "●");
+					return toolHeaderLines(theme, context, name, path, width, pending ? toolLoadingIcon() : "●");
 				},
-				invalidate() {},
+				invalidate() { nativeCall?.invalidate?.(); },
 			};
 		},
 		renderResult(result: AgentToolResult<any>, options: any, theme: any, context: any) {

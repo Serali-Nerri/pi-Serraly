@@ -5,6 +5,7 @@ import { patchRegistry, TRANSCRIPT_OWNER } from "./patch-keys.ts";
 import { installCompactMode, refreshCompactModeComponents } from "./compact-mode.ts";
 import { installDefaultMode, installToolExpandedBackground } from "./default-mode.ts";
 import { installToolMouseInteraction } from "./mouse/interaction.ts";
+import { installStickyUserMessage } from "./sticky-user-message.ts";
 import { getToolMouseTui } from "../overlays/mouse-state.ts";
 import { installToolGrouping } from "./grouping.ts";
 import { installMessageDisplayRendering, setMessageDisplayTheme } from "./message-display.ts";
@@ -37,10 +38,13 @@ export function installTranscript(ctx: ExtensionContext, thinking: CompactThinki
 		disposers.push(installMessageDisplayRendering());
 		disposers.push(installToolExpandedBackground());
 		disposers.push(installToolMouseInteraction(ctx));
+		const sticky = installStickyUserMessage(ctx);
+		disposers.push(() => sticky.dispose());
 		const current = {
 			compact,
 			refresh(context: ExtensionContext) {
 				if (disposed) return;
+				sticky.refresh();
 				grouping.setTheme(context.ui.theme);
 				setMessageDisplayTheme(context.ui.theme);
 				const tui = getToolMouseTui();

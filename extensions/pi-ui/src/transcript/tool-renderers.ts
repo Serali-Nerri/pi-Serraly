@@ -2,7 +2,6 @@
 import { Text, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { config } from "../config/config.ts";
 import { oneLine } from "../utils/format.ts";
-import { formatDuration } from "../shell/utils.ts";
 import { isToolCallHovered } from "../overlays/mouse-state.ts";
 import { createApplyPatchRenderer } from "./tool/apply-patch.ts";
 import { createFileRenderer } from "./tool/files.ts";
@@ -10,6 +9,7 @@ import { fitToolCallSummary, humanizeToolLabel, toolCallSummary } from "./tool/n
 import { showMoreHintText } from "./tool/show-more-hint.ts";
 import {
 	countLines, hasExpandableDetail, isToolExpanded, outputLineCount, pendingIcon,
+	recordedShellDuration,
 	renderCollapsedToolResultToWidth, renderExpandedToolResult, resolveToolVisualState,
 	scheduleAnimation, settledIcon, setToolVisualState, textFromResult, toolIconColor, toolViewportWidth,
 } from "./tool/result.ts";
@@ -32,9 +32,6 @@ function fallback(tool: any, slot: "renderCall" | "renderResult", args: any[], t
 	return new Text(text, 0, 0);
 }
 
-/** Native Pi reports a recorded duration only for the shell tools. */
-const DURATION_TOOLS = new Set(["bash", "powershell"]);
-
 /** Pi 1.1.0 requires `renderShell: "self"` renderers to apply outputPad themselves; the host default is one column. */
 function outputPadOf(context: any): number {
 	const pad = context?.outputPad;
@@ -55,12 +52,13 @@ function createGenericRenderer(original: any): any {
 			const expanded = Boolean(context?.expanded);
 			let cachedWidth: number | undefined;
 			let cachedLine: string | undefined;
+			let cachedState: ReturnType<typeof resolveToolVisualState>;
 			return {
 				render(width: number) {
 					const state = resolveToolVisualState(context);
-					const pending = state === "pending" || (!state && (context?.isPartial || context?.executionStarted));
-					if (!pending && cachedWidth === width && cachedLine !== undefined) return [cachedLine];
-					if (pending && context?.executionStarted) scheduleAnimation(context);
+					const pending = state === "pending";
+					if (!pending && cachedState === state && cachedWidth === width && cachedLine !== undefined) return [cachedLine];
+					if (pending) scheduleAnimation(context);
 					const glyph = pending ? pendingIcon(name) : settledIcon(name, state);
 					const icon = state === "success" ? `\x1b[38;2;80;220;100m${glyph}\x1b[39m` : theme.fg(toolIconColor(context), glyph);
 					const viewport = toolViewportWidth(width);
@@ -68,6 +66,7 @@ function createGenericRenderer(original: any): any {
 					const lead = " ".repeat(pad);
 					const available = Math.max(0, viewport - pad - visibleWidth(icon) - 1 - visibleWidth(summary.detail));
 					cachedWidth = width;
+					cachedState = state;
 					cachedLine = truncateToWidth(`${lead}${icon} ${theme.fg("toolTitle", fitToolCallSummary(summary, available))}${theme.fg("dim", summary.detail)}`, viewport, "");
 					return [cachedLine];
 				},
@@ -91,9 +90,7 @@ function createGenericRenderer(original: any): any {
 			const prefix = expandable ? theme.fg("dim", " • ") : "";
 			const hint = expandable ? prefix + theme.fg("dim", showMoreHintText()) : "";
 			const hoveredHint = expandable ? prefix + theme.fg("text", showMoreHintText()) : "";
-			const duration = !options?.isPartial && DURATION_TOOLS.has(name) &&
-				typeof context?.durationMs === "number" && Number.isFinite(context.durationMs)
-				? context.durationMs : undefined;
+			const duration = recordedShellDuration(name, Boolean(options?.isPartial), context?.durationMs);
 			const resultPrefix = `${" ".repeat(pad)}  ↳ `;
 			let cachedWidth: number | undefined;
 			let normal: string[] | undefined;
@@ -105,7 +102,7 @@ function createGenericRenderer(original: any): any {
 						cachedWidth = width;
 						const lines = (collapsedHint: string) => {
 							const rendered = [theme.fg(error ? "error" : "muted", renderCollapsedToolResultToWidth(summary, collapsedHint, width, resultPrefix))];
-							if (duration !== undefined) rendered.push(`${ " ".repeat(pad)}${ theme.fg("muted", `Took ${ formatDuration(duration)}`)}`);
+							if (duration !== undefined) rendered.push(`${" ".repeat(pad)}${theme.fg("muted", duration)}`);
 							return rendered;
 						};
 						normal = lines(hint);

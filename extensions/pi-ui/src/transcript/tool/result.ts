@@ -1,13 +1,25 @@
 // Adapted from pi-cc-extensions v0.8.69; see licenses/claude-style-tools-THIRD_PARTY_NOTICES.md.
 import { Text, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
+import type {
+	AgentStartEvent, AgentSettledEvent, MessageStartEvent, MessageUpdateEvent,
+	MessageEndEvent, ToolExecutionStartEvent, ToolExecutionEndEvent,
+} from "@earendil-works/pi-coding-agent";
 import { inspect } from "node:util";
 import { config } from "../../config/config.ts";
 import { showMoreHintText } from "./show-more-hint.ts";
 import { TOOL_LOADING_INTERVAL_MS, toolLoadingIcon } from "../../utils/tool-loading-icon.ts";
 import { sanitizeToolResultText } from "../../utils/tool-result-sanitize.ts";
 import { getUiScheduler } from "../../scheduler.ts";
+import { formatDuration } from "../../shell/utils.ts";
 
 const TOOL_VIEWPORT_WIDTH_RATIO = 0.8;
+
+/** Shell duration belongs to the host result, never a presentation clock. */
+export function recordedShellDuration(name: string, isPartial: boolean, durationMs: unknown): string | undefined {
+	if ((name !== "bash" && name !== "powershell") || isPartial ||
+		typeof durationMs !== "number" || !Number.isFinite(durationMs)) return;
+	return `Took ${formatDuration(durationMs)}`;
+}
 
 export function toolViewportWidth(width: number): number {
 	const available = Math.max(0, Math.floor(width));
@@ -112,6 +124,47 @@ export function pendingIcon(_name: string): string {
 
 type ToolVisualState = "pending" | "success" | "error";
 
+export type ToolActivityEvent = AgentStartEvent | AgentSettledEvent | MessageStartEvent |
+	MessageUpdateEvent | MessageEndEvent | ToolExecutionStartEvent | ToolExecutionEndEvent;
+type ToolActivity = "waiting" | "executing" | "success" | "error";
+const liveToolActivity = new Map<string, ToolActivity>();
+let activityActive = false;
+
+/** Live declarations are presentation state, not evidence that execution began. */
+export function observeToolActivityEvent(event: ToolActivityEvent): void {
+	if (event.type === "agent_start") {
+		resetToolActivity();
+		activityActive = true;
+		return;
+	}
+	if (event.type === "agent_settled") {
+		activityActive = false;
+		liveToolActivity.clear();
+		clearAllAnimations();
+		return;
+	}
+	if (!activityActive) return;
+	if (event.type === "tool_execution_start" || event.type === "tool_execution_end") {
+		if (event.parentToolCallId) return;
+		liveToolActivity.set(event.toolCallId, event.type === "tool_execution_start"
+			? "executing" : event.isError ? "error" : "success");
+		return;
+	}
+	if (event.message.role !== "assistant") return;
+	for (const block of event.message.content) {
+		if (block.type === "toolCall" && !liveToolActivity.has(block.id)) {
+			liveToolActivity.set(block.id, "waiting");
+		}
+	}
+}
+
+/** Session replacement, tree navigation, reload and disposal discard live ids. */
+export function resetToolActivity(): void {
+	activityActive = false;
+	liveToolActivity.clear();
+	clearAllAnimations();
+}
+
 export function settledIcon(_name: string, state: ToolVisualState | undefined): string {
 	if (state === "success") return "✓";
 	if (state === "error") return "✗";
@@ -137,17 +190,28 @@ function getToolVisualState(context: any): ToolVisualState | undefined {
 
 export function resolveToolVisualState(context: any): ToolVisualState | undefined {
 	const visualState = getToolVisualState(context);
-	if (visualState || context?.isPartial !== false) return visualState;
-	const settledState: ToolVisualState = context?.isError ? "error" : "success";
-	setToolVisualState(context, settledState);
-	return settledState;
+	// A real result always wins over a declaration, including a result delivered
+	// before the observer's matching tool_execution_end event.
+	if (context?.isPartial === false) {
+		const settledState: ToolVisualState = context?.isError ? "error" : "success";
+		setToolVisualState(context, settledState);
+		return settledState;
+	}
+	if (visualState === "success" || visualState === "error") return visualState;
+	const activity = liveToolActivity.get(context?.toolCallId);
+	if (activity === "success" || activity === "error") {
+		clearAnimation(context);
+		return activity;
+	}
+	if (activity === "waiting" || activity === "executing") return "pending";
+	return undefined;
 }
 
 export function toolIconColor(context: any): "accent" | "error" | "success" | "muted" {
-	const visualState = getToolVisualState(context);
+	const visualState = resolveToolVisualState(context);
 	if (context?.isError || visualState === "error") return "error";
 	if (visualState === "success") return "success";
-	if (context?.isPartial || context?.executionStarted || visualState === "pending") return "accent";
+	if (visualState === "pending") return "accent";
 	return "muted";
 }
 

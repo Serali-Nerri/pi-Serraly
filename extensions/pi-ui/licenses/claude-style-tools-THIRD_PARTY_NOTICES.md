@@ -26,6 +26,28 @@ Additional selective presentation adaptations use the read-only reference
 These are selective behavior ports to the current Pi 1.1.0 interfaces, not whole
 commit imports or a replacement of the v0.8.69 + `26aa98df` source baseline.
 
+Further selective behavior adaptations reference
+[v1.0.1, `0188b76f`](https://github.com/minuque/pi-cc-extensions/tree/0188b76f2597772bea3b42075857e030d9a89666):
+
+- `4f37369`: fullscreen sticky user-message first lines. The local implementation
+  consumes Pi 1.1.0's native prompt zones, preserves saved messages, and bounds
+  pointer input horizontally as well as vertically; the scrollbar is excluded.
+- `e1fbcd6` / `d669a32`: replayed user-message boundaries and child expansion
+  without closing other members of the same Work Group.
+- `5a7d542`: fullscreen expansion stops bottom-following at the current viewport.
+- `76b0233`: pending animation during live declaration/waiting, using public
+  activity events rather than animating historical unfinished calls.
+- `44a57d1` / `28cfe13`: grouped shell rows show recorded duration, not output
+  counts or a new presentation clock.
+
+Collapse retains the current viewport, referencing
+[`08ec9183`](https://github.com/minuque/pi-cc-extensions/commit/08ec91838842f15ec999850816a99435e7e15fbb)
+on main. Its panel-splitting implementation is not imported. Thinking-title
+interaction and object-based Work Summary counts, including recorded nested
+operations, are local product decisions rather than upstream code imports.
+Currencies, output-rate/TTFT features, summary-only edit previews, rich diff,
+theme changes and unrelated upstream fixes are not included.
+
 Copyright (c) 2026 minuque. Licensed under MIT; the complete license is in
 `LICENSES/pi-cc-extensions.txt`.
 

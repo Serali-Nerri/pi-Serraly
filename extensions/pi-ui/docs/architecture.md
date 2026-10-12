@@ -10,6 +10,9 @@ Factory loading has no UI timers or prototype patches.
 one `pi-ui-bridge`, the current context/generation, presentation commands and
 resource cleanup. TUI resources require both `ctx.mode === "tui"` and `hasUI`.
 Print, JSON and RPC retain their native prototypes and protocol output.
+The router forwards public live declarations and tool observations before
+transcript refresh. Session replacement, tree navigation, compaction and shutdown
+clear live animation identities rather than treating replayed calls as active.
 
 Fullscreen is the host default. Explicit `tuiMode: "regular"` or
 `--tui-mode regular` selects regular mode; UI presentation supports both.
@@ -26,12 +29,12 @@ other jobs from running. Shutdown stops scheduling before resources are released
 | Directory | Responsibility |
 | --- | --- |
 | `compat/` | Private host fields, prototype capability checks, source-aware renderer policy, ownership, grouping/compact/message/mouse integration |
-| `state/` | Billing/context snapshots and Thinking timing/persistence controller |
+| `state/` | Billing/context snapshots, recorded Work Summary observations and Thinking timing/persistence controller |
 | `shell/` | Footer view, captured host identity/liveness, statuses, bounded Git/runtime queries and generation guards |
 | `transcript/` | Thinking and tool/file/diff/Input-Output views over captured data |
 | `overlays/` | Text-preview dialogs, hover/TUI state |
 | `markdown/` | One display-only transformer; native Mermaid/ordinary URLs plus narrow CJK-punctuation URL-boundary compatibility |
-| `config/` | Twelve effective settings, atomic explicit saves and four-page Style/Files/Thinking/UI panel |
+| `config/` | Thirteen effective settings, atomic explicit saves and four-page Style/Files/Thinking/UI panel |
 
 ## Compatibility pipeline
 
@@ -83,11 +86,17 @@ is unchanged unless the operator chooses another padding. Settled bash/PowerShel
 results also append the host-recorded `Took` duration, read from `durationMs`
 rather than a renderer clock so the value is monotonic and survives reload; a
 result stored without one omits the line.
+Collapsed tool-group shell rows use that same recorded duration without
+duplicating the single-card line.
 
 Tool animation uses the keyed scheduler to request repaint only. Pending glyphs
 are read by the view's `render`, not captured while assembling call/result bodies;
 pending views must not enter settled caches. Real data and interaction changes
 retain normal host invalidation.
+Declared calls in the current live activity animate while awaiting execution,
+including while required file arguments are still arriving.
+Their pending state does not claim execution has begun; replayed unfinished calls
+do not start live animation, and real results determine the final state.
 
 Each expandable display declares the rows and actions it owns in its current
 layout. Mouse routing checks that declaration before checking the action's text
@@ -96,6 +105,29 @@ selection, links and keyboard expansion retain their existing behavior. Native
 edit context omissions use the gutter; a trailing host omission is not retained
 hidden content. Expanded diffs remain bounded and previews never reconstruct data
 from disk.
+Thinking title text and the explicit expansion hint are both declared targets;
+body selection and links remain host-owned. Fullscreen mouse expansion stops
+bottom-following at the current position, and collapse keeps the current viewport.
+That position is read from the pinned host's `viewportTop` and held through its
+primary ScrollView; these private instance assumptions are validated against the
+real Pi host rather than by the prototype-only capability probe.
+Regular-mode scrolling remains terminal-owned.
+
+Fullscreen sticky user prompts are enabled by `stickyUserMessage` by default,
+only in `on` and `compact` modes. The first body line is pinned once its message
+passes above the viewport; a later user message takes over under the same
+positional condition. Clicking the drawn line returns to its original message.
+Sticky hit-testing is bounded to the current painted row and horizontal span,
+never the scrollbar column. An ordinary repaint retains a press only while its
+instruction, layout root and geometry remain unchanged; scrolling, resizing and
+replacement invalidate it. Moving onto sticky text clears any previous tool-card
+hover, even though sticky input is handled before ordinary component dispatch.
+The frame consumes Pi's native prompt zones without
+patching user-message content. Frame and mouse patches obey the same capability,
+branded ownership and identity-safe cleanup rules; no display marker may escape
+to the terminal or modify saved message content.
+The pinned layout-frame shape is inspected locally; runtime imports stay on the
+public Pi package entries that the isolated extension loader resolves.
 
 `expandedCardBackground` is a validated host semantic background token, defaulting
 to `userMessageBg`. UI-owned expanded cards, groups, message summaries and Thinking

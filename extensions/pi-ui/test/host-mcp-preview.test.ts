@@ -105,9 +105,10 @@ test("Pi 1.1.0 native MCP visual previews, notices and shell survive modes and e
 						"managed read controls prove grouping is active");
 				}
 				if (mode === "compact") {
-					const summary = plain(assistant.render(120));
-					assert.match(summary, /read×2/, "managed controls enter the compact round");
-					assert.doesNotMatch(summary, /mcp__|preview_fixture|long_line/, "MCP is not counted in the compact round");
+					const summary = plain(assistant.render(160));
+					assert.match(summary, /Read 2 files/, "managed controls enter the Work Summary");
+					assert.match(summary, /Used mcp__preview_fixture__long_line 2 times/,
+						"recorded MCP operations are counted without taking over their native cards");
 				}
 				for (const [index, component] of components.entries()) {
 					assert.deepEqual(resolveRendererPolicy(component), {

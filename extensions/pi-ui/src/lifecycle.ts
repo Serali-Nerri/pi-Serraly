@@ -12,6 +12,7 @@ import { setToolTuiFullscreen } from "./transcript/tool/show-more-hint.ts";
 import { mountedTranscriptChanged, mountedTranscriptIdentity, refreshMountedTranscript } from "./compat/transcript-refresh.ts";
 import { bindUiScheduler, UiScheduler } from "./scheduler.ts";
 import { patchRegistry, UI_LIFECYCLE_OWNER } from "./compat/patch-keys.ts";
+import { observeToolActivityEvent, resetToolActivity } from "./transcript/tool/result.ts";
 
 const OWNER = UI_LIFECYCLE_OWNER;
 const BRIDGE = "pi-ui-bridge";
@@ -91,6 +92,7 @@ export function registerUiLifecycle(pi: ExtensionAPI): void {
 		generation++;
 		pendingCompaction = undefined;
 		scheduler.dispose();
+		resetToolActivity();
 		safe("shell cleanup", () => shell.dispose(), previous);
 		safe("transcript cleanup", stopTranscript, previous);
 		safe("thinking cleanup", () => router.emit("session_shutdown", { type: "session_shutdown" }, previous), previous);
@@ -125,6 +127,7 @@ export function registerUiLifecycle(pi: ExtensionAPI): void {
 		if (context.mode !== "tui" || !context.hasUI) return;
 		ctx = context;
 		active = true;
+		resetToolActivity();
 		generation++;
 		reported.clear();
 		scheduler.start((force) => getToolMouseTui()?.requestRender?.(force), (error) => report("refresh", error, context));
@@ -178,6 +181,11 @@ export function registerUiLifecycle(pi: ExtensionAPI): void {
 		(pi.on as (name: string, handler: Handler) => unknown)(name, (event: any, context: ExtensionContext) => {
 			if (!active) return;
 			ctx = context;
+			if (name === "session_tree" || name === "session_compact") resetToolActivity();
+			else if (["agent_start", "agent_settled", "message_start", "message_update",
+				"message_end", "tool_execution_start", "tool_execution_end"].includes(name)) {
+				observeToolActivityEvent(event);
+			}
 			safe(name, () => router.emit(name, event, context), context);
 			switch (name) {
 				case "agent_start": transcript?.compact.activityStart(); shell.agentStart(); break;
@@ -192,8 +200,16 @@ export function registerUiLifecycle(pi: ExtensionAPI): void {
 				}
 				case "ui_prompt_start": transcript?.compact.userWait(true); break;
 				case "ui_prompt_end": transcript?.compact.userWait(false); break;
-				case "message_end": shell.messageEnd(); break;
+				case "message_end":
+					transcript?.compact.observeMessage(event.message);
+					shell.messageEnd();
+					break;
+				case "tool_execution_start":
+				case "tool_execution_update":
+					transcript?.compact.observeToolExecution(event);
+					break;
 				case "tool_execution_end":
+					transcript?.compact.observeToolExecution(event);
 					shell.toolEnd(context);
 					transcript?.compact.refreshToolCallMessage(event.toolCallId);
 					break;

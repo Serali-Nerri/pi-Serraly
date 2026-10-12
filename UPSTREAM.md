@@ -32,6 +32,10 @@
 - 选择性吸收 v0.9.10（`2b72669cafefe0771b2e3e63b0db5c478314d2d4`）的自适应
   摘要、轻量动画、尾部工作汇总、声明式动作、diff 省略语义和展开背景；
   不是整版同步，具体采用与未采用边界见模块许可通知；
+- 另参考 v1.0.1（`0188b76f2597772bea3b42075857e030d9a89666`）的 fullscreen
+  用户首行置顶、用户分界、组内展开、等待动画与 shell 耗时行为，以及 main
+  `08ec91838842f15ec999850816a99435e7e15fbb` 的收起视口保持；
+  语义工作汇总为本地设计，具体来源与取舍仍由模块记录持有；
 - `tifandotme/pi-extensions` 的 `pi-compact-thinking`；
 - `OldSuns/pi-open-tui` 0.3.1 的 footer 渲染、icons、运行时检测、usage 聚合与
   格式化，记录在

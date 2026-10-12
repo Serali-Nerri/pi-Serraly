@@ -1,10 +1,10 @@
 // Adapted from pi-cc-extensions v0.8.69; see THIRD_PARTY_NOTICES.md.
 /**
- * Compact mode：每条含 toolCall 的 assistant message 折叠为一条逐步累加的摘要行
- * （`Ran for 8s, bash×2, read×2`），edit/write/apply_patch 保留独立的本地文件渲染。
+ * Compact mode：工作组尾端呈现中性、单行语义汇总；
+ * edit/write/apply_patch 和 dedicated 工具保留独立渲染。
  * 展开过程视图后，工具和 Thinking 按消息顺序呈现，子项支持独立展开。
  *
- * 工具计数：read 按非空路径去重、其余按调用计数（首次出现顺序）；edit/write/apply_patch 不进摘要。
+ * 汇总包含所有捕获的调用，按记录的对象字符串去重；展示所有权与统计独立。
  * 时长 = 回合流逝挂钟；进行中 Running...，结束 Ran for。
  * abort/error/length 状态行挂在摘要外层，避免被折叠吞掉。
  *
@@ -13,6 +13,7 @@
  */
 import {
 	AssistantMessageComponent,
+	UserMessageComponent,
 	ToolExecutionComponent,
 	type Theme,
 } from "@earendil-works/pi-coding-agent";
@@ -22,7 +23,7 @@ import { getUiScheduler } from "../scheduler.ts";
 import { resolveRendererPolicy } from "./policy.ts";
 import { captureMethod, installMethodStep, nativeMethod } from "./method-pipeline.ts";
 import { requireReplaceableMethod } from "./host-capabilities.ts";
-import { sanitizeToolResultText } from "../utils/tool-result-sanitize.ts";
+import { WorkSummaryObservations, summarizeOperations, type RecordedOperation, type WorkToolEvent } from "../state/work-summary.ts";
 import { refreshTranscriptComponent } from "./transcript-refresh.ts";
 import { getMessageDisplayTheme } from "./message-display.ts";
 import { getToolMouseTui } from "../overlays/mouse-state.ts";
@@ -152,13 +153,14 @@ function buildMessagesSummary(
 	runningActiveOverride?: boolean,
 	workDurationMs?: number,
 	aborted = false,
+	nested?: { operations: RecordedOperation[]; partial: boolean },
 ): string {
 	const parts: string[] = [];
-	const counts = new Map<string, number>();
-	const readPaths = new Set<string>();
+	const operations: RecordedOperation[] = [];
 	const durationTimestamps = new Set<number>();
 	let durationMs = 0;
 	let runningActive = false;
+	let thoughts = 0;
 
 	for (const message of messages) {
 		if (typeof message?.timestamp === "number" && !durationTimestamps.has(message.timestamp)) {
@@ -169,19 +171,13 @@ function buildMessagesSummary(
 		}
 		const content = Array.isArray(message?.content) ? message.content : [];
 		for (const item of content) {
+			if (item?.type === "thinking" && typeof item.thinking === "string" && item.thinking.trim()) thoughts++;
 			if (item?.type !== "toolCall") continue;
-			const rawName = typeof item.name === "string" ? item.name : "tool";
-			if (!resolveRendererPolicy(rawName).compactable) continue;
-			const name = sanitizeToolResultText(rawName);
-			if (rawName.split(".").pop() === "read") {
-				const args = item.arguments ?? item.args ?? {};
-				const path = args.path ?? args.file_path ?? args.file;
-				if (typeof path === "string" && path.length > 0) {
-					if (readPaths.has(path)) continue;
-					readPaths.add(path);
-				}
-			}
-			counts.set(name, (counts.get(name) ?? 0) + 1);
+			operations.push({
+				id: item.id,
+				name: typeof item.name === "string" ? item.name : "tool",
+				arguments: item.arguments ?? item.args,
+			});
 		}
 	}
 
@@ -199,7 +195,9 @@ function buildMessagesSummary(
 	} else if (aborted) {
 		parts.push(durationMs > 0 ? `Cancelled after ${formatThoughtDuration(durationMs)}` : "Cancelled");
 	} else if (durationMs > 0) parts.push(`Ran for ${formatThoughtDuration(durationMs)}`);
-	for (const [name, count] of counts) parts.push(`${name}×${count}`);
+	if (thoughts) parts.push(`Thought ${thoughts} ${thoughts === 1 ? "time" : "times"}`);
+	parts.push(...summarizeOperations([...operations, ...nested?.operations ?? []]));
+	if (nested?.partial) parts.push("partial records");
 	return parts.join(", ");
 }
 
@@ -455,6 +453,10 @@ export function isCompactSummaryComponent(value: unknown): boolean {
 }
 
 export type CompactModeHooks = {
+	/** Public tool observations, including calls nested under a recorded parent. */
+	observeToolExecution(event: WorkToolEvent): void;
+	/** Saved toolResult.nestedCalls on message_end; also restored by sync. */
+	observeMessage(message: any): void;
 	/** Reconcile owned summary displays after the host mounts/rebuilds transcript. */
 	reconcile(root: unknown): void;
 	activityStart(): void;
@@ -703,6 +705,7 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		summaryComponent?: any;
 		summaryParent?: { children: any[] };
 	};
+	const observations = new WorkSummaryObservations();
 	let activeRound: CompactRound | undefined;
 	let activityActive = false;
 	let activityGeneration = 0;
@@ -743,6 +746,11 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 	const roundToJoin = (component: object, message: object): CompactRound | undefined => {
 		const retained = componentClocks.get(component) ?? messageClocks.get(message);
 		if (retained) return [...rounds].find((round) => round.clock === retained);
+		if (activeRound) {
+			let mounted = false;
+			walkComponentTree(getToolMouseTui(), (value) => { if (value === activeRound?.anchor) mounted = true; });
+			if (!mounted) return undefined;
+		}
 		return !activityActive || activeRound?.active ? activeRound : undefined;
 	};
 
@@ -773,6 +781,7 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 			runningActive,
 			round ? roundWallMs(round) : undefined,
 			round?.settledAborted === true,
+			round ? observations.forCalls(roundToolCallIds(round)) : undefined,
 		);
 
 	const stopRoundTick = (): void => {
@@ -924,8 +933,11 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		for (const [component, message] of round.messages) {
 			component.lastMessage = round.proseMessages.get(component) ?? message;
 			ensureAssistantSetExpanded(component);
+			// Only the anchor owns expansion. Otherwise the host's single-card
+			// policy can collapse a sibling assistant when opening a child tool.
+			if (component !== round.anchor) component.expanded = false;
 			component[ASSISTANT_TOGGLE_ROUND_KEY] = (expanded: boolean) => {
-				for (const member of round.messages.keys()) member.expanded = expanded;
+				round.anchor.expanded = expanded;
 				if (!expanded) {
 					for (const id of round.suppressedToolIds) expandedRoundToolIds.delete(id);
 					round.suppressedToolIds.clear();
@@ -1091,15 +1103,16 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 
 		const content = Array.isArray(message?.content) ? message.content : [];
 		const hasToolCalls = content.some((item: any) => item?.type === "toolCall");
+		const hasThinking = content.some((item: any) => item?.type === "thinking");
 		const hasText = content.some(
 			(item: any) => item?.type === "text" && typeof item.text === "string" && item.text.trim(),
 		);
 		self.hasToolCalls = hasToolCalls;
 
-		if (hasToolCalls) {
+		if (hasToolCalls || hasThinking) {
 			const retained = componentClocks.get(this) ?? messageClocks.get(message);
 			let round = roundByComponent.get(this) ?? (retained ? roundToJoin(this, message) : undefined);
-			if (hasText && !round) {
+			if (hasToolCalls && hasText && !round) {
 				if (activeRound && !retained) finishRound(activeRound);
 				round = {
 					anchor: this,
@@ -1124,8 +1137,13 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 			}
 			roundByComponent.set(this, round);
 			if (!rounds.has(round)) activateRound(round);
-			round.proseMessages.delete(this);
-			round.messages.set(this, message);
+			if (hasText && !hasToolCalls) {
+				round.proseMessages.set(this, message);
+				round.messages.set(this, { ...message, content: content.filter((item: any) => item?.type !== "text") });
+			} else {
+				round.proseMessages.delete(this);
+				round.messages.set(this, message);
+			}
 			if (round.clock) rememberClock(this, message, round.clock);
 			renderRound(round);
 			return undefined;
@@ -1135,34 +1153,13 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 			const round = roundByComponent.get(this);
 			if (round) {
 				round.proseMessages.set(this, message);
+				round.messages.set(this, { ...message, content: content.filter((item: any) => item?.type !== "text") });
 				if (!rounds.has(round)) activateRound(round);
 				renderRound(round);
 				return undefined;
 			}
 			if (activeRound && (!activityActive || !activeRound.active)) finishRound(activeRound);
 			return renderAssistantWithoutThinking(this, message);
-		}
-
-		const hasThinking = content.some((item: any) => item?.type === "thinking");
-		if (hasThinking) {
-			let round = roundByComponent.get(this);
-			if (!round) {
-				round = roundToJoin(this, message) ?? {
-					anchor: this,
-					messages: new Map(),
-					proseMessages: new Map(),
-					active: true,
-					suppressedToolIds: new Set(),
-					clock: clockFor(this, message),
-				};
-				roundByComponent.set(this, round);
-			}
-			if (!rounds.has(round)) activateRound(round);
-			round.proseMessages.delete(this);
-			round.messages.set(this, message);
-			if (round.clock) rememberClock(this, message, round.clock);
-			renderRound(round);
-			return undefined;
 		}
 
 		// A per-response status remains visible, but does not settle an activity
@@ -1184,7 +1181,7 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 			return patch.toolOriginalRender.call(this, width);
 		}
 		if (!resolveRendererPolicy(this).compactable) return patch.toolOriginalRender.call(this, width);
-		// Only tools approved by the shared policy join the round summary.
+		// The shared policy governs grouped process rendering, not semantic counting.
 		if (expandedRoundToolIds.has(String(this.toolCallId ?? ""))) return [];
 		// 普通工具折叠时不显示独立行（摘要行已统计），独立展开走原 renderer。
 		if (this.expanded === true) {
@@ -1236,6 +1233,13 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		messageClocks = new WeakMap();
 	};
 
+	function groupBoundary(): void {
+		if (activeRound) endRound(activeRound, true);
+		for (const clock of unfinishedClocks) finishClock(clock);
+		activityClock = activityActive ? createClock(Date.now()) : undefined;
+		activeRound = undefined;
+	}
+
 	try {
 		steps.push(installMethodStep(assistantPrototype, "updateContent", () => patch.assistantInstalled));
 		steps.push(installMethodStep(toolPrototype, "render", () => patch.toolInstalledRender));
@@ -1244,6 +1248,9 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		// Waiting for the editor widget would leave one stale historical frame.
 		steps.push(installMethodStep(Container.prototype as any, "addChild", (downstream) => function (this: any, child: any) {
 			const result = downstream.call(this, child);
+			if (patch.active && config.mode === "compact" && child instanceof UserMessageComponent) {
+				groupBoundary();
+			}
 			if (patch.active && config.mode === "compact" && (isAssistantComponent(child) || isToolComponent(child) ||
 				this.children.some((value: object) => summaryComponents.has(value)))) {
 				reconcile(getToolMouseTui() ?? this);
@@ -1270,6 +1277,8 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 	const applyStateSync = (ctx: any): boolean => {
 		if (!patch.active) return false;
 		uiRef = ctx?.ui;
+		const messages = ctx?.sessionManager?.buildSessionProjection?.().messages;
+		observations.restoreMessages(messages ?? []);
 		resetRounds();
 		// 始终保持补丁在链上：mode=on/off 走 passThrough，仍写入 lastMessage
 		// 与 tracked 集合，这样 /ccstyle 切回 compact 时不必 /reload。
@@ -1279,7 +1288,26 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 		return true;
 	};
 
+	const refreshObservedCall = (id: string): void => {
+		for (const round of rounds) {
+			const roots = roundToolCallIds(round);
+			if (roots.has(id) || observations.forCalls(roots).operations.some((operation) => operation.id === id)) {
+				renderRound(round);
+			}
+		}
+	};
+
 	return {
+		observeToolExecution(event) {
+			if (!patch.active) return;
+			observations.observeExecution(event);
+			refreshObservedCall(event.toolCallId);
+		},
+		observeMessage(message) {
+			if (!patch.active) return;
+			observations.observeMessage(message);
+			if (typeof message?.toolCallId === "string") refreshObservedCall(message.toolCallId);
+		},
 		reconcile,
 		activityStart() {
 			if (!patch.active || activityActive) return;
@@ -1300,12 +1328,7 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 			for (const clock of unfinishedClocks) finishClock(clock);
 			waitingDepth = 0;
 		},
-		groupBoundary() {
-			if (activeRound) endRound(activeRound, true);
-			for (const clock of unfinishedClocks) finishClock(clock);
-			activityClock = activityActive ? createClock(Date.now()) : undefined;
-			activeRound = undefined;
-		},
+		groupBoundary,
 		userWait(waiting) {
 			if (!patch.active || !activityActive) return;
 			waitingDepth = Math.max(0, waitingDepth + (waiting ? 1 : -1));

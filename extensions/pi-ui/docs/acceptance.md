@@ -74,6 +74,8 @@ at 80 columns.
 | HTML export | Real `AgentSession.exportToHtml()` output includes synthetic tool input and retained output through public renderers; isolated sessions never request a model. |
 | Markdown and state | Real-host destinations, literal text, code/target preservation, reference definitions and container boundaries; billing/context and Thinking persistence use synthetic session data. |
 | Failure and compaction | Missing/read-only methods, foreign wrappers, stale context access, unconditional cleanup and refresh after mounted-tree replacement. |
+| Work Summary | Object-based semantic counts, recorded Thinking entries, top-level/internal operation deduplication, incomplete records, user-message boundaries and local child expansion without collapsing the Work Group. |
+| Sticky prompts | Fullscreen viewed-history instruction selection, successor messages, jump-to-message, clipped Unicode, setting/style/mode gating, stale input and scrollbar exclusion. |
 | Terminal modes and widths | Default fullscreen without mode overrides, explicit regular/fullscreen PTYs, alternate-screen behavior, notifications, bounded rows, temporary file/diff operations, native OSC 8 and shutdown cleanup. |
 
 A grouping compatibility slot may retain an inactive reload tombstone. Cleanup
@@ -107,7 +109,7 @@ suite.
 
 - [ ] Native startup header untouched by this module, footer layout, cwd, runtime and extension status segments.
 - [ ] On/compact/off presentation; Thinking remains interactive in off.
-- [ ] All four settings pages, twelve settings and keyboard/focus behavior; `inputClip: 0` adaptive mode and explicit positive limits.
+- [ ] All four settings pages, thirteen settings and keyboard/focus behavior; `inputClip: 0` adaptive mode and explicit positive limits.
 - [ ] Mouse-driven text previews, keyboard navigation, scrolling and Escape ownership.
 - [ ] Fullscreen hover/expansion, text selection and links; regular keyboard paths.
 - [ ] Narrow/wide resizing and light/dark theme changes without stale content.
@@ -117,6 +119,11 @@ suite.
 - [ ] Exact action clicks versus identical ordinary output/diff/Thinking text; actual previews, drag selection, body collapse, links and keyboard paths.
 - [ ] Saved semantic expanded background updates existing tool/file/patch/group/message/Thinking views on repaint in light/dark themes; diff semantics, selection, hover, off mode and dedicated renderers remain intact.
 - [ ] Native Mermaid settings/fallbacks and bare-URL destinations.
+- [ ] Compact semantic Work Summary remains one tail row during live Thinking, direct and internal tool calls; incomplete records are marked without a task-failure claim.
+- [ ] Multiple assistant members stay in the expanded Work Group while a child tool or Thinking title is expanded; user messages split replayed groups.
+- [ ] Declared calls animate during live waiting but not replay; grouped shell rows show recorded duration without duplicate single-card duration.
+- [ ] Fullscreen expansion stops bottom-following at the clicked position and collapse keeps the current viewport; regular scrollback remains terminal-owned.
+- [ ] Sticky user-message first lines follow the viewed history, yield to subsequent prompts, jump to the original message, and leave scrollbar hover/clicks and ordinary text selection usable.
 
 At CJK punctuation boundaries, `www` paths containing Markdown-active characters
 use native inline-code labels so text such as `$x$` stays literal. Include this

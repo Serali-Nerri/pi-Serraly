@@ -8,7 +8,7 @@ import {
 	type Component,
 } from "@earendil-works/pi-tui";
 import { config } from "../config/config.ts";
-import { toolViewportWidth } from "../transcript/tool/result.ts";
+import { recordedShellDuration, resolveToolVisualState, toolViewportWidth } from "../transcript/tool/result.ts";
 import { getUiScheduler } from "../scheduler.ts";
 import { resolveRendererPolicy } from "./policy.ts";
 import { TOOL_LOADING_INTERVAL_MS, toolLoadingIcon } from "../utils/tool-loading-icon.ts";
@@ -90,10 +90,10 @@ function status(tool: any): ToolStatus {
 	return tool?.result ? "success" : "pending";
 }
 
-function statusIcon(value: ToolStatus): string {
+function statusIcon(value: ToolStatus, tool: any): string {
 	if (value === "success") return "✓";
 	if (value === "error") return "✗";
-	return toolLoadingIcon();
+	return resolveToolVisualState(tool) === "pending" ? toolLoadingIcon() : "●";
 }
 
 function scheduleGroupAnimation(patch: Patch): void {
@@ -102,7 +102,7 @@ function scheduleGroupAnimation(patch: Patch): void {
 	patch.cancelAnimation = scheduler.schedule("group-animation", TOOL_LOADING_INTERVAL_MS, () => {
 		patch.cancelAnimation = undefined;
 		if (!patch.active || ![...patch.groups].some((group) =>
-			(group.children as any[]).some((tool) => tool?.executionStarted && status(tool) === "pending"))) return;
+			(group.children as any[]).some((tool) => resolveToolVisualState(tool) === "pending"))) return;
 		scheduler.request();
 	});
 }
@@ -329,7 +329,7 @@ export class ToolGroupComponent extends Container {
 			names.size === 1 ? humanizeToolLabel(toolName(this.children[0])) : "Multiple Tools";
 		const overall: ToolStatus = counts.error ? "error" : counts.pending ? "pending" : "success";
 		if (
-			(this.children as any[]).some((tool) => tool?.executionStarted && status(tool) === "pending")
+			(this.children as any[]).some((tool) => resolveToolVisualState(tool) === "pending")
 		)
 			scheduleGroupAnimation(this.patch);
 		const overallColor = overall === "pending" ? "accent" : overall;
@@ -356,8 +356,9 @@ export class ToolGroupComponent extends Container {
 			const continuation = index === total - 1 ? "  " : "│ ";
 			if (!this._expanded) {
 				const summary = toolSummary(tool);
-				const prefix = ` ${fg("dim", branch)} ${fg(color, statusIcon(toolStatus))} `;
-				const detail = fg("dim", summary.detail);
+				const prefix = ` ${fg("dim", branch)} ${fg(color, statusIcon(toolStatus, tool))} `;
+				const duration = recordedShellDuration(toolName(tool), toolStatus === "pending", (tool as any)?.result?.durationMs);
+				const detail = fg("dim", summary.detail + (duration ? ` • ${duration}` : ""));
 				const rowWidth = toolViewportWidth(width);
 				const mainWidth = Math.max(0, rowWidth - visibleWidth(prefix) - visibleWidth(detail));
 				lines.push(
@@ -382,7 +383,7 @@ export class ToolGroupComponent extends Container {
 					lineIndex === 0 ? childLines[lineIndex] : stripLeadingSpaces(childLines[lineIndex], 1);
 				const prefix =
 					lineIndex === 0
-						? `${fg("dim", branch)} ${fg(color, statusIcon(toolStatus))} `
+						? `${fg("dim", branch)} ${fg(color, statusIcon(toolStatus, tool))} `
 						: fg("dim", continuation);
 				expandedLines.push(prefix + content);
 			}

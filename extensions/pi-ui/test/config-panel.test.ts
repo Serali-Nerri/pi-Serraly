@@ -3,10 +3,11 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "n
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, test } from "node:test";
-import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
-import { CURSOR_MARKER, visibleWidth, type Component, type Focusable, type TuiMouseEvent } from "@earendil-works/pi-tui";
+import { UserMessageComponent, type ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+import { CURSOR_MARKER, Text, visibleWidth, type Component, type Focusable, type TuiMouseEvent } from "@earendil-works/pi-tui";
 import { config, configPath, setConfig } from "../src/config/config.ts";
 import { showStylePanel } from "../src/config/panel.ts";
+import { harness } from "./harness.ts";
 
 let directory: string;
 let previousAgentDir: string | undefined;
@@ -59,7 +60,7 @@ test("four-page panel exposes current settings and omits discarded controls", as
 		["Mode", "Original renderers"],
 		["Write preview lines", "Edit preview lines", "Expanded file lines"],
 		["Summary titles", "Preview lines", "Animation interval (ms)"],
-		["Summary characters (0 = auto)", "Input preview lines", "Output preview lines", "Expanded card background"],
+		["Summary characters (0 = auto)", "Input preview lines", "Output preview lines", "Expanded card background", "Sticky user message"],
 	];
 	for (const labels of pages) {
 		const text = panel.text();
@@ -76,6 +77,37 @@ test("four-page panel exposes current settings and omits discarded controls", as
 	panel.input("\x1b");
 	await panel.completion;
 	assert.equal(panel.closed, true);
+});
+
+test("the host exposes enabled sticky prompts and the panel can save an explicit off switch", async () => {
+	writeFileSync(configPath(), JSON.stringify({ unrelated: { keep: true }, previewLines: 5 }));
+	const h = await harness({ rows: 8 });
+	try {
+		h.root.addChild(new UserMessageComponent("Configurable instruction"));
+		h.root.addChild(new Text(Array.from({ length: 12 }, (_, i) => `Result ${i}`).join("\n"), 0, 0));
+		h.render();
+		h.tui.scrollToTop();
+		h.tui.scrollBy(5);
+		assert.equal(h.render()[0]!.trim(), "Configurable instruction");
+		await h.commands.get("ccstyle").handler("status", h.ctx);
+		assert.match(h.notices.at(-1)!.message, /stickyUserMessage=true/);
+		const completion = h.commands.get("ccstyle").handler("panel", h.ctx);
+		const panel = h.overlay!;
+		for (let page = 0; page < 3; page++) panel.handleInput!("\t");
+		const lines = panel.render(100);
+		const row = lines.findIndex((line) => line.includes("Sticky user message"));
+		assert.ok(row >= 0, "the UI page offers sticky prompts");
+		panel.handleMouse!({ type: "click", button: "left", x: 4, y: row } as TuiMouseEvent);
+		assert.match(panel.render(100).join("\n"), /Sticky user message[\s\S]*false/);
+		panel.handleInput!("\x1b");
+		await completion;
+		await h.commands.get("ccstyle").handler("status", h.ctx);
+		assert.match(h.notices.at(-1)!.message, /stickyUserMessage=false/);
+		assert.deepEqual(JSON.parse(readFileSync(configPath(), "utf8")).unrelated, { keep: true });
+		h.click(2, 0);
+		assert.equal(h.tui.viewportTop, 5, "the off switch invalidates the previous sticky frame before repaint");
+		assert.doesNotMatch(h.render()[0]!, /Configurable instruction/);
+	} finally { await h.close(); }
 });
 
 test("mouse tabs select retained pages and ignore the area after the last tab", async () => {
