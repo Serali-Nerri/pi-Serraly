@@ -323,7 +323,7 @@ export class ConfigStore {
    * assembly. Precedence: session per-type → session default → config per-type
    * → config default → frontmatter → parentModelId.
    */
-  modelFor(type: string, parentModelId: string, agentConfig?: { model?: string }): string {
+  modelFor<T extends string | undefined>(type: string, parentModelId: T, agentConfig?: { model?: string }): string | T {
     return resolveModel({
       subagentType: type,
       agentConfig,

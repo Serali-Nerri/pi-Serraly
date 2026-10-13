@@ -87,6 +87,7 @@ vi.mock("../src/agents/agent-types.js", async () => {
   const actual = await vi.importActual<typeof import("../src/agents/agent-types.js")>("../src/agents/agent-types.js");
   return {
     resolveType: vi.fn((name: string) => ({ kind: "resolved", key: name })),
+    resolveTypeOrDiscover: vi.fn(async (name: string) => ({ kind: "resolved", key: name })),
     getConfig: vi.fn(() => ({ displayName: "unknown" })),
     getAgentConfig: vi.fn(() => ({})),
     registerAgents: vi.fn(),
@@ -373,6 +374,7 @@ describe("tool_call listener — guards", () => {
     expect(typeof event.input.model).toBe("string");
     expect(result).toBeUndefined();
   });
+
 });
 
 /* ------------------------------------------------------------------ */

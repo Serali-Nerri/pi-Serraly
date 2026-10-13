@@ -1,6 +1,6 @@
 # pi-ui
 
-Pi 1.1.0 的展示模块，将 Claude 风格转写与会话 shell 合并为一个独立入口。
+Pi 1.2.0 的展示模块，将 Claude 风格转写与会话 shell 合并为一个独立入口。
 本模块不注册或执行业务工具。工具自带 renderer 优先；真实内置工具以
 `sourceInfo` 区分，同名扩展覆盖不会被误接管。文件/补丁卡的标题与结果状态行
 使用共享 `pi-ui-kit` 的卡语法，diff/IO 正文、hover/hitbox、展开对象和动画帧
@@ -36,7 +36,7 @@ UI 只展示已经返回或保存的数据；不读当前磁盘补全历史 diff
 
 ## 宿主能力预检
 
-兼容补丁按引用替换 Pi 1.1.0 的展示方法（工具/助手/容器/三种摘要组件的
+兼容补丁按引用替换 Pi 1.2.0 的展示方法（工具/助手/容器/三种摘要组件的
 `render`、`updateDisplay`、`createResultRegion`、`dispatchMouseToLayout` 等）。
 每个 TUI `session_start` 在 thinking 与 transcript 修改之前做一次无写入预检：
 只读 descriptor、继承与 extensibility，不执行 getter，也不写任何槽位。
@@ -95,6 +95,8 @@ grep/find 显示表达式和存在的路径范围。摘要预算取终端宽度�
 动画帧只请求重绘，字形在 render 时读取；真实结果、展开、设置和主题更新仍正常失效。
 鼠标展开/预览只匹配展示模块声明的操作行及其文字区域，正文里的同款提示不是操作。
 原生 edit diff 的前部/中间省略显示在 gutter；尾部上下文省略不算可展开的保留内容。
+文字预览直接使用宿主归一化鼠标事件的本地坐标和完整滚轮行数，仅滚动条拖拽捕获指针；
+regular 输入路径仍接受原始终端鼠标数据。完成标记使用主题的 `success` 颜色。
 
 已删除 `dimThinkingText`、`expandedPreviewMaxLines`、`scrollStepLines`、旧 Task
 专用展示和滚轮覆盖。滚轮遵循宿主 `fullscreenWheelScrollLines`。

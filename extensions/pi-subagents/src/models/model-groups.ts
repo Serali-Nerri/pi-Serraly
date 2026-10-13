@@ -99,9 +99,8 @@ export function buildModelGroups(input: ModelGroupsInput): ModelGroups {
     // Tag = the layer that won, straight from the chain: [session] for a
     // session-layer win (per-type override, or the session default shadowing
     // the config per-type key); [project] for a project per-type win without
-    // a session default; untagged for a global per-type win. A listed row
-    // resolves at a per-type position, at the session default above it, or —
-    // for an empty-string key — at the next chain layer.
+    // a session default; untagged for a global per-type win. An empty string
+    // remains an explicit selection so the menu can clear the malformed key.
     const tag =
       source === "session-per-type" || source === "session-default"
         ? "[session]"

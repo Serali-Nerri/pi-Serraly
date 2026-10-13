@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { validateRawLayer } from "../../src/config/config-validation.js";
-import { parseModelKey, findModelInRegistry } from "../../src/utils.js";
+import { parseModelKey } from "../../src/utils.js";
 import { buildModelOptions, extractConfiguredModels } from "../../src/ui/menu/helpers.js";
 
 describe("validateRawLayer — concurrency", () => {
@@ -102,12 +102,6 @@ describe("parse backstop", () => {
     expect(parseModelKey({ model: "x" } as unknown as string)).toBeNull();
     expect(parseModelKey(null as unknown as string)).toBeNull();
     expect(parseModelKey(42 as unknown as string)).toBeNull();
-  });
-
-  it("findModelInRegistry falls back for non-string input instead of throwing", () => {
-    const registry = { find: () => undefined };
-    const fallback = { id: "f" };
-    expect(findModelInRegistry({ model: "x" } as unknown as string, registry, fallback as never)).toBe(fallback);
   });
 });
 

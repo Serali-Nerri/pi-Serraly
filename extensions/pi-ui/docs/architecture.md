@@ -1,4 +1,4 @@
-# pi-ui architecture — Pi 1.1.0
+# pi-ui architecture — Pi 1.2.0
 
 ## Ownership
 
@@ -55,7 +55,9 @@ Tool background and compact display steps
 share the same tool update dispatcher. No rendering tool is re-registered.
 
 Domain installation retains reverse-order cleanup and capability failure
-reporting. Git/runtime subprocesses keep bounded timeouts; disposed sessions ignore
+reporting. An unusable display capability names the member and retains native
+rendering; diagnostics do not infer a host version from a missing member.
+Git/runtime subprocesses keep bounded timeouts; disposed sessions ignore
 late results rather than updating newer installations.
 
 ## Renderer decisions
@@ -82,7 +84,7 @@ that same budget. `inputClip: 0` skips character preclipping, while positive lim
 remain effective. Path fitting stays POSIX-first and grapheme-safe, preserving
 filenames and separator semantics.
 
-Pi 1.1.0 carries `outputPad` in the tool render context and requires self-shell
+Pi 1.2.0 carries `outputPad` in the tool render context and requires self-shell
 renderers to apply it themselves. Managed self-shell cards take their leading
 indent from that value instead of a fixed column, keeping the indent inside the
 viewport budget; `default`-shell expansions stay flush and let the host Box pad
@@ -117,6 +119,17 @@ That position is read from the pinned host's `viewportTop` and held through its
 primary ScrollView; these private instance assumptions are validated against the
 real Pi host rather than by the prototype-only capability probe.
 Regular-mode scrolling remains terminal-owned.
+
+Text-preview overlays consume normalized mouse events directly: hit-testing uses
+component-local coordinates and scrolling preserves the signed `wheelDelta` line
+count, including zero. Only a scrollbar press starts pointer capture; track clicks,
+thumb dragging and release retain clamped scrolling. A change in rendered terminal
+rows/columns, dialog layout or scrollbar track size cancels active thumb dragging
+and preserves the clamped scroll offset. Release followed by a fresh scrollbar
+press resumes dragging in the new layout. Raw regular-input mouse packets are
+decoded at the input boundary, not synthesized from normalized events. Generic
+completed-tool and summary checkmarks use the theme's `success` foreground rather
+than a fixed RGB color.
 
 Fullscreen sticky user prompts are enabled by `stickyUserMessage` by default,
 only in `on` and `compact` modes. The first body line is pinned once its message

@@ -2,7 +2,7 @@
 
 独立入口 `dist/pi-subagents/index.js`，在 Pi 中注册 **`Agent`、`StopAgent`、
 `AgentStatus`** 和 **`/agents`**。三工具使用宿主默认的 direct exposure，注册后
-active；UI 模块只管展示，不执行或代管子代理。支持基线是 Pi **1.1.0**、
+active；UI 模块只管展示，不执行或代管子代理。支持基线是 Pi **1.2.0**、
 TypeBox **1.3.27**、Node **≥22.19**。来源与许可见 [UPSTREAM.md](UPSTREAM.md)
 及 [LICENSE](LICENSE)；构建、隔离和 release/替换流程见[开发指南](../../docs/development.md)。
 
@@ -43,7 +43,12 @@ agent 文件逐字段优先级为 **项目 > 共享 > 用户 > 内置**；必须
 任意嵌套 YAML。
 
 模型优先级为 session 每类型 > session default > 项目/全局每类型 > 项目/全局
-default > frontmatter > 父模型。配置中 null 表示不覆写。thinking 优先使用
+default > frontmatter > 父模型。每类型模型使用实际解析出的注册名称，包括可信目标中
+按需发现的 agent。配置中 null 表示不覆写；未指定模型时沿用父模型对象。
+显式配置或调用覆写的模型必须是可解析的 `provider/model-id` 且存在于宿主模型
+registry；空字符串、格式错误或模型不可用时，`Agent`（前台/后台）和 `/agents`
+手工 spawn 都在任务准入前报错，不会静默换用父模型或显示虚假的模型覆写标题。
+thinking 优先使用
 frontmatter，其后是目标 Pi 的 per-model thinking 和模块 defaultThinking，
 未设置时沿用父级。常用全局配置示例：
 

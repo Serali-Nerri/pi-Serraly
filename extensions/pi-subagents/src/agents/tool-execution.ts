@@ -16,7 +16,7 @@ import { resolveType, getAgentConfig, resolveTypeOrDiscover, type TypeResolution
 import { getSessionContextPercent } from "./usage.js";
 import { computeSpawnTarget, surfaceSpawnTargetWarnings } from "../spawn/spawn-target.js";
 
-import { parseModelKey, findModelInRegistry, parseThinkingLevel } from "../utils.js";
+import { parseModelKey, resolveModel, parseThinkingLevel } from "../utils.js";
 import { resolveThinkingLevel } from "../models/thinking-resolution.js";
 import { getPiModelThinkingLevel } from "../pi-settings.js";
 import { getPiInstance, getStore, getCoordinator, getManager } from "../shell.js";
@@ -146,6 +146,25 @@ export function formatResultContent(record: AgentRecord): string {
 
 // --- Tool execute handlers ---
 
+/** Listener and execution share the canonical, trust-gated profile identity. */
+async function resolveSpawnAgentType(
+  type: string,
+  target: { projectTrusted: boolean; resolvedPath?: string },
+): Promise<string> {
+  const targetAgentsDir = target.projectTrusted && target.resolvedPath ? `${target.resolvedPath}/.pi/agents` : undefined;
+  const resolution = await resolveTypeOrDiscover(type, targetAgentsDir);
+  if (resolution.kind === "ambiguous") {
+    // Two or more registered types differ only by case — never a silent pick.
+    throw new Error(
+      `Ambiguous agent type: ${type}. Candidates: ${resolution.candidates.join(", ")}. Use the exact registered name.`,
+    );
+  }
+  if (resolution.kind === "not-found") {
+    throw new Error(`Unknown agent type: ${type}`);
+  }
+  return resolution.key;
+}
+
 export async function executeAgentTool(
   _toolCallId: string,
   params: Record<string, unknown>,
@@ -161,21 +180,7 @@ export async function executeAgentTool(
   const worktreeLabel = resolved.worktreeLabel;
   const projectTrusted = resolved.projectTrusted;
 
-  const type = (params.agent as string) || "general-purpose";
-  // When worktree_path is set, also scan the target's .pi/agents/ directory, unless
-  // the target is an untrusted cross-repo project (its agent types stay hidden).
-  const targetAgentsDir = projectTrusted && validatedWorktreePath ? `${validatedWorktreePath}/.pi/agents` : undefined;
-  const resolution = await resolveTypeOrDiscover(type, targetAgentsDir);
-  if (resolution.kind === "ambiguous") {
-    // Two or more registered types differ only by case — never a silent pick.
-    throw new Error(
-      `Ambiguous agent type: ${type}. Candidates: ${resolution.candidates.join(", ")}. Use the exact registered name.`,
-    );
-  }
-  if (resolution.kind === "not-found") {
-    throw new Error(`Unknown agent type: ${type}`);
-  }
-  const resolvedType = resolution.key;
+  const resolvedType = await resolveSpawnAgentType((params.agent as string) || "general-purpose", resolved);
 
   const prompt = params.prompt as string;
   const description =
@@ -186,8 +191,9 @@ export async function executeAgentTool(
     getAgentConfig(resolvedType)?.maxTurns ??
     getStore().agent.defaultMaxTurns;
 
-  const modelStr = params.model as string | undefined;
-  const model = findModelInRegistry(modelStr, ctx.modelRegistry, ctx.model);
+  const modelStr = params.model ??
+    getStore().modelFor(resolvedType, undefined, getAgentConfig(resolvedType));
+  const model = resolveModel(modelStr, ctx.modelRegistry, ctx.model);
   const modelKey = model ? `${model.provider}/${model.id}` : undefined;
 
   // Determine modelName for invocation (always capture for display)
@@ -305,20 +311,20 @@ export async function toolCallListener(event: ToolCallEvent, ctx: ExtensionConte
   if (event.toolName !== "Agent") return;
 
   const input = event.input;
-  const subagentType = input.agent as string | undefined;
-  const agentConfig = subagentType ? getAgentConfig(subagentType) : undefined;
+  const target = await computeSpawnTarget(ctx, input.worktree_path);
+  if (!target.ok) return; // Execution owns target errors and warnings; no spawn title to predict.
+  const subagentType = await resolveSpawnAgentType((input.agent as string | undefined) || "general-purpose", target);
+  const agentConfig = getAgentConfig(subagentType);
 
-  const parentModelId = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "";
+  const modelStr = input.model ?? getStore().modelFor(subagentType, undefined, agentConfig);
+  const model = resolveModel(modelStr, ctx.modelRegistry, ctx.model);
+  const effectiveModel = model ? `${model.provider}/${model.id}` : "";
 
-  const effectiveModel = getStore().modelFor(subagentType ?? "general-purpose", parentModelId, agentConfig);
-
-  if (effectiveModel) {
-    input.model = effectiveModel;
-    // Always inject _modelOverride for renderCall
-    const parsed = parseModelKey(effectiveModel);
-    if (parsed) {
-      input._modelOverride = parsed.modelId;
-    }
+  if (model) {
+    // Keep inheritance distinct from an explicit registry selection.
+    if (modelStr) input.model = effectiveModel;
+    // Validate before advertising the selected model in renderCall.
+    input._modelOverride = model.id;
   }
 
   // Inject the spawn-effective thinking when the call carries none. The

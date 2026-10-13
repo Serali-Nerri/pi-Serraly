@@ -215,12 +215,6 @@ describe("findModelInRegistry", () => {
   it("returns the registry model when found", () => {
     expect(findModelInRegistry("anthropic/claude", registry, fallback)).toBe(registryModel);
   });
-
-  it("falls back for unknown, unparseable, or missing model strings", () => {
-    expect(findModelInRegistry("openai/gpt", registry, fallback)).toBe(fallback);
-    expect(findModelInRegistry("nope", registry, fallback)).toBe(fallback);
-    expect(findModelInRegistry(undefined, registry, fallback)).toBe(fallback);
-  });
 });
 
 describe("summarizeToolArgs", () => {

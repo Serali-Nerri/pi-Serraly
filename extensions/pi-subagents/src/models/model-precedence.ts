@@ -98,7 +98,7 @@ export interface SessionModelOverrides {
   [agentType: string]: string | null | undefined;
 }
 
-export interface ResolveModelOptions {
+export interface ResolveModelOptions<T extends string | undefined = string> {
   /** The type of subagent being spawned. */
   subagentType: string;
   /** The agent's config (from .md frontmatter or defaults). */
@@ -106,7 +106,7 @@ export interface ResolveModelOptions {
   /** The subagents-lite.json config (model overrides); only the agent section is read. */
   config: Pick<SubagentsConfig, "agent">;
   /** The parent agent's model ID (final fallback). */
-  parentModelId: string;
+  parentModelId: T;
   /** Session-only overrides (checked first). */
   sessionOverrides?: SessionModelOverrides;
 }
@@ -121,11 +121,13 @@ export type ModelSource =
  * need the winning layer (the Model settings menu's provenance tags) use
  * this instead of re-deriving precedence from the inputs.
  *
- * Returns the first non-null, non-undefined, non-empty-string value
- * from the precedence chain; parentModelId (always valid) is the final
- * fallback.
+ * Returns the first string from the precedence chain. Parsing and registry
+ * validation happen at the spawn boundary; only null/undefined are unset.
+ * parentModelId is the final fallback.
  */
-export function resolveModelSource(options: ResolveModelOptions): { model: string; source: ModelSource } {
+export function resolveModelSource<T extends string | undefined>(
+  options: ResolveModelOptions<T>,
+): { model: string | T; source: ModelSource } {
   const { subagentType, agentConfig, config, parentModelId, sessionOverrides } = options;
 
   // Cast agent values: index signature includes number (graceTurns), but models are always strings
@@ -137,9 +139,9 @@ export function resolveModelSource(options: ResolveModelOptions): { model: strin
     ["frontmatter", agentConfig?.model],
   ];
   for (const [source, value] of candidates) {
-    if (isValidModelValue(value)) return { model: value, source };
+    if (typeof value === "string") return { model: value, source };
   }
-  // Parent model id is the final fallback (always a valid string).
+  // The caller can omit the parent key to preserve inheritance as unset.
   return { model: parentModelId, source: "parent" };
 }
 
@@ -147,11 +149,6 @@ export function resolveModelSource(options: ResolveModelOptions): { model: strin
  * Resolve the model for a subagent invocation — model-only projection of
  * resolveModelSource() for callers that do not need the winning source.
  */
-export function resolveModel(options: ResolveModelOptions): string {
+export function resolveModel<T extends string | undefined>(options: ResolveModelOptions<T>): string | T {
   return resolveModelSource(options).model;
-}
-
-/** True when the value is a usable model string (null/undefined/empty are unset). */
-export function isValidModelValue(value: string | null | undefined): value is string {
-  return typeof value === "string" && value.length > 0;
 }

@@ -53,7 +53,7 @@ test/integration/     产物、实际 loader、子会话和八入口共存
 docs/                 跨模块设计与开发
 ```
 
-工作区统一 npm 锁定。开发宿主是精确 Pi 1.1.0、TypeBox 1.3.27。
+工作区统一 npm 锁定。开发宿主是精确 Pi 1.2.0、TypeBox 1.3.27。
 宿主提供的包以 `peerDependencies: "*"` 声明并 external，不能作为正式包的
 物理运行依赖。workspace 内的开发宿主副本不得延伸到正式运行树。
 

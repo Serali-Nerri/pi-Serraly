@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { getEventListeners } from "node:events";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -154,6 +155,38 @@ test("an RPC host walks the native dialogs and maps a free-text answer", async (
 		assert.equal(result.details.answers[0]?.kind, "custom");
 		assert.equal(result.details.answers[0]?.answer, "typed answer");
 		assert.deepEqual((seen[0] as { opts: unknown }).opts, { signal: controller.signal });
+	});
+});
+
+test("an unavailable custom overlay reports a host failure and releases its listeners", async () => {
+	await withAgentDir(async () => {
+		const host = createHost();
+		registerAskUserQuestionTool(host.api as never);
+		const tool = host.tools.get(ASK_USER_QUESTION_TOOL_NAME)!;
+		const controller = new AbortController();
+		let terminalListenerActive = false;
+		const ctx = {
+			hasUI: true,
+			mode: "tui",
+			ui: {
+				custom: async () => {
+					assert.equal(terminalListenerActive, true);
+					assert.ok(getEventListeners(controller.signal, "abort").length > 0);
+					return undefined;
+				},
+				onTerminalInput: () => {
+					terminalListenerActive = true;
+					return () => { terminalListenerActive = false; };
+				},
+				select: async () => "1. Local — embedded",
+				input: async () => "a native answer must not mask the missing overlay",
+			},
+		};
+		const result = await tool.execute("call", params, controller.signal, undefined, ctx);
+		assert.deepEqual(result.details, { answers: [], cancelled: true, error: "no_custom_ui" });
+		assert.notEqual(result.content[0]?.text, DECLINE_MESSAGE);
+		assert.equal(terminalListenerActive, false);
+		assert.deepEqual(getEventListeners(controller.signal, "abort"), []);
 	});
 });
 

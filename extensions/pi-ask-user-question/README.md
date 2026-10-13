@@ -1,6 +1,6 @@
 # ask-user-question
 
-One model tool for Pi 1.1.0: `ask_user_question` opens a structured
+One model tool for Pi 1.2.0: `ask_user_question` opens a structured
 questionnaire so a blocking decision comes back as typed answers instead of a
 guess. The module owns the tabbed dialog, the native RPC dialog fallback and
 the optional config file. It registers no commands, no renderers and no prompt
@@ -85,8 +85,17 @@ declined.
 | Mode | Behavior |
 | --- | --- |
 | Interactive TUI | The full tabbed overlay |
-| RPC / ACP | One native `select`/`input` dialog per question; no tabs, notes or side-by-side previews, multi-select is typed indices, and dismissing any dialog cancels the questionnaire |
+| RPC (`ctx.mode === "rpc"`) | Sequential native `select`/`input` dialogs; no tabs, notes or side-by-side previews, multi-select is typed indices, and dismissing any dialog cancels the questionnaire |
 | No UI | `before_agent_start` strips the tool from the active set, and `execute` still returns `no_ui` if a call arrives |
+
+If a non-RPC host cannot render the custom overlay, the tool returns
+`no_custom_ui`; native dialogs are not used to disguise that host failure.
+
+RPC clients answer each native dialog with an `extension_ui_response` carrying
+that dialog's `id`. Questions and sibling tool calls wait their turn: the next
+dialog opens only after the current one resolves. Dismissal or tool abort
+cancels the questionnaire, including an outstanding free-text dialog; a late
+response to that dialog cannot answer a later questionnaire.
 
 The reconciler only ever strips the tool; it never re-adds one the operator
 removed through tool settings. An aborted tool call cancels an open

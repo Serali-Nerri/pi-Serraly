@@ -13,7 +13,7 @@ through the isolated runner described in the [development guide](../../../docs/d
 That guide owns build prerequisites, managed-host selection and Node qualification;
 do not repeat full verification for each UI test change.
 
-Tests use Pi **1.1.0** package code, not user configuration. They compile the
+Tests use Pi **1.2.0** package code, not user configuration. They compile the
 current UI to a temporary ESM bundle, keep Pi/TypeBox external, and load it with
 the host's actual bundled CLI (`dist/bundle/cli.js`) and extension loader.
 
@@ -71,6 +71,8 @@ at 80 columns.
 | Print/JSON/RPC | Scripted built-in read loop and extension commands; native prototypes/protocol output, no shell/bridge/UI timers. RPC `hasUI=true` alone does not activate terminal features. |
 | SDK lifecycle and reload | In-memory settings/auth/sessions, repeated TUI activation and cleanup, one shared scheduler, inactive no-UI contexts, settings panel and text previews, real reload and defaultTools transitions. |
 | Renderer and class identity | Public `registerToolRenderer` resolution in extension load order, built-in renderer merging, same-name overrides, rendererless and custom tools; host-created tool/TUI instances share imported prototypes and installed patches; built-in, codemode and MCP definitions preserve renderer ownership and retained/truncated output without MCP execution. |
+| Codemode progress | Native empty/live/final/error output and recorded replay duration; elapsed redraws stop after completion or failure without a local renderer clock. |
+| Preview and cursor | Public normalized preview input/render preserves signed wheel lines, local hitboxes and scrollbar-only capture; resize cancels dragging until release and a fresh press. Focused overlay cursors remain native above a sticky transcript and return to the editor on close. |
 | HTML export | Real `AgentSession.exportToHtml()` output includes synthetic tool input and retained output through public renderers; isolated sessions never request a model. |
 | Markdown and state | Real-host destinations, literal text, code/target preservation, reference definitions and container boundaries; billing/context and Thinking persistence use synthetic session data. |
 | Failure and compaction | Missing/read-only methods, foreign wrappers, stale context access, unconditional cleanup and refresh after mounted-tree replacement. |

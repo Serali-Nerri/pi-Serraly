@@ -17,6 +17,7 @@ import type { TObject } from "typebox";
 import { asExtensionAPI } from "./pi-boundaries.js";
 import type { AgentManager } from "../src/agents/agent-manager.js";
 import type { SubagentsConfig } from "../src/models/model-precedence.js";
+import type { ConfigStore } from "../src/config/config-store.js";
 import type { SpawnCoordinator } from "../src/spawn/spawn-coordinator.js";
 import type { AgentWidget } from "../src/ui/agent-widget.js";
 
@@ -36,7 +37,7 @@ import type { AgentWidget } from "../src/ui/agent-widget.js";
 /** The partial ConfigStore projection the shell mock serves. */
 export interface MockShellStore {
   agent: Partial<SubagentsConfig["agent"]>;
-  modelFor?: (type: string, parentModelId: string, agentConfig?: { model?: string }) => string;
+  modelFor?: ConfigStore["modelFor"];
 }
 
 export interface ShellMockFns {

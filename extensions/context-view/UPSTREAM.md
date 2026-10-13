@@ -7,7 +7,7 @@
 
 保留 Usage 组成估算、冻结 Initial、prompt/transcript 分类、地图、导航、内容/JSON/skill
 预览、颜色与地图偏好，以及相关上游行为套件。改为 context-view 独立 workspace /
-bundle 入口及自有显示偏好文件；使用仓库固定 Pi 1.1.0 / TypeScript 版本。
+bundle 入口及自有显示偏好文件；使用仓库固定 Pi 1.2.0 / TypeScript 版本。
 有界读取 bundle pi-config-core，模块继续拥有验证、默认和 create-only 政策。
 wheel 不读取宿主私有字段；使用公开归一化鼠标事件及固定 raw fallback。
 本地 Tools 增强使用公开工具库存/active 与 before_provider_request 的最新进程内单槽观测；

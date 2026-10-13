@@ -1,4 +1,4 @@
-// Pi 1.1.0 exposes `outputPad` in the tool render context and requires
+// Pi 1.2.0 exposes `outputPad` in the tool render context and requires
 // `renderShell: "self"` renderers to apply that indent themselves.
 import assert from "node:assert/strict";
 import test from "node:test";

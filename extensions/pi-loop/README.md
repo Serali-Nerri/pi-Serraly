@@ -1,6 +1,6 @@
 # loop
 
-Session-local, fixed-interval prompt repetition for Pi 1.1.0. The module owns
+Session-local, fixed-interval prompt repetition for Pi 1.2.0. The module owns
 `/loop` and the `local-loop` status entry; it does not depend on the UI module.
 
 ```text
@@ -32,7 +32,8 @@ is rejected. The scheduler repeats one fixed interval; it is not cron.
   times or waiting-for-idle state, and a shortened single-line prompt preview.
 - `/loop stop <ID>` removes that job and its interval timer. It does not abort
   a turn that has already been sent to Pi.
-- Due jobs wait while busy or while user messages are queued. Missed intervals
+- Due jobs wait while busy, including asynchronous run preparation, or while
+  user messages are queued. Missed intervals
   coalesce into one pending execution per job, not a backlog of turns.
 - Pending jobs are considered in creation order. `agent_settled`, **not**
   `agent_end`, is the lifecycle trigger to consider the next pending job.

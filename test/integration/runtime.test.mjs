@@ -19,7 +19,7 @@ test("release manifest exposes only eight compiled extensions, never companion s
 });
 
 for (const name of names) {
-	test(`compiled ${name} loads independently through Pi 1.1.0`, { timeout: 30000 }, async () => {
+	test(`compiled ${name} loads independently through Pi 1.2.0`, { timeout: 30000 }, async () => {
 		await sdkScenario(stage, "inventory", { names: [name] });
 	});
 }
@@ -48,6 +48,12 @@ test("builtin tool_search discovers still-deferred background tools", { timeout:
 });
 test("compiled external-directory commands load context, skills, and widget through the real host reload boundary", { timeout: 30000 }, async () => {
 	await sdkScenario(stage, "add-dir");
+});
+test("custom starts preserve Initial and directory instructions while startup queues background completion and loops", { timeout: 30000 }, async () => {
+	await sdkScenario(stage, "startup-lifecycle", { names: ["context-view", "pi-add-dir", "pi-background-shell", "pi-loop"] });
+});
+test("context-view keeps the latest declaration when Anthropic retries preferred strict tools", { timeout: 30000 }, async () => {
+	await sdkScenario(stage, "context-strict-fallback", { names: ["context-view"] });
 });
 test("compiled apply_patch contract and immutable report survive UI modes; real question dialog answers/cancels", { timeout: 30000 }, async () => {
 	await sdkScenario(stage, "contracts");

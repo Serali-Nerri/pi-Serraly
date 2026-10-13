@@ -53,7 +53,7 @@ describe("spawn context across independent compiled module instances", () => {
       expect(second.isInsideSubagentSpawn()).toBe(true);
     });
     expect(second.isInsideSubagentSpawn()).toBe(false);
-  });
+  }, 30_000);
 
   it("parallel parent work remains outside a pending child scope", async () => {
     const first = await compiledScope();

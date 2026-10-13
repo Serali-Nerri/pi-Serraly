@@ -3,9 +3,10 @@ import { cp, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rename, rm, wri
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { discoverPackages, root, selectExtensions } from "./packages.mjs";
 import { SEAL_PATH, copyPackageArtifact, verifyPackageArtifact } from "./package-artifacts.mjs";
+import { expectedVersion as expectedHostVersion } from "./host.mjs";
 
 /** Acceptance is pinned to the qualified host; an explicit override must match. */
-export const expectedHostVersion = "1.1.0";
+export { expectedHostVersion };
 
 const sha256 = (buffer) => createHash("sha256").update(buffer).digest("hex");
 const byName = (a, b) => a.name.localeCompare(b.name);

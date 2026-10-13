@@ -1,15 +1,8 @@
 // Adapted from pi-cc-extensions v0.8.69; see THIRD_PARTY_NOTICES.md.
 import { type ExtensionCommandContext, getMarkdownTheme } from "@earendil-works/pi-coding-agent";
-import { Key, Markdown, matchesKey, visibleWidth, type Component, type TuiMouseEvent } from "@earendil-works/pi-tui";
+import { Key, Markdown, matchesKey, visibleWidth, type Component, type TuiMouseEvent, type TuiMouseEventResult } from "@earendil-works/pi-tui";
 import { mouseBaseButton, parseSgrMousePacket } from "../utils/sgr-mouse.ts";
 import { padLine } from "../utils/format.ts";
-
-function mouseInput(event: TuiMouseEvent): string | undefined {
-	if (event.type === "click") return undefined;
-	const button = event.type === "wheel" ? (event.wheelDelta ?? 0) < 0 ? 64 : 65
-		: event.type === "move" ? 35 : (event.button === "left" ? 0 : 3) + (event.type === "drag" ? 32 : 0);
-	return `\x1b[<${button};${event.screenX + 1};${event.screenY + 1}${event.type === "release" ? "m" : "M"}`;
-}
 
 function normalizePreviewText(text: string): string {
 	return text
@@ -54,6 +47,8 @@ export async function showTextPreview(
 				let pageSize = 1;
 				let totalLines = 1;
 				let escHovered = false;
+				let overlayTop = 0;
+				let overlayLeft = 0;
 				let escHitbox: { row: number; startCol: number; endCol: number } | undefined;
 				let scrollbarHitbox:
 					| {
@@ -66,6 +61,7 @@ export async function showTextPreview(
 					  }
 					| undefined;
 				let scrollbarDragOffset: number | null = null;
+				let renderedGeometry: readonly number[] = [];
 				const markdownView = typeof rawContent === "string" ? new Markdown(content, 0, 0, getMarkdownTheme()) : rawContent;
 
 				const scrollTo = (nextOffset: number): void => {
@@ -96,12 +92,49 @@ export async function showTextPreview(
 					scrollTo(nextOffset);
 				};
 
+				const handleMouse = (event: Pick<TuiMouseEvent, "type" | "button" | "x" | "y" | "wheelDelta">): TuiMouseEventResult => {
+					if (event.type === "release") {
+						const handled = scrollbarDragOffset !== null;
+						scrollbarDragOffset = null;
+						return { handled, render: false };
+					}
+					const overEsc = Boolean(
+						escHitbox && event.y === escHitbox.row &&
+						event.x >= escHitbox.startCol && event.x <= escHitbox.endCol,
+					);
+					setEscHovered(overEsc);
+					if (event.type === "wheel") {
+						scrollTo(scrollOffset + (event.wheelDelta ?? 0));
+						return { handled: true, render: false };
+					}
+					if (event.type === "press" && event.button === "left") {
+						if (overEsc) {
+							done(undefined);
+							return { handled: true, render: false };
+						}
+						if (
+							scrollbarHitbox && event.x === scrollbarHitbox.col &&
+							event.y >= scrollbarHitbox.startRow && event.y <= scrollbarHitbox.endRow
+						) {
+							const trackRow = event.y - scrollbarHitbox.startRow;
+							const inThumb = trackRow >= scrollbarHitbox.thumbStart &&
+								trackRow < scrollbarHitbox.thumbStart + scrollbarHitbox.thumbSize;
+							scrollbarDragOffset = inThumb
+								? trackRow - scrollbarHitbox.thumbStart
+								: Math.floor(scrollbarHitbox.thumbSize / 2);
+							dragScrollbarTo(event.y);
+							return { capture: true, render: false };
+						}
+					}
+					if (event.type === "drag" && scrollbarDragOffset !== null) {
+						dragScrollbarTo(event.y);
+						return { handled: true, render: false };
+					}
+					return { handled: false, render: false };
+				};
+
 				return {
-					handleMouse(this: { handleInput(data: string): void }, event: TuiMouseEvent) {
-						const data = mouseInput(event);
-						if (data) this.handleInput(data);
-						return { handled: true, capture: event.type === "press" && event.button === "left", render: event.type !== "move" };
-					},
+					handleMouse,
 					invalidate() {
 						markdownView.invalidate();
 					},
@@ -119,47 +152,17 @@ export async function showTextPreview(
 						else {
 							const mouse = parseSgrMousePacket(data);
 							if (!mouse) return;
-							if (mouse.final === "m") {
-								scrollbarDragOffset = null;
-								return;
-							}
-							const overEsc = Boolean(
-								escHitbox &&
-									mouse.row === escHitbox.row &&
-									mouse.col >= escHitbox.startCol &&
-									mouse.col <= escHitbox.endCol,
-							);
-							setEscHovered(overEsc);
 							const button = mouseBaseButton(mouse.code);
 							const motion = (mouse.code & 32) !== 0;
-							if (button === 0 && !motion) {
-								if (overEsc) {
-									done(undefined);
-									return;
-								}
-								if (
-									scrollbarHitbox &&
-									mouse.col === scrollbarHitbox.col &&
-									mouse.row >= scrollbarHitbox.startRow &&
-									mouse.row <= scrollbarHitbox.endRow
-								) {
-									const trackRow = mouse.row - scrollbarHitbox.startRow;
-									const inThumb =
-										trackRow >= scrollbarHitbox.thumbStart &&
-										trackRow < scrollbarHitbox.thumbStart + scrollbarHitbox.thumbSize;
-									scrollbarDragOffset = inThumb
-										? trackRow - scrollbarHitbox.thumbStart
-										: Math.floor(scrollbarHitbox.thumbSize / 2);
-									dragScrollbarTo(mouse.row);
-									return;
-								}
-							}
-							if (motion && scrollbarDragOffset !== null) {
-								dragScrollbarTo(mouse.row);
-								return;
-							}
-							if (button === 64) scrollTo(scrollOffset - 3);
-							else if (button === 65) scrollTo(scrollOffset + 3);
+							// Regular-mode input still arrives as raw, 1-based terminal SGR.
+							handleMouse({
+								type: mouse.final === "m" ? "release" : button === 64 || button === 65 ? "wheel"
+									: motion ? button === 0 ? "drag" : "move" : "press",
+								button: button === 0 ? "left" : "none",
+								x: mouse.col - overlayLeft - 1,
+								y: mouse.row - overlayTop - 1,
+								wheelDelta: button === 64 ? -3 : button === 65 ? 3 : 0,
+							});
 						}
 					},
 
@@ -180,9 +183,11 @@ export async function showTextPreview(
 						totalLines = wrapped.length;
 						scrollOffset = Math.min(scrollOffset, Math.max(0, totalLines - pageSize));
 						// Centered overlay with margin 2: mirror TUI resolveOverlayLayout for anchor "center".
-						const overlayTop = 2 + Math.floor((availableHeight - viewportHeight) / 2);
-						const overlayLeft = Math.floor((Math.max(1, tui.terminal.columns) - width) / 2);
-						escHitbox = escCloseHitbox({ left: overlayLeft, top: overlayTop, width });
+						overlayTop = 2 + Math.floor((availableHeight - viewportHeight) / 2);
+						overlayLeft = Math.floor((Math.max(1, tui.terminal.columns) - width) / 2);
+						// The helper is 1-based; component-local hitboxes are 0-based.
+						const esc = escCloseHitbox({ left: 0, top: 0, width });
+						escHitbox = { row: esc.row - 1, startCol: esc.startCol - 1, endCol: esc.endCol - 1 };
 						const visible = wrapped.slice(scrollOffset, scrollOffset + pageSize);
 						const border = (text: string) => theme.fg("border", text);
 						const scrollable = totalLines > pageSize;
@@ -190,15 +195,20 @@ export async function showTextPreview(
 							? Math.max(1, Math.floor((pageSize * pageSize) / totalLines))
 							: 0;
 						const maxScrollOffset = Math.max(0, totalLines - pageSize);
+						const geometry = [terminalHeight, tui.terminal.columns, width, pageSize, thumbSize, maxScrollOffset];
+						// Pi retains the press-time capture origin through resize. Cancel
+						// dragging when geometry changes, not when the thumb merely moves.
+						if (geometry.some((value, index) => value !== renderedGeometry[index])) scrollbarDragOffset = null;
+						renderedGeometry = geometry;
 						const thumbStart =
 							scrollable && maxScrollOffset > 0
 								? Math.round((scrollOffset / maxScrollOffset) * (pageSize - thumbSize))
 								: 0;
 						scrollbarHitbox = scrollable
 							? {
-									col: overlayLeft + width - 1,
-									startRow: overlayTop + 4,
-									endRow: overlayTop + 3 + pageSize,
+									col: width - 2,
+									startRow: 3,
+									endRow: 2 + pageSize,
 									thumbStart,
 									thumbSize,
 									maxOffset: maxScrollOffset,

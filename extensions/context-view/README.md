@@ -1,6 +1,6 @@
 # context-view
 
-独立的 Pi 1.1.0 扩展，保留 pi-context-view 的 Usage、Initial 注入、配置和内容预览。
+独立的 Pi 1.2.0 扩展，保留 pi-context-view 的 Usage、Initial 注入、配置和内容预览。
 入口为 `dist/context-view.js`，只注册 `context` 命令，不注册业务工具。
 可单独选择，也可与 pi-ui 按任意顺序共存；pi-ui 的 Footer 与 `/ccstyle` 不由本模块接管。
 安装与选择性 release 遵循[仓库开发指南](../../docs/development.md)，不要将开发 dist 加入真实 settings。
@@ -22,6 +22,8 @@ regular 的终端原生 scrollback 不被接管。
 ## 捕获与边界
 
 只在宿主正常 `before_agent_start` / `context` 流程中捕获 Initial。
+用户消息和空闲时触发工作活动的自定义消息都参与捕获；Initial 冻结首次完整
+捕获，而不是首次用户输入。后续活动不重写已冻结的 Initial。
 打开、关闭或预览不发送探测消息、不 abort、不执行或激活工具、不改写请求、
 不更改 warming 设置。首次请求准备前显示 **Not captured. Session estimate only.**
 及扩展 additions 未观测提示；该 view-local fallback 不冻结 Initial，真实请求后可得到捕获。

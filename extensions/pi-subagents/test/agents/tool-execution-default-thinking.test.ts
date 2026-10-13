@@ -19,6 +19,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fakeCtx } from "../fixtures.js";
+import { defaultModel, defaultModelRegistry } from "../mock-utils.js";
 import type { ExtensionAPI, ExtensionContext, CustomToolCallEvent } from "@earendil-works/pi-coding-agent";
 import type { SpawnIntent } from "../../src/spawn/spawn-coordinator.js";
 import type { AgentConfig } from "../../src/agents/types.js";
@@ -70,8 +71,6 @@ function makeAgentConfig(overrides: Partial<AgentConfig> = {}): AgentConfig {
   return { ...defaultAgentConfig(), ...overrides };
 }
 
-const VALID_THINKING = ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
-
 vi.mock("../../src/spawn/worktree-validator.js", () => ({
   validateWorktreePath: mockValidateWorktreePath,
   computeLabel: vi.fn((resolved: string) => resolved.split("/").pop() || resolved),
@@ -93,17 +92,6 @@ vi.mock("../../src/agents/agent-types.js", () => ({
   }),
   getAgentConfig: mockGetAgentConfig,
   discoverNewAgents: mockDiscoverNewAgents,
-}));
-
-vi.mock("../../src/utils.js", () => ({
-  parseModelKey: vi.fn((value: unknown) => {
-    if (typeof value !== "string") return null;
-    const idx = value.indexOf("/");
-    return idx <= 0 ? null : { provider: value.slice(0, idx), modelId: value.slice(idx + 1) };
-  }),
-  findModelInRegistry: vi.fn(() => undefined),
-  // Faithful to the real parser: valid levels pass through, everything else is undefined.
-  parseThinkingLevel: vi.fn((raw?: string) => (raw !== undefined && VALID_THINKING.includes(raw) ? raw : undefined)),
 }));
 
 // The per-model read is the injection's pi-settings seam; the target cwd and
@@ -234,7 +222,12 @@ describe("toolCallListener — thinking injection (frontmatter > per-model > def
     });
     const event = makeEvent({ worktree_path: "/repo-b" });
 
-    await toolCallListener(event, fakeCtx({ cwd: "/home/test/project" }));
+    await toolCallListener(event, fakeCtx({
+      cwd: "/home/test/project",
+      modelRegistry: defaultModelRegistry({
+        find: () => ({ ...defaultModel(), provider: "anthropic", id: "claude-opus-4-1" }),
+      }),
+    }));
 
     // Keyed by the validated path (what the spawn will use), not the raw argument.
     expect(vi.mocked(getPiModelThinkingLevel)).toHaveBeenCalledWith("/repo-b-resolved", "anthropic", "claude-opus-4-1");
@@ -254,7 +247,12 @@ describe("toolCallListener — thinking injection (frontmatter > per-model > def
     mockResolveSubagentTrust.mockReturnValue(false);
     const event = makeEvent({ worktree_path: "/repo-b" });
 
-    await toolCallListener(event, fakeCtx({ cwd: "/home/test/project" }));
+    await toolCallListener(event, fakeCtx({
+      cwd: "/home/test/project",
+      modelRegistry: defaultModelRegistry({
+        find: () => ({ ...defaultModel(), provider: "anthropic", id: "claude-opus-4-1" }),
+      }),
+    }));
 
     // The untrusted project's settings file must not set the spawn's thinking
     // through the injected value (it would win as the explicit param).

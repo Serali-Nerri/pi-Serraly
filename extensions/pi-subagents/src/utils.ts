@@ -58,26 +58,47 @@ export function errorMessage(err: unknown): string {
   return toSingleLine(err instanceof Error ? err.message : String(err));
 }
 
-/** Parse "provider/model-id" into { provider, modelId }; null if invalid (no slash or empty provider). */
+/** Parse "provider/model-id"; both parts must be nonempty and have no surrounding whitespace. */
 export function parseModelKey(value: unknown): { provider: string; modelId: string } | null {
   // Backstop: config values flow from JSON, so a mistyped value can reach
   // here at runtime. Never throw on non-strings; report unparseable instead.
   if (typeof value !== "string") return null;
   const slashIdx = value.indexOf("/");
-  if (slashIdx <= 0) return null;
-  return { provider: value.slice(0, slashIdx), modelId: value.slice(slashIdx + 1) };
+  if (slashIdx <= 0 || slashIdx === value.length - 1) return null;
+  const provider = value.slice(0, slashIdx);
+  const modelId = value.slice(slashIdx + 1);
+  if (provider.trim() !== provider || modelId.trim() !== modelId) return null;
+  return { provider, modelId };
 }
 
-/** Find a model by "provider/model-id"; fallback if unparseable or not in registry. */
+/** Optional lookup for menus; only an unset selection inherits the fallback. */
 export function findModelInRegistry(
   value: unknown,
   registry: { find(provider: string, modelId: string): Model<any> | undefined },
   fallback: Model<any> | undefined,
 ): Model<any> | undefined {
-  if (!value) return fallback;
+  if (value == null) return fallback;
   const parsed = parseModelKey(value);
-  if (!parsed) return fallback;
-  return registry.find(parsed.provider, parsed.modelId) ?? fallback;
+  if (!parsed) return undefined;
+  return registry.find(parsed.provider, parsed.modelId);
+}
+
+/** Resolve a spawn selection; an explicit invalid or unavailable model must not inherit. */
+export function resolveModel(
+  value: unknown,
+  registry: Parameters<typeof findModelInRegistry>[1],
+  parent: Model<any> | undefined,
+): Model<any> | undefined {
+  if (value == null) return parent;
+  const parsed = parseModelKey(value);
+  if (!parsed) {
+    throw new Error(`Invalid subagent model: ${JSON.stringify(value)}. Expected provider/model-id.`);
+  }
+  const model = registry.find(parsed.provider, parsed.modelId);
+  if (!model) {
+    throw new Error(`Subagent model unavailable: ${JSON.stringify(value)}. Choose a registered provider/model-id.`);
+  }
+  return model;
 }
 /** Timeout for git commands (ms). Shared by agent-runner and worktree-validator. */
 export const GIT_EXEC_TIMEOUT_MS = 5000;

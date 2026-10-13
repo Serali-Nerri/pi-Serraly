@@ -170,23 +170,6 @@ function makeSessionFactory(config: {
 	};
 }
 
-/**
- * A TUI questionnaire ALWAYS resolves a QuestionnaireResult (cancel included),
- * so `undefined` uniquely means "host cannot render", never "user declined".
- * RPC hosts without `ctx.mode` land here: run the dialog walker when the host
- * has the primitives; otherwise tell the model the user never saw the questions.
- */
-async function resolveUndefinedResult(
-	ctx: ExtensionContext,
-	typed: QuestionParams,
-	signal: AbortSignal | undefined,
-): Promise<ToolResult> {
-	if (hasDialogUI(ctx.ui)) {
-		return buildQuestionnaireResponse(await runRpcQuestionnaire(ctx.ui, typed, signal), typed);
-	}
-	return buildToolResult(ERROR_NO_CUSTOM_UI, { answers: [], cancelled: true, error: "no_custom_ui" });
-}
-
 /** The tabbed TUI path, including abort and collapse-listener cleanup. */
 async function runTuiPath(
 	ctx: ExtensionContext,
@@ -223,7 +206,11 @@ async function runTuiPath(
 				},
 			},
 		);
-		if (result === undefined) return await resolveUndefinedResult(ctx, typed, signal);
+		// Cancellation resolves a QuestionnaireResult; undefined means no overlay
+		// was rendered. Only the explicit RPC route may use native dialogs.
+		if (result === undefined) {
+			return buildToolResult(ERROR_NO_CUSTOM_UI, { answers: [], cancelled: true, error: "no_custom_ui" });
+		}
 		return buildQuestionnaireResponse(result, typed);
 	} finally {
 		signal?.removeEventListener("abort", onAbort);

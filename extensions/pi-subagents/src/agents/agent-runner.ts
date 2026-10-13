@@ -28,7 +28,7 @@ import { extractText } from "../prompt/context.js";
 import { readDefaultTools } from "../pi-settings.js";
 import { resolveThinkingLevel } from "../models/thinking-resolution.js";
 import type { AgentUsage } from "./usage.js";
-import { findModelInRegistry, GIT_EXEC_TIMEOUT_MS } from "../utils.js";
+import { resolveModel, GIT_EXEC_TIMEOUT_MS } from "../utils.js";
 import { DEFAULT_AGENTS } from "./default-agents.js";
 import { buildAgentPrompt, type PromptExtras } from "../prompt/prompts.js";
 import { preloadSkills, loadSkillMeta } from "../prompt/skill-loader.js";
@@ -379,7 +379,7 @@ async function initSession(
   onAllocated: (session: AgentSession) => void,
   notify: (message: string) => void,
 ): Promise<AgentSession> {
-  const model = options.model ?? findModelInRegistry(agentConfig?.model, ctx.modelRegistry, ctx.model);
+  const model = options.model ?? resolveModel(agentConfig?.model, ctx.modelRegistry, ctx.model);
   // Per-model comes from the same trust-gated instance the session is created
   // with, so the project-trust gate applies to the read identically. When
   // every source is unset nothing is passed and pi's own fallback applies

@@ -147,7 +147,7 @@ try {
 console.log("reload/defaultTools: addition, removal, manual disable, re-addition and explicit selection verified; two TUI transcript reloads verified");
 `;
 
-test("actual Pi 1.1.0 reload preserves defaultTools and replaces two TUI transcript generations", { timeout: 30000 }, async () => {
+test("actual Pi 1.2.0 reload preserves defaultTools and replaces two TUI transcript generations", { timeout: 30000 }, async () => {
 	const sandbox = await createSandbox();
 	try {
 		const path = join(sandbox.base, "reload-worker.mjs");

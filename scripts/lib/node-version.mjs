@@ -1,7 +1,7 @@
 /**
  * The Node baseline every root entry point enforces before doing any work.
  *
- * The workspace, its sealed artifacts and the qualified Pi 1.1.0 host are only
+ * The workspace, its sealed artifacts and the qualified Pi 1.2.0 host are only
  * verified on Node >= 22.19.0. An older runtime fails loudly instead of being
  * retried, downgraded or reported as a skip, and an unparseable version string
  * fails closed rather than being treated as supported.

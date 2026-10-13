@@ -1,5 +1,5 @@
 // Adapted from pi-cc-extensions v0.8.69; see THIRD_PARTY_NOTICES.md.
-// Pi 1.1.0: decorate hidden thinking runs, never fork the host's message renderer.
+// Pi 1.2.0: decorate hidden thinking runs, never fork the host's message renderer.
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import { AssistantMessageComponent } from "@earendil-works/pi-coding-agent";
 import { type Component } from "@earendil-works/pi-tui";
@@ -65,7 +65,7 @@ export function installThinkingPatch(options: {
 		}
 		original.call(this, displayMessage, isStreaming);
 		self.lastMessage = message;
-		// Pi 1.1.0 wraps every thinking run in MouseRegion. Leave visible
+		// Pi 1.2.0 wraps every thinking run in MouseRegion. Leave visible
 		// Markdown, per-run native expansion, text transforms, errors and OSC
 		// zones untouched. Our preview's existing mouse interaction owns hidden runs.
 		let runIndex = 0;

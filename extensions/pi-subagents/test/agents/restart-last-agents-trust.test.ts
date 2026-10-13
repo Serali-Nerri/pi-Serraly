@@ -116,7 +116,7 @@ vi.mock("../../src/shell.js", () =>
           loadExtensionsImplicitly: storeState.loadExtensionsImplicitly,
         };
       },
-      modelFor: () => "", // falsy → no model override resolves
+      modelFor: (_type, parentModelId) => parentModelId,
     },
   }),
 );

@@ -9,7 +9,7 @@
 import type { ExtensionCommandContext, SessionEntry } from "@earendil-works/pi-coding-agent";
 import type { UICtx } from "../ui/agent-widget.js";
 import { getCoordinator, getManager, getPiInstance, getStore, getWidget } from "../shell.js";
-import { parseThinkingLevel, findModelInRegistry } from "../utils.js";
+import { parseThinkingLevel, resolveModel } from "../utils.js";
 import { resolveTypeOrDiscover, getAgentConfig } from "./agent-types.js";
 import { computeSpawnTarget, surfaceSpawnTargetWarnings } from "../spawn/spawn-target.js";
 
@@ -116,9 +116,8 @@ async function resolveAndSpawn(
   const resolvedType = resolution.key;
   const agentConfig = getAgentConfig(resolvedType);
   const maxTurns = call.max_turns ?? agentConfig?.maxTurns ?? getStore().agent.defaultMaxTurns;
-  const parentModelId = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "";
-  const effectiveModelStr = getStore().modelFor(resolvedType, parentModelId, agentConfig);
-  const model = effectiveModelStr ? findModelInRegistry(effectiveModelStr, ctx.modelRegistry, ctx.model) : undefined;
+  const effectiveModelStr = getStore().modelFor(resolvedType, undefined, agentConfig);
+  const model = resolveModel(effectiveModelStr, ctx.modelRegistry, ctx.model);
   const modelKey = model ? `${model.provider}/${model.id}` : undefined;
   // Explicit > frontmatter only: per-model and defaultThinking are owned by
   // the spawn runner, whose chain keeps per-model above defaultThinking.

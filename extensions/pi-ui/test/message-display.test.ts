@@ -4,10 +4,11 @@ import {
 	BranchSummaryMessageComponent,
 	CompactionSummaryMessageComponent,
 	SkillInvocationMessageComponent,
+	initTheme,
 } from "@earendil-works/pi-coding-agent";
 import { setCapabilityOverrides, visibleWidth } from "@earendil-works/pi-tui";
 import { setConfig } from "../src/config/config.ts";
-import { harness } from "./harness.ts";
+import { harness, theme } from "./harness.ts";
 
 type SummaryCase = {
 	name: string;
@@ -71,6 +72,28 @@ const findRow = (lines: string[], pattern: RegExp | string): number =>
 	lines.findIndex((line) =>
 		typeof pattern === "string" ? line.includes(pattern) : pattern.test(line),
 	);
+
+test("completed tool and summary markers use the active semantic success foreground", async () => {
+	const h = await harness();
+	try {
+		const tool = h.tool("bash", "success-theme", { command: "synthetic-only" }, {
+			content: [{ type: "text", text: "DONE" }], details: {},
+		});
+		const summaries = summaryCases.map((summary) => summary.make());
+		for (const component of summaries) h.root.addChild(component);
+		for (const name of ["dark", "light"]) {
+			initTheme(name, false);
+			await h.emit("session_tree");
+			for (const component of [tool, ...summaries]) {
+				const lines = component.render(100).join("\n");
+				assert.ok(lines.includes(`${theme.getFgAnsi("success")}✓`), `${name}: completion marker uses the theme color\n${lines}`);
+			}
+		}
+	} finally {
+		initTheme("dark", false);
+		await h.close();
+	}
+});
 
 for (const mode of ["on", "compact"] as const) {
 	for (const summary of summaryCases) {

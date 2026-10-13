@@ -32,7 +32,7 @@ function fallback(tool: any, slot: "renderCall" | "renderResult", args: any[], t
 	return new Text(text, 0, 0);
 }
 
-/** Pi 1.1.0 requires `renderShell: "self"` renderers to apply outputPad themselves; the host default is one column. */
+/** Pi 1.2.0 requires `renderShell: "self"` renderers to apply outputPad themselves; the host default is one column. */
 function outputPadOf(context: any): number {
 	const pad = context?.outputPad;
 	return typeof pad === "number" && Number.isFinite(pad) ? Math.max(0, Math.floor(pad)) : 1;
@@ -60,7 +60,7 @@ function createGenericRenderer(original: any): any {
 					if (!pending && cachedState === state && cachedWidth === width && cachedLine !== undefined) return [cachedLine];
 					if (pending) scheduleAnimation(context);
 					const glyph = pending ? pendingIcon(name) : settledIcon(name, state);
-					const icon = state === "success" ? `\x1b[38;2;80;220;100m${glyph}\x1b[39m` : theme.fg(toolIconColor(context), glyph);
+					const icon = theme.fg(state === "success" ? "success" : toolIconColor(context), glyph);
 					const viewport = toolViewportWidth(width);
 					const pad = expanded ? 0 : outputPadOf(context);
 					const lead = " ".repeat(pad);

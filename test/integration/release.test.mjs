@@ -53,7 +53,7 @@ test("release carries eight independent members prepared without a package manag
 			assert.equal(await present(join(output, "extensions", name, "dist/artifacts.json")), true, `${name} seal`);
 		}
 		const record = JSON.parse(await readFile(join(output, "release.json"), "utf8"));
-		assert.equal(record.host, "1.1.0", "release metadata names the qualified Pi host, not an obsolete baseline");
+		assert.equal(record.host, "1.2.0", "release metadata names the qualified Pi host, not an obsolete baseline");
 		assert.deepEqual(Object.keys(record.packages).sort(), names);
 		for (const [name, member] of Object.entries(record.packages)) {
 			assert.equal(member.path, `extensions/${name}`);

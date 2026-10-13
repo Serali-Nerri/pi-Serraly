@@ -20,6 +20,7 @@ async function run(scenario, config = {}) {
 	try {
 		// Gates belong to this sandbox, not shared /tmp paths or real sessions.
 		if (config.startupGate) config.startupGate = join(sandbox.base, "release-startup");
+		if (config.unrelatedGate) config.unrelatedGate = join(sandbox.base, "release-unrelated");
 		if (config.factoryGate) config.factoryGate = join(sandbox.base, "release-factory");
 		if (config.readyGate) config.readyGate = join(sandbox.base, "release-ready");
 		if (config.cleanupGate) config.cleanupGate = join(sandbox.base, "release-cleanup");
@@ -44,12 +45,17 @@ const results = (log, marker = "main") => log.filter((item) => item.phase === "p
 const requests = (log, marker = "main") => log.filter((item) => item.phase === "provider-request" && item.marker === marker);
 const starts = (log) => log.filter((item) => item.phase === "mcp-start");
 const calls = (log, name) => log.filter((item) => item.phase === "mcp-call" && item.name === name);
+// These scripts emit one compact JSON value after codemode's timing header.
+const scriptJson = (result) => JSON.parse(result.text.trim().split("\n").at(-1));
 
 // Omitting native factories, freezing the initial registry, or copying parent
 // closures breaks these returned sentinels through the production Agent path.
 for (const [name, config, wanted] of [
 	["search activates a deferred MCP tool", { exposure: "deferred", plans: { main: searchPeek } }, /mcp-sentinel:user:peek/],
-	["codemode calls MCP and reads a resource", { exposure: "codemode", plans: { main: [code(resourceCode)] } }, /resource-sentinel:user/],
+	["codemode enumerates MCP resources only when requested", { exposure: "codemode", plans: { main: [
+		code(`text(await tools.${peek}({}));`),
+		code(`text(await tools.list_mcp_resources({server:"fixture"})); text(await tools.list_mcp_resource_templates({server:"fixture"})); text(await tools.read_mcp_resource({server:"fixture",uri:"fixture://sentinel"}));`),
+	] } }, /resource-sentinel:user/],
 	["direct MCP tools activate after startup with empty defaultTools", { exposure: "direct", settings: { defaultTools: [] }, plans: { main: [call(peek, {}, { waitForTool: peek })] } }, /mcp-sentinel:user:peek/],
 	["codemode-only and zero inline budget preserve MCP calls", { exposure: "codemode", settings: { codemode: { mode: "only", inlineBudget: 0 } }, plans: { main: [code(resourceCode)] } }, /resource-sentinel:user/],
 	["toolExposure exposes only selected tools of a hidden server", { exposure: "hidden", server: { toolExposure: { peek: "direct" } }, plans: { main: [call(peek, {}, { waitForTool: peek }), code(`try { text(await tools.${effect}({})); } catch(e) { text(e.message); }`)] } }, /mcp-sentinel:user:peek/],
@@ -59,10 +65,93 @@ for (const [name, config, wanted] of [
 	assert.equal(calls(log, "peek").length, 1, "real MCP call, not just inventory");
 	assert.equal(starts(log).length, 1, "one independent child connection");
 	if (name.includes("resource") || name.includes("inline")) assert.equal(log.filter((item) => item.phase === "mcp-resource").length, 1);
+	if (name.includes("enumerates")) {
+		const request = requests(log)[1];
+		for (const phase of ["mcp-resource-list", "mcp-resource-template-list"]) {
+			const listings = log.filter((item) => item.phase === phase);
+			assert.equal(listings.length, 1, "explicit enumeration reaches the MCP protocol");
+			assert.ok(log.indexOf(listings[0]) > log.indexOf(request), "startup and an ordinary MCP call do not enumerate resources");
+		}
+		assert.match(results(log)[1].text, /fixture:\/\/sentinel/);
+	}
 	if (config.settings?.codemode?.mode === "only") {
 		assert.deepEqual(requests(log)[0].declared.map((tool) => tool.name), ["tool_search", "codemode"], "target codemode settings affect actual child requests");
 	}
 	if (config.exposure === "hidden") assert.equal(calls(log, "effect").length, 0, "hidden tools cannot execute even by explicit name");
+});
+
+for (const [exposure, plan] of [
+	["direct", [call(peek)]],
+	["codemode", [code(`text(await tools.${peek}({}));`)]],
+	["deferred", searchPeek],
+]) test(`first ${exposure} MCP call honors native readiness without provider polling`, { timeout: 70000 }, async () => {
+	const log = await run("readiness", { exposure, startupGate: true, unrelatedGate: true, plans: { main: plan } });
+	assert.match(log.find((item) => item.phase === "agent-result").text, /mcp-sentinel:user:peek/);
+	assert.equal(calls(log, "peek").length, 1);
+	const first = requests(log)[0];
+	const released = log.find((item) => item.phase === "readiness-release" && item.label === "user");
+	assert.ok(first && released);
+	assert.equal(log.indexOf(first) > log.indexOf(released), exposure === "direct", "only direct tools hold the first model request");
+	if (exposure === "direct") assert.ok(first.declared.some((tool) => tool.name === peek), "first request already declares the direct tool");
+	else {
+		const started = log.find((item) => item.phase === "readiness-tool-call");
+		assert.ok(started && log.indexOf(started) < log.indexOf(released), "first native call enters while the target is not ready");
+		assert.ok(!first.registered.includes(peek), "provider does not poll for target tool registration");
+	}
+	if (exposure === "deferred") {
+		const unrelated = log.find((item) => item.phase === "mcp-list" && item.label === "unrelated");
+		const found = log.find((item) => item.phase === "child-tool-result" && item.name === "tool_search");
+		assert.ok(unrelated && found);
+		assert.ok(log.indexOf(found) > log.indexOf(unrelated), "native tool_search waits for all searchable servers");
+		assert.ok(requests(log)[1].declared.some((tool) => tool.name === peek), "first search discovers and activates the target");
+	} else {
+		const unrelatedRelease = log.find((item) => item.phase === "readiness-release" && item.label === "unrelated");
+		assert.ok(unrelatedRelease);
+		assert.ok(log.indexOf(calls(log, "peek")[0]) < log.indexOf(unrelatedRelease), "the needed call finishes while the unrelated server is still gated");
+		assert.equal(calls(log, "peek")[0].label, "user");
+	}
+});
+
+test("native codemode preserves arbitrary MCP structuredContent without an output schema", { timeout: 70000 }, async () => {
+	const log = await run("roundtrip", { exposure: "codemode", plans: { main: [code(`
+		const values = [];
+		for (const kind of ["array", "null", "string", "number", "boolean"]) {
+			const result = await tools.mcp__fixture__json({kind});
+			values.push({kind, present:Object.prototype.hasOwnProperty.call(result, "structuredContent"),
+				value:result.structuredContent, content:result.content});
+		}
+		text(values);
+	`)] } });
+	assert.equal(results(log)[0].isError, false);
+	assert.deepEqual(scriptJson(results(log)[0]), [
+		{ kind: "array", present: true, value: [1, null, { nested: "sentinel" }], content: [{ type: "text", text: "json-envelope:array" }] },
+		{ kind: "null", present: true, value: null, content: [{ type: "text", text: "json-envelope:null" }] },
+		{ kind: "string", present: true, value: "structured-sentinel", content: [{ type: "text", text: "json-envelope:string" }] },
+		{ kind: "number", present: true, value: 42, content: [{ type: "text", text: "json-envelope:number" }] },
+		{ kind: "boolean", present: true, value: false, content: [{ type: "text", text: "json-envelope:boolean" }] },
+	]);
+	assert.equal(calls(log, "json").length, 5, "each value came from the real MCP protocol");
+});
+
+test("native codemode resolves explicit namespace aliases in descriptions and scoped search", { timeout: 70000 }, async () => {
+	const log = await run("roundtrip", { namespaceAliases: true, exposure: "codemode", plans: { main: [code(`
+		const rows = [];
+		for (const lookup of ["fixture-docs", "fixture_docs", "handbook-v2", "handbook_v2", "manual", "missing-alias"]) {
+			const group = await describeNamespace(lookup);
+			const matches = await searchTools("alias sentinel", {namespace:lookup});
+			rows.push({lookup, namespace:group?.name ?? null, instructions:group?.instructions ?? null,
+				matches:matches.map(tool => tool.name), sentinel:matches.length === 1 ? await tools[matches[0].name]({}) : null});
+		}
+		text(rows);
+	`)] } });
+	assert.equal(results(log)[0].isError, false);
+	const rows = scriptJson(results(log)[0]);
+	assert.deepEqual(rows.map((row) => row.lookup), ["fixture-docs", "fixture_docs", "handbook-v2", "handbook_v2", "manual", "missing-alias"]);
+	for (const row of rows.slice(0, -1)) assert.deepEqual({ ...row, lookup: undefined }, {
+		lookup: undefined, namespace: "fixture-docs", instructions: "Explicit alias fixture instructions",
+		matches: ["namespace_peek"], sentinel: "namespace-sentinel",
+	});
+	assert.deepEqual(rows.at(-1), { lookup: "missing-alias", namespace: null, instructions: null, matches: [], sentinel: null });
 });
 
 test("hidden MCP tools cannot be searched, directly called or nested-called", { timeout: 70000 }, async () => {

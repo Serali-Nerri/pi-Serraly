@@ -10,7 +10,7 @@ const host = process.argv[2], scenario = process.argv[3];
 const SDK = await import(pathToFileURL(join(host, "dist/index.js")).href);
 const require = createRequire(join(host, "package.json"));
 const TUI = await import(pathToFileURL(require.resolve("@earendil-works/pi-tui")).href);
-// Pi 1.1.0 declares this API but does not export it from the SDK root. This
+// Pi 1.2.0 declares this API but does not export it from the SDK root. This
 // private, pinned import is TEST ONLY; no credentials path is ever consulted.
 const { AuthStorage } = await import(pathToFileURL(join(host, "dist/core/auth-storage.js")).href);
 const config = JSON.parse(await readFile(process.env.SERRALY_CONFIG, "utf8"));
@@ -29,7 +29,9 @@ const modelRuntime = await SDK.ModelRuntime.create({ credentials, modelsPath: nu
 
 // Request-local fake transport for the real adapter. No global SDK/provider/fetch replacement.
 const schemaMarker = "CV_ARTIFACT_DEFERRED_C83D";
-const toolState = { requests: 0, executions: 0, replies: [], latestBody: undefined, withdraw: false };
+const adapterScenario = ["context-tools", "startup-lifecycle", "context-strict-fallback"].includes(scenario);
+const toolState = { requests: 0, executions: 0, replies: [], bodies: [], latestBody: undefined, withdraw: false, rejectStrict: false };
+const startupState = { starts: [], gate: undefined };
 function contextToolsFixture(pi) {
 	pi.registerTool({ name: "context_eager", label: "Eager", description: "Benign local eager operation",
 		parameters: { type: "object", properties: {} }, async execute() {
@@ -41,6 +43,17 @@ function contextToolsFixture(pi) {
 	pi.on("before_agent_start", () => {
 		if (toolState.withdraw) pi.setActiveTools(pi.getActiveTools().filter((name) => name !== "context_deferred"));
 	});
+	if (scenario === "startup-lifecycle") {
+		pi.on("before_agent_start", async (event, ctx) => {
+			startupState.starts.push({ messageType: event.messageType, idle: ctx.isIdle(), prompt: event.prompt });
+			if (startupState.gate) await startupState.gate.promise;
+		});
+	}
+	if (scenario === "context-strict-fallback") {
+		pi.registerTool({ name: "context_preferred_strict", label: "Preferred strict", description: "Local preferred-strict fixture",
+			parameters: { type: "object", properties: {} }, constrainedSampling: { type: "json_schema", strict: "prefer" },
+			async execute() { assert.fail("Observing a definition does not execute it"); } });
+	}
 }
 async function registerContextAdapter() {
 	// pi-ai's public api/* export is import-only; require.resolve cannot select it.
@@ -48,6 +61,14 @@ async function registerContextAdapter() {
 	const fetch = async (_input, init) => {
 		toolState.requests++;
 		const body = toolState.latestBody = JSON.parse(String(init.body));
+		toolState.bodies.push(body);
+		if (toolState.rejectStrict && body.tools.some((tool) => tool.strict === true)) {
+			toolState.rejectStrict = false;
+			return new Response(JSON.stringify({ type: "error", error: { type: "invalid_request_error",
+				message: "Too many strict tools (local deterministic fixture)" } }), {
+				status: 400, headers: { "content-type": "application/json" },
+			});
+		}
 		const reply = toolState.replies.shift();
 		const events = [
 			{ type: "message_start", message: { id: `msg_${toolState.requests}`, type: "message", role: "assistant", content: [], model: body.model,
@@ -66,7 +87,8 @@ async function registerContextAdapter() {
 		api: "context-adapter-fixture", apiKey: "fixture", baseUrl: "https://example.invalid",
 		models: [{ id: "local", name: "Local adapter fixture", reasoning: false, input: ["text"], contextWindow: 65536, maxTokens: 2048,
 			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-			compat: { supportsMidConvoSystemMessages: config.native, supportsMidConvoToolChanges: config.native } }],
+			compat: { supportsMidConvoSystemMessages: config.native, supportsMidConvoToolChanges: config.native,
+				supportsStrictTools: scenario === "context-strict-fallback" } }],
 		streamSimple: (model, context, options) => streamSimple({ ...model, api: "anthropic-messages" }, context,
 			{ ...options, fetch, apiKey: "fixture", maxRetries: 0, timeoutMs: 5000 }),
 	});
@@ -88,16 +110,16 @@ async function open(names = config.names ?? allNames, packageFilter = config.pac
 		additionalExtensionPaths: [join(import.meta.dirname, "sdk-provider.js"), "builtin:tool-search", "builtin:codemode",
 			...(!discoverSettings && packageFilter === undefined ? names.map((name) => entryByName[name]) : [])],
 		extensionFactories: [{ name: "tool-search", builtin: true, factory: SDK.createToolSearchExtension() },
-			{ name: "codemode", builtin: true, factory: SDK.createCodemodeExtension(scenario === "context-tools" ? { models: false } : {}) },
-			...(scenario === "context-tools" ? [{ name: "context-diagnostics-fixture", factory: contextToolsFixture }] : [])],
+			{ name: "codemode", builtin: true, factory: SDK.createCodemodeExtension(adapterScenario ? { models: false } : {}) },
+			...(adapterScenario ? [{ name: "context-diagnostics-fixture", factory: contextToolsFixture }] : [])],
 	});
 	await loader.reload();
 	const loaded = loader.getExtensions();
 	assert.deepEqual(loaded.errors, [], "actual loader resolves compiled entry and lazy/native closure");
 	assert.deepEqual(loader.getSkills().skills, [], "packaged release declares no skills, so no companion skill activates");
 	for (const { name, config } of loaded.runtime.pendingProviderRegistrations) modelRuntime.registerProvider(name, config);
-	if (scenario === "context-tools") await registerContextAdapter();
-	const model = scenario === "context-tools" ? modelRuntime.getModel("context-adapter-fixture", "local") : modelRuntime.getModel("serraly-fixture", "fixture");
+	if (adapterScenario) await registerContextAdapter();
+	const model = adapterScenario ? modelRuntime.getModel("context-adapter-fixture", "local") : modelRuntime.getModel("serraly-fixture", "fixture");
 	assert.ok(model);
 	const { session } = await SDK.createAgentSession({ cwd, agentDir, modelRuntime, model,
 		resourceLoader: loader, settingsManager, sessionManager: SDK.SessionManager.inMemory(cwd), thinkingLevel: "off" });
@@ -349,6 +371,135 @@ async function contextTools(h) {
 		await h.session.prompt("/context injections"); assert.match(plain(), /Not captured.*Session estimate/s);
 		assert.equal(toolState.requests, requests); assert.equal(toolState.executions, 1);
 		assert.equal(entries.filter((entry) => entry.type === "custom").length, 0);
+	} finally { ui.dispose(); }
+}
+
+async function startupLifecycle(h) {
+	const ui = await mount(h);
+	const plain = () => ui.interactions.at(-1).component.render(100).join("\n").replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
+	const external = join(process.env.TMPDIR, "startup-directory");
+	const instructions = join(external, "AGENTS.md");
+	let running;
+	try {
+		await mkdir(external, { recursive: true });
+		await writeFile(instructions, "FIRST_CUSTOM_DIRECTORY_INSTRUCTIONS");
+		await command(h, "dir-add").handler(external, h.session.extensionRunner.createCommandContext());
+		await h.session.sendCustomMessage({ customType: "pending-next-turn", content: "PENDING_NEXT_TURN", display: false },
+			{ deliverAs: "nextTurn" });
+		toolState.replies.push({ name: "context_eager", input: {} });
+		await h.session.sendCustomMessage({ customType: "first-wake", content: "FIRST_CUSTOM_WAKE", display: false },
+			{ triggerTurn: true });
+		assert.deepEqual(startupState.starts, [{ messageType: "custom", idle: false, prompt: undefined }]);
+		assert.equal(toolState.executions, 1);
+		assert.equal(toolState.bodies.length, 2);
+		for (const body of toolState.bodies) {
+			assert.match(JSON.stringify(body.system), /FIRST_CUSTOM_DIRECTORY_INSTRUCTIONS/);
+			assert.match(JSON.stringify(body.messages), /PENDING_NEXT_TURN/);
+		}
+		await h.session.prompt("/context injections");
+		const initial = plain();
+		assert.doesNotMatch(initial, /Not captured/);
+		assert.match(initial, /\[INITIAL\]/);
+
+		await writeFile(instructions, "UPDATED_DIRECTORY_INSTRUCTIONS_WITH_A_DIFFERENT_LENGTH");
+		startupState.gate = Promise.withResolvers();
+		running = h.session.prompt("GATED_USER_START");
+		await until(() => startupState.starts.length === 2, "startup handler entered");
+		assert.equal(h.session.isIdle, false);
+		assert.equal(startupState.starts[1].idle, false);
+		await assert.rejects(h.session.sendUserMessage("MISSING_DELIVERY_MODE"), /streaming|deliverAs/i);
+
+		const ready = join(process.env.TMPDIR, "startup-bg-ready"), finish = join(process.env.TMPDIR, "startup-bg-finish");
+		const script = `const fs = require("node:fs"); setTimeout(() => process.exit(1), 10_000); fs.writeFileSync(${JSON.stringify(ready)}, "ready"); setInterval(() => { if (fs.existsSync(${JSON.stringify(finish)})) process.exit(0); }, 10);`;
+		let taskId;
+		const completion = eventOnce(h.eventBus, "pi-background-shell:terminal:v2", (frame) => frame.task.id === taskId);
+		try {
+			const launched = await execute(h, "bg_run", { name: "Startup completion", command: `${JSON.stringify(process.execPath)} -e ${JSON.stringify(script)}`,
+				notifyOnCompletion: true, triggerOnCompletion: true });
+			taskId = launched.details.task.id;
+			await until(() => existsSync(ready), "local background task ready");
+			await writeFile(finish, "finish");
+			const terminal = await completion.promise;
+			assert.equal(terminal.task.status, "completed");
+		} finally {
+			completion.cancel();
+			await writeFile(finish, "finish");
+		}
+		assert.equal(startupState.starts.length, 2, "background completion cannot start a competing run during preparation");
+		await h.session.sendUserMessage("QUEUED_USER_FOLLOWUP", { deliverAs: "followUp" });
+		startupState.gate.resolve();
+		await running;
+		running = undefined;
+		startupState.gate = undefined;
+		assert.equal(startupState.starts.length, 2, "queued completion and follow-up drain inside the prepared run");
+		assert.equal(h.session.isIdle, true);
+		const notifications = h.session.sessionManager.getEntries().filter((entry) =>
+			entry.type === "custom_message" && entry.customType === "background-task-notification" && entry.details.id === taskId);
+		assert.equal(notifications.length, 1);
+		assert.match(JSON.stringify(toolState.bodies.slice(2)), /QUEUED_USER_FOLLOWUP/);
+		for (const body of toolState.bodies.slice(2)) assert.match(JSON.stringify(body.system), /UPDATED_DIRECTORY_INSTRUCTIONS_WITH_A_DIFFERENT_LENGTH/);
+		await h.session.prompt("/context injections");
+		assert.equal(plain(), initial, "Initial remains the first complete capture, even when that run began with a custom message");
+
+		startupState.gate = Promise.withResolvers();
+		running = h.session.prompt("GATED_LOOP_START");
+		await until(() => startupState.starts.length === 3, "loop startup handler entered");
+		await command(h, "loop").handler("1m PENDING_LOOP_REMINDER", h.session.extensionRunner.createCommandContext());
+		assert.equal(startupState.starts.length, 3, "a pending loop cannot dispatch during startup preparation");
+		startupState.gate.resolve();
+		await running;
+		running = undefined;
+		startupState.gate = undefined;
+		await until(() => startupState.starts.some((start) => start.prompt === "PENDING_LOOP_REMINDER") && h.session.isIdle,
+			"pending loop completed after startup");
+		assert.equal(h.session.isIdle, true);
+		assert.equal(startupState.starts.filter((start) => start.prompt === "PENDING_LOOP_REMINDER").length, 1,
+			"settlement dispatches the pending loop exactly once");
+
+		const requests = toolState.requests;
+		startupState.gate = Promise.withResolvers();
+		running = h.session.prompt("CANCEL_DURING_STARTUP");
+		await until(() => startupState.starts.length === 5, "cancellable startup handler entered");
+		const aborted = h.session.abort();
+		startupState.gate.resolve();
+		await Promise.all([running, aborted]);
+		running = undefined;
+		assert.equal(h.session.isIdle, true);
+		assert.equal(toolState.requests, requests, "abort during preparation prevents the provider request");
+		assert.deepEqual(h.errors, []);
+	} finally {
+		startupState.gate?.resolve();
+		if (running) await running.catch(() => {});
+		ui.dispose();
+	}
+}
+
+async function contextStrictFallback(h) {
+	const ui = await mount(h);
+	try {
+		toolState.rejectStrict = true;
+		await h.session.prompt("Observe a preferred-strict retry.");
+		assert.equal(toolState.requests, 2);
+		const original = toolState.bodies[0].tools.find((tool) => tool.name === "context_preferred_strict");
+		const fallback = toolState.bodies[1].tools.find((tool) => tool.name === "context_preferred_strict");
+		assert.equal(original.strict, true);
+		assert.equal(fallback.strict, undefined);
+		assert.equal(h.session.messages.at(-1).stopReason, "stop");
+		await h.session.prompt("/context tools");
+		const component = ui.interactions.at(-1).component;
+		const plain = () => component.render(100).join("\n").replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
+		component.handleInput("\x1b[H");
+		let opened = false;
+		for (let step = 0; step < 80; step++) {
+			if (plain().split("\n").some((line) => line.includes("›") && line.includes("Observed context_preferred_strict"))) {
+				component.handleInput("\r"); opened = true; break;
+			}
+			component.handleInput("\x1b[B");
+		}
+		assert.ok(opened, "the public declaration diagnostic includes the successful retry");
+		assert.match(plain(), /context_preferred_strict/);
+		assert.doesNotMatch(plain(), /"strict": true/, "the latest pre-send observation replaced the rejected strict declaration");
+		assert.equal(toolState.requests, 2, "opening diagnostics does not probe or replay the provider");
 	} finally { ui.dispose(); }
 }
 
@@ -605,6 +756,8 @@ if (scenario === "filters") {
 	try {
 		if (scenario === "inventory") inventory(h, config.names ?? allNames);
 		else if (scenario === "context-tools") await contextTools(h);
+		else if (scenario === "startup-lifecycle") await startupLifecycle(h);
+		else if (scenario === "context-strict-fallback") await contextStrictFallback(h);
 		else if (scenario === "context-view") {
 			inventory(h, config.names);
 			const state = globalThis[Symbol.for("serraly.sdk-fixture")];

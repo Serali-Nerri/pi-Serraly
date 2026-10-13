@@ -23,14 +23,14 @@ Additional selective presentation adaptations use the read-only reference
   remains in use; no upstream rich-diff/highlighting stack is included.
 - `a644f86`: validated semantic `expandedCardBackground` for UI-owned views.
 
-These are selective behavior ports to the current Pi 1.1.0 interfaces, not whole
+These are selective behavior ports to the current Pi 1.2.0 interfaces, not whole
 commit imports or a replacement of the v0.8.69 + `26aa98df` source baseline.
 
 Further selective behavior adaptations reference
 [v1.0.1, `0188b76f`](https://github.com/minuque/pi-cc-extensions/tree/0188b76f2597772bea3b42075857e030d9a89666):
 
 - `4f37369`: fullscreen sticky user-message first lines. The local implementation
-  selects native user-message components through Pi 1.1.0's layout and preserves
+  selects native user-message components through Pi 1.2.0's layout and preserves
   saved messages. Pointer input is bounded horizontally as well as vertically;
   the scrollbar is excluded.
 - `e1fbcd6` / `d669a32`: replayed user-message boundaries and child expansion

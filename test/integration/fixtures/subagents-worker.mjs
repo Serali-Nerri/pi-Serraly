@@ -11,7 +11,7 @@ const host = process.argv[2], scenario = process.argv[3];
 const SDK = await import(pathToFileURL(join(host, "dist/index.js")).href);
 const require = createRequire(join(host, "package.json"));
 const TUI = await import(pathToFileURL(require.resolve("@earendil-works/pi-tui")).href);
-// Pi 1.1.0 declares AuthStorage but does not export it from its SDK root.
+// Pi 1.2.0 declares AuthStorage but does not export it from its SDK root.
 // TEST ONLY pinned import, always in-memory; no credentials file is read.
 const { AuthStorage } = await import(pathToFileURL(join(host, "dist/core/auth-storage.js")).href);
 const config = JSON.parse(await readFile(process.env.SERRALY_CONFIG, "utf8"));
@@ -143,8 +143,39 @@ export default function (pi) {
 		await json(join(target, ".pi/mcp.json"), { mcpServers: { fixture: server("target-project") } });
 		if (config.targetTrusted !== undefined) new SDK.ProjectTrustStore(agentDir).set(target, config.targetTrusted);
 	}
-	await profile("fixture", config.profile);
-	if (config.mcp !== false) await json(join(agentDir, "mcp.json"), { mcpServers: { fixture: server("user", config.startupGate ? { startupGate: config.startupGate } : {}) } });
+	let profileFields = config.profile;
+	const childFixtures = [];
+	if (config.namespaceAliases) {
+		const aliases = join(cwd, "subagents-namespace-alias-fixture.js");
+		await writeFile(aliases, `export default function (pi) {
+			pi.registerTool({name:"namespace_peek", label:"Namespace peek", description:"Local alias sentinel",
+				parameters:{type:"object",properties:{},additionalProperties:false}, exposure:"codemode",
+				namespace:{name:"fixture-docs",aliases:["handbook-v2","manual"],instructions:"Explicit alias fixture instructions"},
+				async execute() { return {content:[{type:"text",text:"namespace-sentinel"}]}; }});
+		}`);
+		childFixtures.push(aliases);
+		profileFields = { ...profileFields, extensions: [...native, provider, aliases] };
+	}
+	if (scenario === "readiness") {
+		const observer = join(cwd, "subagents-readiness-observer.js");
+		await writeFile(observer, `import {appendFileSync} from "node:fs";
+			export default function (pi) {
+				pi.on("tool_call", event => { appendFileSync(process.env.SERRALY_REPORT,
+					JSON.stringify({phase:"readiness-tool-call",name:event.toolName}) + "\\n"); });
+			}`);
+		childFixtures.push(observer);
+		// Observe the public call event before native MCP's readiness hook waits.
+		profileFields = { ...profileFields, extensions: [observer, ...native, provider] };
+	}
+	if (childFixtures.length) {
+		const settings = JSON.parse(await readFile(settingsPath, "utf8"));
+		await json(settingsPath, { ...settings, extensions: [...settings.extensions, ...childFixtures] });
+	}
+	await profile("fixture", profileFields);
+	if (config.mcp !== false) await json(join(agentDir, "mcp.json"), { mcpServers: {
+		fixture: server("user", config.startupGate ? { startupGate: config.startupGate } : {}),
+		...(config.unrelatedGate ? { unrelated: { ...server("unrelated", { startupGate: config.unrelatedGate }), exposure: "codemode" } } : {}),
+	} });
 	// Contradictory HOME default sentinels prove the child uses custom agentDir.
 	await json(join(process.env.HOME, ".pi/agent/mcp.json"), { mcpServers: { fixture: server("wrong-home") } });
 	await json(join(process.env.HOME, ".pi/agent/subagents-lite.json"), { agent: { disableDefaultAgents: true } });
@@ -263,7 +294,39 @@ async function assertNoProcesses() {
 
 try {
 	await open();
-	if (scenario === "roundtrip" || scenario === "permissions" || scenario === "trust" || scenario === "dynamic") {
+	if (scenario === "readiness") {
+		const running = spawn("main");
+		running.catch(() => {}); // Observe errors below after releasing every fixture gate.
+		try {
+			await until(async () => {
+				const log = await records();
+				return ["user", "unrelated"].every((label) => log.some((item) => item.phase === "mcp-initialize" && item.label === label && item.waiting));
+			}, "both MCP connections reach controlled startup");
+			if (config.exposure !== "direct") {
+				await until(async () => (await records()).some((item) => item.phase === "readiness-tool-call"
+					&& item.name === (config.exposure === "codemode" ? "codemode" : "tool_search")),
+				"first native call starts while its MCP target is still gated");
+			}
+			report("readiness-release", { label: "user" });
+			await writeFile(config.startupGate, "release");
+			if (config.exposure === "deferred") {
+				await until(async () => (await records()).some((item) => item.phase === "mcp-list" && item.label === "user"), "search target becomes ready");
+			} else {
+				await until(async () => (await records()).some((item) => item.phase === "child-tool-result"
+					&& item.name === (config.exposure === "direct" ? "mcp__fixture__peek" : "codemode")
+					&& !item.isError && /mcp-sentinel:user:peek/.test(item.text)),
+				"first call completes without waiting for the unrelated server", 5000);
+			}
+			report("readiness-release", { label: "unrelated" });
+		} finally {
+			await writeFile(config.startupGate, "release");
+			await writeFile(config.unrelatedGate, "release");
+		}
+		const result = await running;
+		report("agent-result", { text: text(result) });
+		await close();
+		await assertNoProcesses();
+	} else if (scenario === "roundtrip" || scenario === "permissions" || scenario === "trust" || scenario === "dynamic") {
 		const result = await spawn("main");
 		report("agent-result", { text: text(result) });
 		if (scenario === "permissions") {

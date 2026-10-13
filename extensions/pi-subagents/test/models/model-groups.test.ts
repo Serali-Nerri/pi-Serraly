@@ -97,13 +97,11 @@ describe("buildModelGroups — grouping", () => {
       },
     ]);
   });
-  it("lists an empty-string per-type key as a row resolving to the parent fallback", () => {
-    // "" is an explicit key needing a clear path; resolution skips it, so the
-    // row lands under the parent fallback with medium thinking (no frontmatter).
+  it("lists a malformed explicit model key without disguising it as the parent", () => {
     const result = groupsFor(input({ config: { scout: "" } }));
     expect(result).toEqual([
       {
-        modelId: "test/parent-model",
+        modelId: "",
         rows: [{ type: "scout", thinking: "medium", tag: "" }],
       },
     ]);

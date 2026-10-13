@@ -58,7 +58,7 @@
 10. **Control characters and completion parity.** Directory paths containing
     terminal controls or line separators are rejected uniformly (including
     session scope) and restored entries are filtered. `@` token boundaries
-    mirror Pi 1.1.0's prose separators. Relative query suffixes remain raw, so
+    mirror Pi 1.2.0's prose separators. Relative query suffixes remain raw, so
     empty and terminal-dot queries preserve the external search scope instead
     of normalizing into a parent-directory search. Explicit scopes use Pi's
     slash normalization, and external attribution requires absolute attachments
@@ -80,10 +80,9 @@ completion wrapping and the directory widget.
 
 ## Bundled third-party licenses
 
-`scripts/lib/modules.mjs` declares the license files the sealed artifact must
-carry; `scripts/build.mjs` copies them from the locked dependency tree at build
-time and `scripts/lib/artifacts.mjs` refuses to seal an artifact that is missing
-one:
+`package.json` declares the license files the sealed artifact must carry in
+`serraly.bundledLicenses`; `scripts/lib/build-package.mjs` copies them from the
+locked dependency tree at build time:
 
 - `licenses/pi-config-store-MIT.txt` — `@henryqw/pi-config-store` 2.0.2
 - `licenses/proper-lockfile-MIT.txt` — `proper-lockfile` 4.1.2

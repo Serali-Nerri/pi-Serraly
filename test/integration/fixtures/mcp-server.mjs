@@ -16,6 +16,9 @@ const tools = () => [
 	{ name: "effect", description: "Fixture effect, observable local mutation", inputSchema: schema },
 	{ name: "mutate", description: "Add or withdraw the late fixture tool", inputSchema: {
 		type: "object", properties: { action: { type: "string", enum: ["add", "withdraw"] } }, required: ["action"] } },
+	{ name: "json", description: "Return arbitrary JSON structuredContent without an output schema", inputSchema: {
+		type: "object", properties: { kind: { type: "string", enum: ["array", "null", "string", "number", "boolean"] } }, required: ["kind"],
+		additionalProperties: false }, annotations: { readOnlyHint: true } },
 	...(late ? [{ name: "late", description: "Late fixture sentinel", inputSchema: schema }] : []),
 ];
 async function exit(reason, code = 0) {
@@ -66,13 +69,22 @@ input.on("line", async (line) => {
 				if (name === "mutate") {
 					late = request.params.arguments?.action === "add";
 					result = text(late ? "late-added" : "late-withdrawn");
+				} else if (name === "json") {
+					const kind = request.params.arguments.kind;
+					result = { ...text(`json-envelope:${kind}`), structuredContent: {
+						array: [1, null, { nested: "sentinel" }], null: null, string: "structured-sentinel", number: 42, boolean: false,
+					}[kind] };
 				} else if (name === "peek" || name === "effect" || (name === "late" && late)) {
 					result = text(`mcp-sentinel:${label}:${name}:${process.pid}`);
 				} else result = { ...text("unknown or withdrawn fixture tool"), isError: true };
 				break;
 			}
-			case "resources/list": result = { resources: [{ uri: "fixture://sentinel", name: "fixture sentinel", mimeType: "text/plain" }] }; break;
-			case "resources/templates/list": result = { resourceTemplates: [] }; break;
+			case "resources/list":
+				report("mcp-resource-list");
+				result = { resources: [{ uri: "fixture://sentinel", name: "fixture sentinel", mimeType: "text/plain" }] }; break;
+			case "resources/templates/list":
+				report("mcp-resource-template-list");
+				result = { resourceTemplates: [] }; break;
 			case "resources/read":
 				report("mcp-resource", { uri: request.params.uri });
 				result = { contents: [{ uri: request.params.uri, mimeType: "text/plain", text: `resource-sentinel:${label}:${process.pid}` }] }; break;

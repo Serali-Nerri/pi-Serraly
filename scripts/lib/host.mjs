@@ -4,7 +4,7 @@ import { dirname, join, resolve, sep } from "node:path";
 import { root } from "./packages.mjs";
 
 /** Acceptance is pinned to the qualified host; an explicit override must match. */
-export const expectedVersion = "1.1.0";
+export const expectedVersion = "1.2.0";
 
 export function hostPackage() {
 	// Read package metadata only; never invoke npm/resolve a source-workspace host.

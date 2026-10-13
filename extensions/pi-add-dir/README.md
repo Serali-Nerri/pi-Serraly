@@ -74,7 +74,8 @@ resolution and directory validation.
 
 Root and `.pi` `AGENTS.md` and `CLAUDE.md` from every active directory are
 injected into one named system-prompt section that is refreshed for each agent
-run; other prompt sections are untouched, and the section is removed when no
+run, whether started by a user message or a custom completion notification;
+other prompt sections are untouched, and the section is removed when no
 directory is active. Directory state, the widget and `@` completion change
 immediately, while instructions are re-read for the next agent run — no
 `/reload` is needed for them. Instruction files are read as strict UTF-8, whole

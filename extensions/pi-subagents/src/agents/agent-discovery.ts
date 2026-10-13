@@ -243,7 +243,7 @@ export function parseAgentFile(content: string, source: "user" | "project"): Age
     skills: parseExtensions(frontmatter.skills),
     preload_skills: parsePreloadSkills(frontmatter.preload_skills),
     color: parseString(frontmatter, "color"),
-    model: parseString(frontmatter, "model"),
+    model: typeof frontmatter.model === "string" ? frontmatter.model : undefined,
     thinking: parseThinkingLevel(parseString(frontmatter, "thinking")),
     max_turns: parseNumber(frontmatter, "max_turns"),
     max_tokens: parseNumber(frontmatter, "max_tokens"),

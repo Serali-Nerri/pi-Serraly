@@ -9,7 +9,7 @@ import { registerApiProvider, unregisterApiProviders } from "@earendil-works/pi-
 import { stream, streamSimple } from "@earendil-works/pi-ai/api/anthropic-messages";
 import { TuiMainScreen, visibleWidth, type Component } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-// Test-only pinned host imports: these are not root-exported by Pi 1.1.0.
+// Test-only pinned host imports: these are not root-exported by Pi 1.2.0.
 import { AuthStorage } from "../../../../node_modules/@earendil-works/pi-coding-agent/dist/core/auth-storage.js";
 import { theme } from "../../../../node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/theme/theme.js";
 import contextView from "../../src/index.ts";

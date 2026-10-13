@@ -14,7 +14,7 @@ import { getSupportedThinkingLevels, clampThinkingLevel } from "@earendil-works/
 import type { ThinkingLevel } from "../../types.js";
 import type { Theme } from "../types.js";
 import { getAgentConfig, getAvailableTypes, discoverNewAgents } from "../../agents/agent-types.js";
-import { findModelInRegistry } from "../../utils.js";
+import { findModelInRegistry, resolveModel } from "../../utils.js";
 import { agentBulletPrefix } from "../format.js";
 import { resolveDisplayThinkingLevel } from "../../models/thinking-resolution.js";
 import { computeSpawnTarget, surfaceSpawnTargetWarnings, type SpawnTarget } from "../../spawn/spawn-target.js";
@@ -116,7 +116,7 @@ async function isInGitRepo(cwd: string): Promise<boolean> {
  */
 function createThinkingLevelSubmenu(
   registry: Parameters<typeof findModelInRegistry>[1],
-  currentModelStr: string,
+  currentModelStr: string | undefined,
   fallbackModel: Parameters<typeof findModelInRegistry>[2],
   theme: Theme,
   onThinkingChange: (level: ThinkingLevel | undefined) => void,
@@ -221,10 +221,9 @@ export async function showSpawnAgentMenu(ctx: ExtensionCommandContext, modelOpti
   const worktrees = inGitRepo ? ((await listWorktrees(parentCwd)) ?? []) : [];
 
   const store = getStore();
-  const parentModelId = session?.model ? `${session.model.provider}/${session.model.id}` : "";
-  const effectiveModelStr = store.modelFor(selectedType, parentModelId, agentConfig);
-
-  let currentModelStr = effectiveModelStr || "";
+  const parentModel = (session ?? ctx).model;
+  const parentModelId = parentModel ? `${parentModel.provider}/${parentModel.id}` : undefined;
+  let currentModelStr = store.modelFor(selectedType, undefined, agentConfig);
 
   // Wizard thinking state. "Derived" (initial) always shows the level the
   // spawn would actually run with for the current model — frontmatter >
@@ -261,17 +260,17 @@ export async function showSpawnAgentMenu(ctx: ExtensionCommandContext, modelOpti
   if (parentTarget.ok) refreshThinkingSnapshot(parentTarget);
 
   /** The spawn-effective level for a model key string, clamped to the model. */
-  const deriveThinking = (modelKeyStr: string): ThinkingLevel => {
-    const key = modelKeyStr || parentModelId;
+  const deriveThinking = (modelKeyStr: string | undefined): ThinkingLevel => {
+    const key = modelKeyStr ?? parentModelId;
     const registry = session?.modelRegistry ?? ctx.modelRegistry;
     return resolveDisplayThinkingLevel(
       {
         frontmatter: agentConfig.thinkingLevel,
-        perModel: modelThinkingLevels[key],
+        perModel: key === undefined ? undefined : modelThinkingLevels[key],
         defaultThinking: store.agent.defaultThinking,
       },
       piDefaultThinking,
-      findModelInRegistry(modelKeyStr, registry, session?.model),
+      findModelInRegistry(modelKeyStr, registry, parentModel),
     );
   };
 
@@ -300,7 +299,7 @@ export async function showSpawnAgentMenu(ctx: ExtensionCommandContext, modelOpti
 
   const buildItems = (): SettingItem[] => {
     const fmtNum = (v: number | undefined) => (v != null ? String(v) : "(not set)");
-    const displayModel = currentModelStr || "(inherits parent)";
+    const displayModel = currentModelStr ?? "(inherits parent)";
     const items: SettingItem[] = [
       {
         id: "spawn",
@@ -321,19 +320,16 @@ export async function showSpawnAgentMenu(ctx: ExtensionCommandContext, modelOpti
           const description = descItem?.currentValue ?? currentDescription;
           const spawnPrompt = promptItem?.currentValue ?? prompt;
 
-          // Resolve model
-          let model: ReturnType<typeof findModelInRegistry> = undefined;
-          let modelKey: string | undefined;
-          if (currentModelStr) {
-            const registry = session?.modelRegistry ?? ctx.modelRegistry;
-            model = findModelInRegistry(currentModelStr, registry, undefined);
-            if (!model) {
-              ctx.ui.notify(`Model not found: ${currentModelStr}`, "error");
-              done();
-              return undefined as any;
-            }
-            modelKey = `${model.provider}/${model.id}`;
+          // Validate explicit selections before admission; unset inherits the parent object.
+          let model: ReturnType<typeof resolveModel>;
+          try {
+            model = resolveModel(currentModelStr, session?.modelRegistry ?? ctx.modelRegistry, parentModel);
+          } catch (err) {
+            ctx.ui.notify(err instanceof Error ? err.message : String(err), "error");
+            done();
+            return undefined as any;
           }
+          const modelKey = model ? `${model.provider}/${model.id}` : undefined;
 
           const doSpawn = async () => {
             try {
@@ -406,14 +402,14 @@ export async function showSpawnAgentMenu(ctx: ExtensionCommandContext, modelOpti
           projectOffered: store.projectTargetOffered,
           theme,
           onSet: (_target, model) => {
-            currentModelStr = model === "(inherits parent)" || model === null ? "" : model;
+            currentModelStr = model === "(inherits parent)" || model === null ? undefined : model;
 
             // UserSet: keep the user's choice, clamped to the new model's
             // supported levels. Derived: nothing here — the displayed value
             // re-derives from the new model (per-model + pi default included).
-            if (thinkingState.kind === "userSet" && thinkingState.value != null && currentModelStr) {
+            if (thinkingState.kind === "userSet" && thinkingState.value != null) {
               const registry = session?.modelRegistry ?? ctx.modelRegistry;
-              const resolved = findModelInRegistry(currentModelStr, registry, session?.model);
+              const resolved = findModelInRegistry(currentModelStr, registry, parentModel);
               if (resolved) {
                 thinkingState = { kind: "userSet", value: clampThinkingLevel(resolved, thinkingState.value) };
               }
@@ -484,7 +480,7 @@ export async function showSpawnAgentMenu(ctx: ExtensionCommandContext, modelOpti
         submenu: createThinkingLevelSubmenu(
           session?.modelRegistry ?? ctx.modelRegistry,
           currentModelStr,
-          session?.model,
+          parentModel,
           theme,
           (level) => {
             setThinkingChoice(level);
