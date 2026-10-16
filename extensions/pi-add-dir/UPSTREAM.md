@@ -58,7 +58,7 @@
 10. **Control characters and completion parity.** Directory paths containing
     terminal controls or line separators are rejected uniformly (including
     session scope) and restored entries are filtered. `@` token boundaries
-    mirror Pi 1.2.0's prose separators. Relative query suffixes remain raw, so
+    mirror Pi 1.3.0's prose separators. Relative query suffixes remain raw, so
     empty and terminal-dot queries preserve the external search scope instead
     of normalizing into a parent-directory search. Explicit scopes use Pi's
     slash normalization, and external attribution requires absolute attachments

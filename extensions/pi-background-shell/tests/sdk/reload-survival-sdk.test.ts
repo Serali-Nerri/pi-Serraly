@@ -754,7 +754,7 @@ void describe('real Pi reload shell survival', { concurrency: false }, () => {
     }
   });
 
-  void it('characterizes empty binding reload and direct AgentSession.dispose as upstream lifecycle blockers', async () => {
+  void it('rejects bare SDK reload survival and fails closed after empty binding reload', async () => {
     const root = await mkdtemp(join(tmpdir(), 'pi-bg-reload-blockers-'));
     const restoreEnvironment = isolatePiEnvironment(join(root, 'agent'));
     roots.push(root);
@@ -838,37 +838,6 @@ void describe('real Pi reload shell survival', { concurrency: false }, () => {
       await orphanedByHost.requestStop('shutdown', 'empty-binding characterization cleanup');
       hub.releaseExecution(lease, orphanedByHost);
       hub.releaseActivation(lease);
-
-      // Bare AgentSession.dispose has no session_shutdown in Pi 0.99.1. A live
-      // default child proves invalidation alone performs no extension cleanup.
-      const directDisposeTask = taskFrom(
-        await execute(session, 'bg_run', {
-          name: 'Direct dispose blocker',
-          command: `node -e ${JSON.stringify('setInterval(()=>{},1000)')}`,
-          notifyOnCompletion: false,
-          triggerOnCompletion: false,
-        }),
-      );
-      const directDisposePid = directDisposeTask.pid;
-      assert.equal(typeof directDisposePid, 'number');
-      const runner = session.extensionRunner;
-      session.dispose();
-      assert.throws(() => runner.createContext().cwd, /stale/u);
-      assert.equal(pidExists(directDisposePid as number), true, 'direct dispose omits shutdown');
-      if (process.platform === 'win32') {
-        const { runWindowsTaskkill } = await import('../../src/core/windows-taskkill.js');
-        await runWindowsTaskkill(directDisposePid as number, 'force');
-      } else {
-        try {
-          process.kill(-(directDisposePid as number), 'SIGKILL');
-        } catch {
-          process.kill(directDisposePid as number, 'SIGKILL');
-        }
-      }
-      await waitFor(() => !pidExists(directDisposePid as number), 'direct-dispose blocker cleanup');
-      // Let the now-stale registry exhaust its bounded publication path while
-      // the fixture directory still exists; this is part of the blocker truth.
-      await new Promise((resolveWait) => setTimeout(resolveWait, 400));
     } finally {
       session.dispose();
       await rm(root, { recursive: true, force: true });

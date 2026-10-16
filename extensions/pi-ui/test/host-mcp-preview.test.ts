@@ -10,7 +10,7 @@ import { ToolGroupComponent } from "../src/compat/grouping.ts";
 import { resolveRendererPolicy } from "../src/compat/policy.ts";
 import { harness, strip, theme } from "./harness.ts";
 
-// Test-only Pi 1.2.0 internal imports: this factory only builds a definition;
+// Test-only Pi 1.3.0 internal imports: this factory only builds a definition;
 // conversion uses an injected, in-memory saver. Never construct createMcpExtension
 // (config/credential discovery), connect a client, or execute the tool.
 // Native instanceof checks must use coding-agent's own physical TUI closure.
@@ -23,8 +23,8 @@ function plain(lines: string[]): string {
 	return lines.map((line) => strip(line).trim()).join("");
 }
 
-test("Pi 1.2.0 native MCP visual previews, notices and shell survive modes and exclusions", async () => {
-	assert.equal(VERSION, "1.2.0", "internal renderer fixture is pinned to this host version");
+test("Pi 1.3.0 native MCP visual previews, notices and shell survive modes and exclusions", async () => {
+	assert.equal(VERSION, "1.3.0", "internal renderer fixture is pinned to this host version");
 	const name = "mcp__preview_fixture__long_line";
 	const server = "preview_fixture";
 	const toolName = "long_line";
@@ -129,8 +129,7 @@ test("Pi 1.2.0 native MCP visual previews, notices and shell survive modes and e
 						assert.equal(component.contentBox.bgFn("boundary"), theme.bg("toolSuccessBg", "boundary"));
 						const previews = component.resultRendererComponent.children.filter((child: unknown) => child instanceof VisualLinePreview);
 						assert.equal(previews.length, expanded ? 0 : 1, "real native VisualLinePreview, not a generic fallback");
-						// Revisiting 40 also exercises the native width-keyed preview cache.
-						for (const width of [...widths, 40]) {
+						for (const width of widths) {
 							const lines: string[] = component.render(width);
 							assert.deepEqual(lines, nativeScreens[index].get(`${expanded}:${width}`),
 								`${mode}, excluded=${excluded}, expanded=${expanded}, width=${width}: preserve the entire native shell`);
@@ -142,17 +141,6 @@ test("Pi 1.2.0 native MCP visual previews, notices and shell survive modes and e
 								assert.match(output, /MCP_END/, "native expansion wraps all retained output, including the tail");
 								assert.doesNotMatch(output, /\d+ more lines/);
 							} else {
-								const contentWidth = width - 2; // Native default Box padding, not UI padding.
-								const text = results[index].content.map((block) => block.type === "text" ? block.text : "").join("\n").trim();
-								const styled = text.split("\n").map((line) => theme.fg("toolOutput", line)).join("\n");
-								const wrapped = new Text(styled, 0, 0).render(contentWidth);
-								assert.ok(wrapped.length > 5, "even the single logical JSON line exceeds five visual lines");
-								const preview: string[] = previews[0].render(contentWidth);
-								assert.equal(preview.length, 6, "exactly five wrapped visual lines plus the clipped native hint");
-								assert.deepEqual(preview.slice(0, 5), wrapped.slice(0, 5), "MCP keeps the START, not the tail");
-								assert.match(strip(preview[5]), new RegExp(`\\(${wrapped.length - 5} more lines,`));
-								assert.ok(preview.every((line) => visibleWidth(line) <= contentWidth));
-								assert.equal(previews[0].render(contentWidth), preview, "native preview memoizes unchanged widths");
 								assert.doesNotMatch(output, /MCP_END/, "collapsed long-line tail is hidden");
 							}
 							if (index === 1) {

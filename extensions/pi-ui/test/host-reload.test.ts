@@ -14,7 +14,6 @@ import { pathToFileURL } from "node:url";
 const host = process.argv[2], base = process.env.TMPDIR, cwd = process.cwd();
 const SDK = await import(pathToFileURL(join(host, "dist/index.js")).href);
 const require = createRequire(join(host, "package.json"));
-const { Type } = await import(pathToFileURL(require.resolve("typebox")).href);
 const { AuthStorage } = await import(pathToFileURL(join(host, "dist/core/auth-storage.js")).href);
 const runtime = await SDK.ModelRuntime.create({ credentials: AuthStorage.inMemory(), modelsPath: null,
 	modelsStorePath: join(base, "models.json"), allowModelNetwork: false, refreshOnCreate: false });
@@ -32,12 +31,6 @@ const settings = SDK.SettingsManager.fromStorage({
 const loader = new SDK.DefaultResourceLoader({ cwd, agentDir: process.env.PI_CODING_AGENT_DIR, settingsManager: settings,
 	noExtensions: true, noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true,
 	additionalExtensionPaths: [process.env.PI_UI_STAGE],
-	extensionFactories: [(pi) => {
-		for (const name of ["sample_one", "sample_two"]) pi.registerTool({
-			name, label: name, description: "Synthetic reload-only definition.", defaultActive: false,
-			parameters: Type.Object({}), execute() { throw new Error("must not execute during reload"); },
-		});
-	}],
 });
 await loader.reload();
 assert.deepEqual(loader.getExtensions().errors, [], "the external UI stage must load through the real host loader");
@@ -50,36 +43,12 @@ const original = SDK.ToolExecutionComponent.prototype.getCallRenderer;
 const session = await create();
 try {
 	await session.bindExtensions({ mode: "print" });
-	assert.deepEqual(session.getActiveToolNames(), ["read"]);
-	stored = { ...stored, defaultTools: ["read", "sample_one"] };
 	await session.reload();
-	assert.deepEqual(session.getActiveToolNames().sort(), ["read", "sample_one"]);
-	stored = { ...stored, defaultTools: ["read"] };
-	await session.reload();
-	assert.ok(session.getActiveToolNames().includes("sample_one"), "removal does not disable an active tool");
-	session.setActiveToolsByName(["read"]);
-	stored = { ...stored, defaultTools: ["read", "sample_one"] };
-	await session.reload();
-	assert.ok(session.getActiveToolNames().includes("sample_one"), "newly re-added default enables the tool");
-	session.setActiveToolsByName(["read"]);
-	await session.reload();
-	assert.deepEqual(session.getActiveToolNames(), ["read"], "unchanged default leaves manual disable intact");
 	const loaded = loader.getExtensions().extensions.find((extension) => extension.path === process.env.PI_UI_STAGE);
 	assert.equal(loaded.tools.size, 0, "UI never re-registers tools across actual reloads");
 	assert.deepEqual([...loaded.commands.keys()].sort(), ["ccstyle"]);
 	assert.equal(SDK.ToolExecutionComponent.prototype.getCallRenderer, original, "print-mode reload stays unpatched");
 } finally { await session.extensionRunner.emit({ type: "session_shutdown" }); session.dispose(); }
-stored = { ...stored, defaultTools: ["read"] };
-await settings.reload();
-const explicit = await create(["read"]);
-try {
-	await explicit.bindExtensions({ mode: "print" });
-	stored = { ...stored, defaultTools: ["read", "sample_two"] };
-	await explicit.reload();
-	assert.deepEqual(explicit.getActiveToolNames(), ["read"], "explicit CLI-style selection wins over new defaults");
-} finally { await explicit.extensionRunner.emit({ type: "session_shutdown" }); explicit.dispose(); }
-stored = { ...stored, defaultTools: ["read"] };
-await settings.reload();
 const interactive = await create(["read"]);
 const { Container, TuiMainScreen, visibleWidth } = await import(pathToFileURL(require.resolve("@earendil-works/pi-tui")).href);
 SDK.initTheme("dark", false);
@@ -144,17 +113,17 @@ try {
 	assert.deepEqual([...mounted.keys()], []);
 	assert.equal(SDK.ToolExecutionComponent.prototype.getCallRenderer, original);
 }
-console.log("reload/defaultTools: addition, removal, manual disable, re-addition and explicit selection verified; two TUI transcript reloads verified");
+console.log("reload: print mode stays unpatched; two TUI transcript generations and shutdown verified");
 `;
 
-test("actual Pi 1.2.0 reload preserves defaultTools and replaces two TUI transcript generations", { timeout: 30000 }, async () => {
+test("actual Pi 1.3.0 reload keeps print mode unpatched and replaces two TUI transcript generations", { timeout: 30000 }, async () => {
 	const sandbox = await createSandbox();
 	try {
 		const path = join(sandbox.base, "reload-worker.mjs");
 		await writeFile(path, worker);
 		const result = await runChild(sandbox, ["--import", join(sandbox.base, "safety.mjs"), path, sandbox.host.directory]);
 		assert.equal(result.code, 0, result.stderr);
-		assert.match(result.stdout, /reload\/defaultTools: addition/);
+		assert.match(result.stdout, /reload: print mode stays unpatched; two TUI transcript generations and shutdown verified/);
 		assert.equal(result.stderr, "");
 	} finally { await sandbox.cleanup(); }
 });

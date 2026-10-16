@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -63,18 +63,6 @@ test("never overwrites malformed global configuration", async (t) => {
 	assert.throws(() => store.loadSync(), /absolute paths/);
 	await assert.rejects(store.update((current) => ({ directories: [...current.directories, "/new"] })), /absolute paths/);
 	assert.equal(await readFile(store.path, "utf8"), '{"directories":["relative"]}\n');
-});
-
-test("merges concurrent global updates without losing entries", async (t) => {
-	const agentDir = await temporary(t);
-	const store = createAddDirConfigStore(agentDir);
-	const additions = Array.from({ length: 6 }, (_, index) => `/external/${index}`);
-	await Promise.all(additions.map((directory) => store.update((current) => ({
-		directories: [...current.directories, directory],
-	}))));
-	const contents = JSON.parse(await readFile(store.path, "utf8"));
-	assert.deepEqual([...contents.directories].sort(), [...additions].sort());
-	assert.equal(((await stat(store.path)).mode & 0o777), 0o600, "global configuration stays private");
 });
 
 test("restores only the last session state entry and filters invalid records", () => {

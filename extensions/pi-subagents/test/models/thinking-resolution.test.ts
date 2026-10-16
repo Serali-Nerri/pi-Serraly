@@ -12,7 +12,6 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { clampThinkingLevel } from "@earendil-works/pi-ai";
 import type { Api, Model } from "@earendil-works/pi-ai";
 import { resolveThinkingLevel, resolveDisplayThinkingLevel } from "../../src/models/thinking-resolution.js";
 
@@ -71,7 +70,6 @@ describe("resolveDisplayThinkingLevel", () => {
 
   it("clamps the result to the model's supported levels", () => {
     expect(resolveDisplayThinkingLevel({ defaultThinking: "xhigh" }, undefined, MODEL)).toBe("xhigh");
-    expect(clampThinkingLevel(MODEL, "max")).toBe("xhigh"); // sanity: the model really lacks max
     expect(resolveDisplayThinkingLevel({ defaultThinking: "max" }, undefined, MODEL)).toBe("xhigh");
   });
 

@@ -7,7 +7,7 @@
 - `packages/rpiv-ask-user-question` version 2.12.0 (entry `index.ts` plus the
   `tool/`, `state/` and `view/` closures and the `locales/` dictionaries).
 - Upstream development host: Pi 0.80.6, TypeBox 1.3.6. This module targets the
-  workspace baseline Pi 1.2.0 / TypeBox 1.3.27.
+  workspace baseline Pi 1.3.0 / TypeBox 1.3.27.
 - Upstream `LICENSE` (MIT, Copyright (c) 2026 juicesharp) is retained
   byte-for-byte as [LICENSE](./LICENSE).
 

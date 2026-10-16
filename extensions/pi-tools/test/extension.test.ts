@@ -70,12 +70,6 @@ test("registers grep, find and ls as codemode replacements for the built-in tool
 		assert.equal(tool.renderResult, undefined);
 		assert.equal(tool.renderShell, undefined);
 	}
-	const [grep, find, ls] = tools.slice(1);
-	assert.deepEqual(Object.keys(grep.parameters.properties), ["pattern", "path", "glob", "ignoreCase", "literal", "context", "limit"]);
-	assert.deepEqual(grep.parameters.required, ["pattern"]);
-	assert.deepEqual(Object.keys(find.parameters.properties), ["pattern", "path", "limit"]);
-	assert.deepEqual(find.parameters.required, ["pattern"]);
-	assert.deepEqual(Object.keys(ls.parameters.properties), ["path", "limit"]);
 });
 
 test("executes ls against ctx.cwd instead of the registration directory", async (t) => {

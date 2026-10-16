@@ -72,7 +72,7 @@ test("Tools is reachable from Usage and explains unobserved inventory without to
 	} finally { await h.close(); }
 });
 
-test("collapsed declarations expose only adapter evidence and real tool_search loads only new matches", { timeout: 15000 }, async () => {
+test("collapsed declarations expose adapter evidence before and after real tool discovery", { timeout: 15000 }, async () => {
 	const h = await host({ tools: true });
 	try {
 		await h.session.prompt("Run the local plan.");
@@ -100,16 +100,6 @@ test("collapsed declarations expose only adapter evidence and real tool_search l
 		back(h);
 		assert.match(preview(h, "Observed fixture_deferred"), new RegExp(deferredSchemaMarker));
 		assert.match(JSON.stringify(h.observedBodies[2].tools.find((tool: any) => tool.name === "fixture_deferred")), new RegExp(deferredSchemaMarker));
-		const loadedActive = h.session.getActiveToolNames();
-		for (const query of ["Quasarledger", "zznonesuch"]) {
-			h.respond({ name: "tool_search", input: { query, limit: 1 } }, undefined);
-			await h.session.prompt("Run another local plan.");
-			assert.deepEqual(h.session.getActiveToolNames(), loadedActive, "repeat/no-match does not load another tool");
-			const result = h.session.messages.filter((message) => message.role === "toolResult" && message.toolName === "tool_search").at(-1);
-			assert.match(JSON.stringify(result), /No matching tools found/, "real tool_search reports no new match");
-			await h.session.prompt("/context tools");
-			assert.match(preview(h, "Observed fixture_deferred"), new RegExp(deferredSchemaMarker));
-		}
 		assert.deepEqual(h.bodies, h.observedBodies, "with no later rewriting handler, observation leaves the complete ordinary payload unchanged");
 		assert.equal(h.executions, 0, "only real discovery runs, not fixture business tools");
 		assert.deepEqual(h.errors, []);
@@ -315,7 +305,7 @@ for (const native of [false, true]) test(`supported recursive schemas, boolean s
 	} finally { await h.close(); }
 });
 
-test("native removal and same-name redefinitions fold in protocol order without turning history into current tools", { timeout: 15000 }, async () => {
+for (const kimi of [false, true]) test(`${kimi ? "Kimi collapsed" : "Anthropic native"} removal and same-name redefinitions do not turn history into current tools`, { timeout: 15000 }, async () => {
 	let revision = 0;
 	const change: ExtensionFactory = (pi) => {
 		const define = (version: string) => pi.registerTool({ name: "fixture_version", label: "Version", description: version,
@@ -330,7 +320,7 @@ test("native removal and same-name redefinitions fold in protocol order without 
 			}
 		});
 	};
-	const h = await host({ tools: true, native: true, factories: [change, contextView] });
+	const h = await host({ kimi, tools: true, native: true, factories: [change, contextView] });
 	try {
 		for (revision = 0; revision <= 4; revision++) {
 			await h.session.prompt("Next local version plan.");
@@ -340,23 +330,32 @@ test("native removal and same-name redefinitions fold in protocol order without 
 				back(h);
 			} else assert.ok(!rowLabels(h).some((line) => line.includes("Observed fixture_version")), "withdrawn definition is not effective");
 		}
-		assert.match(preview(h, "Baseline fixture_version"), /Initial baseline.*not necessarily effective.*VERSION_ONE/s);
-		back(h);
-		const labels = rowLabels(h).filter((line) => line.includes("Update") && line.includes("fixture_version"));
-		assert.deepEqual(labels.map((line) => /Update ([+−])/.exec(line)![1]), ["−", "+", "+", "−"]);
-		assert.match(preview(h, "Update + fixture_version"), /VERSION_TWO/, "old additions remain inspectable as history");
-		back(h);
-		assert.match(preview(h, "Update − fixture_version"), /Position: \$\.messages\[\d+\]\.content\[\d+\]\.tool\.name/);
-		back(h);
-		assert.ok(!rowLabels(h).some((line) => line.includes("Observed fixture_version")));
-		assert.match(JSON.stringify(h.bodies.at(-1).messages), /tool_removal.*tool_addition/s, "real adapter emits both protocols");
+		if (kimi) {
+			assert.match(h.text(), /OpenAI Chat Completions-shaped collapsed/);
+			assert.doesNotMatch(rowLabels(h).join("\n"), /Baseline |Update [＋+−]/);
+		} else {
+			assert.match(preview(h, "Baseline fixture_version"), /Initial baseline.*not necessarily effective.*VERSION_ONE/s);
+			back(h);
+			const labels = rowLabels(h).filter((line) => line.includes("Update") && line.includes("fixture_version"));
+			assert.deepEqual(labels.map((line) => /Update ([+−])/.exec(line)![1]), ["−", "+", "+", "−"]);
+			assert.match(preview(h, "Update + fixture_version"), /VERSION_TWO/, "old additions remain inspectable as history");
+			back(h);
+			assert.match(preview(h, "Update − fixture_version"), /Position: \$\.messages\[\d+\]\.content\[\d+\]\.tool\.name/);
+			back(h);
+			assert.ok(!rowLabels(h).some((line) => line.includes("Observed fixture_version")));
+			assert.match(JSON.stringify(h.bodies.at(-1).messages), /tool_removal.*tool_addition/s, "real adapter emits both protocols");
+		}
 		assert.equal(h.requests, 5); assert.equal(h.executions, 0); assert.deepEqual(h.errors, []);
 	} finally { await h.close(); }
 });
 
-for (const native of [false, true]) test(`the handler owns ${native ? "native addition" : "collapsed"} schema while later in-place and replacement handlers reach the transport`, { timeout: 15000 }, async () => {
+for (const kimi of [false, true]) for (const native of [false, true]) test(`the ${kimi ? "Chat" : "Anthropic"} handler owns ${native ? "native addition" : "collapsed"} schema while later in-place and replacement handlers reach the transport`, { timeout: 15000 }, async () => {
 	let replacement = false;
-	const target = (body: any) => native
+	const schemaKey = kimi ? "parameters" : "input_schema";
+	const target = (body: any) => kimi
+		? (native ? body.messages.flatMap((message: any) => message.tools ?? []).find((tool: any) => tool.function.name === "fixture_deferred")?.function : undefined)
+			?? body.tools.find((tool: any) => tool.function.name === "fixture_tool").function
+		: native
 		? body.messages.flatMap((message: any) => Array.isArray(message.content) ? message.content : []).find((block: any) => block.type === "tool_addition")?.tool.definition
 			?? body.tools.find((tool: any) => tool.name === "fixture_tool")
 		: body.tools.find((tool: any) => tool.name === "fixture_tool");
@@ -364,25 +363,25 @@ for (const native of [false, true]) test(`the handler owns ${native ? "native ad
 		pi.on("before_provider_request", (event) => {
 			const body = event.payload as any;
 			const tool = target(body);
-			tool.input_schema.properties.AT_OBSERVER_指令 = { type: "string", description: "Observed here." };
-			tool.unrelated_envelope = { text: "UNNEEDED_PRIVATE_ENVELOPE" };
+			tool[schemaKey].properties.AT_OBSERVER_指令 = { type: "string", description: "Observed here." };
+			(kimi ? body : tool).unrelated_envelope = { text: "UNNEEDED_PRIVATE_ENVELOPE" };
 		});
 	};
 	const later: ExtensionFactory = (pi) => {
 		pi.on("before_provider_request", (event) => {
 			const body = event.payload as any;
 			const tool = target(body);
-			assert.equal(Object.isFrozen(body), false); assert.equal(Object.isFrozen(tool.input_schema.properties), false);
+			assert.equal(Object.isFrozen(body), false); assert.equal(Object.isFrozen(tool[schemaKey].properties), false);
 			if (replacement) {
 				const rewritten = JSON.parse(JSON.stringify(body));
-				target(rewritten).input_schema = { type: "object", properties: { AFTER_REPLACEMENT: { type: "number" } } };
+				target(rewritten)[schemaKey] = { type: "object", properties: { AFTER_REPLACEMENT: { type: "number" } } };
 				return rewritten;
 			}
-			delete tool.input_schema.properties.AT_OBSERVER_指令;
-			tool.input_schema.properties.AFTER_IN_PLACE = { type: "boolean" };
+			delete tool[schemaKey].properties.AT_OBSERVER_指令;
+			tool[schemaKey].properties.AFTER_IN_PLACE = { type: "boolean" };
 		});
 	};
-	const h = await host({ native, tools: native, factories: [before, contextView, later] });
+	const h = await host({ kimi, native, tools: native, factories: [before, contextView, later] });
 	try {
 		if (native) h.respond({ name: "tool_search", input: { query: "Quasarledger", limit: 1 } }, undefined);
 		for (replacement of [false, true]) {
@@ -721,6 +720,173 @@ test("print mode refuses views but explicitly creates only owned display prefere
 		await assert.rejects(readFile(join(process.env.PI_CODING_AGENT_DIR!, "extensions/pi-context-view.json")), { code: "ENOENT" });
 		assert.equal(h.requests, 0);
 		assert.equal(h.executions, 0);
+		assert.deepEqual(h.errors, []);
+	} finally { await h.close(); }
+});
+
+test("Kimi Chat Completions declarations appear with their actual function parameters at the public command", { timeout: 15000 }, async () => {
+	const fixture: ExtensionFactory = (pi) => {
+		pi.registerTool({ name: "kimi_lookup", label: "Lookup", description: "Local Kimi declaration preview",
+			parameters: Type.Object({ query: Type.String({ description: "KIMI_PARAMETER_MARKER" }) }),
+			async execute() { assert.fail("Preview must not execute tools"); } });
+	};
+	const h = await host({ kimi: true, factories: [fixture, contextView] });
+	try {
+		await h.session.prompt("Prepare a local declaration request.");
+		await h.session.prompt("/context tools");
+		assert.match(h.text(), /OpenAI Chat Completions-shaped collapsed/);
+		const definition = preview(h, "Observed kimi_lookup");
+		assert.match(definition, /Position: \$\.tools\[\d+\]\.function/);
+		assert.match(definition, /"name": "kimi_lookup"/);
+		assert.match(definition, /Local Kimi declaration preview/);
+		assert.match(definition, /"parameters":/);
+		assert.match(definition, /KIMI_PARAMETER_MARKER/);
+		assert.doesNotMatch(definition, /"input_schema"|"strict"/);
+		assert.match(definition, /Not final wire or provider acceptance/);
+		assert.equal(h.executions, 0);
+		assert.deepEqual(h.errors, []);
+	} finally { await h.close(); }
+});
+
+test("Kimi anchored system tools expose ordered additions without content or payload mutation", { timeout: 15000 }, async () => {
+	const h = await host({ kimi: true, tools: true, native: true });
+	try {
+		await h.session.prompt("First Kimi local plan.");
+		h.respond({ name: "tool_search", input: { query: "Quasarledger", limit: 1 } }, undefined);
+		await h.session.prompt("Discover the local tool.");
+		await h.session.prompt("/context tools");
+		assert.match(preview(h, "Observation details"), /OpenAI Chat Completions-shaped native.*effective declarations.*ordered updates/s);
+		back(h);
+		const definition = preview(h, "Observed fixture_deferred");
+		assert.match(definition, /Position: \$\.messages\[\d+\]\.tools\[\d+\]\.function/);
+		assert.match(definition, new RegExp(deferredSchemaMarker));
+		back(h);
+		assert.match(preview(h, "Update + fixture_deferred"), /Native addition.*"parameters"/s);
+		back(h);
+		assert.match(preview(h, "Baseline fixture_tool"), /\$\.tools\[\d+\]\.function/);
+		assert.deepEqual(h.bodies, h.observedBodies, "observation must not alter the real adapter payload");
+		assert.equal(h.executions, 0);
+		assert.deepEqual(h.errors, []);
+	} finally { await h.close(); }
+});
+
+test("Chat-shaped observation ignores call and result content and does not require a model route or token-limit field", { timeout: 15000 }, async () => {
+	let strict = false, original: unknown;
+	const before: ExtensionFactory = (pi) => {
+		pi.on("before_provider_request", (event) => {
+			original = event.payload;
+			const body = JSON.parse(JSON.stringify(original));
+			delete body.max_tokens;
+			body.tools[0].function.strict = strict;
+			body.tools[0].function.parameters.examples = [{ type: "tool_addition", name: "schema_decoy" }];
+			body.messages.push(
+				{ role: "developer", content: "{\"tools\":[{\"name\":\"text_decoy\"}]}" },
+				{ role: "assistant", content: null, tool_calls: [{ id: "local", type: "function", function: { name: "call_decoy", arguments: "{}" } }] },
+				{ role: "tool", tool_call_id: "local", content: "{\"name\":\"result_decoy\",\"parameters\":{}}" },
+				{ role: "assistant", function_call: { name: "legacy_decoy", arguments: "{}" } },
+				{ role: "function", name: "legacy_decoy", content: "local result" },
+			);
+			return body;
+		});
+	};
+	const after: ExtensionFactory = (pi) => { pi.on("before_provider_request", () => original); };
+	const h = await host({ kimi: true, factories: [before, contextView, after] });
+	try {
+		for (strict of [false, true]) {
+			await h.session.prompt("Prepare another local request.");
+			await h.session.prompt("/context tools");
+			assert.match(h.text(), /OpenAI Chat Completions-shaped collapsed/);
+			const labels = rowLabels(h).join("\n");
+			assert.doesNotMatch(labels, /Observed (schema_decoy|text_decoy|call_decoy|result_decoy|legacy_decoy)|Update [＋+−]/);
+			const definition = preview(h, "Observed fixture_tool");
+			assert.match(definition, new RegExp(`"strict": ${strict}`));
+			assert.match(definition, /schema_decoy/);
+			assert.doesNotMatch(definition, /text_decoy|call_decoy|result_decoy|legacy_decoy/);
+		}
+		assert.deepEqual(h.errors, []);
+	} finally { await h.close(); }
+});
+
+test("unsupported or unsafe Chat declarations clear the latest evidence without reading getters or blocking transport", { timeout: 15000 }, async () => {
+	let poison: ((body: any) => void) | undefined, original: unknown, getters = 0;
+	const accessor = () => { getters++; throw new Error("PRIVATE_CHAT_ERROR"); };
+	const before: ExtensionFactory = (pi) => {
+		pi.on("before_provider_request", (event) => {
+			original = event.payload;
+			const body = JSON.parse(JSON.stringify(original));
+			poison?.(body);
+			return body;
+		});
+	};
+	const after: ExtensionFactory = (pi) => { pi.on("before_provider_request", () => original); };
+	const h = await host({ kimi: true, factories: [before, contextView, after] });
+	const failures: [string, (body: any) => void][] = [
+		["unsupported function protocol", (body) => { body.tools[0].function.type = "server_tool"; }],
+		["malformed strict", (body) => { body.tools[0].function.strict = "yes"; }],
+		["function array", (body) => { body.tools[0].function = Object.assign([], body.tools[0].function); }],
+		["inherited parameters", (body) => {
+			const fn = body.tools[0].function, parameters = fn.parameters;
+			delete fn.parameters; Object.setPrototypeOf(fn, { parameters });
+		}],
+		["parameter accessor", (body) => { Object.defineProperty(body.tools[0].function, "parameters", { get: accessor }); }],
+		["schema toJSON", (body) => { body.tools[0].function.parameters.toJSON = accessor; }],
+		["mixed protocol", (body) => { body.messages.push({ role: "system", content: [{ type: "tool_removal", tool: { type: "tool_reference", name: "fixture_tool" } }] }); }],
+		["non-system tools", (body) => { body.messages.push({ role: "user", tools: [body.tools[0]], content: "not a declaration anchor" }); }],
+		["invented wire removal", (body) => { body.messages.push({ role: "system", tools: [{ type: "function", function: { name: "fixture_tool" }, action: "remove" }] }); }],
+		["shared character budget", (body) => {
+			body.tools[0].function.parameters.examples = ["a".repeat(1100000)];
+			body.messages.push({ role: "system", tools: [{ type: "function", function: {
+				name: "other", description: "local", parameters: { type: "object", examples: ["b".repeat(1100000)] },
+			} }] });
+		}],
+	];
+	try {
+		for (const [label, damage] of failures) {
+			poison = undefined;
+			await h.session.prompt("Prepare a valid local request.");
+			await h.session.prompt("/context tools");
+			assert.match(preview(h, "Observed fixture_tool"), /"parameters"/);
+			poison = damage;
+			await h.session.prompt("Prepare an unsupported local observation.");
+			await h.session.prompt("/context tools");
+			assert.match(h.text(), /Unknown:/, label);
+			assert.doesNotMatch(rowLabels(h).join("\n"), /Observed fixture_tool|Baseline |Update [＋+−]/, label);
+			assert.doesNotMatch(preview(h, "Observation details"), /PRIVATE_CHAT_ERROR/);
+			assert.equal(h.session.messages.at(-1)?.role, "assistant", "later handler restores the ordinary transport");
+		}
+		assert.equal(getters, 0);
+		assert.deepEqual(h.errors, []); assert.deepEqual(h.notices, []);
+	} finally { await h.close(); }
+});
+
+test("Kimi can declare its first tools in a system anchor after an initially empty baseline", { timeout: 15000 }, async () => {
+	let activate = false;
+	const change: ExtensionFactory = (pi) => {
+		pi.on("session_start", () => pi.setActiveTools([]));
+		pi.on("before_agent_start", () => { pi.setActiveTools(activate ? ["fixture_tool"] : []); });
+	};
+	const h = await host({ kimi: true, native: true, factories: [change, contextView] });
+	try {
+		await h.session.prompt("Start without tools.");
+		await h.session.prompt("/context tools");
+		assert.match(h.text(), /0 top-level declarations/);
+		assert.doesNotMatch(h.text(), /Unknown:|Anthropic-shaped|OpenAI Chat Completions-shaped|Observed fixture_tool/);
+		activate = true;
+		await h.session.prompt("Now expose a local tool.");
+		await h.session.prompt("/context tools");
+		assert.match(h.text(), /OpenAI Chat Completions-shaped native/);
+		assert.match(preview(h, "Observed fixture_tool"), /\$\.messages\[\d+\]\.tools\[\d+\]\.function/);
+		back(h);
+		assert.match(preview(h, "Update + fixture_tool"), /"parameters"/);
+		back(h);
+		assert.doesNotMatch(rowLabels(h).join("\n"), /Baseline fixture_tool/);
+		h.respond({ name: "fixture_tool" }, undefined);
+		await h.session.prompt("Run the benign local fixture operation.");
+		activate = false;
+		await h.session.prompt("Withdraw all tools after the call.");
+		await h.session.prompt("/context tools");
+		assert.match(h.text(), /0 top-level declarations/);
+		assert.doesNotMatch(rowLabels(h).join("\n"), /Unknown:|Observed fixture_tool|Baseline |Update [＋+−]/);
 		assert.deepEqual(h.errors, []);
 	} finally { await h.close(); }
 });

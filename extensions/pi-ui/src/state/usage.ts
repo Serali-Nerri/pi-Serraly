@@ -25,7 +25,7 @@ let usageCache = new WeakMap<ExtensionContext["sessionManager"], { revision: str
 
 export function getUsageTotals(ctx: ExtensionContext): UsageTotals {
 	const manager = ctx.sessionManager;
-	// Pi 1.2.0 exposes an O(1) entry count. Do not copy the session on every
+	// Pi 1.3.0 exposes an O(1) entry count. Do not copy the session on every
 	// animation frame; the count also catches idle usage entries with no event.
 	// Public SessionManager API, omitted from Pi's ReadonlySessionManager Pick.
 	const count = (manager as typeof manager & Partial<Pick<SessionManager, "getEntryCount">>).getEntryCount?.();

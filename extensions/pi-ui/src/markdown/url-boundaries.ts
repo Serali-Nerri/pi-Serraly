@@ -1,4 +1,4 @@
-// Display-only compatibility for Pi 1.2.0's GFM bare-URL punctuation boundaries.
+// Display-only compatibility for Pi 1.3.0's GFM bare-URL punctuation boundaries.
 // Ordinary URLs still go through the host tokenizer without modification.
 const BOUNDARIES = "，。；：！？、（）【】《》〈〉「」『』〔〕［］｛｝";
 const BARE_URL = new RegExp(`(?:https?:\\/\\/|ftp:\\/\\/|www\\.)[a-z\\d-][^\\s<>\x60${BOUNDARIES}]*`, "gi");

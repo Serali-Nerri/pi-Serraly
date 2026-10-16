@@ -7,41 +7,30 @@ import {
 	formatToolInputArgs,
 	SHOW_MORE_LABEL,
 } from "../src/transcript/tool/result.ts";
-import { truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
-
-function expectedExpandedLines(text: string, prefix: string, width: number): string[] {
-	const normalized = text.replace(/\t/g, "   ").replace(/\n+$/, "");
-	const contentWidth = Math.max(1, width - visibleWidth(prefix));
-	return wrapTextWithAnsi(normalized, contentWidth).map((line) =>
-		truncateToWidth(prefix + line, width, ""),
-	);
-}
+import { visibleWidth } from "@earendil-works/pi-tui";
 
 test("ExpandedToolResultText preserves lines while caching one width", () => {
-	const text = "\x1b[31mfirst\tline with enough content to wrap\nsecond\n\n";
-	const prefix = "\x1b[31m  │ \x1b[0m";
-	const component = new ExpandedToolResultText(text, prefix);
+	const component = new ExpandedToolResultText("a\tb\n12345678\n\n", "│ ");
 
-	const wide = component.render(24);
-	assert.deepEqual(wide, expectedExpandedLines(text, prefix, 24));
-	assert.strictEqual(component.render(24), wide);
+	const wide = component.render(12);
+	assert.deepEqual(wide, ["│ a   b", "│ 12345678"]);
+	assert.strictEqual(component.render(12), wide);
 
-	const narrow = component.render(12);
-	assert.deepEqual(narrow, expectedExpandedLines(text, prefix, 12));
+	const narrow = component.render(8);
+	assert.deepEqual(narrow, ["│ a   b", "│ 123456", "│ 78"]);
 	assert.notStrictEqual(narrow, wide);
 
-	const wideAgain = component.render(24);
-	assert.deepEqual(wideAgain, expectedExpandedLines(text, prefix, 24));
+	const wideAgain = component.render(12);
+	assert.deepEqual(wideAgain, ["│ a   b", "│ 12345678"]);
 	assert.notStrictEqual(wideAgain, wide, "only the most recent width is cached");
 
 	component.invalidate();
-	const afterInvalidate = component.render(24);
-	assert.deepEqual(afterInvalidate, expectedExpandedLines(text, prefix, 24));
+	const afterInvalidate = component.render(12);
+	assert.deepEqual(afterInvalidate, ["│ a   b", "│ 12345678"]);
 	assert.notStrictEqual(afterInvalidate, wideAgain);
 
-	const changedText = "updated\tcontent\n";
-	component.setText(changedText);
-	assert.deepEqual(component.render(24), expectedExpandedLines(changedText, prefix, 24));
+	component.setText("new\ttext\n");
+	assert.deepEqual(component.render(12), ["│ new   text"]);
 });
 
 test("formatToolInputArgs pretty-prints object fields and multiline values", () => {

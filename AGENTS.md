@@ -19,7 +19,7 @@ Each change follows this order:
 
 ## Project Structure & Module Organization
 
-`pi-Serraly` is a private npm workspace with eight independent Pi extensions. Target Node ≥22.19 and Pi 1.2.0.
+`pi-Serraly` is a private npm workspace with eight independent Pi extensions. Target Node ≥22.19 and Pi 1.3.0.
 
 ```text
 .
@@ -72,6 +72,10 @@ Use strict TypeScript and ESM. Preserve local formatting: tabs in UI/questions/l
 - Tautological tests considered harmful.
 - Change-detector tests considered harmful.
 - Do not create regression tests for bug fixes without a genuine gap in behavior testing.
+- Test behavior this repository owns: extension features, adapters, configuration and security rules, lifecycle/resource cleanup, and build/release artifacts. Exercise public interfaces or established seams, with independently derived expectations.
+- Do not duplicate upstream tests for Pi, TypeBox, Node or other dependencies. Upstream algorithms, resource limits (such as codemode worker admission), and API semantics belong in their owning repositories; investigate them with disposable probes when needed, not permanent local tests.
+- Retain integration tests that exercise our code against the real host or compiled artifacts and catch a concrete failure in our adapter, admission/isolation policy, packaging or lifecycle. Merely calling an upstream API and asserting its documented result is not a local integration contract.
+- Before adding or retaining a test, identify the repository-owned behavior it protects. Remove upstream-only, tautological, change-detector and redundant cases; do not replace them with assertions on source text, private call sequences or dependency version constants. Host qualification and package metadata gates remain repository-owned behavior.
 
 Root integration and most package tests use Node’s `node:test` runner, with `tsx` for TypeScript. Subagents retains its imported Vitest suites and runs through the same isolated root runner with network denial. Name package tests `*.test.ts` and root integration tests `*.test.mjs`. When a regression test is warranted, write a behavior-focused test before implementation; observe failure, then success. No numeric coverage threshold is configured. Preserve boundary/compiled-artifact tests, deterministic timing, and process/worker cleanup. Run `npm run verify` before submitting; document platform skips and manually verify visual changes.
 

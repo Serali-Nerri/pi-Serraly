@@ -105,15 +105,33 @@ export function captureToolObservation(payload: unknown): ToolObservation {
 	const observedAt = new Date().toISOString();
 	const unknown = (summary: string): ToolObservation => ({ observedAt, status: "unknown", summary, declarations: [], initialDeclarations: [], updates: [], placeholders: [] });
 	try {
-		if (!record(payload) || typeof data(payload, "model") !== "string" || typeof data(payload, "max_tokens") !== "number")
+		if (!record(payload) || typeof data(payload, "model") !== "string")
 			return unknown("Unknown: unsupported payload format");
 		const messages = data(payload, "messages");
 		if (!Array.isArray(messages) || data(payload, "stream") !== true) return unknown("Unknown: unsupported payload format");
 		const budget = { nodes: 20000, characters: 2 * 1024 * 1024 };
 		const effective = new Map<string, ObservedDeclaration>();
 		const updates: ObservedUpdate[] = [], placeholders: string[] = [];
+		let protocol: "Anthropic-shaped" | "OpenAI Chat Completions-shaped" | undefined;
+		const useProtocol = (shape: NonNullable<typeof protocol>) => {
+			if (protocol !== undefined && protocol !== shape) throw new Error("Mixed declaration protocols");
+			protocol = shape;
+		};
 		const decode = (tool: unknown, position: string): ObservedDeclaration => {
 			if (!record(tool)) throw new Error("Unknown definition");
+			if (data(tool, "type") === "function") {
+				useProtocol("OpenAI Chat Completions-shaped");
+				if (Object.keys(tool).some((key) => !["type", "function"].includes(key))) throw new Error("Unknown function wrapper");
+				const fn = data(tool, "function");
+				if (!record(fn) || Object.keys(fn).some((key) => !["name", "description", "parameters", "strict"].includes(key))) throw new Error("Unknown function definition");
+				const name = data(fn, "name"), description = data(fn, "description"), schema = data(fn, "parameters"), strict = data(fn, "strict");
+				if (typeof name !== "string" || !name.trim() || typeof description !== "string" || !record(schema) || data(schema, "type") !== "object"
+					|| name === "__pi_deferred_placeholder__") throw new Error("Unknown function definition");
+				const owned = copyJson({ name, description, parameters: schema, ...(strict === undefined ? {} : { strict }) }, budget) as Record<string, unknown>;
+				if (!schemaShape(owned.parameters) || (owned.strict !== undefined && typeof owned.strict !== "boolean")) throw new Error("Malformed function definition");
+				return { name, position: `${position}.function`, description, definition: JSON.stringify(owned, undefined, 2) };
+			}
+			useProtocol("Anthropic-shaped");
 			const name = data(tool, "name"), description = data(tool, "description"), schema = data(tool, "input_schema");
 			if (typeof name !== "string" || !name.trim() || typeof description !== "string" || !record(schema) || data(schema, "type") !== "object"
 				|| data(tool, "defer_loading") !== undefined || name === "__pi_deferred_placeholder__" || data(tool, "type") !== undefined)
@@ -139,6 +157,7 @@ export function captureToolObservation(payload: unknown): ToolObservation {
 			const tool = data(tools, String(index)), position = `$.tools[${index}]`;
 			if (!record(tool)) throw new Error("Unknown definition");
 			if (data(tool, "name") === "__pi_deferred_placeholder__") {
+				useProtocol("Anthropic-shaped");
 				// Recognize the pinned adapter's scaffolding, not arbitrary provider deferred definitions.
 				const schema = data(tool, "input_schema");
 				const properties = data(schema, "properties"), required = data(schema, "required");
@@ -162,7 +181,20 @@ export function captureToolObservation(payload: unknown): ToolObservation {
 			if (--budget.nodes < 0) throw new Error("Too large");
 			const message = data(messages, String(index));
 			const role = data(message, "role"), content = data(message, "content");
-			if (typeof role !== "string" || !["user", "assistant", "system"].includes(role)) return unknown("Unknown: unsupported message structure");
+			if (typeof role !== "string" || !["user", "assistant", "system", "developer", "tool", "function"].includes(role)) return unknown("Unknown: unsupported message structure");
+			const additions = data(message, "tools");
+			if (additions !== undefined) {
+				useProtocol("OpenAI Chat Completions-shaped");
+				if (role !== "system" || !Array.isArray(additions)) throw new Error("Unknown system tools");
+				const additionCount = arraySize(additions);
+				for (let toolIndex = 0; toolIndex < additionCount; toolIndex++) {
+					if (--budget.nodes < 0) throw new Error("Too large");
+					const declaration = decode(data(additions, String(toolIndex)), `$.messages[${index}].tools[${toolIndex}]`);
+					effective.set(declaration.name, declaration);
+					updates.push({ kind: "addition", name: declaration.name, position: declaration.position, declaration });
+				}
+			}
+			if ((content === undefined && additions !== undefined) || (protocol !== "Anthropic-shaped" && (role === "assistant" || role === "function") && content == null)) continue;
 			if (typeof content === "string") continue;
 			if (!Array.isArray(content)) return unknown("Unknown: malformed message structure");
 			const blockCount = arraySize(content);
@@ -174,6 +206,7 @@ export function captureToolObservation(payload: unknown): ToolObservation {
 					if (type.startsWith("tool_") && type !== "tool_use" && type !== "tool_result") throw new Error("Unknown protocol");
 					continue;
 				}
+				useProtocol("Anthropic-shaped");
 				if (role !== "system" || declaredTools === undefined || !record(block)
 					|| Object.keys(block).some((key) => !["type", "tool", "cache_control"].includes(key))) throw new Error("Unknown native protocol");
 				const cacheControl = data(block, "cache_control");
@@ -196,8 +229,8 @@ export function captureToolObservation(payload: unknown): ToolObservation {
 		const declarations = [...effective.values()];
 		const native = updates.length > 0 || placeholders.length > 0;
 		return { observedAt, status: "recognized", declarations, initialDeclarations: native ? initialDeclarations : [], updates, placeholders,
-			summary: native ? `Anthropic-shaped native · ${declarations.length} effective declarations · ${updates.length} ordered updates · ${placeholders.length} adapter placeholders`
-				: `Anthropic-shaped collapsed · ${declarations.length} top-level declarations` };
+			summary: native ? `${protocol} native · ${declarations.length} effective declarations · ${updates.length} ordered updates · ${placeholders.length} adapter placeholders`
+				: protocol ? `${protocol} collapsed · ${declarations.length} top-level declarations` : "No tool declarations · 0 top-level declarations" };
 	} catch {
 		return unknown("Unknown: tool declaration decode failed");
 	}

@@ -4,7 +4,6 @@ import { test } from "node:test";
 import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 
 import {
-	CONTEXT_COMMAND_DESCRIPTION,
 	getContextArgumentCompletions,
 	parseContextCommand,
 	reportCommandMessage,
@@ -40,11 +39,7 @@ test("parseContextCommand defaults to Usage and accepts the explicit grammar", (
 	});
 });
 
-test("command registration and completions expose the supported grammar", () => {
-	assert.equal(
-		CONTEXT_COMMAND_DESCRIPTION,
-		"[usage|injections|tools|config] - Inspect context usage, injections, tools",
-	);
+test("command completions expose the supported grammar", () => {
 	assert.deepEqual(
 		getContextArgumentCompletions("")?.map((item) => item.value),
 		["usage", "injections", "tools", "config"],

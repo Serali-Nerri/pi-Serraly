@@ -5,7 +5,7 @@
     "version": "0.2.1",
     "entry": "./dist/extensions/background-tasks.js",
     "node": ">=22.19.0",
-    "verified_host": "1.2.0",
+    "verified_host": "1.3.0",
     "typebox": "1.3.27"
   },
   "public_surfaces": {
@@ -417,7 +417,7 @@
     },
     {
       "path": "docs/getting-started.md",
-      "sha256": "d16ba4ea994fb9b2947c2109260c7fcbd4caa6b7e1732151fee0646ec5120ff5"
+      "sha256": "1d0dd74c0f619207d5746b05be938191f552362e6563dc152fec0187d97b1db1"
     },
     {
       "path": "docs/operations/configuration.md",
@@ -433,23 +433,23 @@
     },
     {
       "path": "docs/subsystems/docs-freshness-gate.md",
-      "sha256": "e28f553f2682cdf5806eb273c12099e567024da1a6939bb2c013e05b941f12db"
+      "sha256": "a533732354e6b4a674f2b0318915bc048d9fcd97d1c3a246656f86c3a5975f77"
     },
     {
       "path": "docs/subsystems/extension-lifecycle.md",
-      "sha256": "c878e929e45a5ffe1ad606c460142a9aacaf012125a637eab2622895e92225c3"
+      "sha256": "78615f018ff2b3b96fb4b2d4f1f3704a408d3fa4647a1562421378a60a439a46"
     },
     {
       "path": "README.md",
-      "sha256": "a26806b0f180292c7624bf058c31e26544817069bdc781d3897b8cf789b83989"
+      "sha256": "90a1dfb1aedff036e3f8439f1c73e20e5991699faf8552488ba9f43b65c073b5"
     },
     {
       "path": "TESTING.md",
-      "sha256": "3945891912e34b2738b08ae6aeafd85e12c9f73f40344a7ed97b1c90ebf0c501"
+      "sha256": "e372931486d4b9c71050e66a4d37f3995c8c2355e406c15f118f056721ba94db"
     },
     {
       "path": "UPSTREAM.md",
-      "sha256": "5266bc4d02927148e7645e7ca3166f2dfb1d67acf19b71c9976a9cac91031d3d"
+      "sha256": "de648be6a6190d188baad1b946fae3a268861b13962e1cece48ae6b3aef8a7df"
     },
     {
       "path": "CHANGELOG.md",

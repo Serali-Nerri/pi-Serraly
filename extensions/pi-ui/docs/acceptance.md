@@ -13,7 +13,7 @@ through the isolated runner described in the [development guide](../../../docs/d
 That guide owns build prerequisites, managed-host selection and Node qualification;
 do not repeat full verification for each UI test change.
 
-Tests use Pi **1.2.0** package code, not user configuration. They compile the
+Tests use Pi **1.3.0** package code, not user configuration. They compile the
 current UI to a temporary ESM bundle, keep Pi/TypeBox external, and load it with
 the host's actual bundled CLI (`dist/bundle/cli.js`) and extension loader.
 

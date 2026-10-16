@@ -2,7 +2,7 @@
 
 独立入口 `dist/pi-subagents/index.js`，在 Pi 中注册 **`Agent`、`StopAgent`、
 `AgentStatus`** 和 **`/agents`**。三工具使用宿主默认的 direct exposure，注册后
-active；UI 模块只管展示，不执行或代管子代理。支持基线是 Pi **1.2.0**、
+active；UI 模块只管展示，不执行或代管子代理。支持基线是 Pi **1.3.0**、
 TypeBox **1.3.27**、Node **≥22.19**。来源与许可见 [UPSTREAM.md](UPSTREAM.md)
 及 [LICENSE](LICENSE)；构建、隔离和 release/替换流程见[开发指南](../../docs/development.md)。
 
@@ -214,6 +214,11 @@ frontmatter 可设置 `model`、`thinking`、`max_turns`、`max_tokens`、`hidde
 连接。普通完成/Stop 保留 session，可 continue 而不重新连接；这些状态不传播
 给父或其他子代理。`finishedRetentionMinutes` 只隐藏过期 widget 行，**不是
 session TTL**。长会话中 retained MCP 连接/进程可增长，即使运行并发不高。
+
+Pi 1.3.0 的 codemode 在同一宿主进程的所有会话间共享最多 **2 个存活 worker**；
+正在关闭的 worker 退出前仍占槽位，父会话与子会话会竞争这些资源。此上限独立于
+子代理默认并发 **4**，不保证相同数量的代理可同时运行 codemode；容量已满时
+宿主立即拒绝新脚本。本模块不额外排队或重试，也不改变默认并发。
 
 **Clear** 开始释放已结束任务的所有权；父 reload/quit/new/resume/fork 释放全部
 子会话。关闭等待有限的初始化边界，发 session_shutdown 后 dispose，幂等处理

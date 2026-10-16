@@ -1,6 +1,6 @@
 # context-view
 
-独立的 Pi 1.2.0 扩展，保留 pi-context-view 的 Usage、Initial 注入、配置和内容预览。
+独立的 Pi 1.3.0 扩展，保留 pi-context-view 的 Usage、Initial 注入、配置和内容预览。
 入口为 `dist/context-view.js`，只注册 `context` 命令，不注册业务工具。
 可单独选择，也可与 pi-ui 按任意顺序共存；pi-ui 的 Footer 与 `/ccstyle` 不由本模块接管。
 安装与选择性 release 遵循[仓库开发指南](../../docs/development.md)，不要将开发 dist 加入真实 settings。
@@ -37,8 +37,16 @@ Tools 将打开视图时采样的 `getAllTools()` 库存、来源、Tool Exposur
 观测显示时间，不用当前选择模型猜测实际路由；事件只有 payload，没有请求身份或严格用途。
 来源未知，可能包括 cache warming。它不是最终 wire、已发送或 provider 已接受的证明。
 
-支持 **Anthropic-shaped collapsed 顶层 `tools[i]`** 与 **原生增量**：system 消息中的
+按 payload 形状支持 **Anthropic-shaped collapsed 顶层 `tools[i]`** 与 **原生增量**：system 消息中的
 `tool_addition.tool.definition` / `tool_removal.tool.name`，展示实际 `input_schema` 与具体路径。
+同时支持 **OpenAI Chat Completions-shaped** 函数工具：顶层 `tools[i].function` 的
+`name`、`description`、`parameters`、可选 boolean `strict`，以及 Pi 1.3 Kimi adapter
+生成的 system 消息 `tools[i].function` 增加声明（该消息可没有 `content`；初始无工具时顶层 `tools` 可缺省）。
+预览保留实际字段与路径，不把 `parameters` 改名为 `input_schema`。消息内新增按序纳入
+有效集合；adapter 遇到移除或同名重定义会折叠为顶层当前集合，不虚构 Kimi wire 移除协议。
+两种声明协议混合或不支持的工具类型显示 Unknown；空声明集合使用中性标签，不凭模型身份判定 provider。
+Chat Completions 的 system / developer / user / assistant / tool / function 消息内容、
+assistant tool_calls 和 tool/function 结果不是声明，不解析其文本中的工具定义。
 从顶层初始定义开始，按 payload 消息、block 顺序应用移除与同名重定义；只有整份声明协议
 可靠解码时才展示 **effective declarations**。原生初始 baseline 与更新历史单列保留位置、
 顺序与原定义，不把初始/历史新增累计为当前有效集合。已知 `__pi_deferred_placeholder__` 的 adapter 形状单列标为
@@ -48,7 +56,9 @@ placeholder，排除在有效声明及注册/推导可调用库存之外；其�
 库存信息不是请求证据，不拿注册 schema 填充观测。
 
 支持的定义边界是 adapter 生成的自定义工具：非空字符串 name、字符串 description、
-无 provider-specific type / defer_loading 字段（已知 placeholder 除外），以及 `type: "object"` 的根 input_schema。
+Anthropic 定义无 provider-specific type / defer_loading 字段（已知 placeholder 除外），
+Chat 函数 wrapper 仅支持 type / function，function 仅支持 name / description / parameters / strict，
+以及 `type: "object"` 的根 input_schema / parameters。
 结构检查递归覆盖 schema 映射（properties、patternProperties、$defs、definitions、dependentSchemas）、
 schema 列表（allOf / anyOf / oneOf、prefixItems）、items（含 tuple 形式），以及
 additionalProperties / additionalItems、unevaluatedProperties / unevaluatedItems、propertyNames、
@@ -72,7 +82,7 @@ hidden 与 inactive direct 不可内部调用。active 不是 callable 或声明
 Enter 预览选中库存元数据、有效观测定义、按序更新记录、placeholder 或 codemode 描述，Esc 返回；`u` / `i` 回到 Usage / Initial，方向键、
 PgUp/PgDn、Home/End 与 wheel 沿用查看器导航。长 schema 与多语言文本在预览中换行并可滚动。
 
-handler 同步复制所需工具声明数据（name、description、input_schema 及已知的
+handler 同步复制所需工具声明数据（name、description、input_schema / parameters 及对应协议已知的
 strict / eager_input_streaming / cache_control 字段），不保留无关 envelope、整个 payload、
 消息引用；增删历史只来自当前 payload，不是跨请求历史。只读自身数据属性，不调用 accessor / toJSON；结构或复制超过 20,000 节点、
 64 层或约 2 MiB 字符预算时整份观测为 Unknown，不呈现部分成功结果。不改写或 freeze
@@ -122,7 +132,7 @@ strict / eager_input_streaming / cache_control 字段），不保留无关 envel
 `npm run check --workspace context-view` 严格检查源码与测试；
 `node scripts/test.mjs --package context-view` 使用隔离原生 node:test 与网络拒绝。
 公开宿主加载/命令/TUI（含 Usage / Initial 返回 overlay 组件的 wheel 转发）、
-真实 tool_search 与 Anthropic adapter 的请求局部假 fetch/SSE、
+真实 tool_search、Anthropic 与 Kimi Chat Completions adapter 的请求局部假 fetch/SSE、
 配置和预览行为及现有 packed/release seam 共同验收，
 不依赖兄弟源码或真实凭据。
 

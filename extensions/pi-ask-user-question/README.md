@@ -1,6 +1,6 @@
 # ask-user-question
 
-One model tool for Pi 1.2.0: `ask_user_question` opens a structured
+One model tool for Pi 1.3.0: `ask_user_question` opens a structured
 questionnaire so a blocking decision comes back as typed answers instead of a
 guess. The module owns the tabbed dialog, the native RPC dialog fallback and
 the optional config file. It registers no commands, no renderers and no prompt

@@ -45,9 +45,6 @@ const results = (log, marker = "main") => log.filter((item) => item.phase === "p
 const requests = (log, marker = "main") => log.filter((item) => item.phase === "provider-request" && item.marker === marker);
 const starts = (log) => log.filter((item) => item.phase === "mcp-start");
 const calls = (log, name) => log.filter((item) => item.phase === "mcp-call" && item.name === name);
-// These scripts emit one compact JSON value after codemode's timing header.
-const scriptJson = (result) => JSON.parse(result.text.trim().split("\n").at(-1));
-
 // Omitting native factories, freezing the initial registry, or copying parent
 // closures breaks these returned sentinels through the production Agent path.
 for (const [name, config, wanted] of [
@@ -110,48 +107,6 @@ for (const [exposure, plan] of [
 		assert.ok(log.indexOf(calls(log, "peek")[0]) < log.indexOf(unrelatedRelease), "the needed call finishes while the unrelated server is still gated");
 		assert.equal(calls(log, "peek")[0].label, "user");
 	}
-});
-
-test("native codemode preserves arbitrary MCP structuredContent without an output schema", { timeout: 70000 }, async () => {
-	const log = await run("roundtrip", { exposure: "codemode", plans: { main: [code(`
-		const values = [];
-		for (const kind of ["array", "null", "string", "number", "boolean"]) {
-			const result = await tools.mcp__fixture__json({kind});
-			values.push({kind, present:Object.prototype.hasOwnProperty.call(result, "structuredContent"),
-				value:result.structuredContent, content:result.content});
-		}
-		text(values);
-	`)] } });
-	assert.equal(results(log)[0].isError, false);
-	assert.deepEqual(scriptJson(results(log)[0]), [
-		{ kind: "array", present: true, value: [1, null, { nested: "sentinel" }], content: [{ type: "text", text: "json-envelope:array" }] },
-		{ kind: "null", present: true, value: null, content: [{ type: "text", text: "json-envelope:null" }] },
-		{ kind: "string", present: true, value: "structured-sentinel", content: [{ type: "text", text: "json-envelope:string" }] },
-		{ kind: "number", present: true, value: 42, content: [{ type: "text", text: "json-envelope:number" }] },
-		{ kind: "boolean", present: true, value: false, content: [{ type: "text", text: "json-envelope:boolean" }] },
-	]);
-	assert.equal(calls(log, "json").length, 5, "each value came from the real MCP protocol");
-});
-
-test("native codemode resolves explicit namespace aliases in descriptions and scoped search", { timeout: 70000 }, async () => {
-	const log = await run("roundtrip", { namespaceAliases: true, exposure: "codemode", plans: { main: [code(`
-		const rows = [];
-		for (const lookup of ["fixture-docs", "fixture_docs", "handbook-v2", "handbook_v2", "manual", "missing-alias"]) {
-			const group = await describeNamespace(lookup);
-			const matches = await searchTools("alias sentinel", {namespace:lookup});
-			rows.push({lookup, namespace:group?.name ?? null, instructions:group?.instructions ?? null,
-				matches:matches.map(tool => tool.name), sentinel:matches.length === 1 ? await tools[matches[0].name]({}) : null});
-		}
-		text(rows);
-	`)] } });
-	assert.equal(results(log)[0].isError, false);
-	const rows = scriptJson(results(log)[0]);
-	assert.deepEqual(rows.map((row) => row.lookup), ["fixture-docs", "fixture_docs", "handbook-v2", "handbook_v2", "manual", "missing-alias"]);
-	for (const row of rows.slice(0, -1)) assert.deepEqual({ ...row, lookup: undefined }, {
-		lookup: undefined, namespace: "fixture-docs", instructions: "Explicit alias fixture instructions",
-		matches: ["namespace_peek"], sentinel: "namespace-sentinel",
-	});
-	assert.deepEqual(rows.at(-1), { lookup: "missing-alias", namespace: null, instructions: null, matches: [], sentinel: null });
 });
 
 test("hidden MCP tools cannot be searched, directly called or nested-called", { timeout: 70000 }, async () => {

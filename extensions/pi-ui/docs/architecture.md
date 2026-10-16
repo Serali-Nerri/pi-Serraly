@@ -1,4 +1,4 @@
-# pi-ui architecture — Pi 1.2.0
+# pi-ui architecture — Pi 1.3.0
 
 ## Ownership
 
@@ -84,7 +84,7 @@ that same budget. `inputClip: 0` skips character preclipping, while positive lim
 remain effective. Path fitting stays POSIX-first and grapheme-safe, preserving
 filenames and separator semantics.
 
-Pi 1.2.0 carries `outputPad` in the tool render context and requires self-shell
+Pi 1.3.0 carries `outputPad` in the tool render context and requires self-shell
 renderers to apply it themselves. Managed self-shell cards take their leading
 indent from that value instead of a fixed column, keeping the indent inside the
 viewport budget; `default`-shell expansions stay flush and let the host Box pad

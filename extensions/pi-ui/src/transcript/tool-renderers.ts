@@ -32,7 +32,7 @@ function fallback(tool: any, slot: "renderCall" | "renderResult", args: any[], t
 	return new Text(text, 0, 0);
 }
 
-/** Pi 1.2.0 requires `renderShell: "self"` renderers to apply outputPad themselves; the host default is one column. */
+/** Pi 1.3.0 requires `renderShell: "self"` renderers to apply outputPad themselves; the host default is one column. */
 function outputPadOf(context: any): number {
 	const pad = context?.outputPad;
 	return typeof pad === "number" && Number.isFinite(pad) ? Math.max(0, Math.floor(pad)) : 1;

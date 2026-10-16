@@ -22,7 +22,7 @@ Task-change and periodic footer updates isolate presentation failures from child
 
 ## SDK embedding
 
-The supported development baseline is Pi 1.2.0. An SDK host must call `bindExtensions()` with counted bindings, for example `{ onError, ... }`, and provide the normal `session_start` after reload. Empty/mode-only binding is not a supported handoff path. Dispose through `AgentSessionRuntime.dispose()` or another awaited host lifecycle that emits `session_shutdown`; direct `AgentSession.dispose()` does not emit the awaited shutdown event needed for child cleanup. Rebind session-local subscriptions and extension bindings after runtime session replacement.
+The supported development baseline is Pi 1.3.0. An SDK host must call `bindExtensions()` with counted bindings, for example `{ onError, ... }`, and provide the normal `session_start` after reload. Empty/mode-only binding is not a supported handoff path. Dispose through `AgentSessionRuntime.dispose()` or another awaited host lifecycle that emits `session_shutdown`; direct `AgentSession.dispose()` does not emit the awaited shutdown event needed for child cleanup. Rebind session-local subscriptions and extension bindings after runtime session replacement.
 
 Pi is busy during startup preparation, including `before_agent_start`. Completion messages use `deliverAs: 'followUp'` with the task's `triggerOnCompletion` flag, so the host queues them while busy rather than starting a competing run. The registry retains its delivery latch, terminal-publication retries and shutdown/reload fences; see [completion delivery](../concepts/completion-delivery.md).
 

@@ -11,7 +11,7 @@ const host = process.argv[2], scenario = process.argv[3];
 const SDK = await import(pathToFileURL(join(host, "dist/index.js")).href);
 const require = createRequire(join(host, "package.json"));
 const TUI = await import(pathToFileURL(require.resolve("@earendil-works/pi-tui")).href);
-// Pi 1.2.0 declares AuthStorage but does not export it from its SDK root.
+// Pi 1.3.0 declares AuthStorage but does not export it from its SDK root.
 // TEST ONLY pinned import, always in-memory; no credentials file is read.
 const { AuthStorage } = await import(pathToFileURL(join(host, "dist/core/auth-storage.js")).href);
 const config = JSON.parse(await readFile(process.env.SERRALY_CONFIG, "utf8"));
@@ -145,17 +145,6 @@ export default function (pi) {
 	}
 	let profileFields = config.profile;
 	const childFixtures = [];
-	if (config.namespaceAliases) {
-		const aliases = join(cwd, "subagents-namespace-alias-fixture.js");
-		await writeFile(aliases, `export default function (pi) {
-			pi.registerTool({name:"namespace_peek", label:"Namespace peek", description:"Local alias sentinel",
-				parameters:{type:"object",properties:{},additionalProperties:false}, exposure:"codemode",
-				namespace:{name:"fixture-docs",aliases:["handbook-v2","manual"],instructions:"Explicit alias fixture instructions"},
-				async execute() { return {content:[{type:"text",text:"namespace-sentinel"}]}; }});
-		}`);
-		childFixtures.push(aliases);
-		profileFields = { ...profileFields, extensions: [...native, provider, aliases] };
-	}
 	if (scenario === "readiness") {
 		const observer = join(cwd, "subagents-readiness-observer.js");
 		await writeFile(observer, `import {appendFileSync} from "node:fs";

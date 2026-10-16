@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { basename, join } from "node:path";
 import {
 	createAgentSession, createCodemodeExtension, createToolSearchExtension, DefaultResourceLoader, initTheme, ModelRuntime, SessionManager, SettingsManager,
@@ -7,9 +7,10 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { registerApiProvider, unregisterApiProviders } from "@earendil-works/pi-ai/compat";
 import { stream, streamSimple } from "@earendil-works/pi-ai/api/anthropic-messages";
+import { stream as streamCompletions, streamSimple as streamSimpleCompletions } from "@earendil-works/pi-ai/api/openai-completions";
 import { TuiMainScreen, visibleWidth, type Component } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-// Test-only pinned host imports: these are not root-exported by Pi 1.2.0.
+// Test-only pinned host imports: these are not root-exported by Pi 1.3.0.
 import { AuthStorage } from "../../../../node_modules/@earendil-works/pi-coding-agent/dist/core/auth-storage.js";
 import { theme } from "../../../../node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/theme/theme.js";
 import contextView from "../../src/index.ts";
@@ -22,7 +23,7 @@ type Reply = { name: string; input?: Record<string, unknown> } | undefined;
 
 /** Real SDK/session/command boundary; only the terminal and request-local transport are scripted. */
 export async function host(options: {
-	factories?: ExtensionFactory[]; mode?: "tui" | "print"; tools?: boolean; native?: boolean;
+	factories?: ExtensionFactory[]; mode?: "tui" | "print"; tools?: boolean; native?: boolean; kimi?: boolean;
 	inputs?: string[][]; sessionManager?: SessionManager; codemodeMode?: "on" | "only";
 } = {}) {
 	assert.ok(process.env.PI_CODING_AGENT_DIR, "Use the isolated runner");
@@ -35,11 +36,24 @@ export async function host(options: {
 	const nested: { callable: string[]; outcomes: Record<string, boolean | undefined> }[] = [];
 	const api = `context-view-test-${basename(base)}`;
 	const providerOwner = api;
+	// Read the installed adapter's actual Kimi compatibility data, without model discovery or network.
+	const kimi = options.kimi ? JSON.parse(await readFile(new URL("../providers/data/kimi-coding.json",
+		import.meta.resolve("@earendil-works/pi-ai/api/openai-completions")), "utf8"))["openai-completions"]["chat:kimi-for-coding"] : undefined;
 	const fetch: typeof globalThis.fetch = async (_input, init) => {
 		requests++;
 		const body = JSON.parse(String(init?.body));
 		bodies.push(body);
 		const reply = replies.shift();
+		if (options.kimi) {
+			const chunk = (delta: unknown, finish_reason: string | null = null) => ({ id: `chat_${requests}`,
+				object: "chat.completion.chunk", created: 0, model: body.model, choices: [{ index: 0, delta, finish_reason }] });
+			const chunks = [chunk({ role: "assistant", ...(reply
+				? { tool_calls: [{ index: 0, id: `call_${requests}`, type: "function", function: { name: reply.name, arguments: JSON.stringify(reply.input ?? {}) } }] }
+				: { content: "Local fixture reply." }) }), chunk({}, reply ? "tool_calls" : "stop")];
+			return new Response(chunks.map((e) => `data: ${JSON.stringify(e)}\n\n`).join("") + "data: [DONE]\n\n", {
+				status: 200, headers: { "content-type": "text/event-stream" },
+			});
+		}
 		const events = [
 			{ type: "message_start", message: { id: `msg_${requests}`, type: "message", role: "assistant", content: [], model: body.model, stop_reason: null, stop_sequence: null, usage: { input_tokens: 10, output_tokens: 0 } } },
 			{ type: "content_block_start", index: 0, content_block: reply ? { type: "tool_use", id: `call_${requests}`, name: reply.name, input: {} } : { type: "text", text: "" } },
@@ -53,8 +67,12 @@ export async function host(options: {
 		});
 	};
 	registerApiProvider({ api,
-		stream: (model, context, opts) => stream({ ...model, api: "anthropic-messages" }, context, { ...opts, fetch, apiKey: "fixture", maxRetries: 0, timeoutMs: 5000 }),
-		streamSimple: (model, context, opts) => streamSimple({ ...model, api: "anthropic-messages" }, context, { ...opts, fetch, apiKey: "fixture", maxRetries: 0, timeoutMs: 5000 }),
+		stream: (model, context, opts) => options.kimi
+			? streamCompletions({ ...model, api: "openai-completions" }, context, { ...opts, fetch, apiKey: "fixture", maxRetries: 0, timeoutMs: 5000 })
+			: stream({ ...model, api: "anthropic-messages" }, context, { ...opts, fetch, apiKey: "fixture", maxRetries: 0, timeoutMs: 5000 }),
+		streamSimple: (model, context, opts) => options.kimi
+			? streamSimpleCompletions({ ...model, api: "openai-completions" }, context, { ...opts, fetch, apiKey: "fixture", maxRetries: 0, timeoutMs: 5000 })
+			: streamSimple({ ...model, api: "anthropic-messages" }, context, { ...opts, fetch, apiKey: "fixture", maxRetries: 0, timeoutMs: 5000 }),
 	}, providerOwner);
 	const credentials = AuthStorage.inMemory();
 	const modelRuntime = await ModelRuntime.create({ credentials, modelsPath: null,
@@ -63,7 +81,7 @@ export async function host(options: {
 		api, apiKey: "fixture", baseUrl: "https://example.invalid",
 		models: [{ id: "local", name: "Local fake model", reasoning: false, input: ["text"], contextWindow: 65536, maxTokens: 2048,
 			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-			compat: { supportsMidConvoSystemMessages: options.native ?? false, supportsMidConvoToolChanges: options.native ?? false } }],
+			compat: kimi?.compat ?? { supportsMidConvoSystemMessages: options.native ?? false, supportsMidConvoToolChanges: options.native ?? false } }],
 	});
 	const settingsManager = SettingsManager.inMemory({ cacheWarming: "off", codemode: { mode: options.codemodeMode ?? "on" }, compaction: { enabled: false }, retry: { enabled: false },
 		enableAnalytics: false, enableInstallTelemetry: false, defaultProjectTrust: "never" });

@@ -20,7 +20,7 @@ function installation(t) {
 	return base;
 }
 
-function writeHost(directory, version = "1.2.0") {
+function writeHost(directory, version = "1.3.0") {
 	mkdirSync(join(directory, "dist/bundle"), { recursive: true });
 	writeFileSync(join(directory, "package.json"), JSON.stringify({
 		name: "@earendil-works/pi-coding-agent", version,
@@ -43,24 +43,24 @@ test("an explicit host override takes precedence over managed discovery and reso
 test("host resolution uses the managed release independently of the Node installation", (t) => {
 	const base = installation(t);
 	const managedRoot = join(base, "install");
-	const directory = writeHost(join(managedRoot, "releases/1.2.0/node_modules/@earendil-works/pi-coding-agent"));
-	writeFileSync(join(managedRoot, "current-version"), "1.2.0\n");
+	const directory = writeHost(join(managedRoot, "releases/1.3.0/node_modules/@earendil-works/pi-coding-agent"));
+	writeFileSync(join(managedRoot, "current-version"), "1.3.0\n");
 	process.env.PI_MANAGED_INSTALL_ROOT = managedRoot;
 	assert.deepEqual(hostPackage(), { directory, cli: join(directory, "dist/bundle/cli.js") });
 });
 
 test("an installed but unqualified managed release cannot silently replace the qualified host", (t) => {
 	const managedRoot = join(installation(t), "install");
-	writeHost(join(managedRoot, "releases/1.1.0/node_modules/@earendil-works/pi-coding-agent"), "1.1.0");
-	writeFileSync(join(managedRoot, "current-version"), "1.1.0\n");
+	writeHost(join(managedRoot, "releases/1.2.0/node_modules/@earendil-works/pi-coding-agent"), "1.2.0");
+	writeFileSync(join(managedRoot, "current-version"), "1.2.0\n");
 	process.env.PI_MANAGED_INSTALL_ROOT = managedRoot;
-	assert.throws(() => hostPackage(), /managed Pi current-version must select Pi 1\.2\.0/);
+	assert.throws(() => hostPackage(), /managed Pi current-version must select Pi 1\.3\.0/);
 });
 
 test("an empty explicit host override cannot fall back to a managed release", (t) => {
 	const managedRoot = join(installation(t), "install");
-	writeHost(join(managedRoot, "releases/1.2.0/node_modules/@earendil-works/pi-coding-agent"));
-	writeFileSync(join(managedRoot, "current-version"), "1.2.0\n");
+	writeHost(join(managedRoot, "releases/1.3.0/node_modules/@earendil-works/pi-coding-agent"));
+	writeFileSync(join(managedRoot, "current-version"), "1.3.0\n");
 	process.env.PI_MANAGED_INSTALL_ROOT = managedRoot;
 	process.env.PI_UI_HOST_PACKAGE = "";
 	assert.throws(() => hostPackage(), /PI_UI_HOST_PACKAGE/);
@@ -68,8 +68,8 @@ test("an empty explicit host override cannot fall back to a managed release", (t
 
 test("an empty configured managed root cannot select a host from the working directory", (t) => {
 	const managedRoot = join(installation(t), "install");
-	writeHost(join(managedRoot, "releases/1.2.0/node_modules/@earendil-works/pi-coding-agent"));
-	writeFileSync(join(managedRoot, "current-version"), "1.2.0\n");
+	writeHost(join(managedRoot, "releases/1.3.0/node_modules/@earendil-works/pi-coding-agent"));
+	writeFileSync(join(managedRoot, "current-version"), "1.3.0\n");
 	process.env.PI_MANAGED_INSTALL_ROOT = "";
 	const cwd = process.cwd();
 	try {
@@ -83,7 +83,7 @@ test("an incomplete managed installation fails at its selected path without glob
 		await t.test(markerPresent ? "missing release" : "missing current-version", (t) => {
 			const managedRoot = join(installation(t), "install");
 			mkdirSync(managedRoot);
-			if (markerPresent) writeFileSync(join(managedRoot, "current-version"), "1.2.0\n");
+			if (markerPresent) writeFileSync(join(managedRoot, "current-version"), "1.3.0\n");
 			process.env.PI_MANAGED_INSTALL_ROOT = managedRoot;
 			assert.throws(() => hostPackage(), (error) => error.code === "ENOENT" && error.path.startsWith(managedRoot + "/"));
 		});
@@ -94,7 +94,7 @@ test("managed host resolution rejects empty or unsafe release pointers", async (
 	for (const [version, packagePath] of [
 		["\n", "releases/node_modules/@earendil-works/pi-coding-agent"],
 		["../outside", "outside/node_modules/@earendil-works/pi-coding-agent"],
-		["1.2.0/nested", "releases/1.2.0/nested/node_modules/@earendil-works/pi-coding-agent"],
+		["1.3.0/nested", "releases/1.3.0/nested/node_modules/@earendil-works/pi-coding-agent"],
 	]) {
 		await t.test(JSON.stringify(version), (t) => {
 			const managedRoot = join(installation(t), "install");

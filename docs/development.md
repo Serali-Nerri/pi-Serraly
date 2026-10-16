@@ -2,7 +2,7 @@
 
 ## 环境与命令
 
-基线：Node ≥22.19、Pi **1.2.0**、TypeBox **1.3.27**。仅在本工作区安装开发依赖：
+基线：Node ≥22.19、Pi **1.3.0**、TypeBox **1.3.27**。仅在本工作区安装开发依赖：
 
 ```sh
 npm ci --ignore-scripts --include=optional --legacy-peer-deps
@@ -88,7 +88,7 @@ GREEN。测试名说明破坏的行为。不得用源码字符串匹配代替执
 根 runner 为每个 suite 创建临时 HOME/agent/config/cache；环境为 allowlist，
 不继承真实 provider keys、session pointers、NODE_OPTIONS 或代理端点。
 `scripts/lib/environment.mjs` 拥有该 allowlist 与测试控制转发，
-`scripts/lib/host.mjs` 拥有固定 1.2.0 宿主的查找及 release/预览共用的版本事实，`scripts/lib/process.mjs`
+`scripts/lib/host.mjs` 拥有固定 1.3.0 宿主的查找及 release/预览共用的版本事实，`scripts/lib/process.mjs`
 拥有有期限的子进程执行；UI 预览与捕获在这之上显式设置自己的 stage/report
 路径，通用环境不携带预览字段。
 隔离构建、检查、测试与打包的 npm 子进程强制离线，并关闭更新通知、audit 与 fund；
@@ -105,7 +105,7 @@ UI renderer 夹具通过目标宿主的公开 resolver 链解析，并在交互�
 renderer；原始工具定义的存在不代表它已经提供 renderer。静态 HTML 验收调用
 真实 `AgentSession.exportToHtml()`，检查实际导出正文，不以消息数据读取代替。
 
-实际 CLI/SDK 验收使用开发树外的 **1.2.0** host：显式 `PI_UI_HOST_PACKAGE`
+实际 CLI/SDK 验收使用开发树外的 **1.3.0** host：显式 `PI_UI_HOST_PACKAGE`
 优先，其次从 `PI_MANAGED_INSTALL_ROOT/current-version` 定位 managed release，
 仅在没有 managed 安装指示时使用当前 Node 的全局 npm 安装。显式配置无效时失败，
 不能悄悄换成另一份宿主。必要时指定另一份同版本安装：

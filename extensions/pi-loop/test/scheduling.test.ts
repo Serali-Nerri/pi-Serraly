@@ -264,15 +264,6 @@ test("agent_start cancels the pre-start delivery watchdog", (t) => {
 	assert.doesNotThrow(() => h.tick(5000));
 });
 
-test("the command returns a promise for the Pi 1.2.0 command contract", async (t) => {
-	const h = loopHarness(t);
-	h.emit("session_start");
-	const result = h.command("1m check");
-	assert.ok(result instanceof Promise);
-	await result;
-	assert.deepEqual(h.delivered.map((entry) => entry.prompt), ["check"]);
-});
-
 test("a delivery exception does not permanently block other pending jobs", async (t) => {
 	const h = loopHarness(t);
 	h.emit("session_start");

@@ -109,18 +109,13 @@ async function dynamicImports(path: string): Promise<Set<string>> {
 }
 
 void describe('lazy shell runtime import graph', () => {
-  void it('keeps the process task manager out of static startup and preserves the literal deferred target', async () => {
+  void it('keeps the process task manager out of static startup with a deferred import', async () => {
     const graph = await runtimeStaticGraph('src/extension.ts');
     assert.equal(graph.has('src/ui/background-tasks-manager.ts'), false);
     assert.equal(graph.has('src/ui/task-log-viewport.ts'), false);
     assert.ok(graph.has('src/core/registry.ts'));
     assert.ok(graph.has('src/core/lazy-module.ts'));
     assert.deepEqual([...await dynamicImports('src/extension.ts')], ['./ui/background-tasks-manager.js']);
-    const source = await readFile(sourcePath('src/extension.ts'), 'utf8');
-    assert.match(source, /new LazyModule/);
-    assert.match(source, /activationCloseFence\.close\(\)/);
-    assert.match(source, /taskManagerLoader\.close\(/);
-    assert.match(source, /!ctx\.hasUI \|\| ctx\.mode !== 'tui'/);
   });
   void it('closes every literal deferred target inside shipped source/dist and host alias-aware entry', async () => {
     const deferred = await dynamicImports('src/extension.ts');

@@ -1,7 +1,7 @@
 /**
  * Host capability preflight for the private display patches.
  *
- * Pi 1.2.0 exposes the interactive components as classes whose methods are
+ * Pi 1.3.0 exposes the interactive components as classes whose methods are
  * replaced by reference. Before any patch is installed this module verifies that
  * every required method exists and can be replaced, and every patch target is
  * extensible so its pipeline registry can be installed. The probe writes nothing and

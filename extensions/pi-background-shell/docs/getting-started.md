@@ -13,6 +13,6 @@ Tools are deferred in the `background-shell` namespace. Enable the host's built-
 
 This is a private npm workspace module, not a separate installation target. Follow the repository root docs for installation and runtime staging. For isolated development verification, see [TESTING](../TESTING.md); its scripts never change global settings. The source factory is `extensions/background-tasks.ts` → `src/extension.ts`; the compiled module entry is `dist/extensions/background-tasks.js`, shipped with its full compiled closure.
 
-Do not load the old fork or upstream alongside this entry: tool and command names overlap. Stop old tasks before switching; same-process ownership cannot adopt upstream or restarted processes. The supported baseline is Pi 1.2.0; Windows requirements and limitations are described in TESTING.
+Do not load the old fork or upstream alongside this entry: tool and command names overlap. Stop old tasks before switching; same-process ownership cannot adopt upstream or restarted processes. The supported baseline is Pi 1.3.0; Windows requirements and limitations are described in TESTING.
 
 See [configuration](operations/configuration.md), [runtime limits](subsystems/background-task-runtime.md), [completion delivery](concepts/completion-delivery.md) and [tool schemas](tools/bg_run.md).

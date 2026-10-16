@@ -49,51 +49,6 @@ interface CommandResult {
   readonly stderr: string;
 }
 
-type NpmIgnoreScriptsObservation = readonly [
-  version: string,
-  status: number | null,
-  output: string,
-  markers: readonly string[],
-];
-
-function requireSupportedNpmVersion(rawVersion: string): string {
-  const version = rawVersion.trim();
-  const match = /^(\d+)\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u.exec(version);
-  assert.ok(
-    match,
-    `expected npm --version to report a semantic version, received ${JSON.stringify(rawVersion)}`,
-  );
-  const npmMajor = Number(match[1]);
-  assert.ok(
-    Number.isSafeInteger(npmMajor) && npmMajor >= 10,
-    `expected npm >=10, received ${version}`,
-  );
-  return version;
-}
-
-function assertNpmIgnoreScriptsObservation(
-  versionText: string,
-  status: number | null,
-  output: string,
-  markers: readonly string[],
-): void {
-  const version = requireSupportedNpmVersion(versionText);
-  if (status === 0 && markers.length === 0) return;
-
-  const isKnownNpm1093PrepareDefect =
-    version === '10.9.3' &&
-    status === 1 &&
-    output.includes('sentinel lifecycle executed: prepare') &&
-    markers.length === 1 &&
-    markers[0] === 'prepare';
-  if (isKnownNpm1093PrepareDefect) return;
-
-  assert.fail(
-    `unexpected npm pack --ignore-scripts lifecycle observation for npm ${version}: ` +
-      `status=${String(status)} markers=${JSON.stringify(markers)} output=${JSON.stringify(output)}`,
-  );
-}
-
 function runNpm(
   args: readonly string[],
   options: { cwd: string; env: NodeJS.ProcessEnv },
@@ -509,10 +464,10 @@ void describe('package', { concurrency: false }, () => {
     assert.deepEqual(p.dependencies ?? {}, {});
     assert.deepEqual(p.files, ['dist/', 'extensions/', 'src/', 'README.md', 'TESTING.md', 'LICENSE', 'UPSTREAM.md', 'CHANGELOG.md', 'docs/']);
     assert.equal(p.peerDependencies['@earendil-works/pi-ai'], undefined, 'pi-ai is scripted-provider development-only');
-    assert.equal(p.devDependencies?.['@earendil-works/pi-ai'], '1.2.0');
+    assert.equal(p.devDependencies?.['@earendil-works/pi-ai'], '1.3.0');
     for (const peer of ['@earendil-works/pi-coding-agent', '@earendil-works/pi-tui', 'typebox']) {
       assert.equal(p.peerDependencies[peer], '*');
-      assert.equal(p.devDependencies?.[peer], peer === 'typebox' ? '1.3.27' : '1.2.0');
+      assert.equal(p.devDependencies?.[peer], peer === 'typebox' ? '1.3.27' : '1.3.0');
     }
     assert.equal(p.scripts['build:runtime'], 'node ../../scripts/build-package.mjs');
     assert.equal(p.serraly.build.verifyArtifact, './scripts/check-package-payload.mjs');
@@ -1383,45 +1338,11 @@ void describe('package', { concurrency: false }, () => {
     }
   });
 
-  void it('characterizes npm --ignore-scripts without requiring future npm defects', () => {
-    const prepareFailure = 'sentinel lifecycle executed: prepare';
-    const accepted: readonly NpmIgnoreScriptsObservation[] = [
-      ['10.9.3', 1, prepareFailure, ['prepare']],
-      ['11.13.0', 0, '', []],
-      ['10.10.0', 0, '', []],
-    ];
-    for (const observation of accepted) assertNpmIgnoreScriptsObservation(...observation);
-
-    const rejected: readonly NpmIgnoreScriptsObservation[] = [
-      ['10.10.0', 1, prepareFailure, ['prepare']],
-      ['11.13.0', 0, '', ['prepare']],
-      ['10.9.3', 1, prepareFailure, ['prepack', 'prepare']],
-      ['10.9.3', 2, prepareFailure, ['prepare']],
-      ['10.9.3', 1, 'different failure', ['prepare']],
-      ['11.13.0', 1, 'different failure', []],
-    ];
-    for (const observation of rejected) {
-      assert.throws(
-        () => assertNpmIgnoreScriptsObservation(...observation),
-        /unexpected npm pack --ignore-scripts lifecycle observation/u,
-      );
-    }
-    assert.throws(
-      () => assertNpmIgnoreScriptsObservation('not-semver', 0, '', []),
-      /expected npm --version to report a semantic version/u,
-    );
-    assert.throws(
-      () => assertNpmIgnoreScriptsObservation('9.9.9', 0, '', []),
-      /expected npm >=10/u,
-    );
-  });
-
-  void it('denies dependency packing lifecycle scripts across supported npm CLIs', async () => {
+  void it('denies dependency packing lifecycle scripts in the offline registry helper', async () => {
     const temp = await mkdtemp(join(tmpdir(), 'pi-bg-pack-script-denial-'));
     const envRoot = makeIsolatedEnvRoot('pi-bg-pack-script-env-');
     const packageRoot = join(temp, 'fixture-root');
     const sentinelDirectory = join(packageRoot, 'node_modules', 'npm-pack-lifecycle-sentinel');
-    const packProject = join(temp, 'pack-project');
     const markerDirectory = join(temp, 'markers');
     const sentinelScripts = {
       prepack: 'node lifecycle.cjs prepack',
@@ -1430,10 +1351,6 @@ void describe('package', { concurrency: false }, () => {
     };
     let registry: Awaited<ReturnType<typeof startInstalledDependencyRegistry>> | undefined;
 
-    const resetMarkers = (): void => {
-      rmSync(markerDirectory, { recursive: true, force: true });
-      mkdirSync(markerDirectory, { recursive: true });
-    };
     const markerEvents = (): string[] => {
       const markerPath = join(markerDirectory, 'attempts.log');
       if (!existsSync(markerPath)) return [];
@@ -1447,7 +1364,6 @@ void describe('package', { concurrency: false }, () => {
 
     try {
       makeIsolatedNpmProject(packageRoot, 'lifecycle-sentinel-root');
-      makeIsolatedNpmProject(packProject, 'lifecycle-sentinel-pack-project');
       mkdirSync(sentinelDirectory, { recursive: true });
       const sentinelManifest = `${JSON.stringify(
         {
@@ -1478,49 +1394,7 @@ void describe('package', { concurrency: false }, () => {
         ].join('\n'),
       );
 
-      const npmVersion = runNpm(['--version'], {
-        cwd: packProject,
-        env: sentinelEnv(''),
-      });
-      assert.equal(npmVersion.status, 0, npmVersion.stderr);
-      const npmVersionText = requireSupportedNpmVersion(npmVersion.stdout);
-
-      resetMarkers();
-      const attemptedTarballs = join(temp, 'attempted-tarballs');
-      mkdirSync(attemptedTarballs, { recursive: true });
-      const lifecycleAttempt = runNpm(
-        ['pack', '--json', '--pack-destination', attemptedTarballs, sentinelDirectory],
-        { cwd: packProject, env: sentinelEnv('postpack') },
-      );
-      assert.notEqual(lifecycleAttempt.status, 0, 'the lifecycle control must fail loudly');
-      assert.match(
-        `${lifecycleAttempt.stderr}\n${lifecycleAttempt.stdout}`,
-        /sentinel lifecycle executed: postpack/u,
-      );
-      assert.deepEqual(markerEvents(), ['prepack', 'prepare', 'postpack']);
-
-      resetMarkers();
-      const ignoredTarballs = join(temp, 'ignored-tarballs');
-      mkdirSync(ignoredTarballs, { recursive: true });
-      const ignoredAttempt = runNpm(
-        [
-          'pack',
-          '--ignore-scripts',
-          '--json',
-          '--pack-destination',
-          ignoredTarballs,
-          sentinelDirectory,
-        ],
-        { cwd: packProject, env: sentinelEnv('prepare') },
-      );
-      assertNpmIgnoreScriptsObservation(
-        npmVersionText,
-        ignoredAttempt.status,
-        `${ignoredAttempt.stderr}\n${ignoredAttempt.stdout}`,
-        markerEvents(),
-      );
-
-      resetMarkers();
+      mkdirSync(markerDirectory, { recursive: true });
       await assert.rejects(
         startInstalledDependencyRegistry({
           dependencySpecs: { 'missing-lifecycle-sentinel': '1.0.0' },

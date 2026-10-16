@@ -8,7 +8,7 @@ import { loadRuntime, record } from './runtime-fixture.js';
 import { installedPackageDirectory } from "../helpers/workspace-dependencies.ts";
 
 const root = resolve(import.meta.dirname, '../..');
-void describe('Pi 1.2.0 / TypeBox 1.3.27 shell schema parity', { concurrency: false }, () => {
+void describe('Pi 1.3.0 / TypeBox 1.3.27 shell schema parity', { concurrency: false }, () => {
   void it('uses exact verified development packages but ships only wildcard host peers', async () => {
     const pkg = record(JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8')));
     assert.equal(pkg['private'], true);
@@ -17,7 +17,7 @@ void describe('Pi 1.2.0 / TypeBox 1.3.27 shell schema parity', { concurrency: fa
     for (const peer of Object.keys(peers)) assert.equal(peers[peer], '*');
     // pi-ai is used by scripted-provider tests, not by the shipped shell runtime.
     for (const peer of ['@earendil-works/pi-ai', '@earendil-works/pi-coding-agent', '@earendil-works/pi-tui', 'typebox']) {
-      const expected = peer === 'typebox' ? '1.3.27' : '1.2.0';
+      const expected = peer === 'typebox' ? '1.3.27' : '1.3.0';
       assert.equal(dev[peer], expected);
       const installed = record(JSON.parse(await readFile(resolve(installedPackageDirectory(peer), 'package.json'), 'utf8')));
       assert.equal(installed['version'], expected);

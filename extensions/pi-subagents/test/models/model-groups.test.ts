@@ -9,7 +9,6 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { clampThinkingLevel } from "@earendil-works/pi-ai";
 import type { Api, Model } from "@earendil-works/pi-ai";
 import { buildModelGroups, type ModelGroupsInput } from "../../src/models/model-groups.js";
 import type { SubagentsConfig } from "../../src/models/model-precedence.js";
@@ -364,8 +363,6 @@ describe("buildModelGroups — thinking display", () => {
         config: { scout: "anthropic/claude-limited" },
       }),
     );
-    // Sanity: the registry model really lacks xhigh (guards the test itself).
-    expect(clampThinkingLevel(LIMITED_REASONING_MODEL, "xhigh")).toBe("high");
     expect(result[0]?.rows[0].thinking).toBe("high");
   });
 

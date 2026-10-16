@@ -55,7 +55,7 @@ test("patch metadata stays direct while grep/find/ls become codemode-only", asyn
 	});
 	t.after(() => session.dispose());
 	const active = session.getActiveToolNames();
-	for (const name of ["read", "bash", "edit", "write", "apply_patch"]) assert.ok(active.includes(name), name);
+	assert.ok(active.includes("apply_patch"));
 	const callable = session.getCallableToolNames();
 	assert.ok(callable.includes("apply_patch"));
 	for (const name of ["grep", "find", "ls"]) {

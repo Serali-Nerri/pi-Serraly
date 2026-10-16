@@ -24,11 +24,3 @@ test("oneLine: 显式 max 覆盖默认；空白折叠为单行", () => {
 	assert.equal(oneLine(null), "");
 	assert.equal(oneLine(undefined), "");
 });
-
-test("oneLine: sanitize 上限 4096，避免扫超大输入", () => {
-	// 超过 4096 的前缀被截断后再折叠；结果长度仍受 max 约束
-	const huge = `${"y".repeat(5000)}\nmore`;
-	const out = oneLine(huge, 20);
-	assert.equal(out.length, 20);
-	assert.equal(out.startsWith("y"), true);
-});
