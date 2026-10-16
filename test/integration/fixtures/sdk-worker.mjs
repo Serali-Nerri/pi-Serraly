@@ -377,6 +377,20 @@ async function contextTools(h) {
 async function startupLifecycle(h) {
 	const ui = await mount(h);
 	const plain = () => ui.interactions.at(-1).component.render(100).join("\n").replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
+	const instructionPreview = () => {
+		const view = ui.interactions.at(-1).component;
+		view.handleInput("\x1b[H");
+		for (let index = 0; index < 100; index++) {
+			if (plain().split("\n").some((line) => line.includes("→") && line.includes("pi_add_dir"))) {
+				view.handleInput("\r");
+				const text = plain();
+				view.handleInput("\x1b");
+				return text;
+			}
+			view.handleInput("\x1b[B");
+		}
+		assert.fail("Latest injections expose the external directory prompt section");
+	};
 	const external = join(process.env.TMPDIR, "startup-directory");
 	const instructions = join(external, "AGENTS.md");
 	let running;
@@ -397,9 +411,9 @@ async function startupLifecycle(h) {
 			assert.match(JSON.stringify(body.messages), /PENDING_NEXT_TURN/);
 		}
 		await h.session.prompt("/context injections");
-		const initial = plain();
-		assert.doesNotMatch(initial, /Not captured/);
-		assert.match(initial, /\[INITIAL\]/);
+		assert.doesNotMatch(plain(), /Not captured/);
+		assert.match(plain(), /\[LATEST\]/);
+		assert.match(instructionPreview(), /FIRST_CUSTOM_DIRECTORY_INSTRUCTIONS/);
 
 		await writeFile(instructions, "UPDATED_DIRECTORY_INSTRUCTIONS_WITH_A_DIFFERENT_LENGTH");
 		startupState.gate = Promise.withResolvers();
@@ -439,7 +453,9 @@ async function startupLifecycle(h) {
 		assert.match(JSON.stringify(toolState.bodies.slice(2)), /QUEUED_USER_FOLLOWUP/);
 		for (const body of toolState.bodies.slice(2)) assert.match(JSON.stringify(body.system), /UPDATED_DIRECTORY_INSTRUCTIONS_WITH_A_DIFFERENT_LENGTH/);
 		await h.session.prompt("/context injections");
-		assert.equal(plain(), initial, "Initial remains the first complete capture, even when that run began with a custom message");
+		const latestInstructions = instructionPreview();
+		assert.match(latestInstructions, /UPDATED_DIRECTORY_INSTRUCTIONS_WITH_A_DIFFERENT_LENGTH/);
+		assert.doesNotMatch(latestInstructions, /FIRST_CUSTOM_DIRECTORY_INSTRUCTIONS/);
 
 		startupState.gate = Promise.withResolvers();
 		running = h.session.prompt("GATED_LOOP_START");

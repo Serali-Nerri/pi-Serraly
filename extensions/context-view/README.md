@@ -1,34 +1,43 @@
 # context-view
 
-独立的 Pi 1.3.0 扩展，保留 pi-context-view 的 Usage、Initial 注入、配置和内容预览。
+独立的 Pi 1.3.0 扩展，提供 Usage、最近请求注入、配置和内容预览。
 入口为 `dist/context-view.js`，只注册 `context` 命令，不注册业务工具。
 可单独选择，也可与 pi-ui 按任意顺序共存；pi-ui 的 Footer 与 `/ccstyle` 不由本模块接管。
 安装与选择性 release 遵循[仓库开发指南](../../docs/development.md)，不要将开发 dist 加入真实 settings。
 
 ## 命令与查看
 
-- `/context` 或 `/context usage`：当前会话分支的组成与 token **估算**，不是最终请求。
-- `/context injections`：本扩展 runtime 首次被动捕获后冻结的 **Initial**。
+- `/context` 或 `/context usage`：会话投影叠加最近请求临时变更后的组成与 token **估算**，不是最终 wire。
+- `/context injections`：本扩展 runtime 最近一次正常请求准备的 **Latest**，含相对会话投影的临时增删改。
 - `/context tools`：宿主工具库存与最近一次工具声明观测；Usage / Injections 内按 `t` 也可进入。
 - `/context config`：显式创建默认显示偏好；非 TUI 模式也可用。
 - Usage / Injections / Tools 仅 TUI 可用；参数补全提供以上四项。
 
 方向键选择/滚动，Enter 打开内容，Esc 返回/关闭；PgUp/PgDn、Home/End 滚动预览。
 Usage 可展开分类、查看正文和 JSON，并使用地图缩放；Injections 可查看 prompt、
-指令文件、skills、工具定义和扩展注入。地图适应终端宽高，CJK 和长正文按可见宽度布局。
+指令文件、skills、工具定义和扩展注入。新增、修改、删除有 `+N` / `-N` 差异指示与正文预览，
+删除内容保留预览但计 0 tokens；长指令路径保留文件名，TOTAL 固定在可滚动列表下方。
+地图适应终端宽高，CJK 和长正文按可见宽度布局。
 fullscreen 的归一化鼠标 wheel 使用公开的逻辑行增量；原始 wheel 报告回退为三行，
 regular 的终端原生 scrollback 不被接管。
 
 ## 捕获与边界
 
-只在宿主正常 `before_agent_start` / `context` 流程中捕获 Initial。
-用户消息和空闲时触发工作活动的自定义消息都参与捕获；Initial 冻结首次完整
-捕获，而不是首次用户输入。后续活动不重写已冻结的 Initial。
+在宿主正常 `before_agent_start` / `context_with_system` 流程中被动更新 Latest，
+包含用户请求、工具后续请求及自定义消息触发的工作活动；只保留最近一份，不记录跨请求历史。
+以 edit-aware 会话投影为基线，区分会话已保存的内容与本次请求临时新增、修改、删除的消息，
+并捕获强制 system prompt 与 Pi 的 hidden tools。请求临时变更不是相邻两次请求之间的差异。
+Injections 与 Usage 使用同一份最近捕获；替换只计新内容一次、删除不计入，
+隐藏的独立工具声明不计入工具定义，仍在 prompt 中出现的片段与 codemode 描述照常计数。
+Usage 不拿 payload 工具观测补齐请求身份或未知内容；没有有效捕获时回退为当前会话估算。
+切换会话、分支、压缩或模型后，旧捕获不能冒充新上下文；新的捕获失败也不继续展示旧内容。
+压缩进行中不打开 Usage / Injections，提示压缩完成后重试；Tools 的独立库存/声明诊断不受此限制。
 打开、关闭或预览不发送探测消息、不 abort、不执行或激活工具、不改写请求、
 不更改 warming 设置。首次请求准备前显示 **Not captured. Session estimate only.**
-及扩展 additions 未观测提示；该 view-local fallback 不冻结 Initial，真实请求后可得到捕获。
-捕获标为 real-turn（本扩展 context handler 所见），fallback 与 Usage 标为 session-estimate。
-Initial 不是 provider payload、最终 wire 或发送/接受证明；active 工具估算不等于请求声明。
+及扩展 additions 未观测提示；该 view-local fallback 不成为捕获，真实请求后可得到 Latest。
+捕获与相应 Usage 标为 real-turn（本扩展 context_with_system handler 所见），fallback 标为 session-estimate。
+Latest 不是 provider payload、最终 wire 或发送/接受证明；本 handler 之后的修改不可见，
+不复制 provider 转换规则来推断最终请求。active 工具估算不等于请求声明。
 
 ## 工具诊断
 
@@ -79,7 +88,7 @@ active 但无独立声明不自动判错。真实 `tool_search` 可激活匹配�
 内部调用资格仅按曝光模式与 active **推导**，不是执行验证：direct 仅 active 时可调用；
 codemode / deferred 即使 inactive 仍可内部调用；model-only 可以 active / 有声明但不可内部调用；
 hidden 与 inactive direct 不可内部调用。active 不是 callable 或声明的别名，集合差异不自动判错。
-Enter 预览选中库存元数据、有效观测定义、按序更新记录、placeholder 或 codemode 描述，Esc 返回；`u` / `i` 回到 Usage / Initial，方向键、
+Enter 预览选中库存元数据、有效观测定义、按序更新记录、placeholder 或 codemode 描述，Esc 返回；`u` / `i` 回到 Usage / Injections，方向键、
 PgUp/PgDn、Home/End 与 wheel 沿用查看器导航。长 schema 与多语言文本在预览中换行并可滚动。
 
 handler 同步复制所需工具声明数据（name、description、input_schema / parameters 及对应协议已知的
@@ -91,7 +100,7 @@ strict / eager_input_streaming / cache_control 字段），不保留无关 envel
 均从 Not yet observed 开始，不从会话恢复；查看/预览不探测、不激活、不执行工具、不改 warming。
 
 捕获与预览仅在 runtime 内存中；不写快照、捕获日志或自定义会话条目。
-重启/reload 的新 runtime 不从历史重建 Initial 观测。Usage 可估算正常宿主会话记录，
+重启/reload 的新 runtime 不从历史重建 Latest 观测。Usage 可估算正常宿主会话记录，
 不将重放称为捕获。预览清洗终端控制字符，省略图片 base64 与不透明签名。
 宿主自身正常会话保存不受影响。
 
@@ -131,7 +140,7 @@ strict / eager_input_streaming / cache_control 字段），不保留无关 envel
 `npm run build --workspace context-view` 构建并密封独立 bundle；
 `npm run check --workspace context-view` 严格检查源码与测试；
 `node scripts/test.mjs --package context-view` 使用隔离原生 node:test 与网络拒绝。
-公开宿主加载/命令/TUI（含 Usage / Initial 返回 overlay 组件的 wheel 转发）、
+公开宿主加载/命令/TUI（含 Usage / Injections 返回 overlay 组件的 wheel 转发）、
 真实 tool_search、Anthropic 与 Kimi Chat Completions adapter 的请求局部假 fetch/SSE、
 配置和预览行为及现有 packed/release seam 共同验收，
 不依赖兄弟源码或真实凭据。

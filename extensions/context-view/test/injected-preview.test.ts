@@ -4,10 +4,10 @@ import { test } from "node:test";
 import { type ContextEvent, Theme, type ThemeColor } from "@earendil-works/pi-coding-agent";
 import { visibleWidth } from "@earendil-works/pi-tui";
 
-import { measureInjectedMessages, mergeRequestOnlyMessages } from "../src/capture.ts";
+import { measureInjectedMessages } from "../src/capture.ts";
 import { DEFAULT_CATEGORY_COLORS, DEFAULT_MAP_SIZE, THEME_COLOR_NAMES } from "../src/config.ts";
 import { analyzeSystemPrompt } from "../src/measure.ts";
-import { buildSnapshot, type InitialSnapshot } from "../src/model.ts";
+import { buildSnapshot, type RequestSnapshot } from "../src/model.ts";
 import { InjectionsView } from "../src/ui/injections-view.ts";
 import type { ContextMarker } from "../src/ui/markers.ts";
 import { previewBodyLines, previewLegendLines } from "../src/ui/section-preview.ts";
@@ -60,7 +60,7 @@ function createTheme(): Theme {
 }
 
 /** Measured prompt with short attributed lines and enough native lines to exercise caps. */
-function createSnapshot(nativeLineCount = 16, withSnippet = false): InitialSnapshot {
+function createSnapshot(nativeLineCount = 16, withSnippet = false): RequestSnapshot {
 	const nativeLines = Array.from({ length: nativeLineCount }, (_, index) => `- Native rule ${index}`).join("\n");
 	const toolsBlock = withSnippet ? `\nAvailable tools:\n- ${SNIPPET_LINE}\n- read: Read files\n` : "";
 	const prompt = `Preamble\n${toolsBlock}\nGuidelines:\n- ${GUIDELINE}\n${nativeLines}`;
@@ -154,12 +154,11 @@ test("captured summaries and bash text reach both previews without envelope meta
 	for (const message of messages) {
 		let height = 40;
 		const snapshot = buildSnapshot(measureInjectedMessages([message], []), "real-turn", new Date());
-		const current = buildSnapshot([], "session-estimate", new Date());
 		const theme = createTheme();
 		const injections = new InjectionsView(theme, { snapshot }, () => {}, () => height);
 		injections.handleInput("j"); // Select the message below its source group
 		const usage = new UsageView(theme, {
-			usage: computeUsage({ snapshot: mergeRequestOnlyMessages(current, snapshot), messages: [] }),
+			usage: computeUsage({ snapshot, messages }),
 			categoryColors: DEFAULT_CATEGORY_COLORS, mapSize: DEFAULT_MAP_SIZE,
 		}, () => {}, () => height);
 		for (const view of [injections, usage]) {
@@ -490,7 +489,7 @@ test("the marker legend gives short content every row and never truncates on tin
 });
 
 /** Snapshot of a --system-prompt replacement: every pi block dropped, one addition still sent. */
-function createReplacedSnapshot(): InitialSnapshot {
+function createReplacedSnapshot(): RequestSnapshot {
 	const addition = "\n\nAsk before editing: npm:web docs.";
 	const prompt = `Custom reviewer prompt.\nCurrent working directory: /fixture${addition}`;
 	const items = analyzeSystemPrompt(prompt, { cwd: "/fixture", customPrompt: "Custom reviewer prompt." }, [{
@@ -544,7 +543,7 @@ test("a replaced prompt marks its dropped blocks in the tree and in previews", (
 });
 
 /** Snapshot of a prompt whose tool-surface blocks an extension moved past pi's footer. */
-function createRelocatedSnapshot(): InitialSnapshot {
+function createRelocatedSnapshot(): RequestSnapshot {
 	const prompt = [
 		"Preamble line.",
 		"",

@@ -1,5 +1,5 @@
 /** Process-local replay of Pi's transcript-backed prompt sections and tool declarations. */
-import type { ContextEvent } from "@earendil-works/pi-coding-agent";
+import { convertToLlm, type ContextEvent } from "@earendil-works/pi-coding-agent";
 
 /** System-message shape supplied by Pi, with content and declaration patches. */
 export type SystemMessage = Extract<ContextEvent["messages"][number], { role: "system" }>;
@@ -53,6 +53,17 @@ export function copySystemMessage(message: SystemMessage): SystemMessage {
 		toolsRemoved: message.toolsRemoved?.map((tool) => ({ name: tool.name })),
 		timestamp: message.timestamp,
 	};
+}
+
+/**
+ * Provider-bound plain text for a message whose transform yields text blocks.
+ * Shared so Usage and Injections previews show the same captured content.
+ */
+export function messageContentText(message: ContextEvent["messages"][number]): string {
+	const content = convertToLlm([message])[0]?.content ?? "";
+	return typeof content === "string"
+		? content
+		: content.flatMap((block) => (block.type === "text" ? [block.text] : [])).join("\n");
 }
 
 /** Extract plain text without copying opaque text-block signatures. */

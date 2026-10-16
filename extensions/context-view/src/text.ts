@@ -44,3 +44,11 @@ function stripTerminalStrings(text: string): string {
 export function normalizeInlineText(text: string): string {
 	return normalizePreviewText(text).replace(/\s+/g, " ").trim();
 }
+
+/** Elide a long text's middle up to `maxLength`, keeping its tail (e.g. a basename) visible. */
+export function shortenMiddle(text: string, maxLength: number): string {
+	if (maxLength <= 1 || text.length <= maxLength) return text;
+	const head = Math.ceil((maxLength - 1) / 2);
+	const tail = maxLength - 1 - head;
+	return `${text.slice(0, head)}…${text.slice(text.length - tail)}`;
+}

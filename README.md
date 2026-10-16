@@ -7,7 +7,7 @@
 
 | 能力 | 运行入口 | 使用与契约 |
 | --- | --- | --- |
-| 上下文 | `extensions/context-view/dist/context-view.js` | [`/context`、Usage 估算、Initial 注入与预览](extensions/context-view/README.md) |
+| 上下文 | `extensions/context-view/dist/context-view.js` | [`/context`、Usage 估算、Latest 注入差异与预览](extensions/context-view/README.md) |
 | UI | `extensions/pi-ui/dist/pi-ui.js` | [工具卡、Thinking、shell、`/ccstyle`](extensions/pi-ui/README.md) |
 | 提问 | `extensions/pi-ask-user-question/dist/pi-ask-user-question.js` | [`ask_user_question` 结构化问卷、preview/备注与 RPC 原生对话框](extensions/pi-ask-user-question/README.md) |
 | 循环 | `extensions/pi-loop/dist/pi-loop.js` | [`/loop`、内存任务和忙闲调度](extensions/pi-loop/README.md) |

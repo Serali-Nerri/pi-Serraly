@@ -39,8 +39,17 @@ export const BUILT_IN_TOOLS_LABEL = "Built-in Tools";
 /** What produced the captured snapshot. */
 export type CaptureOrigin = "real-turn" | "session-estimate";
 
-/** The frozen Initial lifecycle phase. */
-export type InjectionPhase = "initial";
+/** The request-preparation lifecycle phase: one captured outgoing request. */
+export type InjectionPhase = "request";
+
+/** How a request message differs from the saved session projection. */
+export interface InjectionChange {
+	readonly kind: "added" | "modified" | "removed";
+	/** Content as the session projection had it; empty for additions. */
+	readonly before: string;
+	/** Content as the captured request carried it; empty for removals. */
+	readonly after: string;
+}
 
 /** What kind of context data an injection item is. */
 export type InjectionKind =
@@ -149,8 +158,10 @@ export interface InjectionItem {
 	readonly moved?: boolean;
 	/** Preview-only extension prompt lines for a standalone System Prompt part child. */
 	readonly injectedReferences?: readonly InjectedReference[];
-	/** True when a message exists only in the outgoing request, not the session branch. */
+	/** True when a message exists only in the outgoing request, not the session projection. */
 	readonly requestOnly?: boolean;
+	/** Present when the captured request added, replaced, or removed this message. */
+	readonly change?: InjectionChange;
 	/** Sanitized replay inputs for a captured system patch; index preserves request order across grouping. */
 	readonly systemMessage?: { readonly message: SystemMessage; readonly index: number };
 	/** Constituent sub-items (e.g. individual built-in tools or skills), largest first. */
@@ -164,8 +175,8 @@ export interface InjectionGroup {
 	readonly totalTokens: number;
 }
 
-/** The frozen Initial snapshot presented by the Injections view. */
-export interface InitialSnapshot {
+/** The latest captured request snapshot presented by the Injections view. */
+export interface RequestSnapshot {
 	readonly origin: CaptureOrigin;
 	readonly capturedAt: Date;
 	readonly groups: readonly InjectionGroup[];
@@ -197,7 +208,7 @@ export interface UsageCategory {
 
 /** One content entry shown in a Usage category preview. */
 export interface UsagePreviewEntry {
-	/** Message time (epoch ms); absent for Initial-snapshot components. */
+	/** Message time (epoch ms); absent for prompt/tool snapshot components. */
 	readonly timestamp?: number;
 	/** Bracket header cells, e.g. ["assistant", "read"] or ["code-style"]. */
 	readonly breadcrumb: readonly string[];
@@ -260,12 +271,12 @@ export function groupInjections(items: readonly InjectionItem[]): InjectionGroup
 	return [...groups.values()].sort(compareGroups);
 }
 
-/** Build an owned Initial snapshot from measured items. */
+/** Build an owned request snapshot from measured items. */
 export function buildSnapshot(
 	items: readonly InjectionItem[],
 	origin: CaptureOrigin,
 	capturedAt: Date,
-): InitialSnapshot {
+): RequestSnapshot {
 	const groups = groupInjections(items);
 	return {
 		origin,

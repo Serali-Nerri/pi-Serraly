@@ -14,11 +14,10 @@ import {
 	captureActiveTools,
 	collectPromptSources,
 	copyPromptOptions,
-	InitialCaptureState,
+	diffRequestMessages,
+	LatestCaptureState,
 	measureInjectedMessages,
-	mergeRequestOnlyMessages,
 } from "../src/capture.ts";
-import { buildSnapshot, type InjectionItem } from "../src/model.ts";
 
 /** Minimal custom-role message fixture. */
 function customMessage(customType: string, content: string, timestamp: number): ContextEvent["messages"][number] {
@@ -151,7 +150,7 @@ test("copyPromptOptions owns decomposition metadata and keeps only visible skill
 	]);
 });
 
-test("measureInjectedMessages attributes custom and request-only messages without session history", () => {
+test("measureInjectedMessages reports request deltas against the session projection", () => {
 	const ordinaryUser = { role: "user", content: "ordinary", timestamp: 1 } satisfies ContextEvent["messages"][number];
 	const sessionCustom = customMessage("marker", "session", 2);
 	const requestCustom = customMessage("marker", "request only", 3);
@@ -168,20 +167,50 @@ test("measureInjectedMessages attributes custom and request-only messages withou
 
 	assert.deepEqual(
 		items.map((entry) => entry.id),
-		["message:marker:0", "message:marker:1", "message:context:user:0", "message:context:user:1"],
+		["message:added:marker:0", "message:added:user:0", "message:added:user:1"],
 	);
 	assert.equal(items[0]?.source.id, "message-type:marker");
-	assert.equal(items[0]?.requestOnly, undefined);
-	assert.equal(items[1]?.requestOnly, true);
-	assert.equal(items[2]?.source.id, "aggregate:extensions");
-	assert.equal(items[2]?.text, "injected");
+	assert.equal(items[0]?.label, "message");
+	assert.deepEqual(items[0]?.change, { kind: "added", before: "", after: "request only" });
+	assert.equal(items[0]?.requestOnly, true);
+	assert.equal(items[1]?.source.id, "aggregate:extensions");
+	assert.equal(items[1]?.text, "injected");
 	// String content is text; serialized block content is marked JSON for full-content previews.
-	assert.equal(items[2]?.jsonSpan, undefined);
-	assert.equal(items[3]?.text, '[{"type":"text","text":"injected"}]');
-	assert.deepEqual(items[3]?.jsonSpan, { start: 0, end: items[3]?.text.length });
+	assert.equal(items[1]?.jsonSpan, undefined);
+	assert.equal(items[2]?.text, '[{"type":"text","text":"injected"}]');
+	assert.deepEqual(items[2]?.jsonSpan, { start: 0, end: items[2]?.text.length });
 });
 
-test("Initial capture omits opaque signatures from injected and transformed assistant previews", () => {
+test("measureInjectedMessages keeps replacements and removals aligned with the session", () => {
+	const before = { role: "user", content: "before text", timestamp: 1 } satisfies ContextEvent["messages"][number];
+	const after = { role: "user", content: "after text", timestamp: 1 } satisfies ContextEvent["messages"][number];
+	const dropped = customMessage("marker", "gone", 2);
+
+	const items = measureInjectedMessages([after], [before, dropped]);
+
+	assert.deepEqual(
+		items.map((entry) => [entry.id, entry.change?.kind, entry.tokens]),
+		[["message:modified:user:0", "modified", estimateTokens(after)], ["message:removed:marker:0", "removed", 0]],
+	);
+	assert.equal(items[0]?.change?.before, "before text");
+	assert.equal(items[0]?.change?.after, "after text");
+	assert.equal(items[0]?.requestOnly, undefined);
+	assert.equal(items[1]?.text, "gone");
+
+	// Insertions do not misattribute the messages that follow them.
+	const second = { role: "user", content: "second", timestamp: 3 } satisfies ContextEvent["messages"][number];
+	const inserted = customMessage("marker", "inserted", 4);
+	assert.deepEqual(
+		diffRequestMessages([before, inserted, second], [before, second]).map((delta) => [delta.kind, delta.index]),
+		[["added", 1]],
+	);
+	assert.deepEqual(
+		diffRequestMessages([before], [before, inserted]).map((delta) => [delta.kind, delta.index]),
+		[["removed", 1]],
+	);
+});
+
+test("Latest capture omits opaque signatures from injected and transformed assistant previews", () => {
 	const message = {
 		...assistantMessage("aborted", 8),
 		content: [
@@ -205,9 +234,9 @@ test("Initial capture omits opaque signatures from injected and transformed assi
 		[],
 		[{ ...message, content: [{ type: "text", text: "before context transformation" }] }],
 	];
-	for (const baselineMessages of baselines) {
+	for (const [index, baselineMessages] of baselines.entries()) {
 		const originalBaseline = structuredClone(baselineMessages);
-		const capture = new InitialCaptureState();
+		const capture = new LatestCaptureState();
 		capture.prepare({ cwd: "/tmp", customPrompt: "system" });
 		const snapshot = capture.finalize(() => ({
 			systemPrompt: "system", messages: [message], baselineMessages,
@@ -216,7 +245,7 @@ test("Initial capture omits opaque signatures from injected and transformed assi
 		assert.ok(snapshot);
 		const item = snapshot.groups.flatMap((group) => group.items).find((item) => item.kind === "message");
 		assert.ok(item);
-		assert.equal(item.requestOnly, true);
+		assert.equal(item.requestOnly, index === 0 ? true : undefined);
 		assert.equal(item.tokens, expectedTokens);
 		assert.equal(item.chars, item.text.length);
 		assert.deepEqual(item.jsonSpan, { start: 0, end: item.text.length });
@@ -241,7 +270,7 @@ test("Initial capture omits opaque signatures from injected and transformed assi
 	assert.deepEqual(measureInjectedMessages([message], [original]), []);
 });
 
-test("Initial capture reports injected image sizes instead of retaining their payloads", () => {
+test("Latest capture reports injected image sizes instead of retaining their payloads", () => {
 	const payload = "B".repeat(2_048);
 	const imageUser = {
 		role: "user",
@@ -334,30 +363,18 @@ test("captured bash previews use provider-facing text instead of message metadat
 	assert.deepEqual(measureInjectedMessages(messages, original), []);
 });
 
-test("mergeRequestOnlyMessages carries only request-only mutations into Usage snapshots", () => {
-	const source = { id: "aggregate:extensions", label: "unattributed", native: false };
-	const requestMessage = {
-		id: "request-message",
-		phase: "initial",
-		kind: "message",
-		source,
-		label: "user message",
-		chars: 8,
-		tokens: 2,
-		text: "injected",
-		requestOnly: true,
-	} satisfies InjectionItem;
-	const sessionMessage = { ...requestMessage, id: "session-message", requestOnly: undefined };
-	const current = buildSnapshot([], "session-estimate", new Date("2026-07-10T12:00:00Z"));
-	const initial = buildSnapshot([requestMessage, sessionMessage], "real-turn", new Date());
+test("captureActiveTools marks declarations Pi hid from this run's model", () => {
+	const tools = captureActiveTools(
+		[tool("read", "builtin"), tool("search", "npm:web")],
+		["read", "search"],
+		{ hiddenToolNames: ["search"] },
+	);
 
-	const merged = mergeRequestOnlyMessages(current, initial);
-	assert.deepEqual(merged.groups.flatMap((group) => group.items).map((entry) => entry.id), ["request-message"]);
-	assert.equal(merged.capturedAt.toISOString(), "2026-07-10T12:00:00.000Z");
+	assert.deepEqual(tools.map((entry) => [entry.name, entry.hidden]), [["read", undefined], ["search", true]]);
 });
 
-test("InitialCaptureState owns prepared options before later handlers can mutate them", () => {
-	const state = new InitialCaptureState();
+test("LatestCaptureState owns prepared options before later handlers can mutate them", () => {
+	const state = new LatestCaptureState();
 	const options: BuildSystemPromptOptions = {
 		cwd: "/tmp",
 		toolSnippets: { search: "Original snippet" },
@@ -379,8 +396,8 @@ test("InitialCaptureState owns prepared options before later handlers can mutate
 	assert.match(search?.text ?? "", /Original snippet/);
 });
 
-test("InitialCaptureState refreshes pending options and freezes the first snapshot", () => {
-	const state = new InitialCaptureState();
+test("LatestCaptureState replaces the previous snapshot with each finalized request", () => {
+	const state = new LatestCaptureState();
 	const firstOptions: BuildSystemPromptOptions = { cwd: "/tmp" };
 	const finalOptions: BuildSystemPromptOptions = { cwd: "/tmp", customPrompt: "CUSTOM" };
 	const message = customMessage("marker", "captured", 1);
@@ -391,7 +408,7 @@ test("InitialCaptureState refreshes pending options and freezes the first snapsh
 	const first = state.finalize(() => ({
 		systemPrompt: "CUSTOM",
 		messages: [message],
-		baselineMessages: [message],
+		baselineMessages: [],
 		allTools: [],
 		activeToolNames: [],
 		origin: "real-turn",
@@ -410,16 +427,20 @@ test("InitialCaptureState refreshes pending options and freezes the first snapsh
 		baselineMessages: [],
 		allTools: [],
 		activeToolNames: [],
-		origin: "session-estimate",
+		origin: "real-turn",
 	}));
 
-	assert.strictEqual(second, first);
-	assert.equal(second.groups[1]?.items[0]?.text, "captured");
-	assert.equal(second.capturedAt.toISOString(), "2026-07-10T12:00:00.000Z");
+	assert.ok(second !== undefined);
+	assert.notStrictEqual(second, first);
+	assert.equal(second.groups[0]?.items[0]?.text, "DIFFERENT");
+	assert.equal(first.groups[1]?.items[0]?.text, "captured");
+	assert.equal(first.capturedAt.toISOString(), "2026-07-10T12:00:00.000Z");
+	// The new request replaces the captured set instead of accumulating into it.
+	assert.equal(second.groups.some((group) => group.items.some((item) => item.text === "captured")), false);
 });
 
-test("InitialCaptureState does not finalize before prepare", () => {
-	const state = new InitialCaptureState();
+test("LatestCaptureState does not finalize before prepare", () => {
+	const state = new LatestCaptureState();
 	assert.equal(
 		state.finalize(() => ({
 			systemPrompt: "prompt",
@@ -431,4 +452,32 @@ test("InitialCaptureState does not finalize before prepare", () => {
 		})),
 		undefined,
 	);
+});
+
+test("LatestCaptureState drops the previous snapshot when the next capture fails", () => {
+	const state = new LatestCaptureState();
+	state.prepare({ cwd: "/tmp" });
+	const first = state.finalize(() => ({
+		systemPrompt: "Base",
+		messages: [],
+		baselineMessages: [],
+		allTools: [],
+		activeToolNames: [],
+		origin: "real-turn",
+		sessionId: "session-1",
+		leafId: "leaf-1",
+		modelKey: "fixture/model",
+	}));
+	assert.ok(first !== undefined);
+	assert.deepEqual(state.identity, { sessionId: "session-1", leafId: "leaf-1", modelKey: "fixture/model" });
+
+	state.prepare({ cwd: "/tmp" });
+	assert.throws(() =>
+		state.finalize(() => {
+			throw new Error("capture failed");
+		}),
+	);
+	assert.equal(state.snapshot, undefined);
+	assert.equal(state.messages, undefined);
+	assert.equal(state.identity, undefined);
 });

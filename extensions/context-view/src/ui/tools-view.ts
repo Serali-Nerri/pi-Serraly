@@ -173,7 +173,7 @@ class ToolsView {
 		const lines = [border, "", fitLine(this.theme.fg("accent", normalizeInlineText(this.preview?.label ?? "Tool Diagnostics")), width), ""];
 		const hints = wrapTextWithAnsi(hintRow(this.theme, this.preview
 			? [["↑↓/PgUp/PgDn", "Scroll"], ["Esc", "Back"]]
-			: [["↑↓", "Navigate"], ["Enter", "Preview"], ["u/i", "Usage/Initial"], ["Esc", "Close"]]).trimStart(), Math.max(1, width - 2))
+			: [["↑↓", "Navigate"], ["Enter", "Preview"], ["u/i", "Usage/Injections"], ["Esc", "Close"]]).trimStart(), Math.max(1, width - 2))
 			.map((line) => fitLine(`  ${line}`, width));
 		const available = Math.max(1, height - (this.preview ? 10 : 12) - (hints.length - 1));
 		if (this.preview) {

@@ -2,7 +2,7 @@
  * Pure presentation model for the Injections view: flattened rows and
  * list navigation/scrolling state. No pi or TUI access — unit-testable.
  */
-import type { InitialSnapshot, InjectionItem } from "../model.ts";
+import type { RequestSnapshot, InjectionChange, InjectionItem } from "../model.ts";
 
 /** One flattened list row derived from the snapshot hierarchy. */
 export type InjectionRow =
@@ -28,6 +28,8 @@ export type InjectionRow =
 		readonly moved?: boolean;
 		/** Stable preview target id from the snapshot. */
 		readonly itemId: string;
+		/** Line-level size of this contribution's latest-request change, when it differs. */
+		readonly change?: InjectionChangeCounts;
 	}
 	| {
 		readonly kind: "separator";
@@ -42,8 +44,42 @@ export type InjectionRow =
 		readonly depth: 0;
 	};
 
+/** Line-level size of an item's request-vs-session change. */
+export interface InjectionChangeCounts {
+	/** Lines the latest request added or changed. */
+	readonly added: number;
+	/** Lines the latest request removed or replaced. */
+	readonly removed: number;
+}
+
+/** Trim common leading and trailing lines so only the changed middle remains. */
+export function changedLines(change: InjectionChange): { readonly removed: string[]; readonly added: string[] } {
+	const before = contentLines(change.before);
+	const after = contentLines(change.after);
+	let start = 0;
+	while (start < before.length && start < after.length && before[start] === after[start]) start++;
+	let end = 0;
+	while (
+		end < before.length - start &&
+		end < after.length - start &&
+		before[before.length - 1 - end] === after[after.length - 1 - end]
+	) end++;
+	return { removed: before.slice(start, before.length - end), added: after.slice(start, after.length - end) };
+}
+
+/** Count a change's differing lines, when one was recorded. */
+export function countChangedLines(change: InjectionChange | undefined): InjectionChangeCounts | undefined {
+	if (change === undefined) return undefined;
+	const { removed, added } = changedLines(change);
+	return { added: added.length, removed: removed.length };
+}
+
+function contentLines(text: string): string[] {
+	return text === "" ? [] : text.split("\n");
+}
+
 /** Index snapshot items (including sub-items) by id for preview lookup. */
-export function collectItemsById(snapshot: InitialSnapshot): Map<string, InjectionItem> {
+export function collectItemsById(snapshot: RequestSnapshot): Map<string, InjectionItem> {
 	const items = new Map<string, InjectionItem>();
 	for (const group of snapshot.groups) {
 		for (const item of group.items) {
@@ -54,8 +90,8 @@ export function collectItemsById(snapshot: InitialSnapshot): Map<string, Injecti
 	return items;
 }
 
-/** Flatten snapshot groups into rows separated from the non-selectable Initial total. */
-export function buildInjectionRows(snapshot: InitialSnapshot): InjectionRow[] {
+/** Flatten the request contribution tree; the view renders its total separately. */
+export function buildInjectionRows(snapshot: RequestSnapshot): InjectionRow[] {
 	const rows: InjectionRow[] = [];
 	for (const group of snapshot.groups) {
 		rows.push({
@@ -75,6 +111,7 @@ export function buildInjectionRows(snapshot: InitialSnapshot): InjectionRow[] {
 				dropped: item.dropped,
 				moved: item.moved,
 				itemId: item.id,
+				change: countChangedLines(item.change),
 			});
 			const children = item.children ?? [];
 			children.forEach((child, childIndex) => {
@@ -88,12 +125,11 @@ export function buildInjectionRows(snapshot: InitialSnapshot): InjectionRow[] {
 					dropped: child.dropped,
 					moved: child.moved,
 					itemId: child.id,
+					change: countChangedLines(child.change),
 				});
 			});
 		});
 	}
-	rows.push({ kind: "separator", label: "", tokens: 0, depth: 0 });
-	rows.push({ kind: "total", label: "TOTAL", tokens: snapshot.totalTokens, depth: 0 });
 	return rows;
 }
 

@@ -49,7 +49,7 @@ test("builtin tool_search discovers still-deferred background tools", { timeout:
 test("compiled external-directory commands load context, skills, and widget through the real host reload boundary", { timeout: 30000 }, async () => {
 	await sdkScenario(stage, "add-dir");
 });
-test("custom starts preserve Initial and directory instructions while startup queues background completion and loops", { timeout: 30000 }, async () => {
+test("Latest reflects updated directory instructions while startup queues background completion and loops", { timeout: 30000 }, async () => {
 	await sdkScenario(stage, "startup-lifecycle", { names: ["context-view", "pi-add-dir", "pi-background-shell", "pi-loop"] });
 });
 test("context-view keeps the latest declaration when Anthropic retries preferred strict tools", { timeout: 30000 }, async () => {

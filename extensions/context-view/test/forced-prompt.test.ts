@@ -5,8 +5,8 @@ import type { BuildSystemPromptOptions, ToolInfo } from "@earendil-works/pi-codi
 
 // Deep import bypasses the package barrel, which does not re-export buildSystemPrompt.
 import { buildSystemPrompt } from "../../../node_modules/@earendil-works/pi-coding-agent/dist/core/system-prompt.js";
-import { buildUsageSnapshot, InitialCaptureState } from "../src/capture.ts";
-import type { InitialSnapshot, InjectionItem } from "../src/model.ts";
+import { buildUsageSnapshot, LatestCaptureState } from "../src/capture.ts";
+import type { RequestSnapshot, InjectionItem } from "../src/model.ts";
 import type { SystemMessage } from "../src/transcript.ts";
 import { collectPreviewEntries, computeUsage } from "../src/usage.ts";
 import { FORCED_SYSTEM_PROMPT } from "./fixtures/forced-prompt.ts";
@@ -30,13 +30,13 @@ const OPTIONS: BuildSystemPromptOptions = {
 	promptGuidelines: ["Cite sources"],
 };
 
-/** Freeze Initial for one run whose effective prompt is `systemPrompt`. */
+/** Capture one run whose effective prompt is `systemPrompt`. */
 function captureRun(
 	options: BuildSystemPromptOptions,
 	promptAtHandler: string,
 	systemPrompt: string,
-): InitialSnapshot {
-	const capture = new InitialCaptureState();
+): RequestSnapshot {
+	const capture = new LatestCaptureState();
 	capture.prepare(options, promptAtHandler);
 	const snapshot = capture.finalize(() => ({
 		systemPrompt,
@@ -50,12 +50,12 @@ function captureRun(
 	return snapshot;
 }
 
-/** Every measured item of a frozen snapshot, without its grouping. */
-function snapshotItems(snapshot: InitialSnapshot): InjectionItem[] {
+/** Every measured item of a captured snapshot, without its grouping. */
+function snapshotItems(snapshot: RequestSnapshot): InjectionItem[] {
 	return snapshot.groups.flatMap((group) => group.items);
 }
 
-test("Initial captures a forced prompt instead of the recorded sections, in both extension orders", () => {
+test("the latest capture uses a forced prompt instead of the recorded sections, in both extension orders", () => {
 	const structured = buildSystemPrompt(OPTIONS);
 	const orders = {
 		// Loaded before us, the forcing extension already replaced event.systemPrompt.
@@ -95,7 +95,7 @@ test("a forced prompt extending Pi's sections keeps the section parts and its ad
 	}
 });
 
-test("Usage reads the recorded sections after a forced run, not the frozen forced prompt", () => {
+test("Usage reads the recorded sections after a forced run, not the captured forced prompt", () => {
 	const recorded: SystemMessage = {
 		role: "system",
 		content: "",
@@ -103,7 +103,8 @@ test("Usage reads the recorded sections after a forced run, not the frozen force
 		sections: { preamble: "Recorded preamble", cwd: "<cwd>\n/recorded\n</cwd>" },
 		toolsAdded: [{ name: "search", description: "Recorded search definition", parameters: { type: "object" } }],
 	};
-	const initial = captureRun(
+	// A prior forced capture must not leak into an idle read.
+	captureRun(
 		{ ...OPTIONS, forceSystemPrompt: FORCED_SYSTEM_PROMPT },
 		FORCED_SYSTEM_PROMPT,
 		FORCED_SYSTEM_PROMPT,
@@ -115,7 +116,6 @@ test("Usage reads the recorded sections after a forced run, not the frozen force
 		allTools: [SEARCH],
 		activeToolNames: ["search"],
 		messages: [recorded],
-		initial,
 	});
 	const usage = computeUsage({ snapshot, messages: [recorded] });
 	const previews = usage.categories.flatMap(collectPreviewEntries).map((entry) => entry.text).join("\n");

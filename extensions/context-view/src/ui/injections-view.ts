@@ -1,16 +1,18 @@
 /**
- * Focused `/context injections` view: hierarchical Initial snapshot rows. The
- * This view renders only the frozen Initial, not a runtime request history.
+ * Focused `/context injections` view: latest request contributions relative to
+ * the session projection, not a cross-request history or final wire audit.
  */
 import type { ExtensionCommandContext, Theme } from "@earendil-works/pi-coding-agent";
 import type { TuiMouseEvent, TuiMouseEventResult } from "@earendil-works/pi-tui";
 import { Key, matchesKey, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 
-import type { InitialSnapshot, InjectionItem } from "../model.ts";
-import { normalizeInlineText, normalizePreviewText } from "../text.ts";
+import type { RequestSnapshot, InjectionChange, InjectionItem } from "../model.ts";
+import { normalizeInlineText, normalizePreviewText, shortenMiddle } from "../text.ts";
 import {
 	buildInjectionRows,
+	changedLines,
 	collectItemsById,
+	type InjectionChangeCounts,
 	type InjectionRow,
 	ListNavigator,
 	PreviewScroller,
@@ -41,19 +43,30 @@ import { DEFAULT_WHEEL_SCROLL_LINES, parseWheelDirection } from "./wheel.ts";
  * List frame rows excluding the collapsible description: both borders and their
  * blank rows, one header row, and the hint row above its own blank row.
  */
-const LIST_FIXED_LINE_COUNT = 8;
+const LIST_FIXED_LINE_COUNT = 10;
 const PREVIEW_FIXED_LINE_COUNT = 8;
-const LIST_DESCRIPTION = "Injections into the model context for the first turn, with token estimates.";
+const LIST_DESCRIPTION = "Injections into the model context at handler scope, not final wire. Token estimates.";
 /** List rows that must stay visible for the description to keep its own rows. */
 const LIST_DESCRIPTION_MIN_ROWS = 26;
 const CURSOR_COLUMN_WIDTH = 2;
 const MAX_TOKEN_VALUE_COLUMN = 54;
 const TOKEN_LEADER_GAP = 4;
+/** Longer row labels elide their middle so the basename survives the token column. */
+const MAX_ROW_LABEL_LENGTH = 48;
 
 /** Everything the Injections view renders. */
 export interface InjectionsViewInput {
-	readonly snapshot: InitialSnapshot;
+	readonly snapshot: RequestSnapshot;
 	readonly degradedReason?: string;
+}
+
+/** Compact `+N −N` summary of one recorded change. */
+function describeChange(change: InjectionChange): string {
+	const { removed, added } = changedLines(change);
+	const parts: string[] = [change.kind];
+	if (added.length > 0) parts.push(`+${added.length}`);
+	if (removed.length > 0) parts.push(`−${removed.length}`);
+	return parts.join(" ");
 }
 
 /** Shared token-value column measured after the fixed cursor column. */
@@ -117,7 +130,7 @@ export class InjectionsView {
 		this.getTerminalRows = getTerminalRows;
 		this.wheelScrollLines = wheelScrollLines;
 		this.rows = buildInjectionRows(input.snapshot);
-		this.navigator = new ListNavigator(this.rows.length, 1, this.rows.length - 2);
+		this.navigator = new ListNavigator(this.rows.length, 1);
 		this.itemsById = collectItemsById(input.snapshot);
 	}
 
@@ -200,6 +213,7 @@ export class InjectionsView {
 		if (viewport.showScroll) lines.push(this.scrollLine(width));
 		const paddingCount = viewport.visibleCount - listLines.length;
 		for (let pad = 0; pad < paddingCount; pad++) lines.push("");
+		lines.push("", this.totalLine(width));
 		if (descriptionLines.length > 0) lines.push("", ...descriptionLines);
 		lines.push("");
 		lines.push(
@@ -292,10 +306,12 @@ export class InjectionsView {
 		this.previewScroller.setExtent(wrapped.length, viewport.visibleCount);
 
 		const lines: string[] = [border, ""];
-		const title = theme.fg("accent", theme.bold(normalizeInlineText(item.label)));
 		const source = normalizeInlineText(item.source.label);
-		const meta = theme.fg("muted", `${source} · ${item.tokens.toLocaleString("en-US")} tokens`);
+		const changeText = item.change === undefined ? "" : ` · ${describeChange(item.change)}`;
+		const meta = theme.fg("muted", `${source} · ${item.tokens.toLocaleString("en-US")} tokens${changeText}`);
 		const marker = item.moved === true ? movedMarker(theme) : "";
+		const labelBudget = Math.max(8, width - visibleWidth(meta) - visibleWidth(marker) - 4);
+		const title = theme.fg("accent", theme.bold(shortenMiddle(normalizeInlineText(item.label), labelBudget)));
 		const fitsMarker = visibleWidth(title) + visibleWidth(meta) + visibleWidth(marker) + 2 <= width;
 		lines.push(this.spread(title, `${meta}${fitsMarker ? marker : ""} `, width));
 		lines.push("");
@@ -326,16 +342,46 @@ export class InjectionsView {
 		const wrapWidth = Math.max(10, width - BODY_INDENT.length - 1);
 		if (this.previewLines !== undefined && this.previewWrapWidth === wrapWidth) return this.previewLines;
 		// The item preview is the full-content level, so marked JSON expands here.
-		const lines = previewBodyLines(
+		const body = previewBodyLines(
 			this.theme,
 			item,
 			wrapWidth,
 			(text, jsonSpan) => this.wrappedTextLines(expandJsonSpan(text, jsonSpan), wrapWidth),
 			item.label,
 		);
+		const diff = this.changePreviewLines(item, wrapWidth);
+		const lines = item.change?.kind === "removed" && diff.length > 0
+			? diff
+			: diff.length === 0 ? body : [...diff, "", ...body];
 		this.previewLines = lines;
 		this.previewWrapWidth = wrapWidth;
 		return lines;
+	}
+
+	/**
+	 * Deletion/addition lines for content that differs from the session: removals
+	 * render the whole before text, modifications prepend only the changed middle.
+	 */
+	private changePreviewLines(item: InjectionItem, wrapWidth: number): string[] {
+		const change = item.change;
+		if (change === undefined || change.kind === "added") return [];
+		const { removed, added } = changedLines(change);
+		if (removed.length === 0 && added.length === 0) return [];
+		const lines: string[] = [];
+		for (const text of removed) lines.push(...this.diffLines("− ", "toolDiffRemoved", text, wrapWidth));
+		for (const text of added) lines.push(...this.diffLines("+ ", "toolDiffAdded", text, wrapWidth));
+		return lines;
+	}
+
+	private diffLines(
+		prefix: string,
+		color: "toolDiffAdded" | "toolDiffRemoved",
+		text: string,
+		wrapWidth: number,
+	): string[] {
+		const styled = this.theme.fg(color, `${prefix}${text}`);
+		const wrapped = wrapTextWithAnsi(styled, wrapWidth);
+		return (wrapped.length === 0 ? [""] : wrapped).map((line) => `${BODY_INDENT}${line}`);
 	}
 
 	/** Wrap sanitized text into indented preview lines, keeping blank lines. */
@@ -365,8 +411,8 @@ export class InjectionsView {
 		const theme = this.theme;
 		const title = theme.fg("accent", theme.bold("Context Injections"));
 		const separator = theme.fg("dim", " · ");
-		// The frozen snapshot has only the Initial label.
-		const tabs = theme.fg("mdHeading", theme.bold("[INITIAL]"));
+		const label = this.input.snapshot.origin === "real-turn" ? "[LATEST]" : "[SESSION ESTIMATE]";
+		const tabs = theme.fg("mdHeading", theme.bold(label));
 		const combined = `${title}${separator}${tabs}`;
 		if (visibleWidth(combined) <= width) return [this.fit(combined, width)];
 		return [this.fit(title, width), "", this.fit(tabs, width)];
@@ -395,9 +441,17 @@ export class InjectionsView {
 		return lines;
 	}
 
+	/** Fixed summary shares the contribution value column, but never selection or scrolling. */
+	private totalLine(width: number): string {
+		const contentWidth = Math.max(1, width - CURSOR_COLUMN_WIDTH);
+		const total = { kind: "total", label: "TOTAL", tokens: this.input.snapshot.totalTokens, depth: 0 } as const;
+		return this.fit(`${BODY_INDENT}${this.injectionLine(total, this.injectionColumns(contentWidth), contentWidth, false)}`, width);
+	}
+
 	/** Choose the earliest useful shared value column, capped on wide terminals. */
 	private injectionColumns(width: number): InjectionColumns {
-		const contentRows = this.rows.filter((row) => row.kind !== "separator");
+		const contentRows = [...this.rows.filter((row) => row.kind !== "separator"),
+			{ kind: "total", label: "TOTAL", tokens: this.input.snapshot.totalTokens, depth: 0 } as const];
 		const labelWidth = Math.max(1, ...contentRows.map((row) => visibleWidth(this.plainRowLabel(row))));
 		const tokenWidth = Math.max(
 			1,
@@ -444,10 +498,40 @@ export class InjectionsView {
 		return ` ${this.theme.fg("dim", ".".repeat(width - 2))} `;
 	}
 
+	/** Elide long labels so a basename survives beside the fixed token column. */
+	private shortenRowLabel(row: Exclude<InjectionRow, { readonly kind: "separator" }>): string {
+		return shortenMiddle(normalizeInlineText(row.label), MAX_ROW_LABEL_LENGTH);
+	}
+
+	private changeCounts(row: InjectionRow): InjectionChangeCounts | undefined {
+		return row.kind === "item" ? row.change : undefined;
+	}
+
+	/** Unstyled change hint kept in the plain label so the value column stays stable. */
+	private plainChangeSuffix(row: InjectionRow): string {
+		const counts = this.changeCounts(row);
+		if (counts === undefined) return "";
+		const parts: string[] = [];
+		if (counts.added > 0) parts.push(`+${counts.added}`);
+		if (counts.removed > 0) parts.push(`−${counts.removed}`);
+		return parts.length === 0 ? "" : ` ${parts.join(" ")}`;
+	}
+
+	/** Themed change hint with the plain label's visible width. */
+	private styledChangeSuffix(row: InjectionRow): string {
+		const counts = this.changeCounts(row);
+		if (counts === undefined) return "";
+		const parts: string[] = [];
+		if (counts.added > 0) parts.push(this.theme.fg("toolDiffAdded", ` +${counts.added}`));
+		if (counts.removed > 0) parts.push(this.theme.fg("toolDiffRemoved", ` −${counts.removed}`));
+		return parts.join("");
+	}
+
 	/** Unstyled hierarchy label used to keep the value column stable while scrolling. */
 	private plainRowLabel(row: Exclude<InjectionRow, { readonly kind: "separator" }>): string {
-		const label = normalizeInlineText(row.label);
-		return row.kind === "item" ? `${this.treePrefix(row)}${label}` : label;
+		const label = this.shortenRowLabel(row);
+		if (row.kind !== "item") return label;
+		return `${this.treePrefix(row)}${label}${this.plainChangeSuffix(row)}`;
 	}
 
 	/** Themed hierarchy label with connectors intentionally dim even on selection. */
@@ -456,13 +540,13 @@ export class InjectionsView {
 		selected: boolean,
 	): string {
 		const theme = this.theme;
-		const label = normalizeInlineText(row.label);
+		const label = this.shortenRowLabel(row);
 		if (row.kind === "group" || row.kind === "total") {
 			return theme.bold(theme.fg(selected ? "accent" : "text", label));
 		}
 		const prefix = theme.fg("dim", this.treePrefix(row));
 		const color = selected ? "accent" : row.depth === 1 ? "muted" : "dim";
-		return `${prefix}${theme.fg(color, label)}`;
+		return `${prefix}${theme.fg(color, label)}${this.styledChangeSuffix(row)}`;
 	}
 
 	/** Tree branch and ancestor continuation prefix for one item row. */
@@ -495,7 +579,7 @@ export class InjectionsView {
 
 	/**
 	 * Description block, collapsed whole once the list window falls below its
-	 * readable floor. The Initial list is unbounded and scrolls on most
+	 * readable floor. The contribution list is unbounded and scrolls on most
 	 * terminals, so the description outlives the scroll counter instead of
 	 * yielding to it; a list shorter than the floor keeps every row instead.
 	 */
@@ -512,6 +596,9 @@ export class InjectionsView {
 	 */
 	private descriptionLines(width: number): string[] {
 		const lines = wrapDescriptionLines(this.theme, LIST_DESCRIPTION, "dim", width);
+		if (this.input.snapshot.origin === "real-turn") {
+			lines.push(...wrapDescriptionLines(this.theme, `Captured: ${this.input.snapshot.capturedAt.toISOString()} (real-turn)`, "muted", width));
+		}
 		if (this.input.degradedReason !== undefined) {
 			lines.push(...wrapDescriptionLines(
 				this.theme,

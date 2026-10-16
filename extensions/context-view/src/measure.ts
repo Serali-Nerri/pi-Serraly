@@ -93,7 +93,7 @@ export interface PromptOptionsSlice {
 	skills?: SkillSlice[];
 }
 
-/** One active tool as it contributes to the initial context. */
+/** One active tool as it contributes to the prepared context. */
 export interface ToolSlice {
 	name: string;
 	/** Sent to the provider with every request. */
@@ -106,6 +106,8 @@ export interface ToolSlice {
 	guidelines: string[];
 	/** Provenance, e.g. "builtin" or "npm:pi-web-providers". */
 	source: string;
+	/** True when pi hid this tool's standalone declaration from the model. */
+	hidden?: boolean;
 }
 
 /**
@@ -380,7 +382,9 @@ function measureTools(
 			.filter((line) => droppedPartIds.includes(line.partId));
 		if (tool.source === "builtin") {
 			// Pi renders built-in lines on its own behalf, so they become visible here only once dropped.
-			const sections = [...droppedSections(droppedLines), definition];
+			const sections = [...droppedSections(droppedLines), definition]
+				.filter((section): section is SectionDraft => section !== undefined);
+			if (sections.length === 0) continue;
 			builtinChildren.push(createToolItem(`tool:builtin:${tool.name}`, PI_SOURCE, tool.name, sections));
 			continue;
 		}
@@ -393,8 +397,10 @@ function measureTools(
 		const promptSections = [
 			...droppedSections(droppedLines),
 			...carveToolPromptSections(carver, tool, ownedGuidelines, owner),
-		];
-		items.push(createToolItem(owner.itemId, owner.source, tool.name, [...promptSections, definition]));
+			definition,
+		].filter((section): section is SectionDraft => section !== undefined);
+		if (promptSections.length === 0) continue;
+		items.push(createToolItem(owner.itemId, owner.source, tool.name, promptSections));
 	}
 	if (builtinChildren.length > 0) {
 		builtinChildren.sort((a, b) => b.tokens - a.tokens);
@@ -478,7 +484,9 @@ interface SectionDraft {
 }
 
 /** The payload one tool sends with every request: its name, description, and parameter schema. */
-function createDefinitionSection(tool: ToolSlice): SectionDraft {
+function createDefinitionSection(tool: ToolSlice): SectionDraft | undefined {
+	// Pi hides some standalone declarations, e.g. a codemode `only`; the model never receives them.
+	if (tool.hidden === true) return undefined;
 	const heading = `${tool.name}: ${tool.description}\n`;
 	return {
 		label: "Definition",
@@ -877,7 +885,7 @@ function createSystemPromptItem(parts: readonly PromptPart[]): InjectionItem {
 	};
 }
 
-/** Build an initial-phase InjectionItem with derived char/token sizes. */
+/** Build a request-phase InjectionItem with derived char/token sizes. */
 function createItem(
 	id: string,
 	kind: InjectionKind,
@@ -887,7 +895,7 @@ function createItem(
 ): InjectionItem {
 	return {
 		id,
-		phase: "initial",
+		phase: "request",
 		kind,
 		source,
 		label,

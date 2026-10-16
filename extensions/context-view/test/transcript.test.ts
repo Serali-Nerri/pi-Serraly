@@ -8,8 +8,7 @@ import {
 	type ToolInfo,
 } from "@earendil-works/pi-coding-agent";
 
-import { buildUsageSnapshot, InitialCaptureState, measureInjectedMessages } from "../src/capture.ts";
-import { buildSnapshot } from "../src/model.ts";
+import { buildUsageSnapshot, LatestCaptureState, measureInjectedMessages } from "../src/capture.ts";
 import { replaySystemMessages, type SystemMessage, systemMessageText } from "../src/transcript.ts";
 import { collectPreviewEntries, computeUsage } from "../src/usage.ts";
 
@@ -32,12 +31,11 @@ const CURRENT_TOOL: ToolInfo = {
 	sourceInfo: { source: "npm:search", path: "/search.ts", scope: "temporary", origin: "top-level" },
 };
 
-/** Build Usage through the same prompt/tool replay path the command uses. */
-function usageFor(messages: Parameters<typeof buildUsageSnapshot>[0]["messages"], patches: SystemMessage[] = []) {
+/** Build Usage through the same prompt/tool replay path an idle command read uses. */
+function usageFor(messages: Parameters<typeof buildUsageSnapshot>[0]["messages"]) {
 	const snapshot = buildUsageSnapshot({
 		systemPrompt: "LIVE PROMPT MUST NOT REPLACE TRANSCRIPT", options: { cwd: "/current" },
 		allTools: [CURRENT_TOOL], activeToolNames: ["search"], messages,
-		initial: buildSnapshot(measureInjectedMessages(patches, []), "real-turn", new Date(0)),
 	});
 	return computeUsage({ snapshot, messages });
 }
@@ -212,21 +210,30 @@ test("captured system previews include section content and omit opaque text sign
 	assert.deepEqual(measureInjectedMessages([message], [original]), []);
 });
 
-test("frozen request-only system patches replay in request order and do not count as Extensions", () => {
+test("a captured request counts each request-only system patch once, in request order", () => {
 	const first: SystemMessage = { role: "system", content: "", timestamp: 1,
 		sections: { rules: "<rules>\n" + "Long earlier rule ".repeat(50) + "\n</rules>" } };
 	const last: SystemMessage = { role: "system", content: "", timestamp: 1,
 		sections: { rules: "<rules>\nFinal short rule\n</rules>" },
 		toolsAdded: [SECOND_TOOL], toolsRemoved: [{ name: "read" }] };
-	const usage = usageFor([INITIAL], [first, last]);
+	const state = new LatestCaptureState();
+	state.prepare({ cwd: "/fixture" });
+	const snapshot = state.finalize(() => ({
+		systemPrompt: "EFFECTIVE PROMPT", messages: [INITIAL, first, last], baselineMessages: [INITIAL],
+		allTools: [], activeToolNames: [], origin: "real-turn",
+	}));
+	assert.ok(snapshot);
+	const usage = computeUsage({ snapshot, messages: [INITIAL, first, last] });
+	assert.match(previewText(usage), /Long earlier rule/);
 	assert.match(previewText(usage), /Final short rule/);
-	assert.doesNotMatch(previewText(usage), /Long earlier rule|Old rules/);
-	assert.equal(usage.categories.some((category) => category.id === "extensions"), false);
-	assert.equal(usage.estimatedTokens, usageFor([INITIAL, last]).estimatedTokens);
+	assert.doesNotMatch(previewText(usage), /Old rules/);
+	const extensions = usage.categories.find((category) => category.id === "extensions");
+	assert.equal(extensions?.children?.length, 1);
+	assert.equal(extensions?.children[0]?.entries?.length, 2);
 });
 
-test("Initial keeps the effective prompt while owning request-only system patch replay inputs", () => {
-	const state = new InitialCaptureState();
+test("the latest capture keeps the effective prompt while owning request-only system patch replay inputs", () => {
+	const state = new LatestCaptureState();
 	state.prepare({ cwd: "/fixture" });
 	const patch = structuredClone(PATCH);
 	const snapshot = state.finalize(() => ({

@@ -1,12 +1,11 @@
 /**
- * Initial capture state and conversion from pi event data to the semantic
- * model. Event registration remains in index.ts; this module is independently
- * unit-testable.
+ * Latest request capture state and conversion from pi event data to the
+ * semantic model. Event registration remains in index.ts; this module is
+ * independently unit-testable.
  */
 import {
 	type BuildSystemPromptOptions,
 	type ContextEvent,
-	convertToLlm,
 	estimateTokens,
 	formatSize,
 	type SlashCommandInfo,
@@ -15,19 +14,19 @@ import {
 } from "@earendil-works/pi-coding-agent";
 
 import { analyzeSystemPrompt, type PromptOptionsSlice, textTokens, type ToolSlice } from "./measure.ts";
-import { copySystemMessage, replaySystemMessages, systemMessageText } from "./transcript.ts";
+import { copySystemMessage, messageContentText, replaySystemMessages, systemMessageText } from "./transcript.ts";
 import {
 	AGGREGATE_SOURCE,
 	buildSnapshot,
 	type CaptureOrigin,
-	type InitialSnapshot,
+	type RequestSnapshot,
 	type InjectionItem,
 	type InjectionSource,
 	type JsonSpan,
 } from "./model.ts";
 import type { PromptSourceSlice } from "./prompt-additions.ts";
 
-/** Everything available when the first context event finalizes a snapshot. */
+/** Everything available when a context event finalizes the latest snapshot. */
 export interface CaptureFinalization {
 	systemPrompt: string;
 	messages: ContextEvent["messages"];
@@ -38,6 +37,17 @@ export interface CaptureFinalization {
 	promptSources?: readonly PromptSourceSlice[];
 	origin: CaptureOrigin;
 	capturedAt?: Date;
+	/** Session, branch leaf, and model the captured request was prepared for. */
+	sessionId?: string;
+	leafId?: string;
+	modelKey?: string;
+}
+
+/** Session identity a capture describes; any missing part is not checked. */
+export interface CaptureIdentity {
+	readonly sessionId?: string;
+	readonly leafId?: string;
+	readonly modelKey?: string;
 }
 
 /** Inputs for an on-demand pi-native prompt/tool snapshot. */
@@ -46,6 +56,8 @@ export interface NativeSnapshotInput {
 	options: BuildSystemPromptOptions;
 	allTools: readonly ToolInfo[];
 	activeToolNames: readonly string[];
+	/** Standalone tool declarations pi hid from this run's model. */
+	hiddenToolNames?: readonly string[];
 	/** Loaded extension provenance, used only to guess who appended prompt text. */
 	promptSources?: readonly PromptSourceSlice[];
 	capturedAt?: Date;
@@ -55,53 +67,70 @@ export interface NativeSnapshotInput {
 interface CapturePreparation {
 	readonly promptOptions: PromptOptionsSlice;
 	readonly toolSnippets?: Readonly<Record<string, string>>;
+	/** Standalone tool declarations pi hid from this run's model. */
+	readonly hiddenToolNames: readonly string[];
 	/** Prompt as of this extension's own handler, bounding later extensions' additions. */
 	readonly promptAtHandler?: string;
 }
 
 /**
- * Capture-once state machine. `prepare()` refreshes the structured options on
- * every run until `finalize()` succeeds; subsequent finalizations return the
- * original snapshot unchanged.
+ * Latest-request capture state: every normal request replaces the previous
+ * snapshot, so the views describe the context as it was last prepared rather
+ * than the first turn. `prepare()` refreshes the structured options on every
+ * run; `finalize()` either replaces the snapshot or discards it.
  */
-export class InitialCaptureState {
+export class LatestCaptureState {
 	private pendingPreparation: CapturePreparation | undefined;
-	private initialSnapshot: InitialSnapshot | undefined;
+	private latestSnapshot: RequestSnapshot | undefined;
+	private latestMessages: ContextEvent["messages"] | undefined;
+	private captureIdentity: CaptureIdentity | undefined;
 
-	/** The frozen Initial snapshot, or undefined until `finalize()` succeeds. */
-	public get snapshot(): InitialSnapshot | undefined {
-		return this.initialSnapshot;
+	/** The latest captured snapshot, or undefined until `finalize()` succeeds. */
+	public get snapshot(): RequestSnapshot | undefined {
+		return this.latestSnapshot;
+	}
+
+	/** Messages of the captured request, aligned with `snapshot`'s message items. */
+	public get messages(): ContextEvent["messages"] | undefined {
+		return this.latestMessages;
+	}
+
+	/** Session identity the snapshot describes; undefined when no capture exists. */
+	public get identity(): CaptureIdentity | undefined {
+		return this.captureIdentity;
 	}
 
 	/**
-	 * Own the structured prompt inputs from `before_agent_start`; no-op once
-	 * frozen. `promptAtHandler` is the chained prompt as this extension observed
-	 * it, which separates additions made before this extension loaded from those
-	 * made after it.
+	 * Own the structured prompt inputs from `before_agent_start`, replacing any
+	 * previous run's. `promptAtHandler` is the chained prompt as this extension
+	 * observed it, which separates additions made before this extension loaded
+	 * from those made after it.
 	 */
 	public prepare(options: BuildSystemPromptOptions, promptAtHandler?: string): void {
-		if (this.initialSnapshot !== undefined) return;
 		this.pendingPreparation = {
 			promptOptions: copyPromptOptions(options),
 			toolSnippets: options.toolSnippets === undefined ? undefined : { ...options.toolSnippets },
+			hiddenToolNames: [...(options.hiddenTools ?? [])],
 			promptAtHandler,
 		};
 	}
 
 	/**
-	 * Freeze the Initial snapshot from the first context event. Returns the
-	 * existing snapshot on repeat calls, or undefined when `prepare()` never ran.
-	 * `buildInput` runs only on the call that freezes, so callers may collect
-	 * expensive inputs there without paying for them once per later event.
+	 * Replace the snapshot with this request's, or discard the previous one when
+	 * the request could not be measured, so stale state never masquerades as the
+	 * current request. Returns undefined when `prepare()` never ran.
 	 */
-	public finalize(buildInput: () => CaptureFinalization): InitialSnapshot | undefined {
-		if (this.initialSnapshot !== undefined) return this.initialSnapshot;
+	public finalize(buildInput: () => CaptureFinalization): RequestSnapshot | undefined {
+		this.latestSnapshot = undefined;
+		this.latestMessages = undefined;
+		this.captureIdentity = undefined;
 		if (this.pendingPreparation === undefined) return undefined;
 
 		const input = buildInput();
 		const preparation = this.pendingPreparation;
 		const tools = captureActiveTools(input.allTools, input.activeToolNames, {
 			toolSnippets: preparation.toolSnippets,
+			hiddenToolNames: preparation.hiddenToolNames,
 		});
 		const items = [
 			...analyzeSystemPrompt(input.systemPrompt, preparation.promptOptions, tools, {
@@ -110,38 +139,45 @@ export class InitialCaptureState {
 			}),
 			...measureInjectedMessages(input.messages, input.baselineMessages),
 		];
-		this.initialSnapshot = buildSnapshot(items, input.origin, input.capturedAt ?? new Date());
+		this.latestSnapshot = buildSnapshot(items, input.origin, input.capturedAt ?? new Date());
+		this.latestMessages = input.messages;
+		this.captureIdentity = { sessionId: input.sessionId, leafId: input.leafId, modelKey: input.modelKey };
+		return this.latestSnapshot;
+	}
+
+	/** Drop captured content when its session ends. */
+	public clear(): void {
 		this.pendingPreparation = undefined;
-		return this.initialSnapshot;
+		this.latestSnapshot = undefined;
+		this.latestMessages = undefined;
+		this.captureIdentity = undefined;
 	}
 }
 
-/** Build a view-local pi-native snapshot without freezing the main capture state. */
-export function buildNativeSnapshot(input: NativeSnapshotInput): InitialSnapshot {
+/** Build a view-local pi-native snapshot without touching the main capture state. */
+export function buildNativeSnapshot(input: NativeSnapshotInput): RequestSnapshot {
 	const options = copyPromptOptions(input.options);
-	const tools = captureActiveTools(input.allTools, input.activeToolNames, input.options);
+	const tools = captureActiveTools(input.allTools, input.activeToolNames, {
+		toolSnippets: input.options.toolSnippets,
+		hiddenToolNames: input.hiddenToolNames,
+	});
 	const items = analyzeSystemPrompt(input.systemPrompt, options, tools, { sources: input.promptSources });
 	return buildSnapshot(items, "session-estimate", input.capturedAt ?? new Date());
 }
 
-/** Inputs for Usage's branch-local prompt/tool estimate and frozen request-only patches. */
+/** Inputs for Usage's branch-local prompt/tool estimate when no capture exists. */
 export interface UsageSnapshotInput extends NativeSnapshotInput {
 	messages: ContextEvent["messages"];
-	initial: InitialSnapshot;
 }
 
 /**
- * Use replayed transcript state instead of today's loader prompt/tools when available.
- * Request-only system patches remain frozen like other Initial injections; they are
- * applied once here and never counted again as ordinary messages.
+ * Use replayed transcript state instead of today's loader prompt/tools when
+ * available: the branch's recorded system messages describe the prompt the
+ * session carries, not the one the current configuration would render.
  */
-export function buildUsageSnapshot(input: UsageSnapshotInput): InitialSnapshot {
-	const patches = input.initial.groups.flatMap((group) => group.items)
-		.filter((item) => item.requestOnly === true && item.systemMessage !== undefined)
-		.flatMap((item) => item.systemMessage === undefined ? [] : [item.systemMessage])
-		.sort((a, b) => a.index - b.index).map((entry) => entry.message);
-	const state = replaySystemMessages([...input.messages, ...patches]);
-	if (state === undefined) return mergeRequestOnlyMessages(buildNativeSnapshot(input), input.initial);
+export function buildUsageSnapshot(input: UsageSnapshotInput): RequestSnapshot {
+	const state = replaySystemMessages(input.messages);
+	if (state === undefined) return buildNativeSnapshot(input);
 	const registered = new Map(input.allTools.map((tool) => [tool.name, tool]));
 	const tools: ToolSlice[] = state.tools.map((tool) => {
 		const metadata = registered.get(tool.name);
@@ -161,24 +197,7 @@ export function buildUsageSnapshot(input: UsageSnapshotInput): InitialSnapshot {
 		// Current loader overrides are not evidence of what this branch recorded.
 		customPrompt: undefined, appendSystemPrompt: undefined, sections: undefined,
 	}, tools, { sources: input.promptSources });
-	const snapshot = buildSnapshot(items, "session-estimate", input.capturedAt ?? new Date());
-	return mergeRequestOnlyMessages(snapshot, input.initial);
-}
-
-/** Add frozen non-system request-only messages to a current prompt/tool snapshot for Usage. */
-export function mergeRequestOnlyMessages(
-	snapshot: InitialSnapshot,
-	initial: InitialSnapshot,
-): InitialSnapshot {
-	const requestOnly = initial.groups.flatMap((group) =>
-		group.items.filter((item) => item.kind === "message" && item.requestOnly === true && item.systemMessage === undefined)
-	);
-	if (requestOnly.length === 0) return snapshot;
-	const items = [
-		...snapshot.groups.flatMap((group) => group.items),
-		...requestOnly,
-	];
-	return buildSnapshot(items, snapshot.origin, snapshot.capturedAt);
+	return buildSnapshot(items, "session-estimate", input.capturedAt ?? new Date());
 }
 
 /** Copy the prompt-options slice used by measurement, without shared nested references. */
@@ -254,9 +273,13 @@ function addPromptSource(
 export function captureActiveTools(
 	allTools: readonly ToolInfo[],
 	activeToolNames: readonly string[],
-	options: { readonly toolSnippets?: Readonly<Record<string, string>> },
+	options: {
+		readonly toolSnippets?: Readonly<Record<string, string>>;
+		readonly hiddenToolNames?: readonly string[];
+	},
 ): ToolSlice[] {
 	const byName = new Map(allTools.map((tool) => [tool.name, tool]));
+	const hidden = new Set(options.hiddenToolNames ?? []);
 	return [...new Set(activeToolNames)]
 		.map((name) => byName.get(name))
 		.filter((tool) => tool !== undefined)
@@ -267,69 +290,215 @@ export function captureActiveTools(
 			snippet: options.toolSnippets?.[tool.name],
 			guidelines: normalizeGuidelines(tool.promptGuidelines),
 			source: tool.sourceInfo.source,
+			hidden: hidden.has(tool.name) || undefined,
 		}));
 }
 
 /**
- * Measure extension messages while excluding ordinary session history. Custom
- * messages remain attributable by customType; other roles are captured only
- * when they differ from the session-branch baseline.
+ * Measure the messages this request carries beyond the saved session
+ * projection: additions, replacements, and removals. Unchanged session history
+ * is not reported; custom messages follow the same rule rather than being
+ * assumed request-only.
  */
 export function measureInjectedMessages(
 	messages: ContextEvent["messages"],
 	baselineMessages: ContextEvent["messages"],
 ): InjectionItem[] {
-	const baseline = messageSignatureCounts(baselineMessages);
 	const occurrences = new Map<string, number>();
 	const items: InjectionItem[] = [];
-	for (const [index, message] of messages.entries()) {
-		const requestOnly = !consumeMessageSignature(baseline, message);
-		if (message.role !== "custom" && !requestOnly) continue;
-
-		const identity = message.role === "custom" ? message.customType : message.role;
+	for (const delta of diffRequestMessages(messages, baselineMessages)) {
+		const current = delta.current;
+		const saved = delta.saved;
+		const sample = current ?? saved;
+		if (sample === undefined) continue;
+		const identity = sample.role === "custom" ? sample.customType : sample.role;
 		const occurrence = occurrences.get(identity) ?? 0;
 		occurrences.set(identity, occurrence + 1);
-		const { text, jsonSpan } = messagePreview(message);
+		const savedPreview = saved === undefined ? undefined : messagePreview(saved);
+		const currentPreview = current === undefined ? undefined : messagePreview(current);
+		const preview = currentPreview ?? savedPreview ?? { text: "" };
 		items.push({
-			id: message.role === "custom"
-				? `message:${message.customType}:${occurrence}`
-				: `message:context:${message.role}:${occurrence}`,
-			phase: "initial",
+			id: `message:${delta.kind}:${identity}:${occurrence}`,
+			phase: "request",
 			kind: "message",
-			source: message.role === "custom" ? messageSource(message.customType) : AGGREGATE_SOURCE,
-			label: message.role === "custom" ? "message" : `${message.role} message`,
-			chars: text.length,
-			tokens: message.role === "system" ? textTokens(systemMessageText(message)) : estimateTokens(message),
-			text,
-			jsonSpan,
-			requestOnly: requestOnly || undefined,
-			systemMessage: message.role === "system" ? { message: copySystemMessage(message), index } : undefined,
+			source: sample.role === "custom" ? messageSource(sample.customType) : AGGREGATE_SOURCE,
+			label: sample.role === "custom" ? "message" : `${sample.role} message`,
+			chars: preview.text.length,
+			tokens: current === undefined
+				? 0
+				: current.role === "system" ? textTokens(systemMessageText(current)) : estimateTokens(current),
+			text: preview.text,
+			jsonSpan: preview.jsonSpan,
+			change: { kind: delta.kind, before: savedPreview?.text ?? "", after: currentPreview?.text ?? "" },
+			requestOnly: delta.kind === "added" || undefined,
+			systemMessage: current?.role === "system" ? { message: copySystemMessage(current), index: delta.index } : undefined,
 		});
 	}
 	return items;
 }
 
-/** Count structurally identical baseline messages for order-independent diffing. */
-function messageSignatureCounts(messages: ContextEvent["messages"]): Map<string, number> {
-	const counts = new Map<string, number>();
-	for (const message of messages) {
-		const signature = JSON.stringify(message);
-		counts.set(signature, (counts.get(signature) ?? 0) + 1);
-	}
-	return counts;
+/** One request message's relationship to the saved session projection. */
+interface MessageDelta {
+	readonly kind: "added" | "modified" | "removed";
+	/** Request message for additions and replacements; undefined for removals. */
+	readonly current?: ContextEvent["messages"][number];
+	/** Saved projection message for replacements and removals; undefined for additions. */
+	readonly saved?: ContextEvent["messages"][number];
+	/** Index in the request messages for additions and replacements, else in the saved projection. */
+	readonly index: number;
 }
 
-/** Consume one matching baseline occurrence, returning false for a request-only message. */
-function consumeMessageSignature(
-	counts: Map<string, number>,
-	message: ContextEvent["messages"][number],
-): boolean {
-	const signature = JSON.stringify(message);
-	const count = counts.get(signature) ?? 0;
-	if (count === 0) return false;
-	if (count === 1) counts.delete(signature);
-	else counts.set(signature, count - 1);
-	return true;
+/**
+ * Classify each request message against the saved session projection with an
+ * order-preserving common-subsequence alignment, so an insertion or removal
+ * does not misattribute every later message.
+ */
+export function diffRequestMessages(
+	messages: ContextEvent["messages"],
+	baselineMessages: ContextEvent["messages"],
+): MessageDelta[] {
+	const pairs = commonSubsequencePairs(
+		messages.map(messageFingerprint),
+		baselineMessages.map(messageFingerprint),
+	);
+	const deltas: MessageDelta[] = [];
+	let requestCursor = 0;
+	let baselineCursor = 0;
+	const emitGap = (requestEnd: number, baselineEnd: number): void => {
+		const requestGap = messages.slice(requestCursor, requestEnd);
+		const baselineGap = baselineMessages.slice(baselineCursor, baselineEnd);
+		let paired = 0;
+		// A same-role pair inside one gap is the same turn edited or re-emitted.
+		while (
+			paired < requestGap.length && paired < baselineGap.length
+			&& requestGap[paired]?.role === baselineGap[paired]?.role
+		) {
+			deltas.push({
+				kind: "modified",
+				current: requestGap[paired],
+				saved: baselineGap[paired],
+				index: requestCursor + paired,
+			});
+			paired++;
+		}
+		for (let index = paired; index < baselineGap.length; index++) {
+			deltas.push({ kind: "removed", saved: baselineGap[index], index: baselineCursor + index });
+		}
+		for (let index = paired; index < requestGap.length; index++) {
+			deltas.push({ kind: "added", current: requestGap[index], index: requestCursor + index });
+		}
+	};
+	for (const [requestIndex, baselineIndex] of pairs) {
+		emitGap(requestIndex, baselineIndex);
+		requestCursor = requestIndex + 1;
+		baselineCursor = baselineIndex + 1;
+	}
+	emitGap(messages.length, baselineMessages.length);
+	return deltas;
+}
+
+/** Cheap content fingerprint; a collision only risks reporting a real change as unchanged. */
+function messageFingerprint(message: ContextEvent["messages"][number]): number {
+	const text = JSON.stringify(message);
+	let hash = 0x811c9dc5;
+	for (let index = 0; index < text.length; index++) {
+		hash ^= text.charCodeAt(index);
+		hash = Math.imul(hash, 0x01000193) >>> 0;
+	}
+	return hash;
+}
+
+/**
+ * Order-preserving index pairs of equal fingerprints. Hirschberg recursion
+ * keeps memory linear in the shorter sequence instead of allocating the full
+ * comparison table for long sessions.
+ */
+function commonSubsequencePairs(left: readonly number[], right: readonly number[]): Array<readonly [number, number]> {
+	const pairs: Array<readonly [number, number]> = [];
+	collectPairs(left, 0, left.length, right, 0, right.length, pairs);
+	return pairs;
+}
+
+function collectPairs(
+	left: readonly number[],
+	leftStart: number,
+	leftEnd: number,
+	right: readonly number[],
+	rightStart: number,
+	rightEnd: number,
+	pairs: Array<readonly [number, number]>,
+): void {
+	if (leftStart >= leftEnd || rightStart >= rightEnd) return;
+	if (leftEnd - leftStart === 1) {
+		for (let index = rightStart; index < rightEnd; index++) {
+			if (right[index] === left[leftStart]) {
+				pairs.push([leftStart, index]);
+				return;
+			}
+		}
+		return;
+	}
+	const middle = Math.floor((leftStart + leftEnd) / 2);
+	const prefix = commonPrefixLengths(left, leftStart, middle, right, rightStart, rightEnd);
+	const suffix = commonSuffixLengths(left, middle, leftEnd, right, rightStart, rightEnd);
+	const total = rightEnd - rightStart;
+	let split = 0;
+	let best = -1;
+	for (let count = 0; count <= total; count++) {
+		const score = (prefix[count] ?? 0) + (suffix[count] ?? 0);
+		if (score > best) {
+			best = score;
+			split = count;
+		}
+	}
+	collectPairs(left, leftStart, middle, right, rightStart, rightStart + split, pairs);
+	collectPairs(left, middle, leftEnd, right, rightStart + split, rightEnd, pairs);
+}
+
+/** LCS lengths of one left slice against every prefix of the right slice. */
+function commonPrefixLengths(
+	left: readonly number[],
+	leftStart: number,
+	leftEnd: number,
+	right: readonly number[],
+	rightStart: number,
+	rightEnd: number,
+): Uint32Array {
+	const length = rightEnd - rightStart;
+	const previous = new Uint32Array(length + 1);
+	const current = new Uint32Array(length + 1);
+	for (let i = leftStart; i < leftEnd; i++) {
+		for (let j = 0; j < length; j++) {
+			current[j + 1] = left[i] === right[rightStart + j]
+				? (previous[j] ?? 0) + 1
+				: Math.max(previous[j + 1] ?? 0, current[j] ?? 0);
+		}
+		previous.set(current);
+	}
+	return previous;
+}
+
+/** LCS lengths of one left slice against every suffix of the right slice. */
+function commonSuffixLengths(
+	left: readonly number[],
+	leftStart: number,
+	leftEnd: number,
+	right: readonly number[],
+	rightStart: number,
+	rightEnd: number,
+): Uint32Array {
+	const length = rightEnd - rightStart;
+	const previous = new Uint32Array(length + 1);
+	const current = new Uint32Array(length + 1);
+	for (let i = leftEnd - 1; i >= leftStart; i--) {
+		for (let j = length - 1; j >= 0; j--) {
+			current[j] = left[i] === right[rightStart + j]
+				? (previous[j + 1] ?? 0) + 1
+				: Math.max(previous[j] ?? 0, current[j + 1] ?? 0);
+		}
+		previous.set(current);
+	}
+	return previous;
 }
 
 /** Provider-bound message content for raw preview, with any serialization marked as JSON. */
@@ -345,12 +514,7 @@ function messagePreview(message: ContextEvent["messages"][number]): MessagePrevi
 		return { text: message.summary };
 	}
 	if (message.role === "bashExecution") {
-		const content = convertToLlm([message])[0]?.content ?? "";
-		return {
-			text: typeof content === "string"
-				? content
-				: content.flatMap((block) => block.type === "text" ? [block.text] : []).join("\n"),
-		};
+		return { text: messageContentText(message) };
 	}
 	if (typeof message.content === "string") return { text: message.content };
 	if (message.role === "assistant") {

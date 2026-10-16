@@ -1,13 +1,17 @@
 /**
- * `/context` command grammar, argument completions, and Initial capture
+ * `/context` command grammar, argument completions, and latest-request capture
  * resolution shared by the Usage and Injections views.
  */
-import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+import type {
+	ContextEvent,
+	ExtensionAPI,
+	ExtensionCommandContext,
+} from "@earendil-works/pi-coding-agent";
 import type { AutocompleteItem } from "@earendil-works/pi-tui";
 
-import { buildNativeSnapshot, type InitialCaptureState } from "./capture.ts";
+import { buildNativeSnapshot, type LatestCaptureState } from "./capture.ts";
 import type { ConfigCreationResult } from "./config.ts";
-import type { InitialSnapshot } from "./model.ts";
+import type { RequestSnapshot } from "./model.ts";
 import { normalizePreviewText } from "./text.ts";
 
 const COMMAND_USAGE = "Usage: /context [usage|injections|tools|config]";
@@ -22,7 +26,7 @@ const MAX_REPORTED_MESSAGE_LENGTH = 500;
 const DEFAULT_VIEW: ContextView = "usage";
 const ARGUMENT_OPTIONS = [
 	{ value: "usage", label: "usage", description: "Show estimated context usage" },
-	{ value: "injections", label: "injections", description: "Explore initial context injections" },
+	{ value: "injections", label: "injections", description: "Explore latest request injections" },
 	{ value: "tools", label: "tools", description: "Inspect tool inventory and latest declarations" },
 	{ value: "config", label: "config", description: "Create config file populated with defaults" },
 ] satisfies AutocompleteItem[];
@@ -36,9 +40,11 @@ export type ContextCommand =
 	| { readonly type: "config" }
 	| { readonly type: "invalid"; readonly message: string };
 
-/** Resolved Initial capture, possibly degraded to the pi-native fallback. */
-export interface InitialCaptureResult {
-	readonly snapshot: InitialSnapshot;
+/** Resolved latest request capture, possibly degraded to the pi-native fallback. */
+export interface LatestCaptureResult {
+	readonly snapshot: RequestSnapshot;
+	/** Messages the snapshot describes: the captured request's, or the session projection's. */
+	readonly messages: ContextEvent["messages"];
 	readonly degradedReason?: string;
 }
 
@@ -70,22 +76,49 @@ export function getContextArgumentCompletions(argumentPrefix: string): Autocompl
 	return matches.length > 0 ? matches.map((option) => ({ ...option })) : null;
 }
 
-/** Return the passive Initial, or a view-local estimate without entering an agent turn. */
-export function resolveInitialCapture(
+/** Return the latest captured request, or a view-local estimate without entering an agent turn. */
+export function resolveLatestCapture(
 	pi: ExtensionAPI,
-	capture: InitialCaptureState,
+	capture: LatestCaptureState,
 	context: ExtensionCommandContext,
-): InitialCaptureResult {
-	if (capture.snapshot !== undefined) return { snapshot: capture.snapshot };
+): LatestCaptureResult {
+	const snapshot = capture.snapshot;
+	const messages = capture.messages;
+	if (snapshot !== undefined && messages !== undefined && isCaptureCurrent(capture, context)) {
+		return { snapshot, messages };
+	}
+	const options = context.getSystemPromptOptions();
 	return {
 		snapshot: buildNativeSnapshot({
 			systemPrompt: context.getSystemPrompt(),
-			options: context.getSystemPromptOptions(),
+			options,
 			allTools: pi.getAllTools(),
 			activeToolNames: pi.getActiveTools(),
+			hiddenToolNames: options.hiddenTools,
 		}),
+		messages: context.sessionManager.buildSessionProjection().messages,
 		degradedReason: "Not captured. Session estimate only. Extension additions were not observed.",
 	};
+}
+
+/**
+ * True while the capture still describes the session's latest request: same
+ * session and model, with no compaction after the captured branch leaf.
+ */
+function isCaptureCurrent(capture: LatestCaptureState, context: ExtensionCommandContext): boolean {
+	const identity = capture.identity;
+	if (identity === undefined) return false;
+	if (identity.sessionId !== undefined && context.sessionManager.getSessionId() !== identity.sessionId) return false;
+	const model = context.model;
+	if (
+		identity.modelKey !== undefined && model !== undefined
+		&& `${model.provider}/${model.id}` !== identity.modelKey
+	) return false;
+	if (identity.leafId === undefined) return true;
+	const branch = context.sessionManager.getBranch();
+	const leafIndex = branch.findIndex((entry) => entry.id === identity.leafId);
+	if (leafIndex < 0) return false;
+	return !branch.slice(leafIndex + 1).some((entry) => entry.type === "compaction");
 }
 
 /**
@@ -104,6 +137,15 @@ export function reportCommandMessage(
 		return;
 	}
 	process.stderr.write(`${safeMessage}\n`);
+}
+
+/** Refuse a view whose inputs the in-progress compaction is rewriting. */
+export function reportCompactionInProgress(context: ExtensionCommandContext, view: ContextView): void {
+	reportCommandMessage(
+		context,
+		`/context ${view} is unavailable while compaction is in progress. Retry after it completes.`,
+		"warning",
+	);
 }
 
 /** Refuse a view outside TUI mode, naming the form the user typed. */

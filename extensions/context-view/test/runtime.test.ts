@@ -541,7 +541,7 @@ test("ordinary schema text is content, and a real empty declaration list is not 
 });
 
 test("tools navigation returns to the retained views without requesting or changing loadout", { timeout: 15000 }, async () => {
-	for (const [command, returnKey, title] of [["/context", "u", "Context Usage"], ["/context injections", "i", "INITIAL"]]) {
+	for (const [command, returnKey, title] of [["/context", "u", "Context Usage"], ["/context injections", "i", "SESSION ESTIMATE"]]) {
 		const h = await host({ tools: true, inputs: [["t"], [returnKey!]] });
 		try {
 			const active = h.session.getActiveToolNames(), inventory = h.session.getAllTools().map(({ name, exposure }) => ({ name, exposure }));
@@ -627,7 +627,7 @@ for (const command of ["/context usage", "/context injections"]) test(`${command
 		assert.match(scrolled, /PUBLIC_WHEEL_LINE_7(?:\s|$)/);
 		view.handleMouse?.(wheelEvent(-7));
 		assert.match(h.text(), /PUBLIC_WHEEL_LINE_0(?:\s|$)/);
-		back(h); assert.match(h.text(), command === "/context usage" ? /Context Usage/ : /INITIAL/);
+		back(h); assert.match(h.text(), command === "/context usage" ? /Context Usage/ : /LATEST/);
 		assert.equal(h.requests, 1); assert.equal(h.executions, 0);
 		assert.deepEqual(h.sessionManager.getEntries(), entries);
 		assert.deepEqual(h.session.getActiveToolNames(), active);
@@ -659,7 +659,7 @@ test("opening and previewing before capture leaves the conversation untouched an
 });
 
 
-test("normal requests pass through, freeze Initial once, and reload cannot replay capture", { timeout: 15000 }, async () => {
+test("normal requests pass through, replace Latest after completion, and reload cannot replay capture", { timeout: 15000 }, async () => {
 	const h = await host();
 	try {
 		await h.session.prompt("Hello local fixture");
@@ -687,11 +687,11 @@ test("normal requests pass through, freeze Initial once, and reload cannot repla
 		assert.equal(h.requests, 2);
 		assert.match(JSON.stringify(h.bodies[1]), /SECOND_CJK_指令/);
 		await h.session.prompt("/context injections");
-		const frozen = h.overlays.at(-1)!;
-		frozen.handleInput?.("\x1b[B");
-		frozen.handleInput?.("\r");
-		assert.match(h.text(), /FIRST_CJK_指令/);
-		assert.doesNotMatch(h.text(), /SECOND_CJK_指令/);
+		const latest = h.overlays.at(-1)!;
+		latest.handleInput?.("\x1b[B");
+		latest.handleInput?.("\r");
+		assert.match(h.text(), /SECOND_CJK_指令/);
+		assert.doesNotMatch(h.text(), /FIRST_CJK_指令/);
 		await h.session.reload();
 		await h.session.prompt("/context injections");
 		assert.match(h.text(), /Not captured.*Session estimate/s);

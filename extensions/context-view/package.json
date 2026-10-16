@@ -3,7 +3,7 @@
   "version": "0.6.0",
   "private": true,
   "type": "module",
-  "description": "Standalone /context Usage estimate, frozen Initial injections and previews",
+  "description": "Standalone /context latest-request injections, Usage estimates and diff previews",
   "license": "MIT",
   "author": "Dmitry Makarov",
   "engines": { "node": ">=22.19.0" },

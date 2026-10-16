@@ -7,7 +7,7 @@
 
 | 模块 | 拥有的资源 | 不拥有 |
 | --- | --- | --- |
-| `context-view` | `/context`、Usage 会话估算、冻结 Initial 注入、工具声明最新单槽观测与诊断、私有预览、显示偏好 | Footer 缓存、业务工具、主动探测、请求内容持久化、最终 wire 审计 |
+| `context-view` | `/context`、Latest 被动捕获与会话临时差异、Usage 组成估算、工具声明最新单槽观测与诊断、私有预览、显示偏好 | Footer 缓存、业务工具、主动探测、请求内容持久化、最终 wire 审计 |
 | `ui` | 展示生命周期、私有兼容补丁、shell、Markdown、Thinking、文字预览、`/ccstyle` | 上下文 Inspector、业务工具定义、执行和后台进程 |
 | `questions` | `ask_user_question` schema 与运行校验、tabbed 问卷（preview/备注/多选/自由回答）、折叠、RPC 原生对话框降级、答案结果 | UI 总体刷新、其他 overlay、工具卡语法、本地化 |
 | `loop` | `/loop` 解析、内存任务、忙闲调度、`local-loop` | UI scheduler、持久化恢复 |
@@ -151,12 +151,15 @@ dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace
 ## 跨模块交互
 
 context-view 与 UI 可独立选择、按任意顺序共存：只有 context-view 注册 `/context`，
-UI 只注册 `/ccstyle`。查看器在公开 `before_agent_start` / `context` 事件中被动
-冻结本 runtime 的首份 Initial；未捕获时只显示 session estimate / not captured，
-不从会话恢复为观测证据、不发送消息、执行工具或修改请求。Usage 按需重放当前分支
-组成估算；模型、预览与缓存不与 Footer 合并。Tools 分开呈现打开视图时的公开宿主库存/active
+UI 只注册 `/ccstyle`。查看器在公开 `before_agent_start` / `context_with_system` 事件中
+被动更新本 runtime 的 Latest，按 edit-aware 会话投影识别请求临时增删改，
+含强制 prompt 与隐藏声明；Injections 和 Usage 共用最近捕获，避免替换、删除及隐藏声明的重复统计。
+未捕获或上下文失效后只显示 session estimate / not captured，
+不从会话恢复为观测证据、不发送消息、执行工具或修改请求。压缩中不打开依赖会话投影的视图；
+模型、预览与缓存不与 Footer 合并。Tools 分开呈现打开视图时的公开宿主库存/active
 与本扩展 `before_provider_request` handler 同步复制的最新工具声明；只支持可靠识别的
-Anthropic collapsed 顶层定义与原生增删协议，按 payload 顺序推导可证明的有效集合；
+Anthropic collapsed 顶层定义与原生增删协议、Kimi Chat Completions 函数声明与消息内新增，
+按 payload 顺序推导可证明的有效集合；
 本次 payload 内的更新位置/历史、adapter placeholder 与 codemode 描述内容分别归属。
 未知/失败不宣称有效集合，也替换旧观测，
 不持有整份请求历史，不从会话重放或其他 runtime 继承；来源可能包括 warming，不作最终 wire

@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { Theme, type ThemeColor } from "@earendil-works/pi-coding-agent";
 import { visibleWidth } from "@earendil-works/pi-tui";
 
-import type { InitialSnapshot, InjectionGroup, InjectionItem } from "../src/model.ts";
+import type { RequestSnapshot, InjectionGroup, InjectionItem } from "../src/model.ts";
 import { InjectionsView } from "../src/ui/injections-view.ts";
 import { previewBodyLines } from "../src/ui/section-preview.ts";
 
@@ -43,7 +43,7 @@ function createTheme(): Theme {
 function item(id: string, sourceId: string, native: boolean, tokens: number): InjectionItem {
 	return {
 		id,
-		phase: "initial",
+		phase: "request",
 		kind: "message",
 		source: { id: sourceId, label: sourceId, native },
 		label: `${id} with a moderately long label for truncation checks`,
@@ -61,7 +61,7 @@ function group(sourceId: string, native: boolean, items: InjectionItem[]): Injec
 	};
 }
 
-function snapshot(itemsPerGroup: number): InitialSnapshot {
+function snapshot(itemsPerGroup: number): RequestSnapshot {
 	const piItems = Array.from({ length: itemsPerGroup }, (_, index) => item(`pi-${index}`, "pi", true, 1_234_567));
 	const extensionItems = Array.from({ length: itemsPerGroup }, (_, index) => item(`ext-${index}`, "npm:web", false, 42));
 	const groups = [group("pi", true, piItems), group("npm:web", false, extensionItems)];
@@ -96,7 +96,7 @@ test("InjectionsView follows pi selector styling and cursor alignment", () => {
 	const parent: InjectionItem = { ...item("parent", "pi", true, 50), children: [child] };
 	const sibling = item("sibling", "pi", true, 10);
 	const piGroup = group("pi", true, [parent, sibling]);
-	const styledSnapshot: InitialSnapshot = {
+	const styledSnapshot: RequestSnapshot = {
 		origin: "real-turn",
 		capturedAt: new Date("2026-07-10T12:00:00Z"),
 		groups: [piGroup],
@@ -109,13 +109,13 @@ test("InjectionsView follows pi selector styling and cursor alignment", () => {
 	assert.equal(lines[1], "");
 	assert.equal(lines.at(-2), "");
 	const headerIndex = lines.findIndex((line) => stripSgr(line).includes("Context Injections"));
-	const tabIndex = lines.findIndex((line) => stripSgr(line).includes("Context Injections · [INITIAL]"));
+	const tabIndex = lines.findIndex((line) => stripSgr(line).includes("Context Injections · [LATEST]"));
 	assert.ok(headerIndex >= 0 && tabIndex === headerIndex);
 	assert.equal(lines[headerIndex + 1], "");
 	assert.equal(stripSgr(lines[headerIndex] ?? "").indexOf("Context Injections"), 0);
-	assert.equal(stripSgr(lines[tabIndex] ?? ""), "Context Injections · [INITIAL]");
+	assert.equal(stripSgr(lines[tabIndex] ?? ""), "Context Injections · [LATEST]");
 	// Chalk emits bold SGR only on capable terminals, so derive the environment-specific nested style.
-	assert.ok((lines[tabIndex] ?? "").includes(theme.fg("mdHeading", theme.bold("[INITIAL]"))));
+	assert.ok((lines[tabIndex] ?? "").includes(theme.fg("mdHeading", theme.bold("[LATEST]"))));
 	// Runtime stays hidden until the runtime-inspection roadmap step.
 	assert.ok(!lines.some((line) => stripSgr(line).includes("RUNTIME")));
 	assert.ok(!lines.some((line) => stripSgr(line).includes("Runtime Logging:")));
@@ -136,14 +136,14 @@ test("InjectionsView follows pi selector styling and cursor alignment", () => {
 	assert.match(childLine ?? "", /\u001b\[38;2;16;17;18m│  └─ /);
 	assert.match(childLine ?? "", /\u001b\[38;2;16;17;18mchild/);
 	assert.match(childLine ?? "", /\u001b\[38;2;7;8;9m20/);
-	const siblingLine = lines.find((line) => stripSgr(line).includes("sibling with a moderately"));
+	const siblingLine = lines.find((line) => stripSgr(line).includes("sibling"));
 	assert.match(stripSgr(siblingLine ?? ""), /^  └─ sibling/);
 
 	const alignedValues = [
 		["→ pi", "60"],
-		["parent with", "50"],
-		["child with", "20"],
-		["sibling with", "10"],
+		["parent", "50"],
+		["child", "20"],
+		["sibling", "10"],
 	].map(([label, value]) => {
 		const line = lines.map(stripSgr).find((candidate) => candidate.includes(label));
 		assert.ok(line !== undefined);
@@ -173,9 +173,10 @@ test("InjectionsView follows pi selector styling and cursor alignment", () => {
 
 	const descriptionIndex = lines.findIndex((line) => stripSgr(line).includes("Injections into the model context"));
 	const hintsIndex = lines.findIndex((line) => stripSgr(line).includes("↑↓/jk Navigate"));
-	assert.ok(descriptionIndex > 0 && hintsIndex === descriptionIndex + 2);
+	assert.ok(descriptionIndex > 0 && hintsIndex === descriptionIndex + 4);
 	assert.equal(lines[descriptionIndex - 1], "");
-	assert.equal(lines[descriptionIndex + 1], "");
+	assert.match(stripSgr(lines[descriptionIndex + 2] ?? ""), /Captured: 2026-07-10T12:00:00\.000Z \(real-turn\)/);
+	assert.equal(lines[hintsIndex - 1], "");
 	assert.equal(stripSgr(lines[descriptionIndex] ?? "").indexOf("Injections into"), 2);
 	assert.equal(stripSgr(lines[hintsIndex] ?? "").indexOf("↑↓"), 2);
 	assert.match(lines[descriptionIndex] ?? "", /\u001b\[38;2;16;17;18m  Injections into/);
@@ -198,7 +199,7 @@ test("InjectionsView wraps narrow descriptions instead of truncating them", () =
 	assert.ok(descriptionLines.every((line) => line.startsWith("  ")));
 	assert.equal(
 		descriptionLines.map((line) => line.trim()).join(" "),
-		"Injections into the model context for the first turn, with token estimates.",
+		"Injections into the model context at handler scope, not final wire. Token estimates.",
 	);
 	assert.doesNotMatch(descriptionLines.join("\n"), /…/);
 });
@@ -206,71 +207,71 @@ test("InjectionsView wraps narrow descriptions instead of truncating them", () =
 test("InjectionsView keeps the description while the list window stays readable", () => {
 	const scrollCounter = /\(\d+\/\d+\)/;
 	const visibleRowCount = (lines: string[]) => lines.filter((line) => /\s[\d,]+$/.test(line)).length;
-	// Sixteen items per group build a 36-row list, so it outgrows the 26-row description floor.
-	let rows = 46;
+	// Sixteen items per group build a 34-row list, so it outgrows the 26-row description floor.
+	let rows = 47;
 	const view = createView(16, undefined, () => rows);
 	const full = view.render(80).map(stripSgr);
 	assert.ok(full.some((line) => line.includes("Injections into the model context")));
 	assert.ok(!full.some((line) => scrollCounter.test(line)), "every row fits beside the description");
 
 	// A scrolling list keeps its description: the counter alone never collapses it.
-	rows = 37;
+	rows = 40;
 	const scrolled = view.render(80).map(stripSgr);
 	assert.ok(scrolled.some((line) => line.includes("Injections into the model context")));
 	assert.ok(scrolled.some((line) => scrollCounter.test(line)));
 
 	// One row further, the window would drop below the floor, so the description goes whole.
-	rows = 36;
+	rows = 39;
 	const descriptionless = view.render(80).map(stripSgr);
 	assert.ok(!descriptionless.some((line) => line.includes("Injections into")));
 	const hintsIndex = descriptionless.findIndex((line) => line.includes("↑↓/jk Navigate"));
 	assert.equal(hintsIndex, descriptionless.length - 3, "the hints keep their place below one blank row");
 	assert.equal(descriptionless[hintsIndex - 1], "", "the description takes its separating blank row with it");
 	assert.ok(
-		visibleRowCount(descriptionless) > visibleRowCount(scrolled),
-		"the freed rows go to the list",
+		visibleRowCount(descriptionless) >= 26,
+		"the list keeps its readable floor",
 	);
 
 	// Growing the terminal restores the collapsed description.
-	rows = 46;
+	rows = 47;
 	assert.deepEqual(view.render(80).map(stripSgr), full);
 });
 
 test("InjectionsView keeps the description for lists shorter than the floor", () => {
-	// Two items per group build an 8-row list, so the floor is the list itself.
-	let rows = 18;
+	// Two items per group build a 6-row list, so the floor is the list itself.
+	let rows = 19;
 	const view = createView(2, undefined, () => rows);
 	assert.ok(view.render(80).map(stripSgr).some((line) => line.includes("Injections into the model context")));
 
-	rows = 17;
+	rows = 18;
 	const collapsed = view.render(80).map(stripSgr);
 	assert.ok(!collapsed.some((line) => line.includes("Injections into")));
 	assert.ok(collapsed.some((line) => line.includes("↑↓/jk Navigate")), "the hints never collapse");
 });
 
-test("InjectionsView adds degraded INITIAL capture to the dialog description", () => {
+test("InjectionsView adds degraded session-estimate capture to the dialog description", () => {
 	const plain = createView(4);
 	const plainLines = plain.render(80);
-	const plainInitialIndex = plainLines.findIndex((line) => stripSgr(line).includes("INITIAL"));
-	assert.ok(plainInitialIndex >= 0);
-	assert.equal(stripSgr(plainLines[plainInitialIndex] ?? ""), "Context Injections · [INITIAL]");
+	const plainTabIndex = plainLines.findIndex((line) => stripSgr(line).includes("SESSION ESTIMATE"));
+	assert.ok(plainTabIndex >= 0);
+	assert.equal(stripSgr(plainLines[plainTabIndex] ?? ""), "Context Injections · [SESSION ESTIMATE]");
 	assert.ok(!plainLines.some((line) => stripSgr(line).includes("Degraded:")));
 
 	const reason = "Not captured. Session estimate only. Extension additions were not observed.";
 	// Tall enough for the wrapped reason, the whole list, and the description block at both widths.
 	const degraded = createView(4, reason, () => 40);
 	const degradedLines = degraded.render(80);
-	const degradedInitialIndex = degradedLines.findIndex((line) => stripSgr(line).includes("INITIAL"));
-	assert.ok(degradedInitialIndex >= 0);
-	assert.equal(stripSgr(degradedLines[degradedInitialIndex] ?? ""), "Context Injections · [INITIAL]");
-	assert.equal(degradedLines[degradedInitialIndex + 1], "");
-	assert.match(stripSgr(degradedLines[degradedInitialIndex + 2] ?? ""), /Not captured/);
+	const degradedTabIndex = degradedLines.findIndex((line) => stripSgr(line).includes("SESSION ESTIMATE"));
+	assert.ok(degradedTabIndex >= 0);
+	assert.equal(stripSgr(degradedLines[degradedTabIndex] ?? ""), "Context Injections · [SESSION ESTIMATE]");
+	assert.equal(degradedLines[degradedTabIndex + 1], "");
+	assert.match(stripSgr(degradedLines[degradedTabIndex + 2] ?? ""), /Not captured/);
 
 	const descriptionIndex = degradedLines.findIndex((line) =>
 		stripSgr(line).includes("Injections into the model context"),
 	);
 	assert.ok(descriptionIndex >= 0);
-	const degradedDescription = degradedLines[descriptionIndex + 1] ?? "";
+	const degradedDescription = degradedLines[descriptionIndex + 2] ?? "";
 	assert.equal(stripSgr(degradedDescription), "  [Degraded: pi-native fallback used]");
 	assert.match(degradedDescription, /\u001b\[38;2;170;187;204m  \[Degraded: pi-native fallback used\]/);
 
@@ -295,7 +296,7 @@ test("InjectionsView keeps Runtime inactive when label-switch keys are pressed",
 		view.handleInput(key);
 		assert.equal(view.render(80), initial);
 	}
-	assert.ok(initial.some((line) => stripSgr(line).includes("Context Injections · [INITIAL]")));
+	assert.ok(initial.some((line) => stripSgr(line).includes("Context Injections · [SESSION ESTIMATE]")));
 	assert.ok(!initial.some((line) => stripSgr(line).includes("RUNTIME")));
 });
 
@@ -309,7 +310,7 @@ test("InjectionsView keeps every rendered line within the width", () => {
 		if (width === 24) {
 			const plain = listLines.map(stripSgr);
 			const titleIndex = plain.indexOf("Context Injections");
-			const tabsIndex = plain.indexOf("[INITIAL]");
+			const tabsIndex = plain.indexOf("[SESSION ESTIMATE]");
 			assert.ok(titleIndex >= 0 && tabsIndex === titleIndex + 2);
 			assert.equal(plain[titleIndex + 1], "");
 			assert.equal(plain[tabsIndex + 1], "");
@@ -320,6 +321,109 @@ test("InjectionsView keeps every rendered line within the width", () => {
 			assert.ok(visibleWidth(line) <= width, `preview line exceeds width ${width}: ${JSON.stringify(line)}`);
 		}
 	}
+});
+
+/** Snapshot with one modified, one removed, and one added request contribution. */
+function changeSnapshot(): RequestSnapshot {
+	const modified: InjectionItem = {
+		...item("modified", "pi", true, 12),
+		label: "modified",
+		text: "alpha\nVALUE_OLD\nomega",
+		change: { kind: "modified", before: "alpha\nVALUE_OLD\nomega", after: "alpha\nVALUE_NEW\nomega" },
+	};
+	const removed: InjectionItem = {
+		...item("removed", "pi", true, 9),
+		label: "removed",
+		text: "REMOVED_BODY",
+		change: { kind: "removed", before: "REMOVED_BODY", after: "" },
+	};
+	const added: InjectionItem = {
+		...item("added", "pi", true, 7),
+		label: "added",
+		text: "ADDED_BODY",
+		change: { kind: "added", before: "", after: "ADDED_BODY" },
+	};
+	const piGroup = group("pi", true, [modified, removed, added]);
+	return {
+		origin: "real-turn",
+		capturedAt: new Date("2026-07-10T12:00:00Z"),
+		groups: [piGroup],
+		totalTokens: piGroup.totalTokens,
+	};
+}
+
+function changeView(): InjectionsView {
+	return new InjectionsView(createTheme(), { snapshot: changeSnapshot() }, () => {}, () => 40);
+}
+
+test("InjectionsView labels changed contributions with their line deltas", () => {
+	const theme = createTheme();
+	const lines = changeView().render(100);
+	const modifiedLine = lines.find((line) => stripSgr(line).includes("modified")) ?? "";
+	assert.match(stripSgr(modifiedLine), /modified \+1 −1/);
+	assert.ok(modifiedLine.includes(theme.fg("toolDiffAdded", " +1")));
+	assert.ok(modifiedLine.includes(theme.fg("toolDiffRemoved", " −1")));
+	const removedLine = lines.find((line) => stripSgr(line).includes("removed")) ?? "";
+	assert.match(stripSgr(removedLine), /removed −1/);
+	assert.ok(!removedLine.includes(theme.fg("toolDiffAdded", " +0")));
+	assert.match(stripSgr(lines.find((line) => stripSgr(line).includes("added")) ?? ""), /added \+1/);
+});
+
+test("InjectionsView previews a modification as diff lines above the current body", () => {
+	const theme = createTheme();
+	const view = changeView();
+	view.handleInput("\u001b[B"); // the modified item below its group
+	view.handleInput("\r");
+	const lines = view.render(100);
+	const plain = lines.map(stripSgr).join("\n");
+	assert.match(plain, /pi · 12 tokens · modified \+1 −1/);
+	const removedDiff = lines.find((line) => stripSgr(line).includes("− VALUE_OLD"));
+	assert.ok(removedDiff?.includes(theme.fg("toolDiffRemoved", "− VALUE_OLD")));
+	const addedDiff = lines.find((line) => stripSgr(line).includes("+ VALUE_NEW"));
+	assert.ok(addedDiff?.includes(theme.fg("toolDiffAdded", "+ VALUE_NEW")));
+	assert.ok(plain.indexOf("− VALUE_OLD") < plain.indexOf("alpha"), "the diff leads, the body follows");
+});
+
+test("InjectionsView previews a removal as its deletion diff without the stale body", () => {
+	const view = changeView();
+	view.handleInput("\u001b[B");
+	view.handleInput("\u001b[B"); // the removed item
+	view.handleInput("\r");
+	const plain = view.render(100).map(stripSgr);
+	assert.ok(plain.some((line) => line.includes("− REMOVED_BODY")));
+	assert.equal(plain.filter((line) => line.includes("REMOVED_BODY")).length, 1);
+});
+
+test("InjectionsView previews an addition as the current body alone", () => {
+	const view = changeView();
+	view.handleInput("\u001b[B");
+	view.handleInput("\u001b[B");
+	view.handleInput("\u001b[B"); // the added item
+	view.handleInput("\r");
+	const plain = view.render(100).map(stripSgr).join("\n");
+	assert.match(plain, /pi · 7 tokens · added \+1/);
+	assert.match(plain, /ADDED_BODY/);
+	assert.doesNotMatch(plain, /[+−] ADDED_BODY/);
+});
+
+test("InjectionsView elides long row labels in the middle so the basename survives", () => {
+	const long: InjectionItem = {
+		...item("long", "pi", true, 10),
+		label: `some/deep/path/${"segment/".repeat(8)}basename.ts`,
+	};
+	const piGroup = group("pi", true, [long]);
+	const snapshot: RequestSnapshot = {
+		origin: "session-estimate",
+		capturedAt: new Date("2026-07-10T12:00:00Z"),
+		groups: [piGroup],
+		totalTokens: piGroup.totalTokens,
+	};
+	const view = new InjectionsView(createTheme(), { snapshot }, () => {}, () => 24);
+	const lines = view.render(100).map(stripSgr);
+	const row = lines.find((line) => line.includes("basename.ts"));
+	assert.ok(row !== undefined);
+	assert.match(row, /…/);
+	assert.match(row, /\.+\s+10\s*$/);
 });
 
 test("InjectionsView reflows on height-only resize and bounds very short output", () => {

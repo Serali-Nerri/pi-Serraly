@@ -1,13 +1,20 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import type { InitialSnapshot, InjectionItem } from "../src/model.ts";
-import { buildInjectionRows, collectItemsById, ListNavigator, PreviewScroller } from "../src/ui/injections-model.ts";
+import type { InjectionItem, RequestSnapshot } from "../src/model.ts";
+import {
+	buildInjectionRows,
+	changedLines,
+	collectItemsById,
+	countChangedLines,
+	ListNavigator,
+	PreviewScroller,
+} from "../src/ui/injections-model.ts";
 
 function item(id: string, sourceId: string, native: boolean, tokens: number): InjectionItem {
 	return {
 		id,
-		phase: "initial",
+		phase: "request",
 		kind: "message",
 		source: { id: sourceId, label: sourceId, native },
 		label: id,
@@ -17,12 +24,16 @@ function item(id: string, sourceId: string, native: boolean, tokens: number): In
 	};
 }
 
-function snapshot(): InitialSnapshot {
+function snapshot(): RequestSnapshot {
 	const builtinTools: InjectionItem = {
 		...item("tool:builtin", "pi", true, 60),
 		children: [item("tool:builtin:bash", "pi", true, 40), item("tool:builtin:read", "pi", true, 20)],
 	};
-	const piItems = [item("base-prompt", "pi", true, 100), builtinTools, item("skills", "pi", true, 40)];
+	const basePrompt: InjectionItem = {
+		...item("base-prompt", "pi", true, 100),
+		change: { kind: "modified", before: "keep\nold\ntail", after: "keep\nnew\ntail" },
+	};
+	const piItems = [basePrompt, builtinTools, item("skills", "pi", true, 40)];
 	const extensionItems = [item("web_search", "npm:web", false, 30)];
 	return {
 		origin: "session-estimate",
@@ -35,7 +46,7 @@ function snapshot(): InitialSnapshot {
 	};
 }
 
-test("buildInjectionRows flattens groups and separates the Initial total", () => {
+test("buildInjectionRows flattens groups and leaves the total to the view", () => {
 	const rows = buildInjectionRows(snapshot());
 
 	assert.deepEqual(
@@ -49,15 +60,15 @@ test("buildInjectionRows flattens groups and separates the Initial total", () =>
 			["item", "skills", 1],
 			["group", "npm:web", 0],
 			["item", "web_search", 1],
-			["separator", "", 0],
-			["total", "TOTAL", 0],
 		],
 	);
+	assert.ok(!rows.some((row) => row.kind === "total" || row.kind === "separator"));
 	const basePromptRow = rows[1];
 	assert.equal(basePromptRow?.kind, "item");
 	if (basePromptRow?.kind === "item") {
 		assert.equal(basePromptRow.itemId, "base-prompt");
 		assert.equal(basePromptRow.isLast, false);
+		assert.deepEqual(basePromptRow.change, { added: 1, removed: 1 });
 	}
 	const firstToolChild = rows[3];
 	assert.equal(firstToolChild?.kind, "item");
@@ -74,7 +85,6 @@ test("buildInjectionRows flattens groups and separates the Initial total", () =>
 	const finalPiItem = rows[5];
 	assert.equal(finalPiItem?.kind, "item");
 	if (finalPiItem?.kind === "item") assert.equal(finalPiItem.isLast, true);
-	assert.equal(rows.at(-1)?.tokens, 230);
 });
 
 test("collectItemsById indexes every snapshot item including children", () => {
@@ -85,6 +95,17 @@ test("collectItemsById indexes every snapshot item including children", () => {
 		["base-prompt", "skills", "tool:builtin", "tool:builtin:bash", "tool:builtin:read", "web_search"],
 	);
 	assert.equal(items.get("tool:builtin:read")?.tokens, 20);
+});
+
+test("changedLines trims the common prefix and suffix to the changed middle", () => {
+	assert.deepEqual(changedLines({ kind: "modified", before: "keep\nold\ntail", after: "keep\nnew\ntail" }), {
+		removed: ["old"],
+		added: ["new"],
+	});
+	assert.deepEqual(changedLines({ kind: "removed", before: "gone", after: "" }), { removed: ["gone"], added: [] });
+	assert.deepEqual(changedLines({ kind: "added", before: "", after: "fresh" }), { removed: [], added: ["fresh"] });
+	assert.deepEqual(countChangedLines({ kind: "modified", before: "a", after: "b" }), { added: 1, removed: 1 });
+	assert.equal(countChangedLines(undefined), undefined);
 });
 
 test("PreviewScroller clamps scrolling to the wrapped extent", () => {

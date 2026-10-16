@@ -8,7 +8,7 @@ import {
 	DEFAULT_CATEGORY_COLORS,
 	FREE_SPACE_CATEGORY_ID,
 } from "../src/config.ts";
-import type { InitialSnapshot, InjectionItem, UsageCategory } from "../src/model.ts";
+import type { RequestSnapshot, InjectionItem, UsageCategory } from "../src/model.ts";
 import { collectPreviewEntries, computeUsage, toReportedUsage } from "../src/usage.ts";
 
 /** Minimal measured item fixture. */
@@ -21,7 +21,7 @@ function item(
 ): InjectionItem {
 	return {
 		id,
-		phase: "initial",
+		phase: "request",
 		kind,
 		source: { id: native ? "pi" : "npm:test", label: native ? "pi" : "npm:test", native },
 		label: id,
@@ -32,8 +32,8 @@ function item(
 	};
 }
 
-/** Frozen Initial fixture covering every prompt/tool category. */
-function snapshot(): InitialSnapshot {
+/** Latest-request fixture covering every prompt/tool category. */
+function snapshot(): RequestSnapshot {
 	const builtins = [item("read", "tool", 3), item("bash", "tool", 5)];
 	const skills = [item("code-style", "skills", 2), item("typescript-code", "skills", 4)];
 	const contextFiles = [item("agents", "context-file", 2), item("global-agents", "context-file", 4)];
@@ -140,7 +140,7 @@ function findCategory(categories: readonly UsageCategory[], id: string): UsageCa
 	return undefined;
 }
 
-test("computeUsage classifies Initial components and live session messages without double-counting", () => {
+test("computeUsage classifies latest-request components and live session messages without double-counting", () => {
 	const usage = computeUsage({
 		snapshot: snapshot(),
 		messages: sessionMessages(),
@@ -213,33 +213,31 @@ test("computeUsage produces exactly the top-level categories that carry a config
 	assert.deepEqual(usage.categories.map((entry) => entry.id).sort(), configuredIds);
 });
 
-test("computeUsage includes frozen request-only messages without recounting session-backed injections", () => {
-	const initial = snapshot();
-	const requestOnly = {
-		...item("request-user", "message", 8, false),
+test("computeUsage counts a captured system patch once, not through the session it replaces", () => {
+	const base = snapshot();
+	const text = "12345678";
+	const patch: InjectionItem = {
+		...item("message:added:system:0", "message", 2, false),
 		source: { id: "aggregate:extensions", label: "unattributed", native: false },
-		label: "user message",
-		text: "request-only content",
+		label: "system message",
+		text,
 		requestOnly: true,
-	} satisfies InjectionItem;
+		systemMessage: { message: { role: "system", content: text, timestamp: 1 }, index: 0 },
+	};
 	const requestGroup = {
-		source: requestOnly.source,
-		items: [requestOnly],
-		totalTokens: requestOnly.tokens,
+		source: patch.source,
+		items: [patch],
+		totalTokens: patch.tokens,
 	};
 	const usage = computeUsage({
-		snapshot: {
-			...initial,
-			groups: [...initial.groups, requestGroup],
-			totalTokens: initial.totalTokens + requestOnly.tokens,
-		},
-		messages: [],
+		snapshot: { ...base, groups: [...base.groups, requestGroup], totalTokens: base.totalTokens + patch.tokens },
+		messages: [{ role: "system", content: text, timestamp: 1 }],
 	});
 
 	const extensions = category(usage.categories, "extensions");
-	assert.equal(extensions.tokens, 17);
-	assert.deepEqual(extensions.children?.map((entry) => entry.label), ["npm:test", "unattributed"]);
-	assert.ok(collectPreviewEntries(extensions).some((entry) => entry.text === "request-only content"));
+	assert.equal(extensions.tokens, 11);
+	assert.deepEqual(extensions.children?.map((entry) => entry.label), ["npm:test", "system"]);
+	assert.ok(collectPreviewEntries(extensions).some((entry) => entry.text === text));
 });
 
 test("computeUsage carries measured tool parts into tool preview entries", () => {
@@ -438,7 +436,7 @@ test("computeUsage builds per-block preview entries with timestamps and breadcru
 
 	const bashEntries = category(usage.categories, "bash-executions").entries ?? [];
 	assert.deepEqual(bashEntries.map((entry) => [entry.timestamp, [...entry.breadcrumb], entry.text]), [
-		[30, ["bash"], "$ ls\nout"],
+		[30, ["bash"], "Ran `ls`\n```\nout\n```"],
 	]);
 
 	// Snapshot-backed categories carry timeless content entries.

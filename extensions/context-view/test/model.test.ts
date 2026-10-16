@@ -14,7 +14,7 @@ function item(
 ): InjectionItem {
 	return {
 		id,
-		phase: "initial",
+		phase: "request",
 		kind,
 		source: { id: sourceId, label: sourceLabel, native },
 		label: id,
@@ -72,7 +72,7 @@ test("buildSnapshot owns nested input data and computes the total", () => {
 	const sections = [{ label: "Definition", text: "hello world!", tokens: 3 }];
 	const input: InjectionItem = {
 		id: "message:test:0",
-		phase: "initial",
+		phase: "request",
 		kind: "message",
 		source,
 		label: "message",

@@ -8,20 +8,21 @@ import { type ContextEvent, type ContextUsage, convertToLlm, estimateTokens } fr
 import {
 	BUILT_IN_TOOLS_LABEL,
 	type ContextUsageSnapshot,
+	type InjectionItem,
 	INSTRUCTION_FILES_LABEL,
 	type InvisibleReasoningEstimate,
-	type InitialSnapshot,
-	type InjectionItem,
 	type ReportedContextUsage,
+	type RequestSnapshot,
 	SKILLS_LABEL,
 	SYSTEM_PROMPT_LABEL,
 	type UsageCategory,
 	type UsagePreviewEntry,
 } from "./model.ts";
+import { messageContentText, systemMessageText } from "./transcript.ts";
 
-/** Everything computeUsage needs; messages describe the current session branch. */
+/** Everything computeUsage needs; messages are the ones the snapshot describes. */
 export interface UsageInputs {
-	snapshot: InitialSnapshot;
+	snapshot: RequestSnapshot;
 	messages: ContextEvent["messages"];
 	reported?: ReportedContextUsage;
 	modelLabel?: string;
@@ -32,16 +33,18 @@ export interface UsageInputs {
 
 /**
  * Estimate the current/next-request context composition. Prompt and tool
- * categories come from the caller's current-state snapshot; message categories are
- * classified from the live session context. System messages have already been
- * replayed into that snapshot and must not count again. Empty categories are dropped and
- * every aggregate equals the exact sum of its children.
+ * categories come from the caller's snapshot; message categories are classified
+ * from the messages that snapshot describes. When the snapshot is a captured
+ * request, those messages are the request's own and replaced or removed session
+ * messages are not classified; system messages have already been replayed into a
+ * session-estimate snapshot and must not count again. Empty categories are dropped
+ * and every aggregate equals the exact sum of its children.
  */
 export function computeUsage(inputs: UsageInputs): ContextUsageSnapshot {
 	const prompt = classifyPromptCategories(inputs.snapshot);
 	const categories = [
 		...prompt.categories,
-		...classifyMessages(inputs.messages, requestOnlyMessages(inputs.snapshot), prompt.promptAdditions),
+		...classifyMessages(inputs.messages, requestOnlySystemIndices(inputs.snapshot), prompt.promptAdditions),
 	].filter((category) => category.tokens > 0);
 	return {
 		computedAt: inputs.computedAt ?? new Date(),
@@ -89,7 +92,7 @@ interface PromptCategories {
 }
 
 /** Map frozen snapshot items to prompt/tool/instruction/skill categories. */
-function classifyPromptCategories(snapshot: InitialSnapshot): PromptCategories {
+function classifyPromptCategories(snapshot: RequestSnapshot): PromptCategories {
 	const systemPrompt: UsageCategory[] = [];
 	const promptAdditions: UsageCategory[] = [];
 	const builtInTools: UsageCategory[] = [];
@@ -120,7 +123,7 @@ function classifyPromptCategories(snapshot: InitialSnapshot): PromptCategories {
 					skills.push(...breakdownFromItem(item));
 					break;
 				case "message":
-					// Initial custom messages live in the session; classifyMessages counts them.
+					// Snapshot message items are replayed through the messages list below.
 					break;
 			}
 		}
@@ -145,17 +148,23 @@ function isMcpTool(item: InjectionItem): boolean {
 	return /(^|[^a-z])mcp([^a-z]|$)/i.test(`${item.source.id} ${item.source.label}`);
 }
 
-/** Collect frozen messages that existed only in the captured outgoing request. */
-function requestOnlyMessages(snapshot: InitialSnapshot): InjectionItem[] {
-	return snapshot.groups.flatMap((group) =>
-		group.items.filter((item) => item.kind === "message" && item.requestOnly === true && item.systemMessage === undefined)
-	);
+/** Positions of captured system patches the replay could not cover, in request order. */
+function requestOnlySystemIndices(snapshot: RequestSnapshot): ReadonlySet<number> {
+	const indices = new Set<number>();
+	for (const group of snapshot.groups) {
+		for (const item of group.items) {
+			if (item.kind === "message" && item.requestOnly === true && item.systemMessage !== undefined) {
+				indices.add(item.systemMessage.index);
+			}
+		}
+	}
+	return indices;
 }
 
-/** Classify live session messages and frozen request-only injections with preview entries. */
+/** Classify the snapshot's messages with preview entries. */
 function classifyMessages(
 	messages: ContextEvent["messages"],
-	requestOnly: readonly InjectionItem[],
+	requestOnlySystem: ReadonlySet<number>,
 	promptAdditions: readonly UsageCategory[],
 ): UsageCategory[] {
 	const user: UsagePreviewEntry[] = [];
@@ -167,18 +176,17 @@ function classifyMessages(
 	const toolResults = new Map<string, UsagePreviewEntry[]>();
 	const customMessages = new Map<string, UsagePreviewEntry[]>();
 
-	for (const item of requestOnly) {
-		appendEntry(customMessages, item.source.label, {
-			breadcrumb: [item.label],
-			tokens: item.tokens,
-			text: item.text,
-			jsonSpan: item.jsonSpan,
-		});
-	}
-	for (const message of messages) {
+	for (const [index, message] of messages.entries()) {
 		switch (message.role) {
 			case "system":
-				// Sections and tool deltas already contribute through the replayed snapshot.
+				// A captured request-only patch was not in the session replay, so count it here.
+				if (requestOnlySystem.has(index)) {
+					appendEntry(customMessages, "system", {
+						breadcrumb: ["system"],
+						tokens: estimateTokens(message),
+						text: systemMessageText(message),
+					});
+				}
 				break;
 			case "user":
 				user.push({
@@ -230,7 +238,7 @@ function classifyMessages(
 						timestamp: message.timestamp,
 						breadcrumb: ["bash"],
 						tokens,
-						text: `$ ${message.command}\n${message.output}`,
+						text: messageContentText(message),
 					});
 				}
 				break;
