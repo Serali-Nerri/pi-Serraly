@@ -62,7 +62,7 @@ import { LazyModule, SynchronousActivationCloseFence } from './core/lazy-module.
 const STATUS_INTERVAL_MS = 1000;
 const COMMAND_PREVIEW_CHARS = 90;
 export const BG_RUN_DESCRIPTION =
-  'Start a named long-running shell command in the background; returns immediately with task ID, PID, and output path. Default terminal notification starts a follow-up turn; do not poll or sleep merely to wait. Output is stored in .pi/tasks, with model-visible log reads capped at 50 KiB. Commands run with local permissions, not in a sandbox.';
+  'Start a named long-running shell command in the background; returns immediately with task ID, PID, and output path. Default terminal notification steers a busy agent at the next safe boundary or wakes an idle agent; do not poll or sleep merely to wait. Output is stored in .pi/tasks, with model-visible log reads capped at 50 KiB. Commands run with local permissions, not in a sandbox.';
 
 /** Namespace tool_search lists as a searchable source for the deferred shell tools. */
 const BG_TOOL_NAMESPACE = {
@@ -126,7 +126,7 @@ const BgRunParams = Type.Object(
     triggerOnCompletion: Type.Optional(
       Type.Boolean({
         description:
-          'Automatically start a follow-up agent turn on terminal notification. Default: true; inactive when notifyOnCompletion is false.',
+          'Steer a busy agent or wake an idle agent on terminal notification. Default: true; inactive when notifyOnCompletion is false.',
       }),
     ),
     surviveReload: Type.Optional(
@@ -715,7 +715,7 @@ export default async function backgroundTasksExtension(pi: ExtensionAPI): Promis
         if (parsed.name !== undefined) taskOptions.name = parsed.name;
         const task = await startTask(ctx, parsed.command, taskOptions);
         ctx.ui.notify(
-          `Started ${taskDisplayName(task)} (${task.id}), PID: ${String(task.pid ?? 'unknown')}\nOutput: ${task.outputPath}\nTerminal notification: enabled. Automatic follow-up turn: disabled.`,
+          `Started ${taskDisplayName(task)} (${task.id}), PID: ${String(task.pid ?? 'unknown')}\nOutput: ${task.outputPath}\nTerminal notification: enabled. Automatic steering / wake-up: disabled.`,
           'info',
         );
       } catch (error) {
@@ -875,7 +875,7 @@ export default async function backgroundTasksExtension(pi: ExtensionAPI): Promis
       const task = await startTask(ctx, params.command, taskOptions);
       return {
         content: textContent(
-          `Started background task ${taskDisplayName(task)} (${task.id})\nStatus: ${task.status}\nPID: ${String(task.pid ?? 'unknown')}\nOutput: ${task.outputPath}\nTerminal notification: ${task.notifyOnCompletion ? 'enabled' : 'disabled'}.\nAutomatic follow-up turn: ${task.notifyOnCompletion && task.triggerOnCompletion ? 'enabled' : 'disabled'}.`,
+          `Started background task ${taskDisplayName(task)} (${task.id})\nStatus: ${task.status}\nPID: ${String(task.pid ?? 'unknown')}\nOutput: ${task.outputPath}\nTerminal notification: ${task.notifyOnCompletion ? 'enabled' : 'disabled'}.\nAutomatic steering / wake-up: ${task.notifyOnCompletion && task.triggerOnCompletion ? 'enabled' : 'disabled'}.`,
         ),
         details: { task: registry.snapshot(task) },
       };

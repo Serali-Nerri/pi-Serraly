@@ -26,7 +26,7 @@ Commands: `/bg`, `/jobs`, `/logs`, `/kill`, `/tasks`, `/bg-tasks`, `/bg-clear`.
 /tasks
 ```
 
-`bg_run` defaults to notification **and** automatic follow-up; `/bg` defaults to notification without follow-up. After a tool launch, do independent work or end the turn—do not sleep/poll just to wait. With notification disabled, the trigger flag has no effect. See [completion delivery](docs/concepts/completion-delivery.md).
+`bg_run` defaults to notification **and** automatic continuation: completion steers a busy agent at the next safe boundary or wakes an idle agent. `/bg` defaults to display-only notification without waking the agent. After a tool launch, do independent work or end the turn—do not sleep/poll just to wait. With notification disabled, the trigger flag has no effect. See [completion delivery](docs/concepts/completion-delivery.md).
 
 The TUI task dock supports fullscreen (Pi's default) and explicit regular mode (`"tuiMode": "regular"` or `--tui-mode regular`). It is a **centered floating panel**, using the full allocated width without a 118-column cap and adapting its height up to 80% of the terminal with a one-cell margin. Wide layouts pair a task sidebar with the selected task's log preview; narrow layouts start with the list, then Enter opens logs. `f` selects a log-only view; `i` toggles scrollable full task info, with compact metadata otherwise. The focused overlay captures keyboard input while background processes continue; it is not an always-on passive panel.
 

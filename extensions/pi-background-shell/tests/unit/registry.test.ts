@@ -2155,7 +2155,7 @@ void describe('BackgroundTaskRegistry', () => {
       assert.match(notification.message.content, /<status>failed<\/status>/);
       assert.match(notification.message.content, /<output-file>/);
       assert.doesNotMatch(notification.message.content, /<guidance>|Next action|Do not call/);
-      assert.deepEqual(notification.options, { deliverAs: 'followUp', triggerTurn: true });
+      assert.deepEqual(notification.options, { deliverAs: 'steer', triggerTurn: true });
 
       const capped = await h.registry.startTask(h.ctx, 'node noisy.js', {
         name: 'Output Race',

@@ -159,7 +159,7 @@ export interface CompletionNotificationMessage {
 }
 
 export interface CompletionNotificationOptions {
-  deliverAs: 'followUp';
+  deliverAs: 'steer';
   triggerTurn: boolean;
 }
 
@@ -2283,7 +2283,7 @@ export class BackgroundTaskRegistry {
           display: true,
           details: snapshot(task),
         },
-        { deliverAs: 'followUp', triggerTurn: task.triggerOnCompletion },
+        { deliverAs: 'steer', triggerTurn: task.triggerOnCompletion },
       );
     } catch (error) {
       task.notified = false;

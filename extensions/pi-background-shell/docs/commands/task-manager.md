@@ -16,7 +16,7 @@ The task manager opens a centered floating panel using the full allocated width 
 
 The dock requires interactive TUI mode. RPC/print/non-UI callers get a message directing them to `/jobs`, `/logs`, `bg_status`, or `bg_logs`; no custom UI is opened. The task manager module is loaded lazily on dock use. While open, the focused overlay captures keyboard input and background processes continue; it is not a passive always-on panel.
 
-Opening a finished task's logs or full info explicitly acknowledges that task's notice. Merely opening the list, selecting a task or seeing its wide log preview does not. Stop-all requires confirmation. Rerun starts a **new** execution, retaining reload opt-in but using current shell configuration, with notification on and automatic follow-up off. `c`/`C` displays the output path; it does not copy it.
+Opening a finished task's logs or full info explicitly acknowledges that task's notice. Merely opening the list, selecting a task or seeing its wide log preview does not. Stop-all requires confirmation. Rerun starts a **new** execution, retaining reload opt-in but using current shell configuration, with notification on and automatic steering/wake-up off. `c`/`C` displays the output path; it does not copy it.
 
 Logs soft-wrap by default; `w` toggles no-wrap mode with Shift+Left/Right horizontal pan, `0` to reset and `$` to reach the last column. The UI is a bounded **128 KiB recent tail**, refreshed once per second while following, not full-file history. Scrolling up freezes the reservoir; reaching the bottom or `r`/`G` resumes follow. Resizing and wrap toggles preserve the paused source-log-line anchor. The **50 KiB tool/model log cap** and process runtime/reload mechanism are unchanged.
 

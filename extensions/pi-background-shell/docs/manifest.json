@@ -62,7 +62,7 @@
         "id": "tool:bg_run",
         "name": "bg_run",
         "label": "Background Run",
-        "description": "Start a named long-running shell command in the background; returns immediately with task ID, PID, and output path. Default terminal notification starts a follow-up turn; do not poll or sleep merely to wait. Output is stored in .pi/tasks, with model-visible log reads capped at 50 KiB. Commands run with local permissions, not in a sandbox.",
+        "description": "Start a named long-running shell command in the background; returns immediately with task ID, PID, and output path. Default terminal notification steers a busy agent at the next safe boundary or wakes an idle agent; do not poll or sleep merely to wait. Output is stored in .pi/tasks, with model-visible log reads capped at 50 KiB. Commands run with local permissions, not in a sandbox.",
         "description_suffix": "BG_RUN_DESCRIPTION + shellPolicyDescription(shellPolicy): append the activation-selected executable, argv and command syntax; never extract a local shell path or execute extension code.",
         "parameters": {
           "type": "object",
@@ -91,7 +91,7 @@
             },
             "triggerOnCompletion": {
               "type": "boolean",
-              "description": "Automatically start a follow-up agent turn on terminal notification. Default: true; inactive when notifyOnCompletion is false."
+              "description": "Steer a busy agent or wake an idle agent on terminal notification. Default: true; inactive when notifyOnCompletion is false."
             },
             "surviveReload": {
               "type": "boolean",
@@ -339,7 +339,7 @@
     {
       "path": "src/core/registry.ts",
       "owner": "docs/subsystems/background-task-runtime.md",
-      "sha256": "d2b25a61149fec37e4946e3fe72b409c102cb9f3ca3f1ea539c5fdc4ae58fbc9"
+      "sha256": "46c45d6d63104cf21ee09ef622af06d2c2c4443ae6b5b13686bed9d9fa1c8995"
     },
     {
       "path": "src/core/reload-shell-owner.ts",
@@ -364,7 +364,7 @@
     {
       "path": "src/extension.ts",
       "owner": "docs/subsystems/extension-lifecycle.md",
-      "sha256": "c9f93008a9329ca7ca2a11c1dc56eecfe5afc31abd196b86567c0657a541ac05"
+      "sha256": "04a044c87a3259f8bb7c56cb851b63e8fb8d0b1172a2c0f404ffaee8f979368b"
     },
     {
       "path": "src/ui/background-tasks-manager.ts",
@@ -385,7 +385,7 @@
   "authored_docs": [
     {
       "path": "docs/api/eventbus-v2.md",
-      "sha256": "3c70cca5569a24bb1509d3785d3d5ce8a5e34871d3c26a3e7c4169007fcac30a"
+      "sha256": "9c9806db0a055666d5ba6319922e5ae21c21fac41cf29d9813b41acff1948265"
     },
     {
       "path": "docs/commands/bg-clear.md",
@@ -393,7 +393,7 @@
     },
     {
       "path": "docs/commands/bg.md",
-      "sha256": "22036c2f706641314435a602aeb0874700d40e0fadcb5bfcfa5de91266d4196a"
+      "sha256": "185c4de362fa0bfbc55c32a8e85e136fb9f3e51051cdcbf3edbe80dbd03ec8ec"
     },
     {
       "path": "docs/commands/jobs.md",
@@ -409,15 +409,15 @@
     },
     {
       "path": "docs/commands/task-manager.md",
-      "sha256": "03a51ba0c345a2f436c917e930288b4521e7ef335780a693c7026933453b02e0"
+      "sha256": "79d7fada0ade0aef023bdcba6dae675ab77a2665b4500665a5c9338005fe11ff"
     },
     {
       "path": "docs/concepts/completion-delivery.md",
-      "sha256": "ffa8a1a9f346982defb00016396571265ee8b2edb534215b9e94a8856078cbd1"
+      "sha256": "c4bcd85e8d5c4c75bcc65f1e0ddcbc81b09cba7e8076b3c5ef8ec3bcc6732b47"
     },
     {
       "path": "docs/getting-started.md",
-      "sha256": "1d0dd74c0f619207d5746b05be938191f552362e6563dc152fec0187d97b1db1"
+      "sha256": "b8c3e04f18a3443ced82686c025a8524e8beb1319c218cd0db0c67e4dc04991a"
     },
     {
       "path": "docs/operations/configuration.md",
@@ -437,15 +437,15 @@
     },
     {
       "path": "docs/subsystems/extension-lifecycle.md",
-      "sha256": "78615f018ff2b3b96fb4b2d4f1f3704a408d3fa4647a1562421378a60a439a46"
+      "sha256": "27bab90e21e1518ea41b419ab8e2e20e7d5c604b831243d950335663a6d3709a"
     },
     {
       "path": "README.md",
-      "sha256": "90a1dfb1aedff036e3f8439f1c73e20e5991699faf8552488ba9f43b65c073b5"
+      "sha256": "7f4ce953e6f986532fca336c1ab08b2b1d148fbf17e403eba3b29b24239dbcd3"
     },
     {
       "path": "TESTING.md",
-      "sha256": "e372931486d4b9c71050e66a4d37f3995c8c2355e406c15f118f056721ba94db"
+      "sha256": "a2f9ef821c10bf444ea03137a7295337aca60774c8c7e0fbeaa1cccbaba79efc"
     },
     {
       "path": "UPSTREAM.md",

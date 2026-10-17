@@ -29,6 +29,7 @@ const DEFAULT_USAGE = {
 
 type Scenario =
   | 'bg-run-follow-up'
+  | 'busy-completion'
   | 'notify-false'
   | 'wake-false'
   | 'failed-follow-up'
@@ -49,6 +50,7 @@ type ScriptedBlock = TextContent | ScriptedToolCall;
 function parseScenario(value: string | undefined): Scenario {
   if (
     value === 'bg-run-follow-up' ||
+    value === 'busy-completion' ||
     value === 'notify-false' ||
     value === 'wake-false' ||
     value === 'failed-follow-up' ||
@@ -148,7 +150,7 @@ function inspectEventDrivenContract(context: TranscriptContext): EventDrivenCont
       toolDescription('bg_logs').includes('not a waiting primitive'),
     launchReceipt:
       bgRunResult?.includes('Terminal notification: enabled.') === true &&
-      bgRunResult.includes('Automatic follow-up turn: enabled.'),
+      bgRunResult.includes('Automatic steering / wake-up: enabled.'),
     launchSucceeded: bgRunResult?.includes('Started background task') === true,
   };
 }
@@ -158,6 +160,31 @@ function responseFor(
   callCount: number,
   contract: EventDrivenContractCheck,
 ): ScriptedAssistantMessage {
+  if (scenario === 'busy-completion') {
+    if (callCount === 1) {
+      return assistant(
+        [toolCall('bg_run', {
+          name: 'Busy Scripted',
+          command: shellNode(
+            "const fs = require('node:fs'); const timer = setInterval(() => { if (fs.existsSync('busy-task-release')) { clearInterval(timer); console.log('busy task done'); } }, 10); setTimeout(() => process.exit(1), 10000).unref();",
+          ),
+        }, 'call-bg-run-busy')],
+        'toolUse',
+      );
+    }
+    if (callCount === 2) {
+      return assistant(
+        [toolCall('bg_run', {
+          name: 'Independent Work',
+          command: shellNode("console.log('independent work done');"),
+          notifyOnCompletion: false,
+        }, 'call-bg-run-independent')],
+        'toolUse',
+      );
+    }
+    return assistant([text('Independent work finished.')], 'stop');
+  }
+
   if (scenario === 'bg-run-follow-up') {
     if (callCount === 1) {
       return assistant(

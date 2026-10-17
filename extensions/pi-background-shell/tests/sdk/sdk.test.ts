@@ -516,7 +516,7 @@ void describe('sdk', () => {
           expectedTrigger: true,
           expected: [
             'Terminal notification: enabled.',
-            'Automatic follow-up turn: enabled.',
+            'Automatic steering / wake-up: enabled.',
           ],
         },
         {
@@ -527,7 +527,7 @@ void describe('sdk', () => {
           expectedTrigger: false,
           expected: [
             'Terminal notification: enabled.',
-            'Automatic follow-up turn: disabled.',
+            'Automatic steering / wake-up: disabled.',
           ],
         },
         {
@@ -538,7 +538,7 @@ void describe('sdk', () => {
           expectedTrigger: true,
           expected: [
             'Terminal notification: disabled.',
-            'Automatic follow-up turn: disabled.',
+            'Automatic steering / wake-up: disabled.',
           ],
         },
         {
@@ -549,7 +549,7 @@ void describe('sdk', () => {
           expectedTrigger: false,
           expected: [
             'Terminal notification: disabled.',
-            'Automatic follow-up turn: disabled.',
+            'Automatic steering / wake-up: disabled.',
           ],
         },
       ] as const;

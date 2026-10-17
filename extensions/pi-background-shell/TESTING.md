@@ -78,7 +78,7 @@ library declarations.
   actual shell description/spawn-policy parity; no system-prompt hook.
 - Exit/spawn failure, timeouts/output overflow, bounded head/tail reads,
   unknown/ambiguous IDs, kill-after-end failures and uninterpreted stdout/stderr.
-- Notification/trigger combinations, response-before-terminal ordering,
+- Busy-agent completion steering, idle-agent wakeup, notification/trigger combinations, response-before-terminal ordering,
   close-before-publication, deduplication and bounded delivery retries.
 - Start/shutdown races, repeated cleanup, session replacement/removal, default
   kill-on-reload and opt-in same-child handoff with unchanged PID, timeout and

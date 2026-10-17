@@ -13,7 +13,7 @@
 
 `--name=<name>` and `-n=<name>` are accepted; quoted names are parsed before the remaining bytes become shell command text. An omitted name is derived from the command. Empty commands and missing/unterminated names fail. Only one bare `--survive-reload` is accepted; duplicate or assignment forms fail.
 
-Returns a task ID and output path after spawning. Notification defaults on; automatic follow-up defaults off. Reload survival defaults off.
+Returns a task ID and output path after spawning. Notification defaults on; automatic steering/wake-up defaults off. Reload survival defaults off.
 
 ```text
 /bg --name "Build" npm run build

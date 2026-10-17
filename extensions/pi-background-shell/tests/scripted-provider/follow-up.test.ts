@@ -1,6 +1,6 @@
 import { describe, it, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -21,6 +21,7 @@ const roots: string[] = [];
 
 type Scenario =
   | 'bg-run-follow-up'
+  | 'busy-completion'
   | 'notify-false'
   | 'wake-false'
   | 'failed-follow-up'
@@ -234,7 +235,53 @@ async function disposeHarness(h: Awaited<ReturnType<typeof harness>>) {
   }
 }
 
-void describe('scripted-provider completion follow-up behavior', { concurrency: false }, () => {
+void describe('scripted-provider completion delivery', { concurrency: false }, () => {
+  void it(
+    'delivers bg_run completion before the next model request while independent work is still pending',
+    { timeout: 15_000 },
+    async () => {
+      const h = await harness('busy-completion');
+      let releaseResponse: () => void = () => {};
+      const responseGate = new Promise<void>((resolve) => { releaseResponse = resolve; });
+      const stream = h.session.agent.streamFunction;
+      let requests = 0;
+      h.session.agent.streamFunction = async (...args) => {
+        const response = stream(...args);
+        // Hold a model response that requests more useful work, not a waiting/polling tool.
+        if (++requests === 2) await responseGate;
+        return response;
+      };
+      const running = h.session.prompt('Start a background task and continue independent work.');
+      try {
+        await waitFor(
+          async () => (await providerEvents(h.eventsPath)).length === 2,
+          'in-flight independent-work response',
+        );
+        // Finish the real child only after the model has started its next response.
+        await writeFile(join(h.cwd, 'busy-task-release'), '');
+        await waitFor(() => h.session.agent.hasQueuedMessages(), 'queued task completion');
+        releaseResponse();
+        await running;
+        await h.session.agent.waitForIdle();
+
+        const events = await providerEvents(h.eventsPath);
+        const nextRequest = requiredAt(events, 2, 'next model request should be recorded');
+        assert.match(
+          (nextRequest.summaries ?? []).join('\n'),
+          /<task-name>Busy Scripted<\/task-name>/,
+          'completion must reach the model before it finishes all pending work',
+        );
+        assert.equal(customNotifications(h.session).length, 1);
+        assert.deepEqual(assistantToolNames(h.session), ['bg_run', 'bg_run']);
+      } finally {
+        releaseResponse();
+        await h.session.abort();
+        await running.catch(() => undefined);
+        await disposeHarness(h);
+      }
+    },
+  );
+
   void it(
     'description-only bg_run yields without polling and its completion event triggers one real follow-up turn',
     { timeout: 15_000 },
