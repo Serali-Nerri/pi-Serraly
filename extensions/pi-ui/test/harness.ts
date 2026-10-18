@@ -95,7 +95,13 @@ export async function harness(options: HarnessOptions = {}) {
 		registerTool(tool: any) { registered.push(tool); },
 		registerCommand(name: string, command: any) { commands.set(name, command); },
 		registerMarkdownTransformer() {},
-		appendEntry(customType: string, data: any) { entries.push({ type: "custom", customType, data }); },
+		appendEntry(customType: string, data: any) {
+			const entry = { type: "custom" as const, id: `entry-${entries.length}`, parentId: null,
+				timestamp: new Date().toISOString(), customType, data };
+			entries.push(entry);
+			const component = runner.getEntryRenderer(customType)?.(entry, { expanded: false }, theme);
+			if (component) root.addChild(component);
+		},
 		setActiveTools() { mutations.push("activeTools"); },
 		getAllTools: () => [...toolMetadata.values()],
 		getCommands: () => [...commands.keys()].map((name) => ({ name })),

@@ -370,7 +370,8 @@ async function contextTools(h) {
 		await h.session.prompt("/context tools"); assert.match(plain(), /Not yet observed/);
 		await h.session.prompt("/context injections"); assert.match(plain(), /Not captured.*Session estimate/s);
 		assert.equal(toolState.requests, requests); assert.equal(toolState.executions, 1);
-		assert.equal(entries.filter((entry) => entry.type === "custom").length, 0);
+		assert.deepEqual(h.session.sessionManager.getEntries(), entries,
+			"reloading and opening diagnostics do not append session data");
 	} finally { ui.dispose(); }
 }
 

@@ -29,12 +29,36 @@ other jobs from running. Shutdown stops scheduling before resources are released
 | Directory | Responsibility |
 | --- | --- |
 | `compat/` | Private host fields, prototype capability checks, source-aware renderer policy, ownership, grouping/compact/message/mouse integration |
-| `state/` | Billing/context snapshots, recorded Work Summary observations and Thinking timing/persistence controller |
+| `state/` | Billing/context snapshots, recorded Work Summary observations, Thinking timing and activity timing/persistence |
 | `shell/` | Footer view, captured host identity/liveness, statuses, bounded Git/runtime queries and generation guards |
 | `transcript/` | Thinking and tool/file/diff/Input-Output views over captured data |
 | `overlays/` | Text-preview dialogs, hover/TUI state |
 | `markdown/` | One display-only transformer; native Mermaid/ordinary URLs plus narrow CJK-punctuation URL-boundary compatibility |
 | `config/` | Thirteen effective settings, atomic explicit saves and four-page Style/Files/Thinking/UI panel |
+
+## Activity completion
+
+The lifecycle owns the main-agent completion recorder independently of compact
+Work Groups and compatibility patches. The first `agent_start` begins an activity;
+repeated starts before `agent_settled` preserve that clock. Explicit blocking UI
+prompts pause elapsed work, including overlapping prompts. Only `agent_settled`
+freezes the result and appends one `pi-ui-activity-completion` custom entry with
+`{ durationMs, completedAt }`. Intermediate agent/turn ends do not record
+completion, and background agents do not extend the main activity clock.
+Session replacement, tree navigation, reload and shutdown discard unfinished
+timing rather than inventing a completion.
+
+The public `registerEntryRenderer` renders this metadata as a muted, width-bounded
+single line after the activity's final content: `2m 18s · 14:32:08`, with a local
+time and a date for records not from today. It adds no labels, status or outcome
+interpretation, including when the user stops the activity.
+This uses native entry placement and branch replay,
+not an assistant-message patch or a custom model-facing message. Saved sessions
+retain the records across processes; missing historical timings stay absent.
+The host's branch/compaction projection controls visible history: timings for
+compacted-away content remain saved but are not restored as orphaned lines.
+Only TUI sessions create records. Print/JSON/RPC stay untouched; style mode and
+compatibility preflight do not gate this feature.
 
 ## Compatibility pipeline
 

@@ -13,6 +13,7 @@ import { mountedTranscriptChanged, mountedTranscriptIdentity, refreshMountedTran
 import { bindUiScheduler, UiScheduler } from "./scheduler.ts";
 import { patchRegistry, UI_LIFECYCLE_OWNER } from "./compat/patch-keys.ts";
 import { observeToolActivityEvent, resetToolActivity } from "./transcript/tool/result.ts";
+import { installActivityCompletion } from "./state/activity-completion.ts";
 
 const OWNER = UI_LIFECYCLE_OWNER;
 const BRIDGE = "pi-ui-bridge";
@@ -39,6 +40,7 @@ function createEventRouter() {
 
 export function registerUiLifecycle(pi: ExtensionAPI): void {
 	const router = createEventRouter();
+	const completion = installActivityCompletion(pi, router.events);
 	const scheduler = new UiScheduler();
 	const thinking = installCompactThinking(pi, getCompactThinkingConfig(), {
 		events: router.events, scheduler, getTui: () => getToolMouseTui() as TUI | undefined,
@@ -85,6 +87,7 @@ export function registerUiLifecycle(pi: ExtensionAPI): void {
 		typeof value === "object" && value !== null && typeof (value as { dispose?: unknown }).dispose === "function";
 
 	function dispose(): void {
+		completion.reset();
 		if (!active || !ctx) return;
 		const previous = ctx;
 		const tui = getToolMouseTui();
