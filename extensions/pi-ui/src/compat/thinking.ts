@@ -1,11 +1,11 @@
 // Adapted from pi-cc-extensions v0.8.69; see THIRD_PARTY_NOTICES.md.
-// Pi 1.3.0: decorate hidden thinking runs, never fork the host's message renderer.
+// Decorate hidden thinking after the host builds content, eagerly or at paint time.
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import { AssistantMessageComponent } from "@earendil-works/pi-coding-agent";
 import { type Component } from "@earendil-works/pi-tui";
 import { COMPACT_THINKING_PATCH_KEY } from "./patch-keys.ts";
 import { captureMethod, installMethodStep } from "./method-pipeline.ts";
-import { requireReplaceableMethod } from "./host-capabilities.ts";
+import { requireReplaceableMethod, thinkingBuildMethod } from "./host-capabilities.ts";
 
 type Assistant = InstanceType<typeof AssistantMessageComponent>;
 type Internals = {
@@ -30,8 +30,10 @@ export function installThinkingPatch(options: {
 	preview(message: AssistantMessage, run: ThinkingRun): Component;
 }): ThinkingPatch {
 	const prototype = AssistantMessageComponent.prototype;
+	const buildMethod = thinkingBuildMethod();
 	requireReplaceableMethod("AssistantMessageComponent", prototype, "updateContent");
-	const original = captureMethod(prototype, "updateContent") as typeof prototype.updateContent;
+	if (buildMethod !== "updateContent") requireReplaceableMethod("AssistantMessageComponent", prototype, buildMethod);
+	const original = captureMethod(prototype, buildMethod) as typeof prototype.updateContent;
 	let installed = true;
 	let latest: Assistant | undefined;
 	const streaming = new Set<Assistant>();
@@ -83,7 +85,7 @@ export function installThinkingPatch(options: {
 		}
 	};
 	(wrapper as unknown as Record<symbol, unknown>)[COMPACT_THINKING_PATCH_KEY] = true;
-	const step = installMethodStep(prototype, "updateContent", () => wrapper);
+	const step = installMethodStep(prototype, buildMethod, () => wrapper);
 
 	return {
 		refreshActive(message) {

@@ -39,12 +39,15 @@ export function resolveRendererPolicy(componentOrName: any, suppliedDefinition?:
 		({ managed: false, groupable: false, compactable: false, reason });
 	if (config.mode === "off") return native("off");
 	if (config.excludeRenderers.includes(name)) return native("excluded");
+	const nativeName = NATIVE_TOOLS.has(name);
 	let source: ReturnType<ExtensionAPI["getAllTools"]>[number]["sourceInfo"] | undefined;
-	try { source = tools?.().find((tool) => tool.name === name)?.sourceInfo; } catch { /* Unbound or stale context. */ }
-	const builtin = NATIVE_TOOLS.has(name) && source?.source === "builtin" && source.path === `builtin:${name}`;
+	if (nativeName) {
+		try { source = tools?.().find((tool) => tool.name === name)?.sourceInfo; } catch { /* Unbound or stale context. */ }
+	}
+	const builtin = nativeName && source?.source === "builtin" && source.path === `builtin:${name}`;
 	// Public metadata intentionally omits renderers. Until a custom tool component
 	// supplies its definition, compact must not count or suppress that tool.
-	if (!builtin && !definition && (source || !NATIVE_TOOLS.has(name))) return native("dedicated");
+	if (!builtin && !definition && (source || !nativeName)) return native("dedicated");
 	const hasDedicatedRenderer = definition?.renderShell === "self" ||
 		typeof definition?.renderCall === "function" || typeof definition?.renderResult === "function";
 	if (!builtin && hasDedicatedRenderer) return native("dedicated");

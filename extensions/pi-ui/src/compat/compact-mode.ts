@@ -706,12 +706,19 @@ export function installCompactMode(deps: CompactModeInstallDeps): CompactModeHoo
 	};
 
 	const reconcile = (root: unknown): void => {
-		if (!patch.active || config.mode !== "compact") return;
+		if (!patch.active || config.mode !== "compact" || rounds.size === 0) return;
+		// Share discovery across all rounds, scanning each child list only once.
+		// Rebuild on every reconciliation: the host can mutate or replace children directly.
+		const parentsByAnchor = new Map<any, { children: any[] } | undefined>();
+		for (const round of rounds) parentsByAnchor.set(round.anchor, undefined);
+		walkComponentTree(root, (value) => {
+			if (!Array.isArray(value.children)) return;
+			for (const child of value.children) {
+				if (parentsByAnchor.has(child)) parentsByAnchor.set(child, value);
+			}
+		});
 		for (const round of rounds) {
-			let parent: { children: any[] } | undefined;
-			walkComponentTree(root, (value) => {
-				if (Array.isArray(value.children) && value.children.includes(round.anchor)) parent = value;
-			});
+			const parent = parentsByAnchor.get(round.anchor);
 			if (!parent) { unmountSummary(round); continue; }
 			const view = summaryComponent(round);
 			if (round.summaryParent !== parent) {

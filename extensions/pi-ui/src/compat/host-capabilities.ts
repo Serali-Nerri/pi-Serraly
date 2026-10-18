@@ -97,6 +97,11 @@ function descriptorOf(target: object, name: string): PropertyDescriptor | undefi
 	return undefined;
 }
 
+/** Select the content-build completion point without evaluating a host accessor. */
+export function thinkingBuildMethod(): "buildContent" | "updateContent" {
+	return descriptorOf(ASSISTANT, "buildContent") === undefined ? "updateContent" : "buildContent";
+}
+
 /** The reason a requirement is unusable, or undefined when it is satisfied. */
 function capabilityFailure({ target, name, optional }: Requirement): string | undefined {
 	if (!Object.isExtensible(target)) return "target not extensible";
@@ -120,7 +125,10 @@ function describe(requirement: Requirement, failure: string): string {
 
 /** Read-only preflight over every patched host member. */
 export function probeHostCapabilities(): { ok: boolean; missing: readonly string[] } {
-	const missing = REQUIREMENTS.flatMap((entry) => {
+	const requirements = thinkingBuildMethod() === "buildContent"
+		? [...REQUIREMENTS, requirement("AssistantMessageComponent", ASSISTANT, "buildContent")]
+		: REQUIREMENTS;
+	const missing = requirements.flatMap((entry) => {
 		const failure = capabilityFailure(entry);
 		return failure === undefined ? [] : [describe(entry, failure)];
 	});

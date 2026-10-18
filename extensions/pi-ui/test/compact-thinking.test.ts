@@ -258,6 +258,126 @@ function themeCtx(sessionManager: any = { getBranch: () => [], getEntries: () =>
 	};
 }
 
+/** External host seam: streaming updates are built only when the component paints. */
+function deferredAssistantHost(): () => void {
+	const prototype = AssistantMessageComponent.prototype as any;
+	const descriptors = Object.getOwnPropertyDescriptors(prototype);
+	const update = prototype.updateContent;
+	const render = prototype.render;
+	const pending = new WeakSet<object>();
+	Object.defineProperties(prototype, {
+		buildContent: { configurable: true, writable: true, value(this: any, message: AssistantMessage) {
+			pending.delete(this);
+			update.call(this, message, this.isStreaming);
+		} },
+		updateContent: { configurable: true, writable: true, value(this: any, message: AssistantMessage, streaming = this.isStreaming) {
+			this.lastMessage = message;
+			this.isStreaming = streaming;
+			if (streaming) pending.add(this);
+			else this.buildContent(message);
+		} },
+		render: { configurable: true, writable: true, value(this: any, width: number) {
+			if (pending.has(this) && this.lastMessage) this.buildContent(this.lastMessage);
+			return render.call(this, width);
+		} },
+	});
+	return () => {
+		for (const name of ["buildContent", "updateContent", "render"]) {
+			if (descriptors[name]) Object.defineProperty(prototype, name, descriptors[name]);
+			else delete prototype[name];
+		}
+	};
+}
+
+test("deferred host paints animated thinking and elapsed time without new deltas, then retains the final duration", (t) => {
+	const restore = deferredAssistantHost();
+	const host = runtime();
+	const ctx = themeCtx();
+	ctx.ui.theme = {
+		fg: (color: string, text: string) => `\x1b[${color === "text" ? 97 : 90}m${text}\x1b[39m`,
+		italic: (text: string) => `\x1b[3m${text}\x1b[23m`,
+		bold: (text: string) => `\x1b[1m${text}\x1b[22m`,
+	};
+	t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: 10_000 });
+	const controller = installCompactThinking(host.pi, { ...config, previewLines: 1, animationIntervalMs: 90 });
+	try {
+		host.emit("session_start", {}, ctx);
+		const message = { ...thinkingMessage(10_000, false), content: [{ type: "thinking", thinking: "" }] } as AssistantMessage;
+		const component = new AssistantMessageComponent(undefined, true);
+		component.updateContent(message, true);
+		host.emit("message_update", { message, assistantMessageEvent: { type: "thinking_start", contentIndex: 0 } }, ctx);
+		assert.match(renderText(component).join("\n"), /Thinking\.\.\. · 1ms/);
+		const label = () => component.render(100).join("\n").split(" · ")[0];
+		const first = label();
+		t.mock.timers.tick(90);
+		assert.notEqual(label(), first, "the painted label's styling moves even with no provider delta");
+		assert.match(renderText(component).join("\n"), /Thinking\.\.\. · 90ms/);
+		t.mock.timers.tick(2_000);
+		assert.match(renderText(component).join("\n"), /Thinking\.\.\. · 2s/);
+
+		const superseded = { ...message, content: [{ type: "thinking", thinking: "Superseded reasoning" }] } as AssistantMessage;
+		const latest = { ...message, content: [{ type: "thinking", thinking: "Latest retained reasoning" }] } as AssistantMessage;
+		component.updateContent(superseded, true);
+		component.updateContent(latest, true);
+		assert.match(renderText(component).join("\n"), /Latest retained reasoning/);
+		assert.doesNotMatch(renderText(component).join("\n"), /Superseded reasoning/);
+		host.emit("message_end", { message: latest }, ctx);
+		assert.match(renderText(component).join("\n"), /Thought for 2s/);
+		assert.doesNotMatch(renderText(component).join("\n"), /Thinking\.\.\./);
+		assert.deepEqual(message.content, [{ type: "thinking", thinking: "" }], "the empty-run placeholder never alters the message");
+		assert.deepEqual(latest.content, [{ type: "thinking", thinking: "Latest retained reasoning" }]);
+	} finally {
+		controller.dispose();
+		host.scheduler.dispose();
+		restore();
+		t.mock.timers.reset();
+	}
+});
+
+test("deferred thinking survives owner replacement and releases only its own builder patch", (t) => {
+	const restore = deferredAssistantHost();
+	const prototype = AssistantMessageComponent.prototype as any;
+	const nativeBuild = prototype.buildContent;
+	const first = runtime(), second = runtime();
+	const ctx = themeCtx();
+	t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: 10_000 });
+	const oldController = installCompactThinking(first.pi, { ...config, animationIntervalMs: 90 });
+	let newController: ReturnType<typeof installCompactThinking> | undefined;
+	try {
+		first.emit("session_start", {}, ctx);
+		newController = installCompactThinking(second.pi, { ...config, animationIntervalMs: 90 });
+		second.emit("session_start", {}, ctx);
+		first.emit("session_shutdown", {}, ctx);
+		const message = thinkingMessage(10_000, false);
+		const component = new AssistantMessageComponent(undefined, true);
+		component.updateContent(message, true);
+		second.emit("message_update", { message, assistantMessageEvent: { type: "thinking_start", contentIndex: 0 } }, ctx);
+		assert.match(renderText(component).join("\n"), /Thinking\.\.\. · 1ms/);
+		t.mock.timers.tick(90);
+		assert.match(renderText(component).join("\n"), /Thinking\.\.\. · 90ms/,
+			"the stale owner's shutdown cannot stop its replacement");
+		second.emit("session_shutdown", {}, ctx);
+		assert.equal(prototype.buildContent, nativeBuild, "shutdown restores the selected host builder");
+		assert.equal(second.scheduler.pendingJobs, 0, "shutdown releases animation work");
+
+		// Another extension may replace the builder after us. Cleanup must neither
+		// invoke that foreign method nor overwrite it to restore our captured one.
+		second.emit("session_start", {}, ctx);
+		const foreignBuild = () => { throw new Error("shutdown re-entered a foreign content builder"); };
+		prototype.buildContent = foreignBuild;
+		second.emit("session_shutdown", {}, ctx);
+		assert.equal(prototype.buildContent, foreignBuild);
+		assert.equal(second.scheduler.pendingJobs, 0);
+	} finally {
+		newController?.dispose();
+		oldController.dispose();
+		first.scheduler.dispose();
+		second.scheduler.dispose();
+		restore();
+		t.mock.timers.reset();
+	}
+});
+
 test("session tree restores durations from all entries so old messages keep Thought for", async () => {
 	const dir = mkdtempSync(join(tmpdir(), "pi-compact-thinking-restore-"));
 	const previousDir = process.env.PI_CODING_AGENT_DIR;

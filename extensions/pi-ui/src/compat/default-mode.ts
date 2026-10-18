@@ -145,7 +145,7 @@ export function installToolExpandedBackground(): () => void {
 	const installed = function (this: any) {
 		restore(this.contentBox);
 		original.call(this);
-		if (!active || config.mode !== "on" || !managed(this) || !this.expanded || !resolveRendererPolicy(this).groupable) return;
+		if (!active || config.mode !== "on" || !this.expanded || !managed(this) || !resolveRendererPolicy(this).groupable) return;
 		const theme = getMessageDisplayTheme();
 		const box = this.contentBox;
 		if (!box || !theme?.bg) return;
@@ -164,8 +164,9 @@ export function installToolExpandedBackground(): () => void {
 	const step = installMethodStep(proto, "updateDisplay", () => installed);
 	const renderStep = installMethodStep(proto, "render", () => function (this: any, width: number) {
 		const lines: string[] = renderOriginal.call(this, width);
+		if (!active || !this.expanded) return lines;
 		const policy = resolveRendererPolicy(this);
-		if (!active || !this.expanded || !policy.managed || managedView(String(this.toolName), policy) === "generic") return lines;
+		if (!policy.managed || managedView(String(this.toolName), policy) === "generic") return lines;
 		const theme = getMessageDisplayTheme();
 		if (!theme?.getBgAnsi) return lines;
 		const bg = theme.getBgAnsi(config.expandedCardBackground);

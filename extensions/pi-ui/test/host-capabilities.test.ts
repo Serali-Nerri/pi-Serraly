@@ -9,8 +9,8 @@ import {
 	ToolExecutionComponent,
 } from "@earendil-works/pi-coding-agent";
 import { Container, TuiAltScreen } from "@earendil-works/pi-tui";
-import { harness } from "./harness.ts";
-import { probeHostCapabilities, requireHostCapabilities, requireReplaceableMethod } from "../src/compat/host-capabilities.ts";
+import { harness, strip } from "./harness.ts";
+import { probeHostCapabilities, requireHostCapabilities, requireReplaceableMethod, thinkingBuildMethod } from "../src/compat/host-capabilities.ts";
 
 const PIPELINES = Symbol.for("pi-ui.method-pipelines");
 const tool = ToolExecutionComponent.prototype as any;
@@ -22,6 +22,114 @@ const compaction = CompactionSummaryMessageComponent.prototype as any;
 test("the untouched Pi 1.3.0 host satisfies every required display capability", () => {
 	assert.deepEqual(probeHostCapabilities(), { ok: true, missing: [] });
 	requireHostCapabilities();
+});
+
+test("thinking capability selection follows late builders while updateContent remains required", () => {
+	const builder = Object.getOwnPropertyDescriptor(assistant, "buildContent");
+	const update = Object.getOwnPropertyDescriptor(assistant, "updateContent")!;
+	try {
+		delete assistant.buildContent;
+		assert.equal(thinkingBuildMethod(), "updateContent");
+		assert.deepEqual(probeHostCapabilities(), { ok: true, missing: [] });
+		assert.equal(Object.hasOwn(assistant, "buildContent"), false, "the probe does not create a builder");
+
+		Object.defineProperty(assistant, "buildContent", {
+			configurable: true, writable: true, value: () => { throw new Error("the probe must not build content"); },
+		});
+		const before = Object.getOwnPropertyDescriptor(assistant, "buildContent");
+		assert.equal(thinkingBuildMethod(), "buildContent");
+		assert.deepEqual(probeHostCapabilities(), { ok: true, missing: [] });
+		assert.deepEqual(Object.getOwnPropertyDescriptor(assistant, "buildContent"), before, "selection and probing are read-only");
+
+		assistant.updateContent = undefined;
+		assert.deepEqual(probeHostCapabilities(), {
+			ok: false, missing: ["AssistantMessageComponent.updateContent (not a method)"],
+		});
+	} finally {
+		Object.defineProperty(assistant, "updateContent", update);
+		if (builder) Object.defineProperty(assistant, "buildContent", builder);
+		else delete assistant.buildContent;
+	}
+});
+
+test("present unusable thinking builders fail preflight instead of falling back to updateContent", () => {
+	const builder = Object.getOwnPropertyDescriptor(assistant, "buildContent");
+	try {
+		for (const [descriptor, reason] of [
+			[{ value: undefined, writable: true }, "not a method"],
+			[{ value: 42, writable: true }, "not a method"],
+			[{ value: () => {}, writable: false }, "not writable"],
+			[{ get: () => { throw new Error("the probe must not evaluate a host getter"); } }, "getter-only, not replaceable"],
+		] as const) {
+			Object.defineProperty(assistant, "buildContent", { configurable: true, ...descriptor });
+			const before = Object.getOwnPropertyDescriptor(assistant, "buildContent");
+			assert.equal(thinkingBuildMethod(), "buildContent");
+			assert.deepEqual(probeHostCapabilities(), {
+				ok: false, missing: [`AssistantMessageComponent.buildContent (${reason})`],
+			});
+			assert.deepEqual(Object.getOwnPropertyDescriptor(assistant, "buildContent"), before);
+		}
+	} finally {
+		if (builder) Object.defineProperty(assistant, "buildContent", builder);
+		else delete assistant.buildContent;
+	}
+});
+
+test("a thinking builder with a setter remains admissible without executing its accessors", () => {
+	const builder = Object.getOwnPropertyDescriptor(assistant, "buildContent");
+	try {
+		Object.defineProperty(assistant, "buildContent", {
+			configurable: true,
+			get: () => { throw new Error("the probe must not evaluate a host getter"); },
+			set: () => { throw new Error("the probe must not write a host setter"); },
+		});
+		const before = Object.getOwnPropertyDescriptor(assistant, "buildContent");
+		assert.equal(thinkingBuildMethod(), "buildContent");
+		assert.deepEqual(probeHostCapabilities(), { ok: true, missing: [] });
+		assert.deepEqual(Object.getOwnPropertyDescriptor(assistant, "buildContent"), before);
+	} finally {
+		if (builder) Object.defineProperty(assistant, "buildContent", builder);
+		else delete assistant.buildContent;
+	}
+});
+
+test("a late non-writable thinking builder retains native rendering without partial display patches", async () => {
+	const builder = Object.getOwnPropertyDescriptor(assistant, "buildContent");
+	const assistantUpdate = assistant.updateContent, assistantRender = assistant.render;
+	const toolRender = tool.render, toolUpdate = tool.updateDisplay, summaryUpdate = compaction.updateDisplay;
+	const message = {
+		role: "assistant", timestamp: 1,
+		content: [{ type: "thinking", thinking: "plan" }, { type: "text", text: "Native answer" }],
+	} as any;
+	const nativeLines = new AssistantMessageComponent(message, true).render(100).map(strip);
+	let h: Awaited<ReturnType<typeof harness>> | undefined;
+	try {
+		h = await harness({
+			beforeStart: () => {
+				Object.defineProperty(assistant, "buildContent", { configurable: true, writable: false, value: () => {} });
+			},
+		});
+		assert.equal(h.notices.length, 1, "one notification for the failed display domain");
+		assert.equal(h.notices[0]!.level, "warning");
+		assert.match(h.notices[0]!.message, /AssistantMessageComponent\.buildContent \(not writable\)/);
+		assert.match(h.notices[0]!.message, /native rendering retained/);
+		assert.equal(assistant.updateContent, assistantUpdate, "thinking never falls back to patching updateContent");
+		assert.equal(assistant.render, assistantRender);
+		assert.equal(tool.render, toolRender, "no partial tool patch");
+		assert.equal(tool.updateDisplay, toolUpdate);
+		assert.equal(compaction.updateDisplay, summaryUpdate, "no partial summary patch");
+		assert.equal(Object.hasOwn(assistant, PIPELINES), false);
+		assert.equal(Object.hasOwn(tool, PIPELINES), false);
+		assert.equal(h.widgets.has("pi-ui-bridge"), false);
+		const lines = new AssistantMessageComponent(message, true).render(100).map(strip);
+		assert.deepEqual(lines, nativeLines, "the native hidden-thinking label and answer are preserved");
+		assert.ok(lines.some((line) => line.includes("Thinking...")));
+		assert.ok(lines.some((line) => line.includes("Native answer")));
+	} finally {
+		await h?.close();
+		if (builder) Object.defineProperty(assistant, "buildContent", builder);
+		else delete assistant.buildContent;
+	}
 });
 
 test("a missing required method is reported by name and skips the whole compat domain", async () => {

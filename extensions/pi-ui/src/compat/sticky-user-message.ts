@@ -25,40 +25,51 @@ function scrollViewBox(box: LayoutBox, scrollView: ScrollView): LayoutBox | unde
 function instructionAbove(box: LayoutBox, scrollView: ScrollView, top: number, tui: TuiAltScreen): { text: string; sourceRow: number } | undefined {
 	let selected: { text: string; sourceRow: number } | undefined;
 	const nativeTui = tui as unknown as { implicitDocument: Component; mouseLayout?: NativeContainerLayout };
-	function visitComponent(component: Component, lines: readonly string[], sourceRow: number, width: number) {
-		if (sourceRow >= top) return;
-		// Assistant messages emit the same OSC133 zones. Only actual native user
-		// components can supply an instruction, including the spacer's jump row.
-		if (component instanceof UserMessageComponent) {
-			for (let row = 0; row < lines.length && sourceRow + row < top; row++) {
-				const text = stripTerminalSequences(lines[row]!).trim();
-				if (!text) continue;
-				if (!selected || sourceRow >= selected.sourceRow) selected = { text, sourceRow };
-				break;
-			}
-			return;
-		}
-		const container = component === nativeTui.implicitDocument ? tui : component;
-		if (!(container instanceof Container) || (container !== tui && container.render !== Container.prototype.render)) return;
-		const native = (container as unknown as { mouseLayout?: NativeContainerLayout }).mouseLayout;
-		if (native?.width !== width) return;
-		let offset = 0;
-		for (const child of native.children) {
-			visitComponent(child.component, lines.slice(offset, offset + child.height), sourceRow + offset, width);
-			offset += child.height;
-		}
-	}
 	function visitBox(child: LayoutBox) {
 		if (child.scrollView) return; // Nested scroll content has its own row coordinates.
+		const sourceRow = child.rect.y - box.rect.y + scrollView.scrollTop;
+		if (sourceRow >= top || (selected && sourceRow + child.rect.height <= selected.sourceRow)) return;
 		if (child.children.length) {
-			for (const nested of child.children) visitBox(nested);
+			for (let index = child.children.length - 1; index >= 0; index--) visitBox(child.children[index]!);
 			return;
 		}
-		const sourceRow = child.rect.y - box.rect.y + scrollView.scrollTop;
+		const lines = child.lines ?? [];
 		const offset = child.lineOffset ?? 0;
-		visitComponent(child.component, (child.lines ?? []).slice(offset, offset + child.rect.height), sourceRow, child.rect.width);
+		const limit = Math.min(lines.length, offset + child.rect.height);
+		// Native Containers concatenate child lines. Walk their captured heights
+		// backwards into this same array, stopping once an earlier sibling cannot
+		// replace the nearest instruction. Neither output nor child arrays are copied.
+		function visitComponent(component: Component, start: number, end: number) {
+			const row = sourceRow + start - offset;
+			if (row >= top || end <= offset || start >= limit ||
+				(selected && sourceRow + end - offset <= selected.sourceRow)) return;
+			// Assistant messages emit the same OSC133 zones. Only native user
+			// components supply instructions, including the spacer's jump row.
+			if (component instanceof UserMessageComponent) {
+				for (let index = Math.max(start, offset); index < Math.min(end, limit) && sourceRow + index - offset < top; index++) {
+					const text = stripTerminalSequences(lines[index]!).trim();
+					if (!text) continue;
+					if (!selected || row > selected.sourceRow) selected = { text, sourceRow: row };
+					break;
+				}
+				return;
+			}
+			const container = component === nativeTui.implicitDocument ? tui : component;
+			if (!(container instanceof Container) || (container !== tui && container.render !== Container.prototype.render)) return;
+			const native = (container as unknown as { mouseLayout?: NativeContainerLayout }).mouseLayout;
+			if (native?.width !== child.rect.width) return;
+			let childEnd = end;
+			for (let index = native.children.length - 1; index >= 0; index--) {
+				if (selected && sourceRow + childEnd - offset <= selected.sourceRow) break;
+				const entry = native.children[index]!;
+				const childStart = childEnd - entry.height;
+				visitComponent(entry.component, childStart, childEnd);
+				childEnd = childStart;
+			}
+		}
+		visitComponent(child.component, 0, lines.length);
 	}
-	for (const child of box.children) visitBox(child);
+	for (let index = box.children.length - 1; index >= 0; index--) visitBox(box.children[index]!);
 	return selected;
 }
 

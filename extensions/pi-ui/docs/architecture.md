@@ -44,7 +44,14 @@ composes ordered steps. Captured downstream methods cannot re-enter that mutable
 dispatcher; disposed steps become inert even if a foreign wrapper captured them.
 Only an owned prototype value is restored.
 
-Thinking decorates hidden native runs after Pi builds its message content. Visible
+Thinking decorates hidden native runs after Pi builds its message content. Hosts
+with a separate `buildContent` method use that completion point; otherwise the
+decoration follows `updateContent`. Capability preflight and installation select
+the same entry without executing accessors; an unusable builder retains native
+rendering instead of falling back to an earlier update hook. Refreshes still use
+`updateContent`, so deferred hosts such as Pi-Bolt retain their streaming
+coalescing and decide when to build. Both paths share the existing method pipeline,
+owner and animation scheduler, including reload and shutdown cleanup. Visible
 reasoning, per-run overrides, native Markdown and errors stay with Pi. Compact
 controls Work Group visibility in the original transcript positions rather than
 collecting member content into one anchor panel. Expanded Thinking, progress text,
@@ -76,6 +83,11 @@ outside UI ownership.
 The host resolver may provide renderer functions without a business definition;
 the native tool component supplies its name. Renderer-cache identity includes that
 name, rather than treating an anonymous renderer object as a tool identity.
+Renderer decisions consult source metadata only for names that can be native
+builtins; non-builtin names retain their definition-based ownership without
+enumerating the inventory. Collapsed cards bypass expanded-background work.
+Decisions still read current definitions, settings and source metadata where
+relevant; no cross-frame inventory cache can conceal late registration or overrides.
 
 Single, grouped and compact eligible-tool summaries use the shared captured-argument
 formatter. Their viewport is the larger of 80% of terminal width and width minus
@@ -145,7 +157,11 @@ replacement invalidate it. Moving onto sticky text clears any previous tool-card
 hover, even though sticky input is handled before ordinary component dispatch.
 The frame identifies native user messages through the host layout (native
 `UserMessageComponent` boxes and container layout heights); assistant content is
-never a user instruction. It neither scans OSC prompt zones nor patches
+never a user instruction. Native container lookup starts at the newest eligible
+child and stops at the nearest nonempty instruction; row offsets refer into the
+host's existing line array instead of copying historical output. It uses each
+current frame's geometry, so content changes, expansion and resizing do not
+depend on a second invalidation protocol. It neither scans OSC prompt zones nor patches
 user-message content. Frame and mouse patches obey the same capability,
 branded ownership and identity-safe cleanup rules; no display marker may escape
 to the terminal or modify saved message content.
@@ -184,6 +200,8 @@ awaits across timer turns. No extra animation timer is introduced.
 
 Compact mounts its display-only Work Summary when transcript children are added,
 before the host paints them; the bridge also reconciles rebuilt containers.
+Each reconciliation discovers anchor parents in one mounted-tree traversal shared
+by all Work Groups, rather than walking the transcript again for every group.
 Synthetic summary shells are not native transcript identities. Work-group and
 activity lifetime details belong to [work-summary.md](work-summary.md).
 
