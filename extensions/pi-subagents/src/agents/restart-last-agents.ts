@@ -9,7 +9,8 @@
 import type { ExtensionCommandContext, SessionEntry } from "@earendil-works/pi-coding-agent";
 import type { UICtx } from "../ui/agent-widget.js";
 import { getCoordinator, getManager, getPiInstance, getStore, getWidget } from "../shell.js";
-import { parseThinkingLevel, resolveModel } from "../utils.js";
+import { parseThinkingChoice, resolveModel } from "../utils.js";
+import { resolveThinkingLevel } from "../models/thinking-resolution.js";
 import { resolveTypeOrDiscover, getAgentConfig } from "./agent-types.js";
 import { computeSpawnTarget, surfaceSpawnTargetWarnings } from "../spawn/spawn-target.js";
 
@@ -121,7 +122,13 @@ async function resolveAndSpawn(
   const modelKey = model ? `${model.provider}/${model.id}` : undefined;
   // Explicit > frontmatter only: per-model and defaultThinking are owned by
   // the spawn runner, whose chain keeps per-model above defaultThinking.
-  const thinkingLevel = parseThinkingLevel(call.thinking) ?? agentConfig?.thinkingLevel;
+  // `parent` resolves against the session replaying the restart; the stored
+  // invocation carries only the concrete result.
+  const thinkingLevel = resolveThinkingLevel({
+    explicit: parseThinkingChoice(call.thinking),
+    frontmatter: agentConfig?.thinkingLevel,
+    parentLevel: ctx.thinkingLevel,
+  });
 
   await coordinator!.spawn(pi!, ctx, {
     type: resolvedType,

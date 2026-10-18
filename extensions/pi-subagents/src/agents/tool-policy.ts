@@ -1,9 +1,9 @@
 import type { InlineExtension } from "@earendil-works/pi-coding-agent";
-import { BUILTIN_TOOL_NAMES } from "./agent-types.js";
+import { assertSupportedToolRestriction, BUILTIN_TOOL_NAMES } from "./agent-types.js";
 
 /**
  * Complements exact SDK excludes only for the existing third-party ext/* deny
- * syntax. A late tool may remain discoverable, but cannot execute through any
+ * and ext/all syntax. A late tool may remain discoverable, but cannot execute through any
  * route. This is not an extension sandbox or a dynamic MCP authorization DSL.
  */
 export function createExtensionDenyGuard(options: {
@@ -12,10 +12,10 @@ export function createExtensionDenyGuard(options: {
 }): InlineExtension | undefined {
   const excludedAliases = new Set<string>();
   for (const entry of options.excludedEntries) {
-    if (entry.includes("*") && /^(?:builtin:)?mcp(?:__|\/|$)/i.test(entry)) {
-      throw new Error(`MCP wildcard restriction "${entry}" is unsupported; use exact tool names or disable builtin:mcp`);
+    assertSupportedToolRestriction(entry);
+    if (entry.endsWith("/*") || entry.endsWith("/all")) {
+      excludedAliases.add(entry.slice(0, entry.lastIndexOf("/")).toLowerCase());
     }
-    if (entry.endsWith("/*")) excludedAliases.add(entry.slice(0, -2).toLowerCase());
   }
   if (excludedAliases.size === 0) return undefined;
 

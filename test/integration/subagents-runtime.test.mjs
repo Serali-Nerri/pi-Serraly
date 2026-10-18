@@ -142,6 +142,13 @@ test("late MCP additions become callable and withdrawn tools stop executing", { 
 	assert.ok(log.filter((item) => item.phase === "mcp-list").some((item) => item.late));
 });
 
+test("MessageAgent steers and continues retained sessions while respecting queue and concurrency admission", { timeout: 70000 }, async () => {
+	const log = await run("messages", { providerGate: true, exposure: "direct", limit: 1, plans: {
+		first: [], blocked: [call("read", { path: "seed.txt" }, { gate: true })], steered: [], continued: [],
+	} });
+	assert.ok(log.some((item) => item.phase === "message-delivery"));
+});
+
 test("continuation retains child search/store while sibling and parent stay isolated", { timeout: 70000 }, async () => {
 	const log = await run("state", { exposure: "deferred", plans: {
 		first: [...searchPeek, code(`store("child-token", "first-child-value"); text("stored");`)],
@@ -227,29 +234,29 @@ test("an explicit enabled extension set can execute the ordinary and native supp
 // Late *exact* control names are an adversarial third-party registration, not
 // harmless namespaced MCP names. Removing unconditional SDK exclusions permits
 // these real direct/search/codemode calls to run the fixture execute functions.
-test("late exact Agent/StopAgent/AgentStatus registration cannot execute through direct or native nested routes", { timeout: 70000 }, async () => {
-	const controls = ["Agent", "StopAgent", "AgentStatus"];
+test("late exact agent control registration cannot execute through direct or native nested routes", { timeout: 70000 }, async () => {
+	const controls = ["Agent", "StopAgent", "MessageAgent", "AgentStatus"];
 	const log = await run("permissions", { plans: { main: [
 		call("read", { path: "seed.txt" }, { lateControlTools: true }),
 		...controls.map((name) => call(name)),
 		...controls.flatMap((name) => [search(`Late local effect ${name}`), call(name)]),
-		code(`for (const name of ["Agent","StopAgent","AgentStatus"]) { text({search:await searchTools("Late local effect " + name)}); try { text(await tools[name]({})); } catch(e) { text(e.message); } }`),
+		code(`for (const name of ${JSON.stringify(controls)}) { text({search:await searchTools("Late local effect " + name)}); try { text(await tools[name]({})); } catch(e) { text(e.message); } }`),
 		code(`text(await tools.${peek}({}));`),
 	] } });
 	const registration = log.find((item) => item.phase === "late-controls-registered");
 	assert.ok(registration, "malicious factory attempted late registration after binding");
-	assert.equal(log.filter((item) => item.phase === "recursive-effect").length, 0, "none of the three real execute side effects ran");
+	assert.equal(log.filter((item) => item.phase === "recursive-effect").length, 0, "none of the real control execute side effects ran");
 	for (const item of requests(log)) for (const name of controls) assert.ok(!item.registered.includes(name), "child registry excludes " + name);
 	const outcome = results(log);
 	assert.match(outcome[0].text, /seed/);
-	for (const index of [1, 2, 3, 5, 7, 9]) assert.equal(outcome[index].isError, true, "direct/search-then-call denied");
-	for (const index of [4, 6, 8]) {
+	for (const index of [1, 2, 3, 4, 6, 8, 10, 12]) assert.equal(outcome[index].isError, true, "direct/search-then-call denied");
+	for (const index of [5, 7, 9, 11]) {
 		assert.equal(outcome[index].isError, false, "real native search ran rather than being disabled");
 		for (const name of controls) assert.doesNotMatch(outcome[index].text, new RegExp(`^- ${name}:`, "m"), "search cannot expose exact control name");
 	}
-	for (const name of controls) assert.match(outcome[10].text, new RegExp(`tools\\.${name} does not exist`), "actual codemode denies " + name);
-	assert.doesNotMatch(outcome[10].text, /"name"\s*:\s*"(?:Agent|StopAgent|AgentStatus)"/, "codemode's actual searchTools cannot rediscover denied control names");
-	assert.equal(log.filter((item) => item.phase === "child-tool-result" && item.name === "tool_search").length, 3, "native tool_search executed before direct denied calls");
+	for (const name of controls) assert.match(outcome[13].text, new RegExp(`tools\\.${name} does not exist`), "actual codemode denies " + name);
+	assert.doesNotMatch(outcome[13].text, /"name"\s*:\s*"(?:Agent|StopAgent|MessageAgent|AgentStatus)"/, "codemode's actual searchTools cannot rediscover denied control names");
+	assert.equal(log.filter((item) => item.phase === "child-tool-result" && item.name === "tool_search").length, controls.length, "native tool_search executed before direct denied calls");
 	assert.equal(calls(log, "peek").length, 1, "allowed native call is a positive control");
 	assert.ok(log.some((item) => item.phase === "child-tool-result" && item.name === peek && item.parentToolCallId), "allowed nested route actually executed");
 });

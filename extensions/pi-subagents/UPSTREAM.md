@@ -5,6 +5,15 @@
 - Commit: `0a9ad2f14562daeec2b5d815fbdf42695f2e7f11`
 - License: MIT; the original `LICENSE`, including its copyright notice, is preserved verbatim.
 
+Selected behavior from v1.16.0–v1.17.1, pinned at
+`682c9c73680dbd7e4bf754b4eccc9ed1a85d27fb`, is incorporated: unique short-ID
+resolution, MessageAgent, `extension/all`, trust-aware Thinking settings,
+wizard selection preservation, `parent` Thinking and pre-spawn provenance,
+and widget context sampling, static redraw suppression and visible-row
+formatting. This is not a whole-version sync. Child lifecycle announcements,
+the new implicit-tools setting, source-only `.ts` import specifiers and the
+Vite+ toolchain are not incorporated.
+
 The source and behavior tests are maintained as an independent module of this
 private workspace, not published on a separate npm release line. Runtime host
 packages remain external peers; the supported development baseline is Pi 1.3.0,

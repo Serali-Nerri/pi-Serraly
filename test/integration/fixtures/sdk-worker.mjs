@@ -148,7 +148,7 @@ function inventory(h, names) {
 	assert.ok(active.includes("tool_search"), "builtin discovery remains enabled by +tool_search");
 	for (const name of ["read", "bash", "edit", "write"]) assert.ok(active.includes(name), "+tool_search retains default built-ins");
 	const exposures = { apply_patch: "direct", grep: "codemode", find: "codemode", ls: "codemode",
-		Agent: "direct", StopAgent: "direct", AgentStatus: "direct", ask_user_question: "model-only" };
+		Agent: "direct", StopAgent: "direct", MessageAgent: "direct", AgentStatus: "direct", ask_user_question: "model-only" };
 	for (const tool of h.session.getAllTools().filter((tool) => expectedTools.includes(tool.name))) {
 		const exposure = exposures[tool.name] ?? "deferred";
 		assert.equal(tool.exposure, exposure);

@@ -482,7 +482,7 @@ describe("renderFinishedLine context percent", () => {
       settled: false,
       settlementCount: 0,
       session: asAgentSession({
-        getSessionStats: () => ({ contextUsage: { percent: 85 } }),
+        getContextUsage: () => ({ percent: 85 }),
       }),
     };
     activity.set("a1", makeActivity("a1"));
@@ -593,7 +593,7 @@ describe("stats visibility integration", () => {
       settled: false,
       settlementCount: 0,
       session: asAgentSession({
-        getSessionStats: () => ({ contextUsage: { percent: 75 } }),
+        getContextUsage: () => ({ percent: 75 }),
       }),
     };
     activity.set("a1", makeActivity("a1"));
@@ -637,7 +637,7 @@ describe("stats visibility integration", () => {
       settled: false,
       settlementCount: 0,
       session: asAgentSession({
-        getSessionStats: () => ({ contextUsage: { percent: 60 } }),
+        getContextUsage: () => ({ percent: 60 }),
       }),
     };
     activity.set("a1", makeActivity("a1"));

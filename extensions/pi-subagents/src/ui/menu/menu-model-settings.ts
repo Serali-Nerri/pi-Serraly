@@ -27,13 +27,7 @@ import { buildModelGroups, hasExplicitPerTypeOverride, type AgentTypeModelConfig
 import { findModelInRegistry } from "../../utils.js";
 import { getPiDefaultThinkingLevel, getPiModelThinkingLevels } from "../../pi-settings.js";
 import type { SessionModelOverrides } from "../../models/model-precedence.js";
-
-/**
- * Thinking levels pad to this width so every row's tag starts at the same
- * column. "minimal" (7 chars) is the longest level label in the ThinkingLevel
- * union.
- */
-const THINKING_COLUMN_WIDTH = 7;
+import { formatDisplayedThinking } from "../../models/thinking-resolution.js";
 
 /**
  * Display value for the "Global default model" row. Tag precedence:
@@ -153,7 +147,10 @@ export async function showModelSettingsMenu(ctx: ExtensionCommandContext, modelO
     // One settings read per build feeds both thinking displays: the global
     // default and the per-model map (the prediction of what a spawn would
     // run with — the session is the source of truth once it exists).
-    const modelThinkingLevels = getPiModelThinkingLevels(ctx.cwd);
+    // Read the same layers the spawn runtime would: an untrusted project's
+    // own settings are ignored while the global layer still applies.
+    const scope = { projectTrusted: ctx.isProjectTrusted() };
+    const modelThinkingLevels = getPiModelThinkingLevels(ctx.cwd, scope);
     const groups = buildModelGroups({
       types,
       agentConfigs,
@@ -161,9 +158,10 @@ export async function showModelSettingsMenu(ctx: ExtensionCommandContext, modelO
       sessionOverrides,
       hasProjectModelKey: (key) => store.hasProjectModelKey(key),
       parentModelId,
-      piDefaultThinking: getPiDefaultThinkingLevel(ctx.cwd),
+      piDefaultThinking: getPiDefaultThinkingLevel(ctx.cwd, scope),
       piModelThinking: (modelKey) => modelThinkingLevels[modelKey],
       findModel: (modelId) => findModelInRegistry(modelId, registry, undefined),
+      parentLevel: ctx.thinkingLevel,
     });
 
     for (const group of groups) {
@@ -173,10 +171,11 @@ export async function showModelSettingsMenu(ctx: ExtensionCommandContext, modelO
       // Section title: bare model id in bold accent, matching the menu title
       items.push(headerItem(theme, group.modelId));
       for (const row of group.rows) {
+        const thinkingLabel = formatDisplayedThinking({ level: row.thinking, source: row.source });
         items.push({
           id: `type:${row.type}`,
           label: `${agentBulletPrefix(row.type)}${row.type}`,
-          currentValue: `${row.thinking.padEnd(THINKING_COLUMN_WIDTH)} ${row.tag}`,
+          currentValue: [thinkingLabel, row.tag].filter(Boolean).join(" "),
           description: `Model for the ${row.type} agent type. Select to set or clear its override.`,
           // Every listed row carries an explicit per-type override, so Clear is always offered.
           submenu: modelSubmenuFor(row.type, group.modelId, true, levelsFor(row.type)),

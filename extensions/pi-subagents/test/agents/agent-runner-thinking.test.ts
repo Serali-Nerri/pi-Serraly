@@ -5,9 +5,12 @@
  * Pins the spawn-effective precedence:
  *   explicit param > frontmatter > pi per-model (trust-gated SettingsManager,
  *   keyed by the resolved model's provider/modelId) > defaultThinking >
- *   nothing passed (pi's own fallback: defaultThinkingLevel → medium, clamped)
+ *   parent session level > nothing passed (pi's own fallback:
+ *   defaultThinkingLevel → medium, clamped)
  *
- * The per-model read must go through the same trust-gated SettingsManager
+ * A `parent` choice resolves at its position to the parent session's current
+ * level; with no parent level it reads as unset and the chain continues. The
+ * per-model read must go through the same trust-gated SettingsManager
  * instance the session is created with, so the project-trust gate applies
  * identically to the read.
  */
@@ -109,6 +112,37 @@ describe("runAgent — runtime thinking resolution", () => {
 
   it("passes nothing when no thinking source is set, so pi's own fallback applies", async () => {
     mockSettingsManager(undefined);
+
+    await runWithSpawnModel();
+
+    expect(sessionOpts().thinkingLevel).toBeUndefined();
+  });
+
+  it("a frontmatter parent selection follows the parent session's current level", async () => {
+    mockSettingsManager(undefined);
+    mockModules.mockGetAgentConfig.mockReturnValue({ ...defaultAgentConfig, thinkingLevel: "parent" });
+
+    await runAgent(fakeCtx({ thinkingLevel: "high" }), "test-agent", "do something", {
+      pi: fakePi,
+      model: SPAWN_MODEL,
+    });
+
+    expect(sessionOpts().thinkingLevel).toBe("high");
+  });
+
+  it("a parent selection with no parent level continues down the chain", async () => {
+    mockSettingsManager(undefined);
+    mockModules.mockGetAgentConfig.mockReturnValue({ ...defaultAgentConfig, thinkingLevel: "parent" });
+    mockModules.mockDefaultThinking = "max";
+
+    await runWithSpawnModel();
+
+    expect(sessionOpts().thinkingLevel).toBe("max");
+  });
+
+  it("a parent selection with no parent level and no other source passes nothing", async () => {
+    mockSettingsManager(undefined);
+    mockModules.mockGetAgentConfig.mockReturnValue({ ...defaultAgentConfig, thinkingLevel: "parent" });
 
     await runWithSpawnModel();
 

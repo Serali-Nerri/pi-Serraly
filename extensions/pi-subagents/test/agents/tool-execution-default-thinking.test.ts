@@ -4,14 +4,16 @@
  *
  * Two seams are covered:
  *   - toolCallListener: injects the spawn-effective thinking into the Agent
- *     tool call input as frontmatter > pi per-model > defaultThinking, never
- *     overwriting an explicit param. The per-model term obeys the same
- *     project-trust gate as the spawn's own settings read: an untrusted
- *     cross-repo worktree target's settings file must not reach the spawn
- *     through the injected value.
- *   - executeAgentTool: resolves explicit param > frontmatter and defers
- *     per-model / defaultThinking to the spawn runner (whose chain keeps
- *     per-model above defaultThinking)
+ *     tool call input as frontmatter > pi per-model > defaultThinking,
+ *     resolving configured `parent` values without overwriting an explicit param. The per-model term
+ *     is read with the same trust scope as the spawn's own settings read: an
+ *     untrusted cross-repo worktree target drops only its project layer while
+ *     the user's global per-model level still reaches the spawn through the
+ *     injected value.
+ *   - executeAgentTool: resolves explicit param > frontmatter (including a
+ *     `parent` value against the live parent context) and defers per-model /
+ *     defaultThinking to the spawn runner (whose chain keeps per-model above
+ *     defaultThinking)
  *
  * Tests observable behavior (the injected input / the spawn intent), not
  * internal call order.
@@ -24,6 +26,7 @@ import type { ExtensionAPI, ExtensionContext, CustomToolCallEvent } from "@earen
 import type { SpawnIntent } from "../../src/spawn/spawn-coordinator.js";
 import type { AgentConfig } from "../../src/agents/types.js";
 import type { ThinkingLevel } from "../../src/types.js";
+import type { PiSettingsScope } from "../../src/pi-settings.js";
 import type { WorktreeValidationResult } from "../../src/spawn/worktree-validator.js";
 
 /* ------------------------------------------------------------------ */
@@ -98,7 +101,7 @@ vi.mock("../../src/agents/agent-types.js", () => ({
 // provider/modelId key are pinned by the listener tests below.
 vi.mock("../../src/pi-settings.js", () => ({
   getPiModelThinkingLevel: vi.fn(
-    (_cwd: string, _provider: string, _modelId: string, _agentDir?: string) => perModelState.value,
+    (_cwd: string, _provider: string, _modelId: string, _scope?: PiSettingsScope) => perModelState.value,
   ),
 }));
 
@@ -202,12 +205,14 @@ describe("toolCallListener — thinking injection (frontmatter > per-model > def
     expect(event.input.thinking).toBe("high");
   });
 
-  it("reads the per-model level keyed by the parent model's provider/modelId", async () => {
+  it("reads the per-model level keyed by the parent model's provider/modelId, as a trusted scope", async () => {
     const event = makeEvent();
 
     await toolCallListener(event, fakeCtx());
 
-    expect(vi.mocked(getPiModelThinkingLevel)).toHaveBeenCalledWith("/home/test/project", "test", "model");
+    expect(vi.mocked(getPiModelThinkingLevel)).toHaveBeenCalledWith("/home/test/project", "test", "model", {
+      projectTrusted: true,
+    });
   });
 
   it("reads the per-model level at the resolved target path and model when the target is trusted", async () => {
@@ -229,12 +234,15 @@ describe("toolCallListener — thinking injection (frontmatter > per-model > def
       }),
     }));
 
-    // Keyed by the validated path (what the spawn will use), not the raw argument.
-    expect(vi.mocked(getPiModelThinkingLevel)).toHaveBeenCalledWith("/repo-b-resolved", "anthropic", "claude-opus-4-1");
+    // Keyed by the validated path (what the spawn will use), not the raw argument,
+    // and read with the target's trust decision as the settings scope.
+    expect(vi.mocked(getPiModelThinkingLevel)).toHaveBeenCalledWith("/repo-b-resolved", "anthropic", "claude-opus-4-1", {
+      projectTrusted: true,
+    });
     expect(event.input.thinking).toBe("low");
   });
 
-  it("does not read an untrusted cross-repo target's per-model level (project-trust gate)", async () => {
+  it("reads an untrusted target's per-model level through an untrusted scope, so its project layer is ignored", async () => {
     perModelState.value = "max";
     storeState.modelFor = "anthropic/claude-opus-4-1";
     mockValidateWorktreePath.mockResolvedValue({
@@ -254,13 +262,15 @@ describe("toolCallListener — thinking injection (frontmatter > per-model > def
       }),
     }));
 
-    // The untrusted project's settings file must not set the spawn's thinking
-    // through the injected value (it would win as the explicit param).
-    expect(vi.mocked(getPiModelThinkingLevel)).not.toHaveBeenCalled();
-    expect(event.input.thinking).toBeUndefined();
+    // The user's global per-model level still applies: only the untrusted
+    // project layer is dropped by the scope.
+    expect(vi.mocked(getPiModelThinkingLevel)).toHaveBeenCalledWith("/repo-b-resolved", "anthropic", "claude-opus-4-1", {
+      projectTrusted: false,
+    });
+    expect(event.input.thinking).toBe("max");
   });
 
-  it("still injects frontmatter and defaultThinking for an untrusted target, without the per-model term", async () => {
+  it("still injects frontmatter and defaultThinking for an untrusted target when the global per-model level is unset", async () => {
     storeState.defaultThinking = "medium";
     mockValidateWorktreePath.mockResolvedValue({
       ok: true,
@@ -316,6 +326,26 @@ describe("toolCallListener — thinking injection (frontmatter > per-model > def
 
     await toolCallListener(event, fakeCtx());
 
+    expect(event.input.thinking).toBeUndefined();
+  });
+
+  it("resolves a parent frontmatter selection against the parent session's level", async () => {
+    mockGetAgentConfig.mockReturnValue(makeAgentConfig({ thinkingLevel: "parent" }));
+    const event = makeEvent();
+
+    await toolCallListener(event, fakeCtx({ thinkingLevel: "high" }));
+
+    // The injected value is the spawn-effective level: concrete, never `parent`.
+    expect(event.input.thinking).toBe("high");
+  });
+
+  it("falls through to the runner when no source is set", async () => {
+    const event = makeEvent();
+
+    await toolCallListener(event, fakeCtx({ thinkingLevel: "low" }));
+
+    // The parent's level is not a position of its own: only a source holding
+    // `parent` reads it. Unset everywhere means the session decides.
     expect(event.input.thinking).toBeUndefined();
   });
 });
@@ -381,6 +411,39 @@ describe("executeAgentTool — explicit/frontmatter resolution, per-model + defa
   it("keeps thinking undefined when nothing is configured (inherit parent)", async () => {
     await executeAgentTool("tc-4", { agent: "general-purpose", prompt: "do it" }, undefined, undefined, ctx);
 
+    expect(spawnThinkingLevel()).toBeUndefined();
+  });
+
+  it("resolves a parent frontmatter selection to the parent session's level before spawning", async () => {
+    mockGetAgentConfig.mockReturnValue(makeAgentConfig({ thinkingLevel: "parent" }));
+    const parentCtx = fakeCtx({ thinkingLevel: "high" });
+
+    await executeAgentTool("tc-5", { agent: "general-purpose", prompt: "do it" }, undefined, undefined, parentCtx);
+
+    expect(spawnThinkingLevel()).toBe("high");
+  });
+
+  it("resolves an explicit parent thinking param to the parent session's level before spawning", async () => {
+    mockGetAgentConfig.mockReturnValue(makeAgentConfig({ thinkingLevel: "low" }));
+    const parentCtx = fakeCtx({ thinkingLevel: "max" });
+
+    await executeAgentTool(
+      "tc-6",
+      { agent: "general-purpose", prompt: "do it", thinking: "parent" },
+      undefined,
+      undefined,
+      parentCtx,
+    );
+
+    expect(spawnThinkingLevel()).toBe("max");
+  });
+
+  it("keeps thinking undefined when a parent selection has no parent level", async () => {
+    mockGetAgentConfig.mockReturnValue(makeAgentConfig({ thinkingLevel: "parent" }));
+
+    await executeAgentTool("tc-7", { agent: "general-purpose", prompt: "do it" }, undefined, undefined, ctx);
+
+    // The spawn runner applies pi's own fallback; `parent` never reaches it.
     expect(spawnThinkingLevel()).toBeUndefined();
   });
 });

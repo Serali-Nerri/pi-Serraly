@@ -1,7 +1,7 @@
 # pi-subagents
 
-独立入口 `dist/pi-subagents/index.js`，在 Pi 中注册 **`Agent`、`StopAgent`、
-`AgentStatus`** 和 **`/agents`**。三工具使用宿主默认的 direct exposure，注册后
+独立入口 `dist/pi-subagents.js`，在 Pi 中注册 **`Agent`、`StopAgent`、
+`MessageAgent`、`AgentStatus`** 和 **`/agents`**。四工具使用宿主默认的 direct exposure，注册后
 active；UI 模块只管展示，不执行或代管子代理。支持基线是 Pi **1.3.0**、
 TypeBox **1.3.27**、Node **≥22.19**。来源与许可见 [UPSTREAM.md](UPSTREAM.md)
 及 [LICENSE](LICENSE)；构建、隔离和 release/替换流程见[开发指南](../../docs/development.md)。
@@ -9,7 +9,7 @@ TypeBox **1.3.27**、Node **≥22.19**。来源与许可见 [UPSTREAM.md](UPSTRE
 ## 使用
 
 `Agent` 前台调用返回结果和统计；后台调用立即返回 ID，完成后通知父会话。
-三工具的工具卡使用共享 `pi-ui-kit` 的标题/状态语法，模型标签、统计、描述、
+工具卡使用共享 `pi-ui-kit` 的标题/状态语法，模型标签、统计、描述、
 输出路径与错误正文仍是本模块自己的展示数据。
 `/agents` 可手工 spawn、查看会话、steer 运行中任务、continue 已结束任务、Stop、
 Clear、设置模型/并发/提示词/widget。widget 和 viewer 仅用于 TUI，不在
@@ -19,12 +19,20 @@ print/JSON/RPC 创建终端组件或 UI bridge。
 | --- | --- |
 | `Agent` | `prompt` 必填；`description`、`agent`、`run_in_background`、`worktree_path` 可选 |
 | `StopAgent` | `agent_id` 必填，停止运行中或排队中的任务 |
+| `MessageAgent` | `agent_id`、`message` 必填；steer 运行中任务，或继续有保留会话的已结束任务 |
 | `AgentStatus` | 无参数；列出任务并提醒不要轮询，完成通知自动送达 |
+
+`StopAgent` 和 `MessageAgent` 接受完整 ID 或唯一前缀，包括状态列表显示的 8 位
+短 ID；完整 ID 优先匹配，歧义前缀不执行操作，并列出候选完整 ID。
+`MessageAgent` 的消息在运行中会话的下一处理边界送入；尚在初始化的任务先暂存。
+已结束任务沿用原记录和会话上下文，不创建第二条任务；没有会话（包括尚未启动的
+排队任务）时返回未发送，仍在收尾或并发已满等无法接续的情况报错。发送成功只表示
+已交付，不保证任务结束前已读取；后续完成仍通过原通知机制送达。
 
 `agent` 默认 `general-purpose`，名称精确匹配优先，其后允许唯一的大小写不敏感
 匹配。`model`、thinking、turn/output cap 从配置解析，不是模型可传的工具参数。
 严格 schema 模式 `agentToolStrictMode: true` 让可选参数以 nullable 字段表示，
-要求传全字段；默认关闭。子代理不能再调用三个 Agent 控制工具。
+要求传全字段；默认关闭。子代理不能调用这四个 Agent 控制工具。
 
 ## 配置位置与优先级
 
@@ -48,9 +56,24 @@ default > frontmatter > 父模型。每类型模型使用实际解析出的注�
 显式配置或调用覆写的模型必须是可解析的 `provider/model-id` 且存在于宿主模型
 registry；空字符串、格式错误或模型不可用时，`Agent`（前台/后台）和 `/agents`
 手工 spawn 都在任务准入前报错，不会静默换用父模型或显示虚假的模型覆写标题。
-thinking 优先使用
-frontmatter，其后是目标 Pi 的 per-model thinking 和模块 defaultThinking，
-未设置时沿用父级。常用全局配置示例：
+Thinking 优先级为显式 spawn 选择 > frontmatter > 目标 Pi 的 per-model
+thinking > 模块 `defaultThinking` > Pi `defaultThinkingLevel`（未设置则
+`medium`），最终按实际模型支持的等级限制。不可信目标只忽略项目 settings，
+仍读取用户级 per-model thinking 和默认值。
+
+frontmatter `thinking`、模块 `defaultThinking` 和手工 spawn 的 Thinking 选择
+支持 `parent`：在该优先级位置读取父会话当前等级，不是额外的兜底优先级；
+没有父等级时继续向下解析。`parent` 在创建子会话前解析为具体等级；重启上次任务时，
+原调用或当前 frontmatter 中的 `parent` 按重启所在父会话重新解析，已记录的显式
+具体等级仍优先。未设置 `parent` 时不会隐式继承父 Thinking。
+模型设置菜单与 spawn wizard 显示最终等级及来源（frontmatter、pi per-model、
+subagent default、parent 或 pi default），运行后的 widget/viewer 仍显示具体等级。
+菜单里的 `pi default` 清除当前层的选择，让优先级链继续生效；wizard 明确选择的
+等级在切换模型或目标时保留，并按实际 spawn 模型支持的等级限制。
+wizard 的模型项明确选择“(inherits parent)”时直接使用父模型，而不重新回退到
+agent 文件的模型；Thinking 的显示、可选等级和启动值都按这个实际模型计算。
+
+常用全局配置示例：
 
 ```json
 {
@@ -168,15 +191,16 @@ schema。显式布尔值会替换低优先级文件的工具数组限制。工�
 `+name`/`-name` 修饰符只属于 Pi 的 `--tools` 与 `defaultTools`，写进 agent 的
 工具数组会让该子代理启动失败。精确 `exclude_tools`
 交给 SDK，包含后续才注册的
-exact MCP 名称。数组 whitelist 优先于普通 excludes；三个 Agent 控制工具无论
+exact MCP 名称。数组 whitelist 优先于普通 excludes；四个 Agent 控制工具无论
 如何都不会授予子会话。inactive 工具不等于禁止调用：codemode/deferred 可能
 通过嵌套工具调用到达，因此权限不能只靠 active 列表。
 
-保留既有静态 `ext/*`、`ext/tool`、`ext/none` selectors：静态 `ext/*` 按已选择
+保留静态 `ext/*`、`ext/all`、`ext/tool`、`ext/none` selectors：`ext/all` 与
+`ext/*` 等价，按已选择
 扩展的工具展开，`ext/none` 只表示承认该扩展而不授予工具。继承模式的第三方
-`exclude_tools: [ext/*]` 还按最新工具来源阻断延迟调用；它们的动态元数据可能
+`exclude_tools: [ext/*]` 或 `[ext/all]` 还按最新工具来源阻断延迟调用；它们的动态元数据可能
 仍在发现列表中，不能承诺宿主未提供的 wildcard 元数据隐藏。
-**不支持动态 MCP wildcard 授权**，如 `mcp/*`、`mcp__docs__*` 或
+**不支持动态 MCP wildcard 授权**，如 `mcp/*`、`mcp/all`、`mcp__docs__*` 或
 `builtin:mcp/*`；无法安全表达时直接报错。使用 exact `mcp__<server>__<tool>`
 名称，或禁用 builtin:mcp。Pi `mcp.json` 自身的 toolExposure pattern 是宿主
 exposure 配置，不是这里的子代理授权 DSL。
@@ -214,6 +238,11 @@ frontmatter 可设置 `model`、`thinking`、`max_turns`、`max_tokens`、`hidde
 连接。普通完成/Stop 保留 session，可 continue 而不重新连接；这些状态不传播
 给父或其他子代理。`finishedRetentionMinutes` 只隐藏过期 widget 行，**不是
 session TTL**。长会话中 retained MCP 连接/进程可增长，即使运行并发不高。
+
+widget 只格式化当前可见记录；静止行的可见内容未变化时不重复请求重绘，
+运行中动画和计时仍正常刷新。context 占用率使用宿主轻量 getter，隐藏该统计
+时不查询；采样缓存最多保留 500 ms，会话、当前分支/记录、模型或压缩状态变化时
+立即重新采样。缓存只影响界面统计，不缓存模型回答或修改会话内容。
 
 Pi 1.3.0 的 codemode 在同一宿主进程的所有会话间共享最多 **2 个存活 worker**；
 正在关闭的 worker 退出前仍占槽位，父会话与子会话会竞争这些资源。此上限独立于

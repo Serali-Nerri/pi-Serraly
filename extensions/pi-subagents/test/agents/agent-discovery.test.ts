@@ -381,6 +381,16 @@ body
     expect(result.name).toBe("agent");
   });
 
+  it("accepts `parent` as a frontmatter thinking choice", () => {
+    const content = `---
+name: child
+thinking: parent
+---
+Body.
+`;
+    expect(parseAgentFile(content, "user").thinking).toBe("parent");
+  });
+
   it("rejects invalid thinking values", () => {
     const content = `---
 name: agent

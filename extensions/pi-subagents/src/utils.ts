@@ -7,7 +7,8 @@
 
 import { lstatSync, readFileSync } from "node:fs";
 import type { Model } from "@earendil-works/pi-ai";
-import type { ThinkingLevel } from "./types.js";
+import type { ThinkingChoice, ThinkingLevel } from "./types.js";
+import { PARENT_THINKING_CHOICE } from "./models/thinking-resolution.js";
 
 /** True if the name has characters outside the whitelist (alphanumeric, hyphen, underscore, dot — no leading dot). */
 export function isUnsafeName(name: string): boolean {
@@ -47,6 +48,13 @@ export const VALID_THINKING_LEVELS: readonly ThinkingLevel[] = [
 export function parseThinkingLevel(raw: string | undefined): ThinkingLevel | undefined {
   if (raw === undefined) return undefined;
   return VALID_THINKING_LEVELS.includes(raw as ThinkingLevel) ? (raw as ThinkingLevel) : undefined;
+}
+
+/** Validate and narrow a raw string to ThinkingChoice; undefined if invalid. */
+export function parseThinkingChoice(raw: string | undefined): ThinkingChoice | undefined {
+  if (raw === undefined) return undefined;
+  const accepted: readonly string[] = [...VALID_THINKING_LEVELS, PARENT_THINKING_CHOICE];
+  return accepted.includes(raw) ? (raw as ThinkingChoice) : undefined;
 }
 
 /** Collapse newlines/CRs into spaces so a message renders on one line (line-based TUI output breaks on raw CR/LF). */

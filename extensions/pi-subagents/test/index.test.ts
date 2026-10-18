@@ -313,13 +313,13 @@ describe("message renderer registration", () => {
 /* ------------------------------------------------------------------ */
 
 describe("tool registration", () => {
-  it("registers Agent, StopAgent, and AgentStatus tools", () => {
+  it("registers the spawn, stop, message and status tools", () => {
     const names = api.tools.map((t) => t.name);
-    expect(names).toEqual(["Agent", "StopAgent", "AgentStatus"]);
+    expect(names).toEqual(["Agent", "StopAgent", "MessageAgent", "AgentStatus"]);
   });
 
   it("registers every tool with the dot description", () => {
-    for (const toolName of ["Agent", "StopAgent", "AgentStatus"]) {
+    for (const toolName of ["Agent", "StopAgent", "MessageAgent", "AgentStatus"]) {
       expect(findTool(api, toolName)!.description).toBe(".");
     }
   });
@@ -455,7 +455,7 @@ describe("subagent spawn guard", () => {
     try {
       const parentApi = createMockExtensionAPI();
       await loadExtension(parentApi.api);
-      expect(parentApi.tools.map((tool) => tool.name)).toEqual(["Agent", "StopAgent", "AgentStatus"]);
+      expect(parentApi.tools.map((tool) => tool.name)).toEqual(["Agent", "StopAgent", "MessageAgent", "AgentStatus"]);
     } finally {
       resume();
       await childLoad;
@@ -482,8 +482,8 @@ describe("constrained sampling — default OFF", () => {
     expect(tool!.parameters.required).toEqual(["prompt"]);
   });
 
-  it("StopAgent has constrainedSampling (always)", () => {
-    const tool = findTool(api, "StopAgent");
+  it.each(["StopAgent", "MessageAgent"])("%s has constrainedSampling (always)", (name) => {
+    const tool = findTool(api, name);
     expect(tool).toBeDefined();
     expect(tool!.constrainedSampling).toEqual({
       type: "json_schema",
@@ -491,7 +491,7 @@ describe("constrained sampling — default OFF", () => {
     });
   });
 
-  for (const toolName of ["StopAgent", "AgentStatus"]) {
+  for (const toolName of ["StopAgent", "MessageAgent", "AgentStatus"]) {
     it(`${toolName} schema has additionalProperties: false`, () => {
       const tool = findTool(api, toolName);
       expect(tool).toBeDefined();
@@ -503,6 +503,12 @@ describe("constrained sampling — default OFF", () => {
     const tool = findTool(api, "AgentStatus");
     expect(tool).toBeDefined();
     expect(tool!.constrainedSampling).toBeUndefined();
+  });
+
+  it("MessageAgent requires an agent ID and message without exposing extra parameters", () => {
+    const tool = findTool(api, "MessageAgent")!;
+    expect(Object.keys(tool.parameters.properties!)).toEqual(["agent_id", "message"]);
+    expect(tool.parameters.required).toEqual(["agent_id", "message"]);
   });
 });
 

@@ -177,6 +177,17 @@ describe("validateRawLayer — non-model keys", () => {
     }
   });
 
+  it("accepts `parent` as a thinking choice for defaultThinking", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const cleaned = validateRawLayer({ agent: { defaultThinking: "parent" } }, "/g.json");
+      expect(cleaned.agent).toEqual({ defaultThinking: "parent" });
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it("passes valid values of every kind without warnings", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {

@@ -202,7 +202,14 @@ export function getAllTypes(): string[] {
 }
 
 /** Names of tools that subagents must NOT inherit (no sub-subagent policy, ADR 0001). */
-export const EXCLUDED_TOOL_NAMES = ["Agent", "StopAgent", "AgentStatus"];
+export const EXCLUDED_TOOL_NAMES = ["Agent", "StopAgent", "MessageAgent", "AgentStatus"];
+
+/** Dynamic MCP registries require exact names, not static extension aliases. */
+export function assertSupportedToolRestriction(entry: string): void {
+  if ((entry.includes("*") || entry.endsWith("/all")) && /^(?:builtin:)?mcp(?:__|\/|$)/i.test(entry)) {
+    throw new Error(`MCP wildcard restriction "${entry}" is unsupported; use exact tool names or disable builtin:mcp`);
+  }
+}
 
 function resolveToolEntries(
   entries: string[],
@@ -212,15 +219,13 @@ function resolveToolEntries(
   const resolved = new Set<string>();
 
   for (const entry of entries) {
-    if (entry.includes("*") && /^(?:builtin:)?mcp(?:__|\/|$)/i.test(entry)) {
-      throw new Error(`MCP wildcard restriction "${entry}" is unsupported; use exact tool names or disable builtin:mcp`);
-    }
+    assertSupportedToolRestriction(entry);
     const slashIdx = entry.indexOf("/");
     if (slashIdx !== -1) {
-      // ext/* or ext/tool syntax
+      // ext/*, ext/all or ext/tool syntax
       const extName = entry.slice(0, slashIdx);
       const toolPart = entry.slice(slashIdx + 1);
-      if (toolPart === "*") {
+      if (toolPart === "*" || toolPart === "all") {
         const extTools = extToolMap?.get(extName);
         if (extTools && extTools.length > 0) {
           for (const t of extTools) resolved.add(t);

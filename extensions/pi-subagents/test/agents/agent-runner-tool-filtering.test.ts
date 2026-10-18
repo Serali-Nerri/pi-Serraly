@@ -22,7 +22,7 @@ describe("runAgent — tool filtering", () => {
     fakePi.exec.mockResolvedValue({ code: 0, stdout: "true" });
   });
 
-  it("excludes all three control tools from SDK admission without freezing inherited tools", async () => {
+  it("excludes all four control tools from SDK admission without freezing inherited tools", async () => {
     const session = createMockSession();
     session.getActiveToolNames.mockReturnValue(["read", "bash", "edit", "Agent", "grep"]);
     mockModules.mockCreateAgentSession.mockResolvedValue({
@@ -36,7 +36,7 @@ describe("runAgent — tool filtering", () => {
 
     const options = mockModules.mockCreateAgentSession.mock.calls[0][0];
     expect(options).not.toHaveProperty("tools");
-    expect(options.excludeTools).toEqual(expect.arrayContaining(["Agent", "StopAgent", "AgentStatus"]));
+    expect(options.excludeTools).toEqual(expect.arrayContaining(["Agent", "StopAgent", "MessageAgent", "AgentStatus"]));
     expect(session.setActiveToolsByName).not.toHaveBeenCalled();
   });
 
@@ -96,7 +96,7 @@ describe("runAgent — excludeTools (blacklist mode)", () => {
 
     const options = mockModules.mockCreateAgentSession.mock.calls[0][0];
     expect(options).not.toHaveProperty("tools");
-    expect(options.excludeTools).toEqual(["Agent", "StopAgent", "AgentStatus", "write"]);
+    expect(options.excludeTools).toEqual(["Agent", "StopAgent", "MessageAgent", "AgentStatus", "write"]);
   });
 
   it("excludeTools: [write, grep] — excludes multiple tools", async () => {
@@ -115,7 +115,7 @@ describe("runAgent — excludeTools (blacklist mode)", () => {
 
     const options = mockModules.mockCreateAgentSession.mock.calls[0][0];
     expect(options).not.toHaveProperty("tools");
-    expect(options.excludeTools).toEqual(["Agent", "StopAgent", "AgentStatus", "write", "grep"]);
+    expect(options.excludeTools).toEqual(["Agent", "StopAgent", "MessageAgent", "AgentStatus", "write", "grep"]);
   });
 
   it("excludeTools with no matching tools — no filtering needed", async () => {
@@ -180,7 +180,7 @@ describe("runAgent — excludeTools (blacklist mode)", () => {
 
     const options = mockModules.mockCreateAgentSession.mock.calls[0][0];
     expect(options).not.toHaveProperty("tools");
-    expect(options.excludeTools).toEqual(["Agent", "StopAgent", "AgentStatus", "web_search", "web_extract", "web_crawl"]);
+    expect(options.excludeTools).toEqual(["Agent", "StopAgent", "MessageAgent", "AgentStatus", "web_search", "web_extract", "web_crawl"]);
     expect(mockModules.getLoaderOpts().extensionFactories).toHaveLength(1);
   });
 
@@ -209,7 +209,7 @@ describe("runAgent — excludeTools (blacklist mode)", () => {
 
     const options = mockModules.mockCreateAgentSession.mock.calls[0][0];
     expect(options).not.toHaveProperty("tools");
-    expect(options.excludeTools).toEqual(["Agent", "StopAgent", "AgentStatus", "write", "web_search", "web_extract"]);
+    expect(options.excludeTools).toEqual(["Agent", "StopAgent", "MessageAgent", "AgentStatus", "write", "web_search", "web_extract"]);
   });
 });
 
@@ -654,7 +654,7 @@ describe("tools field — extension tool names and ext/all syntax", () => {
 
     const options = mockModules.mockCreateAgentSession.mock.calls[0][0];
     expect(options).not.toHaveProperty("tools");
-    expect(options.excludeTools).toEqual(["Agent", "StopAgent", "AgentStatus"]);
+    expect(options.excludeTools).toEqual(["Agent", "StopAgent", "MessageAgent", "AgentStatus"]);
     expect(session.setActiveToolsByName).not.toHaveBeenCalled();
   });
 });

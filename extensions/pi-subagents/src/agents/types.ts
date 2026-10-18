@@ -1,5 +1,5 @@
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
-import type { ThinkingLevel } from "../types.js";
+import type { ThinkingChoice, ThinkingLevel } from "../types.js";
 
 /** Session ownership starts at allocation, before native extension startup finishes. */
 export interface AgentSessionOwnership {
@@ -39,7 +39,8 @@ export interface AgentConfig {
   preloadSkills?: string[] | false;
   color?: string;
   model?: string;
-  thinkingLevel?: ThinkingLevel;
+  /** A configured thinking choice; `parent` resolves to the parent session's level at spawn time. */
+  thinkingLevel?: ThinkingChoice;
   maxTurns?: number;
   /** Max output tokens per LLM response. Passed to provider as max_tokens or max_completion_tokens. */
   maxTokens?: number;

@@ -98,6 +98,7 @@ function scriptedStream({ factory, inventory = () => ({}), sessionId = () => und
 				const results = context.messages.slice(start + 1).filter((item) => item.role === "toolResult");
 				const step = plan[results.length];
 				if (step?.waitForTool || step?.waitAbsent || step?.gate) {
+					if (step.gate) report("provider-waiting", { factory, sessionId: sessionId(), marker });
 					const end = Date.now() + 8000;
 					while (!options?.signal?.aborted && Date.now() < end) {
 						const names = inventory().registered ?? getCurrentTools(context.messages).map((tool) => tool.name);
@@ -109,7 +110,7 @@ function scriptedStream({ factory, inventory = () => ({}), sessionId = () => und
 				if (options?.signal?.aborted) { finishAborted(); return; }
 				if (step?.lateTool) registerLate(["late_effect"]);
 				if (step?.lateControlTools) {
-					registerLate(["Agent", "StopAgent", "AgentStatus"]);
+					registerLate(["Agent", "StopAgent", "MessageAgent", "AgentStatus"]);
 					report("late-controls-registered", { factory, sessionId: sessionId(), ...inventory() });
 				}
 				report("provider-request", { factory, sessionId: sessionId(), marker, step: results.length, ...inventory(),

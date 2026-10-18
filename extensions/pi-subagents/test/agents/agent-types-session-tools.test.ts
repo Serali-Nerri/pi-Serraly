@@ -29,7 +29,7 @@ describe("session registry admission", () => {
     let api: ExtensionAPI;
     const factory: ExtensionFactory = (pi) => {
       api = pi;
-      for (const name of ["Agent", "StopAgent", "AgentStatus"]) {
+      for (const name of ["Agent", "StopAgent", "MessageAgent", "AgentStatus"]) {
         pi.registerTool({ name, label: name, description: name, parameters: Type.Object({}),
           execute: async () => ({ content: [{ type: "text", text: name }], details: undefined }),
         });
@@ -92,8 +92,8 @@ describe("session registry admission", () => {
     expect(session.getAllTools().map((tool) => tool.name).sort()).toEqual(["mcp__late__search", "read"]);
   });
 
-  it("all three control tools are permanently excluded even when whitelisted", async () => {
-    const { session } = await sessionFor({ tools: ["read", "Agent", "StopAgent", "AgentStatus"] });
+  it("all four control tools are permanently excluded even when whitelisted", async () => {
+    const { session } = await sessionFor({ tools: ["read", "Agent", "StopAgent", "MessageAgent", "AgentStatus"] });
     expect(session.getAllTools().map((tool) => tool.name)).toEqual(["read"]);
   });
 
@@ -110,12 +110,12 @@ describe("session registry admission", () => {
     expect(names).not.toContain("StopAgent");
   });
 
-  it("static ext selectors expand and an explicit allowlist wins ordinary denies", () => {
-    expect(select({ tools: ["read", "tavily/*"], excludeTools: ["read"], extToolMap: new Map([["tavily", ["web_search", "web_extract"]]]) }))
+  it.each(["*", "all"])("static ext/%s expands and an explicit allowlist wins ordinary denies", (alias) => {
+    expect(select({ tools: ["read", `tavily/${alias}`], excludeTools: ["read"], extToolMap: new Map([["tavily", ["web_search", "web_extract"]]]) }))
       .toMatchObject({ tools: ["read", "web_search", "web_extract"] });
   });
 
-  it.each(["mcp/*", "mcp__github__*", "mcp__github/*", "builtin:mcp/*"])("dynamic MCP wildcard %s fails closed", (entry) => {
+  it.each(["mcp/*", "mcp/all", "mcp__github__*", "mcp__github/*", "builtin:mcp/*", "builtin:mcp/all"])("dynamic MCP wildcard %s fails closed", (entry) => {
     expect(() => select({ tools: [entry] })).toThrow(/MCP.*wildcard.*exact/i);
     expect(() => select({ tools: true, excludeTools: [entry] })).toThrow(/MCP.*wildcard.*exact/i);
   });

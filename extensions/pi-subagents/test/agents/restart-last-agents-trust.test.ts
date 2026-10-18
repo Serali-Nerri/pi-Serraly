@@ -368,6 +368,46 @@ describe("restart without a worktree_path", () => {
 });
 
 /* ------------------------------------------------------------------ */
+/*  Thinking resolution                                                */
+/* ------------------------------------------------------------------ */
+
+describe("restart thinking resolution", () => {
+  it("resolves a parent thinking choice against the session replaying the restart", async () => {
+    const ctx = asCommandContext(fakeCtx({ thinkingLevel: "high" }));
+    vi.mocked(ctx.sessionManager.getEntries).mockReturnValue(
+      entriesWithCalls([{ prompt: "Do it", thinking: "parent" }]),
+    );
+
+    await handleRestartLastAgents(ctx);
+
+    // A replay follows the session replaying it, and stores the concrete level.
+    expect(lastSpawnIntent().thinkingLevel).toBe("high");
+  });
+
+  it("resolves a parent frontmatter selection against the session replaying the restart", async () => {
+    mockGetAgentConfig.mockReturnValue({ ...defaultAgentConfig(), thinkingLevel: "parent" });
+    const ctx = asCommandContext(fakeCtx({ thinkingLevel: "low" }));
+    vi.mocked(ctx.sessionManager.getEntries).mockReturnValue(entriesWithCalls([{ prompt: "Do it" }]));
+
+    await handleRestartLastAgents(ctx);
+
+    expect(lastSpawnIntent().thinkingLevel).toBe("low");
+  });
+
+  it("leaves thinking unset for a parent selection when the replaying session has no level", async () => {
+    const ctx = asCommandContext(fakeCtx());
+    vi.mocked(ctx.sessionManager.getEntries).mockReturnValue(
+      entriesWithCalls([{ prompt: "Do it", thinking: "parent" }]),
+    );
+
+    await handleRestartLastAgents(ctx);
+
+    // The spawn runner applies pi's own fallback; `parent` never reaches it.
+    expect(lastSpawnIntent().thinkingLevel).toBeUndefined();
+  });
+});
+
+/* ------------------------------------------------------------------ */
 /*  Shared helper + per-call resolution                                */
 /* ------------------------------------------------------------------ */
 

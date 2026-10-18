@@ -37,7 +37,7 @@ function bySettledDesc(a: AgentRecord, b: AgentRecord): number {
  * at most `limit` settled agents most-recently-settled first, with a summary
  * line when settled agents are hidden.
  */
-function formatAgentStatusList(agents: AgentRecord[], limit: number): string {
+export function formatAgentStatusList(agents: AgentRecord[], limit: number): string {
   const active: AgentRecord[] = [];
   const settled: AgentRecord[] = [];
   for (const record of agents) {

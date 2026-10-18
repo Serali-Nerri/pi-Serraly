@@ -7,10 +7,12 @@ import {
   isUnsafeName,
   isSymlink,
   parseModelKey,
+  parseThinkingChoice,
   parseThinkingLevel,
   safeReadFile,
   summarizeToolArgs,
 } from "../src/utils.js";
+import { PARENT_THINKING_CHOICE } from "../src/models/thinking-resolution.js";
 import { tempDirFixture } from "./fixtures.js";
 import type { Api, Model } from "@earendil-works/pi-ai";
 
@@ -171,6 +173,21 @@ describe("parseThinkingLevel", () => {
   it("returns undefined for an invalid level or undefined input", () => {
     expect(parseThinkingLevel("ultra")).toBeUndefined();
     expect(parseThinkingLevel(undefined)).toBeUndefined();
+  });
+});
+
+describe("parseThinkingChoice", () => {
+  it("narrows a concrete level", () => {
+    expect(parseThinkingChoice("high")).toBe("high");
+  });
+
+  it("accepts the parent choice", () => {
+    expect(parseThinkingChoice(PARENT_THINKING_CHOICE)).toBe(PARENT_THINKING_CHOICE);
+  });
+
+  it("returns undefined for an invalid choice or undefined input", () => {
+    expect(parseThinkingChoice("ultra")).toBeUndefined();
+    expect(parseThinkingChoice(undefined)).toBeUndefined();
   });
 });
 

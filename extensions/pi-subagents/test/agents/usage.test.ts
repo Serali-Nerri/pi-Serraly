@@ -2,8 +2,15 @@
  * usage.test.ts — Tests for usage tracking utilities.
  */
 
-import { describe, it, expect } from "vitest";
-import { type LifetimeUsage, addUsage, getLifetimeTotal, formatTokens, formatCost } from "../../src/agents/usage.js";
+import { describe, it, expect, vi } from "vitest";
+import {
+  type LifetimeUsage,
+  addUsage,
+  getLifetimeTotal,
+  formatTokens,
+  formatCost,
+  getSessionContextPercent,
+} from "../../src/agents/usage.js";
 
 /* ------------------------------------------------------------------ */
 /*  addUsage — cost accumulation                                       */
@@ -121,5 +128,51 @@ describe("formatCost", () => {
 
   it("formats very small cost as $0.00", () => {
     expect(formatCost(0.001)).toBe("$0.00");
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  getSessionContextPercent — cheap context getter preferred          */
+/* ------------------------------------------------------------------ */
+
+describe("getSessionContextPercent", () => {
+  it("reads the context getter without computing session stats", () => {
+    const getSessionStats = vi.fn(() => {
+      throw new Error("stats should not be computed");
+    });
+    const session = {
+      getContextUsage: () => ({ percent: 42 }),
+      getSessionStats,
+    };
+    expect(getSessionContextPercent(session)).toBe(42);
+    expect(getSessionStats).not.toHaveBeenCalled();
+  });
+
+  it("treats a missing getter result as unavailable instead of falling back to stats", () => {
+    const getSessionStats = vi.fn(() => ({ tokens: { input: 0, output: 0, cacheWrite: 0 }, contextUsage: { percent: 90 } }));
+    const session = { getContextUsage: (): undefined => undefined, getSessionStats };
+    expect(getSessionContextPercent(session)).toBeNull();
+    expect(getSessionStats).not.toHaveBeenCalled();
+  });
+
+  it("returns null when the getter throws, without falling back to stats", () => {
+    const getSessionStats = vi.fn(() => ({ tokens: { input: 0, output: 0, cacheWrite: 0 }, contextUsage: { percent: 90 } }));
+    const session = {
+      getContextUsage: (): { percent: number | null } => {
+        throw new Error("no usage yet");
+      },
+      getSessionStats,
+    };
+    expect(getSessionContextPercent(session)).toBeNull();
+    expect(getSessionStats).not.toHaveBeenCalled();
+  });
+
+  it("returns null without a session or a known percent", () => {
+    expect(getSessionContextPercent(undefined)).toBeNull();
+    expect(
+      getSessionContextPercent({
+        getContextUsage: () => ({ percent: null }),
+      }),
+    ).toBeNull();
   });
 });

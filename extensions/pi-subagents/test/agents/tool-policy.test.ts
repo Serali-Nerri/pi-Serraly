@@ -137,8 +137,11 @@ describe("legacy extension wildcard deny at execution", () => {
     };
   }
 
-  it.each(["direct", "nested", "codemode"])("late excluded vendor tool is blocked on the %s route before its side effect", async (route) => {
-    const h = await open();
+  it.each([
+    ["*", "direct"], ["*", "nested"], ["*", "codemode"],
+    ["all", "direct"], ["all", "nested"], ["all", "codemode"],
+  ])("late excluded vendor/%s tool is blocked on the %s route before its side effect", async (alias, route) => {
+    const h = await open([`vendor/${alias}`]);
     expect(h.session.getAllTools().map((tool) => tool.name)).toContain("late_write");
     const output = await h.call(route === "direct" ? "late_write" : route, route === "codemode" ? { code: "return await tools.late_write({});" } : {});
     expect(h.effects()).toBe(0);

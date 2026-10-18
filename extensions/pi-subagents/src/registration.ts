@@ -2,7 +2,7 @@ import { Type, type TSchema } from "typebox";
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { formatAgentTypeDescriptions, getVisibleAgentInfos } from "./agents/agent-types.js";
-import { executeAgentTool, executeStopAgentTool } from "./agents/tool-execution.js";
+import { executeAgentTool, executeMessageAgentTool, executeStopAgentTool } from "./agents/tool-execution.js";
 import { executeAgentStatusTool } from "./agents/agent-status.js";
 import {
   renderAgentToolCall,
@@ -142,6 +142,19 @@ export function registerTools(pi: ExtensionAPI): void {
     },
   };
   pi.registerTool(stopAgentTool);
+
+  pi.registerTool({
+    name: "MessageAgent",
+    label: "MessageAgent",
+    description: ".",
+    parameters: Type.Object({
+      agent_id: Type.String(),
+      message: Type.String(),
+    }, { additionalProperties: false }),
+    execute: executeMessageAgentTool,
+    constrainedSampling: CONSTRAINED_SAMPLING,
+    renderResult: stopAgentTool.renderResult,
+  });
 
   const agentStatusTool = {
     name: "AgentStatus",

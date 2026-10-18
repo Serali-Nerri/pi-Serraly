@@ -17,7 +17,7 @@ export const toolsByName = {
 	"pi-ask-user-question": ["ask_user_question"],
 	"pi-background-shell": ["bg_kill", "bg_logs", "bg_run", "bg_status"],
 	"pi-loop": [],
-	"pi-subagents": ["Agent", "StopAgent", "AgentStatus"],
+	"pi-subagents": ["Agent", "StopAgent", "MessageAgent", "AgentStatus"],
 	"pi-tools": ["apply_patch", "grep", "find", "ls"],
 	"pi-ui": [],
 };

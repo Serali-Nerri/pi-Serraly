@@ -330,6 +330,42 @@ try {
 		await spawn("sibling");
 		await session.prompt("SERRALY_PLAN:parent");
 		await clearAll();
+	} else if (scenario === "messages") {
+		const status = async () => text(await execute("AgentStatus", {}));
+		const idFor = async (state) => {
+			const id = (await status()).match(new RegExp(`([a-f0-9]{8}) \\(fixture\\) ${state}`))?.[1];
+			assert.ok(id, `status exposes a ${state} short ID`);
+			return id;
+		};
+		await spawn("first");
+		const firstId = await idFor("completed");
+		const running = await spawn("blocked", { run_in_background: true });
+		await until(async () => (await records()).some((item) => item.phase === "provider-waiting" && item.marker === "blocked"), "running child enters controlled provider boundary");
+		const runningId = await idFor("running");
+		assert.ok(running.details.agentId.startsWith(runningId), "displayed prefix identifies the spawned record");
+		await spawn("queued", { run_in_background: true });
+		const queuedId = await idFor("queued");
+		assert.match(text(await execute("MessageAgent", { agent_id: queuedId, message: "SERRALY_PLAN:never" })), /Message not sent.*no session/);
+		await assert.rejects(execute("MessageAgent", { agent_id: firstId, message: "SERRALY_PLAN:never" }), /cannot steer or continue/);
+		assert.match(await status(), new RegExp(`${firstId} \\(fixture\\) completed`), "full slot refuses continuation without changing the finished record");
+		assert.match(text(await execute("StopAgent", { agent_id: queuedId })), /Stopped agent/);
+		assert.match(text(await execute("MessageAgent", { agent_id: runningId, message: "SERRALY_PLAN:steered" })), /Sent \(steered\)/);
+		await writeFile(config.providerGate, "release");
+		const completed = async (marker) => {
+			await until(async () => (await records()).some((item) => item.phase === "plan-complete" && item.marker === marker), "message delivered: " + marker);
+			await until(async () => !/\(fixture\) running/.test(await status()), "messaged child settles");
+		};
+		await completed("steered");
+		assert.match(text(await execute("MessageAgent", { agent_id: ` ${runningId} `, message: "SERRALY_PLAN:continued" })), /Sent \(continued\)/);
+		await completed("continued");
+		const log = await records();
+		const steeredSession = log.find((item) => item.phase === "plan-complete" && item.marker === "steered").sessionId;
+		assert.equal(log.find((item) => item.phase === "plan-complete" && item.marker === "continued").sessionId, steeredSession, "MessageAgent continues the same session");
+		assert.equal((await status()).match(/\(fixture\)/g).length, 3, "message delivery does not create agent records");
+		assert.equal(log.filter((item) => item.phase === "mcp-start").length, 2, "only the two started children connect; queued messaging never starts a child");
+		report("message-delivery", { sessionId: steeredSession });
+		await close();
+		await assertNoProcesses();
 	} else if (scenario === "widget-retain") {
 		// SDK print mode cannot instantiate the widget. Bind a public TUI-style
 		// UI context and lifecycle event; no manager/widget exports are accessed.

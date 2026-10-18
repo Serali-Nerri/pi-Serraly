@@ -12,11 +12,12 @@ import type { ExtensionContext, ToolCallEvent } from "@earendil-works/pi-coding-
 import type { AgentRecord, ThinkingLevel } from "../types.js";
 import { SHORT_ID_LENGTH } from "../types.js";
 import type { AgentConfig } from "./types.js";
+import { formatAgentStatusList } from "./agent-status.js";
 import { resolveType, getAgentConfig, resolveTypeOrDiscover, type TypeResolution } from "./agent-types.js";
 import { getSessionContextPercent } from "./usage.js";
 import { computeSpawnTarget, surfaceSpawnTargetWarnings } from "../spawn/spawn-target.js";
 
-import { parseModelKey, resolveModel, parseThinkingLevel } from "../utils.js";
+import { parseModelKey, resolveModel, parseThinkingChoice } from "../utils.js";
 import { resolveThinkingLevel } from "../models/thinking-resolution.js";
 import { getPiModelThinkingLevel } from "../pi-settings.js";
 import { getPiInstance, getStore, getCoordinator, getManager } from "../shell.js";
@@ -29,13 +30,16 @@ function successResult(text: string, details?: Record<string, unknown>) {
 
 /**
  * The thinking a spawn of this call would run with, predicted at call time:
- * frontmatter > pi per-model > defaultThinking. Undefined when nothing is
- * configured — the session is the source of truth once it exists. The
- * per-model term obeys the same project-trust gate as the spawn's own
- * settings read: computeSpawnTarget's validation plus trust decision, run
- * silently (execution owns the user-facing warnings). Without the gate, an
- * untrusted cross-repo target's settings file could set the spawn's thinking
- * through the injected value, which wins as the explicit param.
+ * frontmatter > pi per-model > defaultThinking, resolving a configured `parent`
+ * value at its own position against the parent session's current level.
+ * Undefined when nothing is configured — the session is the source of truth
+ * once it exists. The per-model term carries the spawn target's trust decision
+ * into the settings read: computeSpawnTarget's validation plus trust decision,
+ * run silently (execution owns the user-facing warnings). An untrusted target's
+ * own project layer is then ignored, so its settings file cannot set the
+ * spawn's thinking through the injected value (which wins as the explicit
+ * param), while the user's global layer still applies — the scope the child's
+ * session is created with.
  */
 async function predictSpawnThinking(
   ctx: ExtensionContext,
@@ -49,13 +53,16 @@ async function predictSpawnThinking(
   const modelKey = effectiveModel || (ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "");
   const parsed = parseModelKey(modelKey);
   const perModel =
-    target.ok && target.projectTrusted && parsed
-      ? getPiModelThinkingLevel(target.resolvedPath ?? ctx.cwd, parsed.provider, parsed.modelId)
+    target.ok && parsed
+      ? getPiModelThinkingLevel(target.resolvedPath ?? ctx.cwd, parsed.provider, parsed.modelId, {
+          projectTrusted: target.projectTrusted,
+        })
       : undefined;
   return resolveThinkingLevel({
     frontmatter: agentConfig?.thinkingLevel,
     perModel,
     defaultThinking: getStore().agent.defaultThinking,
+    parentLevel: ctx.thinkingLevel,
   });
 }
 
@@ -204,8 +211,13 @@ export async function executeAgentTool(
   // spawn runner owns them (its trust-gated settings read keeps per-model
   // above defaultThinking; folding them into this explicit param would shadow
   // per-model). When the listener ran, it already injected the full chain.
-  const thinkingLevel =
-    parseThinkingLevel(params.thinking as string | undefined) ?? getAgentConfig(resolvedType)?.thinkingLevel;
+  // A `parent` value resolves here because the explicit param and the stored
+  // invocation must never carry it; the parent's level needs no trust gate.
+  const thinkingLevel = resolveThinkingLevel({
+    explicit: parseThinkingChoice(params.thinking as string | undefined),
+    frontmatter: getAgentConfig(resolvedType)?.thinkingLevel,
+    parentLevel: ctx.thinkingLevel,
+  });
 
   const coordinator = getCoordinator()!;
   // Background spawns (explicit or forceBackground) never bind to the parent
@@ -271,6 +283,25 @@ function formatRunningAgents(): string {
   return agents.map((a) => `${a.id.slice(0, SHORT_ID_LENGTH)} (${a.display.type})`).join(", ");
 }
 
+/** Resolve only at the tool boundary; manager/session identity stays exact. */
+function resolveAgentRecord(rawId: unknown, availableAgents: () => string): AgentRecord {
+  const id = typeof rawId === "string" ? rawId.trim() : "";
+  if (!id) throw new Error("agent_id is required");
+
+  const manager = getManager()!;
+  const exact = manager.getRecord(id);
+  if (exact) return exact;
+  const matches = manager.listAgents().filter((record) => record.id.startsWith(id));
+  if (matches.length === 0) {
+    throw new Error(`Agent ${id} not found. ${availableAgents()}`);
+  }
+  if (matches.length > 1) {
+    const candidates = matches.map((record) => `${record.id} (${record.display.type})`).join(", ");
+    throw new Error(`Ambiguous agent id ${id}. Matching agents: ${candidates}. Use a longer id.`);
+  }
+  return matches[0];
+}
+
 // --- StopAgent execute handler ---
 
 export async function executeStopAgentTool(
@@ -280,17 +311,8 @@ export async function executeStopAgentTool(
   _onUpdate: ((update: any) => void) | undefined,
   _ctx: ExtensionContext,
 ): Promise<any> {
-  const agentId = params.agent_id as string | undefined;
-
-  if (!agentId) {
-    throw new Error("agent_id is required");
-  }
-
-  const record = getManager()!.getRecord(agentId);
-
-  if (!record) {
-    throw new Error(`Agent ${agentId} not found. Running agents: ${formatRunningAgents()}`);
-  }
+  const record = resolveAgentRecord(params.agent_id, () => `Running agents: ${formatRunningAgents()}`);
+  const agentId = record.id;
 
   if (record.lifecycle.status !== "running" && record.lifecycle.status !== "queued") {
     return successResult(
@@ -303,6 +325,35 @@ export async function executeStopAgentTool(
   }
 
   throw new Error(`Failed to stop agent ${agentId}`);
+}
+
+// --- MessageAgent execute handler ---
+
+export async function executeMessageAgentTool(
+  _toolCallId: string,
+  params: Record<string, unknown>,
+  _signal: AbortSignal | undefined,
+  _onUpdate: ((update: any) => void) | undefined,
+  _ctx: ExtensionContext,
+): Promise<any> {
+  const record = resolveAgentRecord(params.agent_id, () => {
+    const list = formatAgentStatusList(getManager()!.listAgents(), getStore().agent.agentStatusLimit);
+    return `Available agents: ${list || "none"}`;
+  });
+  const message = typeof params.message === "string" ? params.message.trim() : "";
+  if (!message) throw new Error("message is required");
+
+  const shortId = record.id.slice(0, SHORT_ID_LENGTH);
+  const running = record.lifecycle.status === "running";
+  if (!running && !record.execution.session) {
+    return successResult(`Message not sent to agent ${shortId}: no session (status: ${record.lifecycle.status}).`);
+  }
+  // steer owns setup buffering, settled-session continuation and concurrency
+  // admission. Do not create another record or bypass its refusal conditions.
+  if (!(await getManager()!.steer(record.id, message))) {
+    throw new Error(`Failed to message agent ${record.id}: cannot steer or continue (status: ${record.lifecycle.status}).`);
+  }
+  return successResult(`Sent (${running ? "steered" : "continued"}) to agent ${shortId}.`);
 }
 
 // --- Tool_call listener — inject model into Agent tool calls ---

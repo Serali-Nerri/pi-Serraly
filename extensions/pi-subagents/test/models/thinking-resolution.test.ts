@@ -1,19 +1,27 @@
 /**
- * thinking-resolution.test.ts — The shared thinking precedence chain.
+ * thinking-resolution.test.ts — The shared thinking precedence chain and the
+ * displayed-value provenance.
  *
- * Pins the spawn-effective precedence:
+ * Spawn-effective precedence (highest to lowest):
  *   explicit > frontmatter > per-model > defaultThinking > undefined
  *
- * `undefined` means "nothing set": the caller passes nothing to session
- * creation and pi's own fallback applies (defaultThinkingLevel setting,
- * else medium, clamped to the model's supported levels). Display surfaces
- * additionally fall through to pi's global default, then medium — that
- * display-only tail is resolveDisplayThinkingLevel, pinned below.
+ * A configurable position may hold `parent`: it resolves to the parent
+ * session's current level at that position (not as an extra fallback after
+ * the chain), and reads as unset when no parent level is available, so the
+ * chain continues past it.
+ *
+ * Display surfaces (pre-spawn) skip the explicit position, then fall through
+ * to pi's global defaultThinkingLevel, then medium, clamped to the model —
+ * and label which position decided the value.
  */
 
 import { describe, it, expect } from "vitest";
 import type { Api, Model } from "@earendil-works/pi-ai";
-import { resolveThinkingLevel, resolveDisplayThinkingLevel } from "../../src/models/thinking-resolution.js";
+import {
+  PARENT_THINKING_CHOICE,
+  resolveThinkingLevel,
+  resolveDisplayedThinking,
+} from "../../src/models/thinking-resolution.js";
 
 describe("resolveThinkingLevel", () => {
   it("returns the explicit spawn param when set, beating every other source", () => {
@@ -47,7 +55,37 @@ describe("resolveThinkingLevel", () => {
   });
 });
 
-describe("resolveDisplayThinkingLevel", () => {
+describe("resolveThinkingLevel — parent", () => {
+  it("resolves a parent frontmatter selection to the parent session's level", () => {
+    expect(
+      resolveThinkingLevel({ frontmatter: PARENT_THINKING_CHOICE, perModel: "max", parentLevel: "high" }),
+    ).toBe("high");
+  });
+
+  it("resolves a parent defaultThinking selection to the parent session's level", () => {
+    expect(resolveThinkingLevel({ defaultThinking: PARENT_THINKING_CHOICE, parentLevel: "low" })).toBe("low");
+  });
+
+  it("resolves an explicit parent selection to the parent session's level", () => {
+    expect(resolveThinkingLevel({ explicit: PARENT_THINKING_CHOICE, parentLevel: "max" })).toBe("max");
+  });
+
+  it("continues down the chain when the parent level is unavailable", () => {
+    expect(resolveThinkingLevel({ frontmatter: PARENT_THINKING_CHOICE, defaultThinking: "medium" })).toBe("medium");
+  });
+
+  it("returns undefined when the only source is parent and no parent level is available", () => {
+    expect(resolveThinkingLevel({ defaultThinking: PARENT_THINKING_CHOICE })).toBeUndefined();
+  });
+
+  it("a resolved explicit parent beats a concrete frontmatter value", () => {
+    expect(
+      resolveThinkingLevel({ explicit: PARENT_THINKING_CHOICE, frontmatter: "low", parentLevel: "high" }),
+    ).toBe("high");
+  });
+});
+
+describe("resolveDisplayedThinking", () => {
   // Minimal reasoning model; real clampThinkingLevel runs against it.
   const MODEL = {
     provider: "test",
@@ -56,24 +94,68 @@ describe("resolveDisplayThinkingLevel", () => {
     thinkingLevelMap: { xhigh: "xhigh" },
   } as Model<Api>;
 
-  it("returns the chain result when a source wins", () => {
-    expect(resolveDisplayThinkingLevel({ perModel: "high", defaultThinking: "low" }, "xhigh", MODEL)).toBe("high");
+  it("labels a frontmatter value as frontmatter", () => {
+    expect(resolveDisplayedThinking({ frontmatter: "high" }, "low", MODEL)).toEqual({
+      level: "high",
+      source: "frontmatter",
+    });
+  });
+
+  it("labels a per-model value as pi per-model and lets it beat defaultThinking", () => {
+    expect(resolveDisplayedThinking({ perModel: "high", defaultThinking: "low" }, undefined, MODEL)).toEqual({
+      level: "high",
+      source: "pi per-model",
+    });
+  });
+
+  it("labels a defaultThinking value as subagent default", () => {
+    expect(resolveDisplayedThinking({ defaultThinking: "high" }, undefined, MODEL)).toEqual({
+      level: "high",
+      source: "subagent default",
+    });
+  });
+
+  it("labels a resolved parent value as parent, not as the position holding it", () => {
+    expect(
+      resolveDisplayedThinking({ frontmatter: PARENT_THINKING_CHOICE, parentLevel: "low" }, "high", MODEL),
+    ).toEqual({ level: "low", source: "parent" });
+  });
+
+  it("continues past an unresolved parent to the next configured source", () => {
+    expect(
+      resolveDisplayedThinking({ frontmatter: PARENT_THINKING_CHOICE, perModel: "low" }, undefined, MODEL),
+    ).toEqual({ level: "low", source: "pi per-model" });
   });
 
   it("falls through the chain to pi's global defaultThinkingLevel", () => {
-    expect(resolveDisplayThinkingLevel({}, "xhigh", MODEL)).toBe("xhigh");
+    expect(resolveDisplayedThinking({}, "xhigh", MODEL)).toEqual({ level: "xhigh", source: "pi default" });
   });
 
   it("falls through to medium when no source and no pi default is set", () => {
-    expect(resolveDisplayThinkingLevel({}, undefined, MODEL)).toBe("medium");
+    expect(resolveDisplayedThinking({}, undefined, MODEL)).toEqual({ level: "medium", source: "pi default" });
   });
 
-  it("clamps the result to the model's supported levels", () => {
-    expect(resolveDisplayThinkingLevel({ defaultThinking: "xhigh" }, undefined, MODEL)).toBe("xhigh");
-    expect(resolveDisplayThinkingLevel({ defaultThinking: "max" }, undefined, MODEL)).toBe("xhigh");
+  it("clamps the displayed result to the model's supported levels", () => {
+    expect(resolveDisplayedThinking({ defaultThinking: "xhigh" }, undefined, MODEL)).toEqual({
+      level: "xhigh",
+      source: "subagent default",
+    });
+    expect(resolveDisplayedThinking({ defaultThinking: "max" }, undefined, MODEL)).toEqual({
+      level: "xhigh",
+      source: "subagent default",
+    });
+  });
+
+  it("clamps a resolved parent level to the displayed model", () => {
+    expect(
+      resolveDisplayedThinking({ frontmatter: PARENT_THINKING_CHOICE, parentLevel: "max" }, undefined, MODEL),
+    ).toEqual({ level: "xhigh", source: "parent" });
   });
 
   it("leaves the result unclamped when the model is not in the registry", () => {
-    expect(resolveDisplayThinkingLevel({ defaultThinking: "max" }, undefined, undefined)).toBe("max");
+    expect(resolveDisplayedThinking({ defaultThinking: "max" }, undefined, undefined)).toEqual({
+      level: "max",
+      source: "subagent default",
+    });
   });
 });
