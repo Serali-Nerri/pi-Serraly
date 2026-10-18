@@ -48,10 +48,13 @@ completion, and background agents do not extend the main activity clock.
 Session replacement, tree navigation, reload and shutdown discard unfinished
 timing rather than inventing a completion.
 
-The public `registerEntryRenderer` renders this metadata as a muted, width-bounded
-single line after the activity's final content: `2m 18s · 14:32:08`, with a local
-time and a date for records not from today. It adds no labels, status or outcome
-interpretation, including when the user stops the activity.
+The public `registerEntryRenderer` renders this metadata as a muted, width-bounded,
+right-aligned single line after the activity's final content:
+`Worked for 2m 18s · 14:32:08`, with a local time and a date for records not from
+today. `Worked for` identifies elapsed work without interpreting its outcome,
+including when the user stops the activity. Alignment follows the available
+content width on every render; narrow windows truncate the line. It is not a
+footer status.
 This uses native entry placement and branch replay,
 not an assistant-message patch or a custom model-facing message. Saved sessions
 retain the records across processes; missing historical timings stay absent.

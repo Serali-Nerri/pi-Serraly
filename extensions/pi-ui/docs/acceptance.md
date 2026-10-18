@@ -77,7 +77,7 @@ at 80 columns.
 | Markdown and state | Real-host destinations, literal text, code/target preservation, reference definitions and container boundaries; billing/context and Thinking persistence use synthetic session data. |
 | Failure and compaction | Missing/read-only methods, foreign wrappers, stale context access, unconditional cleanup and refresh after mounted-tree replacement. |
 | Work Summary | Object-based semantic counts, recorded Thinking entries, top-level/internal operation deduplication, incomplete records, user-message boundaries, original-order expansion around prose/file/dedicated cards, and local child expansion without collapsing the Work Group. |
-| Activity completion | Public lifecycle events to final transcript placement, uninterrupted retry/continuation timing, explicit user waits, identical timestamp presentation on manual stops, style/terminal modes, persisted-session replay and model-context isolation. |
+| Activity completion | Public lifecycle events to right-aligned final transcript placement with a `Worked for` duration, uninterrupted retry/continuation timing, explicit user waits, identical timestamp presentation on manual stops, style/terminal modes, resize alignment, persisted-session replay and model-context isolation. |
 | Sticky prompts | Fullscreen viewed-history instruction selection through the interactive host's forwarding TUI reference, successor messages, jump-to-message, clipped Unicode, setting/style/mode gating, stale input and scrollbar exclusion. |
 | Terminal modes and widths | Default fullscreen without mode overrides, explicit regular/fullscreen PTYs, alternate-screen behavior, notifications, bounded rows, temporary file/diff operations, native OSC 8 and shutdown cleanup. |
 
@@ -112,7 +112,7 @@ suite.
 
 - [ ] Native startup header untouched by this module, footer layout, cwd, runtime and extension status segments.
 - [ ] On/compact/off presentation; Thinking remains interactive in off.
-- [ ] Muted numeric timing line below the final response in regular/fullscreen and all style modes; local time, historical date, identical format on manual stops, narrow resizing and same-session reopening.
+- [ ] Muted, right-aligned `Worked for … · …` timing line below the final response in regular/fullscreen and all style modes; local time, historical date, identical format on manual stops, narrow resizing and same-session reopening.
 - [ ] All four settings pages, thirteen settings and keyboard/focus behavior; `inputClip: 0` adaptive mode and explicit positive limits.
 - [ ] Mouse-driven text previews, keyboard navigation, scrolling and Escape ownership.
 - [ ] Fullscreen hover/expansion, text selection and links; regular keyboard paths.

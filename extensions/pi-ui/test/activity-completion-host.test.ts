@@ -80,7 +80,7 @@ const renderEntry = (entry) => {
 };
 const records = () => manager.getBranch().filter((entry) => entry.type === "custom" && entry.customType === type);
 const rows = () => root.render(80).map((line) => line.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "").trim());
-const completionRow = () => rows().find((line) => /^(?:<1s|\d+m? ?\d*s?) · \d{2}:\d{2}:\d{2}$/.test(line));
+const completionRow = () => rows().find((line) => /^Worked for (?:<1s|\d+m? ?\d*s?) · \d{2}:\d{2}:\d{2}$/.test(line));
 const unsubscribe = session.subscribe((event) => {
 	if (event.type === "entry_appended") renderEntry(event.entry);
 	if (event.type === "message_end" && event.message.role === "assistant")

@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { truncateToWidth } from "@earendil-works/pi-tui";
+import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { formatDuration } from "../utils/format.ts";
 
 type ActivityCompletion = { durationMs: number; completedAt: number };
@@ -26,10 +26,13 @@ export function installActivityCompletion(pi: ExtensionAPI, events: Pick<Extensi
 		if (!data || !Number.isFinite(data.durationMs) || data.durationMs < 0 ||
 			!Number.isFinite(data.completedAt) || !Number.isFinite(new Date(data.completedAt).getTime())) return;
 		return {
-			render: (width) => [theme.fg("dim", truncateToWidth(
-				`${formatDuration(data.durationMs) || "<1s"} · ${endTime(data.completedAt)}`,
-				width, "…",
-			))],
+			render: (width) => {
+				const line = truncateToWidth(
+					`Worked for ${formatDuration(data.durationMs) || "<1s"} · ${endTime(data.completedAt)}`,
+					width, "…",
+				);
+				return [" ".repeat(Math.max(0, width - visibleWidth(line))) + theme.fg("dim", line)];
+			},
 			invalidate() {},
 		};
 	});
