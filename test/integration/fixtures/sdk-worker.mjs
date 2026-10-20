@@ -148,6 +148,7 @@ function inventory(h, names) {
 	assert.ok(active.includes("tool_search"), "builtin discovery remains enabled by +tool_search");
 	for (const name of ["read", "bash", "edit", "write"]) assert.ok(active.includes(name), "+tool_search retains default built-ins");
 	const exposures = { apply_patch: "direct", grep: "codemode", find: "codemode", ls: "codemode",
+		bg_run: "codemode", bg_status: "codemode", bg_logs: "codemode", bg_kill: "codemode",
 		Agent: "direct", StopAgent: "direct", MessageAgent: "direct", AgentStatus: "direct", ask_user_question: "model-only" };
 	for (const tool of h.session.getAllTools().filter((tool) => expectedTools.includes(tool.name))) {
 		const exposure = exposures[tool.name] ?? "deferred";
@@ -840,9 +841,18 @@ if (scenario === "filters") {
 		else if (scenario === "add-dir") await addDir(h);
 		else if (scenario === "discovery") {
 			inventory(h, allNames);
-			const searched = await execute(h, "tool_search", { query: "+bg_logs +bg_run" });
-			assert.ok(searched.content[0].text.includes("bg_logs"));
-			for (const name of ["bg_logs", "bg_run"]) assert.ok(h.session.getActiveToolNames().includes(name), "tool_search discovers and activates " + name);
+			const active = h.session.getActiveToolNames();
+			h.session.agent.state.messages.push({ role: "assistant", content: [], api: h.model.api, provider: h.model.provider, model: h.model.id,
+				usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+				stopReason: "toolUse", timestamp: Date.now() });
+			const result = await execute(h, "codemode", { code: `const names = ["bg_run", "bg_status", "bg_logs", "bg_kill"];
+				text({tools: ALL_TOOLS.filter(tool => names.includes(tool.name)).map(tool => tool.name).sort()});
+				text(await tools.bg_status({}));` });
+			assert.equal(result.isError, undefined);
+			const text = result.content.filter(part => part.type === "text").map(part => part.text).join("\n");
+			assert.match(text, /"tools":\["bg_kill","bg_logs","bg_run","bg_status"\]/);
+			assert.match(text, /No background tasks in this Pi extension runtime/);
+			assert.deepEqual(h.session.getActiveToolNames(), active, "script discovery and calls do not directly activate background tools");
 		} else assert.fail("Unknown worker scenario " + scenario);
 	} finally { await h.close(); }
 }

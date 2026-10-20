@@ -64,7 +64,7 @@ const COMMAND_PREVIEW_CHARS = 90;
 export const BG_RUN_DESCRIPTION =
   'Start a named long-running shell command in the background; returns immediately with task ID, PID, and output path. Default terminal notification steers a busy agent at the next safe boundary or wakes an idle agent; do not poll or sleep merely to wait. Output is stored in .pi/tasks, with model-visible log reads capped at 50 KiB. Commands run with local permissions, not in a sandbox.';
 
-/** Namespace tool_search lists as a searchable source for the deferred shell tools. */
+/** Namespace for discovery and script calls to the background shell tools. */
 const BG_TOOL_NAMESPACE = {
   name: 'background-shell',
   description:
@@ -858,7 +858,7 @@ export default async function backgroundTasksExtension(pi: ExtensionAPI): Promis
     name: 'bg_run',
     label: 'Background Run',
     description: BG_RUN_DESCRIPTION + shellPolicyDescription(shellPolicy),
-    exposure: 'deferred',
+    exposure: 'codemode',
     namespace: BG_TOOL_NAMESPACE,
     parameters: BgRunParams,
     prepareArguments: prepareBgRunArguments,
@@ -903,7 +903,7 @@ export default async function backgroundTasksExtension(pi: ExtensionAPI): Promis
     label: 'Background Status',
     description:
       'Inspect one background task or list all running/recent background tasks. This is a point-in-time inspection tool, not a waiting primitive.',
-    exposure: 'deferred',
+    exposure: 'codemode',
     namespace: BG_TOOL_NAMESPACE,
     parameters: BgStatusParams,
     execute(_toolCallId, params) {
@@ -939,7 +939,7 @@ export default async function backgroundTasksExtension(pi: ExtensionAPI): Promis
     name: 'bg_logs',
     label: 'Background Logs',
     description: `Read bounded output from a background task for deliberate inspection; this is not a waiting primitive. Output is capped at ${formatSize(MAX_LOG_BYTES)} for model safety and points to the full output file when truncated.`,
-    exposure: 'deferred',
+    exposure: 'codemode',
     namespace: BG_TOOL_NAMESPACE,
     parameters: BgLogsParams,
     async execute(_toolCallId, params) {
@@ -983,7 +983,7 @@ export default async function backgroundTasksExtension(pi: ExtensionAPI): Promis
     label: 'Background Kill',
     description:
       'Stop a running background task by ID. Fails loudly if the task is unknown or already finished.',
-    exposure: 'deferred',
+    exposure: 'codemode',
     namespace: BG_TOOL_NAMESPACE,
     parameters: BgKillParams,
     async execute(_toolCallId, params) {

@@ -43,7 +43,7 @@ test("compiled subagents alone validates real control tools without spawning and
 test("actual package settings can disable each compiled entry independently, including UI", { timeout: 60000 }, async () => {
 	await sdkScenario(stage, "filters", {}, 55000);
 });
-test("builtin tool_search discovers still-deferred background tools", { timeout: 30000 }, async () => {
+test("compiled background tools are discoverable and callable from codemode without direct activation", { timeout: 30000 }, async () => {
 	await sdkScenario(stage, "discovery");
 });
 test("compiled external-directory commands load context, skills, and widget through the real host reload boundary", { timeout: 30000 }, async () => {

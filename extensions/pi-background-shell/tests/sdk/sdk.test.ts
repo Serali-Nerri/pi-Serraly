@@ -412,12 +412,12 @@ void describe('sdk', () => {
   void it('registers commands, tools, shortcuts, renderers, and runs with output and metadata files', async () => {
     const { session, cwd } = await harness();
     try {
-      // These four are deferred: registered, but never declared until a loader loads them.
+      // These four are script-callable without direct model declarations.
       for (const tool of ['bg_run', 'bg_status', 'bg_logs', 'bg_kill']) {
         assert.ok(session.getToolDefinition(tool), tool);
         assert.equal(
           session.getAllTools().find((definition) => definition.name === tool)?.exposure,
-          'deferred',
+          'codemode',
           tool,
         );
       }
@@ -433,7 +433,7 @@ void describe('sdk', () => {
         'timeoutSeconds', 'triggerOnCompletion',
       ]);
       assert.equal(bgRunParams['additionalProperties'], false);
-      assert.deepEqual(session.getActiveToolNames(), [], 'deferred tools must not be declared');
+      assert.deepEqual(session.getActiveToolNames(), [], 'codemode tools are not directly declared by default');
       for (const name of ['bg_kill', 'bg_logs', 'bg_run', 'bg_status']) {
         const tool = session.getToolDefinition(name);
         assert.ok(tool);

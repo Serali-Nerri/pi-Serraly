@@ -74,7 +74,7 @@ library declarations.
 
 ## What tests exercise
 
-- Four tools/seven commands, deferred exposure, description-only metadata and
+- Four tools/seven commands, codemode exposure and script invocation without discovery activation, description-only metadata and
   actual shell description/spawn-policy parity; no system-prompt hook.
 - Exit/spawn failure, timeouts/output overflow, bounded head/tail reads,
   unknown/ambiguous IDs, kill-after-end failures and uninterpreted stdout/stderr.

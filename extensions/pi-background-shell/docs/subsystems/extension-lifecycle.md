@@ -12,7 +12,7 @@
 ---
 # Extension lifecycle and lazy UI
 
-The module factory entry is `dist/extensions/background-tasks.js`, compiled from `extensions/background-tasks.ts` reexporting `src/extension.ts` and shipped with its complete compiled module closure; installation/release wiring belongs to root scripts. Four tools (deferred exposure, namespace `background-shell`) and seven commands are registered; only the selected dock shortcut is conditional. The completion renderer is `background-task-notification`.
+The module factory entry is `dist/extensions/background-tasks.js`, compiled from `extensions/background-tasks.ts` reexporting `src/extension.ts` and shipped with its complete compiled module closure; installation/release wiring belongs to root scripts. Four tools (`codemode` exposure, namespace `background-shell`) and seven commands are registered; only the selected dock shortcut is conditional. Tools are callable from scripts without discovery activation and are not directly declared by default. The completion renderer is `background-task-notification`.
 
 Tool cards use the shared card syntax. `src/ui/tool-cards.ts` is the only module that imports `pi-ui-kit`, and the only one the build bundles: `tsc` compiles the runtime one-to-one, then the shared package builder inlines that leaf (kit included, host packages external) into the same `dist/src/ui/tool-cards.js` with a multi-source map. The manifest declares that leaf under `serraly.build.bundles`; the docs gate allows the declared workspace packages there and nowhere else, and still rejects a bare workspace import in the compiled closure. The leaf renders card chrome from plain display input and never reads the registry, configuration or extension factory.
 

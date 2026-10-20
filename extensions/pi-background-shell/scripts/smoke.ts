@@ -36,10 +36,10 @@ export default function (pi) {
   pi.on('session_start', () => {
     const expected = ['bg_kill', 'bg_logs', 'bg_run', 'bg_status'];
     const declared = pi.getActiveTools().filter(name => expected.includes(name));
-    if (declared.length > 0) throw new Error('Deferred tools must not be declared directly: ' + declared.join(','));
+    if (declared.length > 0) throw new Error('Codemode tools must not be declared directly by default: ' + declared.join(','));
     const definitions = pi.getAllTools().filter(tool => expected.includes(tool.name));
-    if (definitions.length !== 4 || definitions.some(tool => tool.exposure !== 'deferred')) {
-      throw new Error('Background tools must register with deferred exposure');
+    if (definitions.length !== 4 || definitions.some(tool => tool.exposure !== 'codemode')) {
+      throw new Error('Background tools must register with codemode exposure');
     }
     if (definitions.some(tool => tool.namespace?.name !== 'background-shell')) {
       throw new Error('Background tools must share the background-shell namespace');

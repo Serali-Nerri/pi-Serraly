@@ -173,8 +173,9 @@ questions 以 `model-only` 注册，模型可见但不进入 codemode/嵌套调�
 sequential 执行，避免并发问卷互相干扰。
 
 后台通知、`.pi/tasks` 元数据和补丁报告由对应能力维护，UI 不改写格式。
-deferred background 工具仍通过内置 `tool_search` 发现；
-`defaultTools: ["+tool_search"]` 是用户选择，不由安装脚本隐式重写。
+background 的四个 `bg_*` 工具以 `codemode` 注册，默认不直接声明给模型，
+可由内置 `codemode` 或支持该曝光模式的代码执行适配器发现和调用。
+`defaultTools: ["+codemode"]` 是用户选择，不由安装脚本隐式重写。
 tools 模块以同名扩展覆盖内置 `grep`/`find`/`ls`，exposure 为 `codemode`：
 默认不直接声明给模型，启用内置 `codemode` 后由脚本调用，显式激活仍然有效。
 CLI 加载内置 codemode/tool_search 扩展，但默认不激活这些工具；SDK 会话

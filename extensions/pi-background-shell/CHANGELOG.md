@@ -32,7 +32,7 @@ The baseline npm source, entry and dist matched that commit; provenance in [UPST
 
 - The task manager uses a centered responsive floating panel, with a wide task sidebar/log preview and narrow list/detail layouts. Logs soft-wrap by default with optional horizontal pan; paused source-line/column anchors survive resize and reflow, and full task info is scrollable.
 - Task selection, displayed logs and action targets stay aligned after rerun or completion. Log display strips terminal controls without modifying output files; the 128 KiB UI tail, 50 KiB tool/model log cap and process/reload ownership remain unchanged.
-- All four tools use `deferred` exposure in the `background-shell` namespace: registered but not declared, so the model loads them with `tool_search` (or calls them from `codemode`). Commands, shortcuts and the dock are unaffected.
+- All four tools use `codemode` exposure in the `background-shell` namespace: callable from scripts without discovery activation, but not directly declared by default. Commands, shortcuts and the dock are unaffected.
 - Task timeouts are validated to 1–2,147,483 seconds so a Node timer cannot overflow into an immediate kill; output caps must be positive safe integers.
 - Completion notifications report task facts only; the `<guidance>` instruction block was removed.
 - Non-stale UI render failures are reported and isolated from child ownership instead of failing an admitted task.

@@ -58,6 +58,7 @@ export default function (pi) {
 		assert.deepEqual(ours.map((tool) => tool.name).sort(), Object.values(toolsByName).flat().sort());
 		assert.ok(pi.getActiveTools().includes("tool_search"));
 		const exposures = { apply_patch: "direct", grep: "codemode", find: "codemode", ls: "codemode",
+			bg_run: "codemode", bg_status: "codemode", bg_logs: "codemode", bg_kill: "codemode",
 			Agent: "direct", StopAgent: "direct", MessageAgent: "direct", AgentStatus: "direct", ask_user_question: "model-only" };
 		for (const tool of ours) {
 			const exposure = exposures[tool.name] ?? "deferred";

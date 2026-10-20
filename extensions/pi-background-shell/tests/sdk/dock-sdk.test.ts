@@ -132,7 +132,7 @@ void describe('shell-only registration and dock SDK integration', { concurrency:
           assert.deepEqual(h.session.getActiveToolNames(), []);
           assert.deepEqual(
             h.session.getAllTools().filter((tool) => tools.includes(tool.name)).map((tool) => `${tool.name}:${tool.exposure}`).sort(),
-            tools.map((name) => `${name}:deferred`),
+            tools.map((name) => `${name}:codemode`),
           );
           assert.deepEqual(h.session.extensionRunner.getRegisteredCommands().map((c) => c.invocationName).sort(), commands);
           assert.equal(h.session.extensionRunner.hasHandlers('before_agent_start'), false);
