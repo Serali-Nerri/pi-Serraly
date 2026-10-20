@@ -11,6 +11,7 @@
 | [`pi-add-dir`](extensions/pi-add-dir/README.md) | [HenryQW/pi-harness](https://github.com/HenryQW/pi-harness) | `4d9ed14b8016abcecb3d97af8c28ca37a3ca265f` | MIT |
 | [`pi-ask-user-question`](extensions/pi-ask-user-question/README.md) | [juicesharp/rpiv-mono](https://github.com/juicesharp/rpiv-mono) | 2.12.0，`68d9a0014b70006d7b04b57933752338a2716db7`（`packages/rpiv-ask-user-question`） | MIT / juicesharp |
 | [`pi-subagents`](extensions/pi-subagents/README.md) | [AlexParamonov/pi-subagents-lite](https://github.com/AlexParamonov/pi-subagents-lite) | v1.15.1，`0a9ad2f14562daeec2b5d815fbdf42695f2e7f11`；选择性吸收 v1.16.0–v1.17.1，`682c9c73680dbd7e4bf754b4eccc9ed1a85d27fb` | MIT |
+| [`pi-codex-imagegen`](extensions/pi-codex-imagegen/README.md) | [IgorWarzocha/howaboua-pi-stuff](https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/main/packages/pi-codex-imagegen) | 0.0.11，`d7564b7fc903590fd8d08b587cce2bb4707e4eef` | MIT / Igor Warzocha；Codex 参考 Apache-2.0 |
 
 模块内记录（含完整变更清单与固定来源）：
 
@@ -20,6 +21,7 @@
 - `pi-add-dir`：[UPSTREAM.md](extensions/pi-add-dir/UPSTREAM.md)
 - `pi-ask-user-question`：[UPSTREAM.md](extensions/pi-ask-user-question/UPSTREAM.md)
 - `pi-subagents`：[UPSTREAM.md](extensions/pi-subagents/UPSTREAM.md)
+- `pi-codex-imagegen`：[UPSTREAM.md](extensions/pi-codex-imagegen/UPSTREAM.md)
 
 ## pi-ui
 

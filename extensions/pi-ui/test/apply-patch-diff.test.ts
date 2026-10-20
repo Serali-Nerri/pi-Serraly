@@ -25,7 +25,7 @@ const change = (overrides: Record<string, unknown> = {}) => ({ kind: "update", p
 const detailsOf = (changes: unknown[], extra: Record<string, unknown> = {}) => ({ format: "apply_patch.v1", changes, ...extra });
 const render = (tool: any, width = 100) => tool.render(width).map(strip).join("\n");
 
-// 与 tools 扩展一致：apply_patch 始终是一个带定义的注册工具，而非匿名工具名。
+// 带定义的历史 apply_patch 调用仍可按 v1 报告展示，不依赖当前是否加载补丁工具。
 const definition = { name: "apply_patch", label: "apply_patch" };
 const patchTool = (h: any, id: string, input: string, resultValue: any) =>
 	h.tool("apply_patch", id, { input }, resultValue, definition);

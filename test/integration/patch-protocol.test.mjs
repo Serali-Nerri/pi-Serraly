@@ -155,8 +155,8 @@ test("a consumer built without its library dist still packs and installs standal
 	const packages = await discoverPackages();
 	const library = packages.find((pkg) => pkg.name === "pi-apply-patch-protocol");
 	await rm(join(library.directory, "dist"), { recursive: true, force: true });
-	await buildPackages(packages, ["pi-tools"]);
-	const packed = await packedFixture(t, "pi-tools");
+	await buildPackages(packages, ["pi-ui"]);
+	const packed = await packedFixture(t, "pi-ui");
 	assert.equal(packed.installed.status, 0, `the packed consumer installs offline: ${packed.installed.stderr}`);
 	assert.ok(packed.entry && existsSync(packed.entry), "the installed payload exposes its entry point");
 });

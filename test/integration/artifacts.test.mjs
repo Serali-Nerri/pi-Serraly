@@ -4,12 +4,13 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
 import { discoverPackages } from "../../scripts/lib/packages.mjs";
+import { names } from "./fixtures/contracts.mjs";
 
 const root = resolve(import.meta.dirname, "../..");
 
 // A host loader may supply a `require` binding, so only native ESM proves the
 // artifact's CJS interop closure is self-sufficient.
-for (const name of ["context-view", "pi-add-dir", "pi-ask-user-question", "pi-background-shell", "pi-loop", "pi-subagents", "pi-tools", "pi-ui"]) {
+for (const name of names) {
 	test(`compiled ${name} entry imports as native ESM without a host require binding`, { timeout: 30000 }, async () => {
 		const packages = await discoverPackages();
 		const pkg = packages.find((candidate) => candidate.name === name);
@@ -18,7 +19,7 @@ for (const name of ["context-view", "pi-add-dir", "pi-ask-user-question", "pi-ba
 		const cjsRequire = pkg.manifest.serraly.build.cjsRequire === true;
 		const source = `const factory = (await import(${JSON.stringify(entry)})).default;\n`
 			+ `if (typeof factory !== "function") throw new Error("entry must default-export the extension factory");\n`
-			+ (cjsRequire ? `factory({ on: () => () => {}, registerCommand() {}, registerTool() {}, appendEntry() {}, getCommands: () => [], exec: async () => ({ code: 128, killed: false, stdout: "", stderr: "not a git repository" }) });\n` : "");
+			+ (cjsRequire ? `factory({ on: () => () => {}, events: { on: () => () => {}, emit() {} }, registerCommand() {}, registerTool() {}, appendEntry() {}, getCommands: () => [], exec: async () => ({ code: 128, killed: false, stdout: "", stderr: "not a git repository" }) });\n` : "");
 		const child = spawn(process.execPath, ["--input-type=module", "-e", source], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
 		let stderr = "";
 		child.stderr.setEncoding("utf8").on("data", (chunk) => { stderr += chunk; });

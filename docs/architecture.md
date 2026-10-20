@@ -1,6 +1,6 @@
 # 仓库架构
 
-## 八个维护边界
+## 九个维护边界
 
 根 package 是资源清单和开发工作区，不是总 extension factory。
 每个模块仅注册自己的能力；关闭一个入口不会通过总工厂间接重新启用它。
@@ -11,10 +11,11 @@
 | `ui` | 展示生命周期、私有兼容补丁、shell、Markdown、Thinking、文字预览、`/ccstyle` | 上下文 Inspector、业务工具定义、执行和后台进程 |
 | `questions` | `ask_user_question` schema 与运行校验、tabbed 问卷（preview/备注/多选/自由回答）、折叠、RPC 原生对话框降级、答案结果 | UI 总体刷新、其他 overlay、工具卡语法、本地化 |
 | `loop` | `/loop` 解析、内存任务、忙闲调度、`local-loop` | UI scheduler、持久化恢复 |
-| `tools` | `apply_patch` 补丁算法、文件锁、预检、提交、`apply_patch.v1` 报告；`grep`/`find`/`ls` 同名替换的 codemode 注册 | UI 历史 diff 重建 |
+| `tools` | `grep`/`find`/`ls` 同名替换的 codemode 注册；保留未注册的补丁实现与行为测试 | `apply_patch` 运行时注册、UI 历史 diff 重建 |
 | `background-shell` | 进程/日志、dock、通知、状态、同进程 reload handoff | 跨进程恢复或 UI 工具卡接管 |
 | `add-dir` | 目录作用域与存储、外部指令 prompt section、skill 路径发现、`@` 补全包装、目录 widget | 模型工具、自动 reload、cwd 切换或工具权限 |
 | `subagents` | `Agent`/`StopAgent`/`MessageAgent`/`AgentStatus`、`/agents`、子会话选择/准入/可信状态、调度与关闭、专用展示 | 父工具闭包、兄弟模块私有实现、共享 MCP 连接池或跨进程任务恢复 |
+| `imagegen` | `imagegen`、OpenAI／Codex 图片请求与认证选择、编辑输入、工作区图片产物、可选 PCC 图片投影 | 登录流程、凭据存储、会话模型切换、其他扩展安装 |
 
 共享库只承载两侧都必须逐字一致的构建期契约，不承载任一方的策略：
 
@@ -46,10 +47,10 @@ instance 字段布局，实际宿主与人工视觉验收仍必需。同一预�
 ## 源码与运行树
 
 ```text
-extensions/*/         八个 private npm workspace；源码、测试、包文档/许可、dist/
+extensions/*/         九个 private npm workspace；源码、测试、包文档/许可、dist/
 packages/pi-*/        构建期共享库；无 Pi 资源入口
 scripts/              工作区命令、单包构建/封印和 release 组装
-test/integration/     产物、实际 loader、子会话和八入口共存
+test/integration/     产物、实际 loader、子会话和独立入口共存
 docs/                 跨模块设计与开发
 ```
 
@@ -82,7 +83,8 @@ interface SerralyMetadata {
 
 依赖方向：扩展（`extensions/*`）只能依赖库（`packages/*`）；三个库保持独立，
 不得依赖其他 workspace 包。内部依赖必须用精确版本写在 `devDependencies` 并随产物
-bundle；`dependencies` 必须为空，`peerDependencies` 只列宿主。构建顺序来自
+bundle；`dependencies` 必须为空，`peerDependencies` 只列宿主。imagegen 的可选
+PCC 图片投影使用其版本化事件协议，不依赖或 bundle PCC 包。构建顺序来自
 该依赖图（先依赖后使用者），拒绝缺依赖、版本不符、循环、跨扩展依赖、越界入口
 和符号链接 workspace。
 
@@ -95,8 +97,8 @@ dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace
 
 ## 构建闭包
 
-- context-view、UI、questions、loop、tools 是独立 ESM bundle；`diff@8.0.4` 打入补丁
-  bundle 并携带其 BSD 文本。
+- context-view、UI、questions、loop、tools 是独立 ESM bundle。tools 入口只包含搜索
+  工具；保留的补丁源码及其测试使用 `diff@8.0.4`，不进入运行 bundle。
 - background-shell 用 tsc 编译完整 `extensions/` + `src/`，保留 lazy import；
   根入口只是同目录转发，不另行注册能力。唯一例外是 manifest 声明的
   `src/ui/tool-cards.ts` 叶（见下），其余文件仍是逐文件 tsc 产物。
@@ -104,9 +106,15 @@ dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace
   全部打入产物，不增加根运行依赖。
 - subagents 是独立 ESM bundle，保留上游 MIT 许可及固定来源；Pi SDK、pi-ai、
   pi-tui 和 TypeBox external，不增加运行依赖或额外 worker。
-- tools 与 ui 各自 bundle 同一份 `pi-apply-patch-protocol`：wire 常量与类型只有
-  该库一处定义，两侧只保留各自的算法、阈值与展示策略。契约一致性由根
-  一致性套件用真实生产者输出与真实消费者解析器互验，不做常量自证。
+- imagegen 保留 howaboua 包的源码相对路径，独立 ESM bundle 内联固定版本的
+  undici、proxy-from-env；保留 MIT 与 Codex 参考的 Apache-2.0 许可。OpenAI
+  适配集中在本地源码，复用宿主的凭据刷新、base URL 与 headers，不保存 token。
+  API Key 使用 Images 接口；新版订阅 OAuth 使用 Responses 的 image_generation，
+  生成与编辑均复用上游输入校验、图片落盘和结果展示。
+- ui bundle `pi-apply-patch-protocol`；tools 保留的补丁源码也使用同一契约库，
+  但不随入口打包。wire 常量与类型只有该库一处定义，两侧只保留各自的算法、
+  阈值与展示策略。契约一致性由根一致性套件用保留的生产者输出与真实消费者
+  解析器互验，不做常量自证。
 - ui、questions 与 subagents 各自 bundle 同一份 `pi-config-core`：读取上限 64 KiB、严格
   UTF-8、`0600` 文件、`0700` 新父目录和 `<pid>.<uuid>` 临时名只在该库一处实现；
   加载失败回退、保存前重读合并、项目层信任状态和 log/throw 语义仍各自保留。

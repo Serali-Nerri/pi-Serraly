@@ -1,6 +1,6 @@
 import { appendFileSync, readFileSync } from "node:fs";
 import { createAssistantMessageEventStream } from "@earendil-works/pi-ai";
-import { questionArgs, patchInput } from "./contracts.mjs";
+import { questionArgs } from "./contracts.mjs";
 
 export function report(phase, extra = {}) {
 	appendFileSync(process.env.SERRALY_REPORT, JSON.stringify({ phase, ...extra }) + "\n");
@@ -36,7 +36,7 @@ export function registerScriptedProvider(pi, state) {
 						{ name: "bg_status", arguments: {} },
 						{ name: "Agent", arguments: { prompt: "fixture", agent: "no-such-agent" } },
 						{ name: "StopAgent", arguments: { agent_id: "missing" } },
-						{ name: "apply_patch", arguments: { input: patchInput } },
+						{ name: "write", arguments: { path: "boundary.txt", content: "first\nsecond\n" } },
 					] : [];
 					const next = plan[results.length];
 					stream.push({ type: "start", partial: message });

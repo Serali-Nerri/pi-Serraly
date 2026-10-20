@@ -54,7 +54,7 @@ export async function runRpc(sandbox, args) {
 	} finally { clearTimeout(timer); if (child.exitCode === null) child.kill("SIGKILL"); await closed.catch(() => {}); }
 }
 
-// Same Python/POSIX technique as scripts/capture.mjs, but with the final eight
+// Same Python/POSIX technique as scripts/capture.mjs, but with the final
 // compiled entries and fixture arguments rather than its stage-one UI bundle.
 const ptyDriver = String.raw`
 import os,sys,json,pty,termios,fcntl,struct,subprocess,select,time,errno,signal

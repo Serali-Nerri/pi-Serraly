@@ -147,9 +147,9 @@ function inventory(h, names) {
 	const active = h.session.getActiveToolNames();
 	assert.ok(active.includes("tool_search"), "builtin discovery remains enabled by +tool_search");
 	for (const name of ["read", "bash", "edit", "write"]) assert.ok(active.includes(name), "+tool_search retains default built-ins");
-	const exposures = { apply_patch: "direct", grep: "codemode", find: "codemode", ls: "codemode",
+	const exposures = { grep: "codemode", find: "codemode", ls: "codemode",
 		bg_run: "codemode", bg_status: "codemode", bg_logs: "codemode", bg_kill: "codemode",
-		Agent: "direct", StopAgent: "direct", MessageAgent: "direct", AgentStatus: "direct", ask_user_question: "model-only" };
+		Agent: "direct", StopAgent: "direct", MessageAgent: "direct", AgentStatus: "direct", ask_user_question: "model-only", imagegen: "direct" };
 	for (const tool of h.session.getAllTools().filter((tool) => expectedTools.includes(tool.name))) {
 		const exposure = exposures[tool.name] ?? "deferred";
 		assert.equal(tool.exposure, exposure);
@@ -199,29 +199,13 @@ function pidExists(pid) { try { process.kill(pid, 0); return true; } catch (erro
 async function status(h, taskId) { return (await execute(h, "bg_status", { taskId })).details.tasks[0]; }
 
 async function contracts(h) {
-	const patch = h.session.getToolDefinition("apply_patch");
-	assert.equal(patch.exposure, "direct");
-	assert.deepEqual(JSON.parse(JSON.stringify(patch.parameters)), { type: "object", properties: {
-		input: { description: "The complete *** Begin Patch ... *** End Patch text", type: "string" },
-	}, required: ["input"], additionalProperties: false });
-	assert.equal(patch.promptSnippet, "Apply patches to add, update, delete, or move files");
-	assert.deepEqual(patch.promptGuidelines, [
-		"Use apply_patch for file changes; inspect existing text before constructing update chunks.",
-		"apply_patch: @@ context anchors are text, not line numbers. Keep chunks in source order and include enough context to target the intended occurrence.",
-	]);
-	assert.equal(patch.constrainedSampling.type, "grammar");
-	assert.match(patch.constrainedSampling.variants.openai_lark, /\*\*\* Begin Patch/);
-	const original = { parameters: JSON.stringify(patch.parameters), description: patch.description,
-		promptSnippet: patch.promptSnippet, promptGuidelines: [...patch.promptGuidelines],
-		grammar: JSON.stringify(patch.constrainedSampling), execute: patch.execute, exposure: patch.exposure };
-	const result = await execute(h, "apply_patch", { input: patchInput });
-	assert.equal(await readFile(join(cwd, "boundary.txt"), "utf8"), "first\nsecond\n");
-	assert.deepEqual(result.content, [{ type: "text", text: "Success. Updated the following files:\nA boundary.txt" }]);
-	assert.equal(result.details.format, "apply_patch.v1");
-	assert.equal(result.details.changes[0].views[0].added, 2);
-	assert.equal(result.details.changes[0].views[0].removed, 0);
+	assert.equal(h.session.getToolDefinition("apply_patch"), undefined);
+	assert.ok(!h.session.getCallableToolNames().includes("apply_patch"));
+	// Replay a saved v1 result without loading a live patch tool.
+	const patch = { name: "apply_patch", label: "apply_patch" };
+	const result = { content: [{ type: "text", text: "Saved patch result" }],
+		details: config.savedPatchReport };
 	const frozen = structuredClone(result);
-	await writeFile(join(cwd, "boundary.txt"), "newer content must not change historical diff\n");
 	// Same-name search replacements stay inactive but codemode-callable.
 	const codemode = h.session.getToolDefinition("codemode");
 	assert.ok(codemode, "codemode extension is loaded");
@@ -267,19 +251,13 @@ async function contracts(h) {
 		});
 		assert.equal(tooFew.details.error, "empty_options");
 		const ctx = h.session.extensionRunner.createCommandContext();
+		const search = h.session.getToolDefinition("ls");
 		for (const mode of ["compact", "off", "on"]) {
 			await command(h, "ccstyle").handler(mode, ctx);
-			const current = h.session.getToolDefinition("apply_patch");
-			assert.equal(current, patch, "UI never re-registers the execute/schema contract");
-			assert.equal(current.execute, original.execute);
-			assert.equal(JSON.stringify(current.parameters), original.parameters);
-			assert.equal(current.description, original.description);
-			assert.equal(current.promptSnippet, original.promptSnippet);
-			assert.deepEqual(current.promptGuidelines, original.promptGuidelines);
-			assert.equal(JSON.stringify(current.constrainedSampling), original.grammar);
-			assert.equal(current.exposure, original.exposure);
+			assert.equal(h.session.getToolDefinition("apply_patch"), undefined, "UI never registers a patch tool");
+			assert.equal(h.session.getToolDefinition("ls"), search, "UI retains the search tool definition");
 			if (mode === "off") {
-				await execute(h, "apply_patch", { input: "*** Begin Patch\n*** Add File: ui-off.txt\n+tools still execute\n*** End Patch" });
+				await execute(h, "write", { path: "ui-off.txt", content: "tools still execute\n" });
 				assert.equal(await readFile(join(cwd, "ui-off.txt"), "utf8"), "tools still execute\n", "ccstyle off only affects presentation");
 			}
 			const row = new SDK.ToolExecutionComponent("apply_patch", "history", { input: patchInput }, undefined, patch, ui.tui, cwd);
@@ -752,6 +730,7 @@ async function addDir(h) {
 }
 
 if (scenario === "filters") {
+	await writeFile(join(cwd, "search-marker.txt"), "filesystem fixture\n");
 	for (let disabled = 0; disabled < allNames.length; disabled++) {
 		const disabledName = allNames[disabled];
 		const names = allNames.filter((name) => name !== disabledName);
@@ -761,8 +740,8 @@ if (scenario === "filters") {
 			inventory(h, names);
 			if (disabledName === "pi-ui") {
 				assert.deepEqual((await execute(h, "bg_status", {})).details.tasks, [], "UI-disabled package retains background execution");
-				const patch = await execute(h, "apply_patch", { input: patchInput });
-				assert.equal(patch.details.format, "apply_patch.v1", "UI-disabled package retains file mutation/report contract");
+				const listing = await execute(h, "ls", {});
+				assert.match(listing.content[0].text, /search-marker\.txt/, "UI-disabled package retains filesystem tools");
 			} else {
 				mounted = await mount(h);
 				assert.ok(mounted.mounted.has("footer"), "disabling a business entry does not disable UI");

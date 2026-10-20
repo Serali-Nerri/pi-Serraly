@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { discoverAndLoadExtensions, type ExtensionAPI, type ExtensionToolContext, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 import toolsExtension from "../src/index.ts";
+import { createApplyPatchTool } from "../src/tool.ts";
 import { PATCH_GRAMMAR } from "../src/grammar.ts";
 import type { ApplyPatchReport } from "pi-apply-patch-protocol";
 
@@ -17,7 +18,7 @@ function registeredTools(): ToolDefinition<any, any>[] {
 	return tools;
 }
 
-function registeredTool(name = "apply_patch"): ToolDefinition<any, any> {
+function registeredTool(name: string): ToolDefinition<any, any> {
 	const tool = registeredTools().find((candidate) => candidate.name === name);
 	assert.ok(tool, name);
 	return tool;
@@ -36,7 +37,7 @@ async function snapshotFile(path: string): Promise<FileSnapshot> {
 }
 
 function executePatch(input: string, cwd: string) {
-	return registeredTool().execute("id", { input }, undefined, undefined, { cwd } as ExtensionToolContext);
+	return createApplyPatchTool().execute("id", { input }, undefined, undefined, { cwd } as ExtensionToolContext);
 }
 
 function summary(details: ApplyPatchReport) {
@@ -44,8 +45,8 @@ function summary(details: ApplyPatchReport) {
 	return details.changes.map(({ views: _views, ...change }) => change);
 }
 
-test("registers apply_patch first, with one string input and grammar fallback schema", () => {
-	const tool = registeredTool();
+test("retained patch factory has one string input and grammar fallback schema", () => {
+	const tool = createApplyPatchTool();
 	assert.equal(tool.name, "apply_patch");
 	assert.equal(tool.exposure, "direct");
 	assert.equal(tool.namespace?.name, "patches");
@@ -62,8 +63,8 @@ test("registers apply_patch first, with one string input and grammar fallback sc
 
 test("registers grep, find and ls as codemode replacements for the built-in tools", () => {
 	const tools = registeredTools();
-	assert.deepEqual(tools.map((tool) => tool.name), ["apply_patch", "grep", "find", "ls"]);
-	for (const tool of tools.slice(1)) {
+	assert.deepEqual(tools.map((tool) => tool.name), ["grep", "find", "ls"]);
+	for (const tool of tools) {
 		assert.equal(tool.exposure, "codemode");
 		assert.equal(tool.namespace?.name, "filesystem");
 		assert.equal(tool.renderCall, undefined);
@@ -86,7 +87,7 @@ test("executes ls against ctx.cwd instead of the registration directory", async 
 test("executes in ctx.cwd and reports the changed files", async (t) => {
 	const root = await mkdtemp(join(tmpdir(), "pi-apply-patch-extension-"));
 	t.after(() => rm(root, { recursive: true, force: true }));
-	const result = await registeredTool().execute("id", {
+	const result = await createApplyPatchTool().execute("id", {
 		input: "*** Begin Patch\n*** Add File: hello.txt\n+hello\n*** End Patch",
 	}, undefined, undefined, { cwd: root } as ExtensionToolContext);
 	assert.equal(await readFile(join(root, "hello.txt"), "utf8"), "hello\n");
@@ -317,7 +318,7 @@ test("actual tool execution produces the shared v1 contract fixture", async (t) 
 	assert.deepEqual(result.details, expected);
 });
 
-test("loads the workspace source through Pi's real loader and preserves no-op bytes", async (t) => {
+test("loads only filesystem replacements through Pi's real loader and executes ls in ctx.cwd", async (t) => {
 	const root = await mkdtemp(join(tmpdir(), "pi-apply-patch-loader-"));
 	t.after(() => rm(root, { recursive: true, force: true }));
 	const agentDir = join(root, "agent");
@@ -327,33 +328,16 @@ test("loads the workspace source through Pi's real loader and preserves no-op by
 	assert.deepEqual(loaded.errors, []);
 	assert.equal(loaded.extensions.length, 1);
 	const extension = loaded.extensions[0];
-	assert.deepEqual([...extension.tools.keys()], ["apply_patch", "grep", "find", "ls"]);
-	const added = await extension.tools.get("apply_patch")!.definition.execute("loader-test", {
-		input: "*** Begin Patch\n*** Add File: loaded.txt\n+loaded\n*** End Patch",
+	assert.deepEqual([...extension.tools.keys()], ["grep", "find", "ls"]);
+	await writeFile(join(root, "loaded.txt"), "loaded\n");
+	const result = await extension.tools.get("ls")!.definition.execute("loader-test", {
+		path: ".",
 	}, undefined, undefined, { cwd: root } as ExtensionToolContext);
-	assert.equal(await readFile(join(root, "loaded.txt"), "utf8"), "loaded\n");
-	assert.equal((added.details as ApplyPatchReport).format, "apply_patch.v1");
-	assert.equal((added.details as ApplyPatchReport).changes[0].views[0].diff, "+1 loaded");
-
-	const updated = await extension.tools.get("apply_patch")!.definition.execute("loader-diff", {
-		input: "*** Begin Patch\n*** Update File: loaded.txt\n@@\n-loaded\n+changed\n*** End Patch",
-	}, undefined, undefined, { cwd: root } as ExtensionToolContext);
-	assert.equal((updated.details as ApplyPatchReport).changes[0].views[0].diff, "-1 loaded\n+1 changed");
-
-	// The loaded tool must not add a newline to an all-no-op update of an
-	// unterminated source file.
-	await writeFile(join(root, "unterminated.txt"), "alpha");
-	const before = await snapshotFile(join(root, "unterminated.txt"));
-	const noop = await extension.tools.get("apply_patch")!.definition.execute("loader-noop", {
-		input: "*** Begin Patch\n*** Update File: unterminated.txt\n@@\n-alpha\n+alpha\n*** End Patch",
-	}, undefined, undefined, { cwd: root } as ExtensionToolContext);
-	assert.deepEqual(noop.content, [{ type: "text", text: "No files were modified." }]);
-	assert.deepEqual(noop.details, { format: "apply_patch.v1", changes: [] });
-	assert.deepEqual(await snapshotFile(join(root, "unterminated.txt")), before);
+	assert.match(result.content[0].type === "text" ? result.content[0].text : "", /loaded\.txt/);
 });
 
 test("failed patches throw a bounded tool error rather than a success result", async () => {
-	await assert.rejects(registeredTool().execute("id", { input: "x".repeat(100_000) }, undefined, undefined, {
+	await assert.rejects(createApplyPatchTool().execute("id", { input: "x".repeat(100_000) }, undefined, undefined, {
 		cwd: tmpdir(),
 	} as ExtensionToolContext), (error: Error) => {
 		assert.ok(error.message.length < 20_000);

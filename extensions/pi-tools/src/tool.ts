@@ -1,4 +1,5 @@
-import { defineTool, truncateHead, withFileMutationQueue } from "@earendil-works/pi-coding-agent";
+import { defineTool, truncateHead, withFileMutationQueue, type AgentToolResult } from "@earendil-works/pi-coding-agent";
+import type { ApplyPatchReport } from "pi-apply-patch-protocol";
 import { Type } from "typebox";
 import { applyPatchWithSnapshots } from "./files.ts";
 import { PATCH_GRAMMAR } from "./grammar.ts";
@@ -41,7 +42,7 @@ All chunks are checked before writes, but I/O failures can leave a partially app
 			input: Type.String({ description: "The complete *** Begin Patch ... *** End Patch text" }),
 		}, { additionalProperties: false }),
 		constrainedSampling: { type: "grammar", variants: { openai_lark: PATCH_GRAMMAR } },
-		async execute(_id, { input }, signal, _onUpdate, ctx) {
+		async execute(_id, { input }, signal, _onUpdate, ctx): Promise<AgentToolResult<ApplyPatchReport>> {
 			try {
 				const outcome = await applyPatchWithSnapshots(input, ctx.cwd, { signal, withFileLock: withFileMutationQueue });
 				const { changes } = outcome;

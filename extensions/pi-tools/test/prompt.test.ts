@@ -12,10 +12,8 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import toolsExtension from "../src/index.ts";
 
-// Catches loss of apply_patch direct activation, wrong exposure for the
-// same-name search tools, or their prompt metadata during migration. Inspect
-// the actual SDK prompt/loadout; no provider request is made.
-test("patch metadata stays direct while grep/find/ls become codemode-only", async (t) => {
+// Inspect the actual SDK prompt/loadout; no provider request is made.
+test("only grep/find/ls are callable from the extension, without patch tools or guidance", async (t) => {
 	const root = await mkdtemp(join(tmpdir(), "pi-serraly-patch-prompt-"));
 	t.after(() => rm(root, { recursive: true, force: true }));
 	const agentDir = join(root, "agent");
@@ -55,9 +53,10 @@ test("patch metadata stays direct while grep/find/ls become codemode-only", asyn
 	});
 	t.after(() => session.dispose());
 	const active = session.getActiveToolNames();
-	assert.ok(active.includes("apply_patch"));
+	assert.ok(!active.includes("apply_patch"));
 	const callable = session.getCallableToolNames();
-	assert.ok(callable.includes("apply_patch"));
+	assert.ok(!callable.includes("apply_patch"));
+	assert.equal(session.getToolDefinition("apply_patch"), undefined);
 	for (const name of ["grep", "find", "ls"]) {
 		assert.ok(!active.includes(name), `${name} is not declared by default`);
 		assert.ok(callable.includes(name), `${name} is callable from codemode`);
@@ -65,7 +64,5 @@ test("patch metadata stays direct while grep/find/ls become codemode-only", asyn
 	}
 	// The built-in snippets disappear because the same-name replacements are not declared.
 	assert.doesNotMatch(session.systemPrompt, /Search file contents for patterns/);
-	assert.match(session.systemPrompt, /apply_patch: Apply patches to add, update, delete, or move files/);
-	assert.match(session.systemPrompt, /Use apply_patch for file changes; inspect existing text before constructing update chunks\./);
-	assert.match(session.systemPrompt, /apply_patch: @@ context anchors are text, not line numbers\. Keep chunks in source order and include enough context to target the intended occurrence\./);
+	assert.doesNotMatch(session.systemPrompt, /\bapply_patch\b/);
 });

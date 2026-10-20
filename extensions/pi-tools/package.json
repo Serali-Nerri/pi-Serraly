@@ -3,7 +3,7 @@
 	"version": "0.2.1",
 	"private": true,
 	"type": "module",
-	"description": "apply_patch plus codemode-only grep/find/ls replacements for the private pi-Serraly workspace",
+	"description": "Codemode-only grep/find/ls replacements for the private pi-Serraly workspace",
 	"engines": {
 		"node": ">=22.19.0"
 	},
@@ -39,13 +39,6 @@
 			"kind": "bundle",
 			"entry": "./src/index.ts"
 		},
-		"bundledLicenses": [
-			{
-				"package": "diff",
-				"file": "LICENSE",
-				"to": "licenses/diff-BSD.txt"
-			}
-		],
 		"test": {
 			"directory": "test"
 		}

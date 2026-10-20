@@ -13,7 +13,7 @@ after(async () => { await stage?.cleanup(); });
 
 // Break caught: a missing compiled entry/lazy module or a release that still loads
 // through workspace dependencies cannot reach any real loader scenario.
-test("release manifest exposes only eight compiled extensions, never companion skills", async () => {
+test("release manifest exposes only compiled extensions, never companion skills", async () => {
 	const manifest = JSON.parse(await readFile(join(stage.release, "package.json"), "utf8"));
 	assert.deepEqual(manifest.pi, { extensions: releaseEntries });
 });
@@ -25,7 +25,7 @@ for (const name of names) {
 }
 
 for (const [order, selection] of [["manifest", [...names]], ["reversed", [...names].reverse()]]) {
-	test(`eight compiled entries coexist without duplicate tools/commands (${order} order)`, { timeout: 30000 }, async () => {
+	test(`compiled entries coexist without duplicate tools/commands (${order} order)`, { timeout: 30000 }, async () => {
 		await sdkScenario(stage, "inventory", { names: selection });
 	});
 }
@@ -55,8 +55,9 @@ test("Latest reflects updated directory instructions while startup queues backgr
 test("context-view keeps the latest declaration when Anthropic retries preferred strict tools", { timeout: 30000 }, async () => {
 	await sdkScenario(stage, "context-strict-fallback", { names: ["context-view"] });
 });
-test("compiled apply_patch contract and immutable report survive UI modes; real question dialog answers/cancels", { timeout: 30000 }, async () => {
-	await sdkScenario(stage, "contracts");
+test("compiled search tools and saved patch reports survive UI modes; real question dialog answers/cancels", { timeout: 30000 }, async () => {
+	const savedPatchReport = JSON.parse(await readFile(new URL("../../extensions/pi-ui/test/fixtures/apply-patch-v1.json", import.meta.url), "utf8"));
+	await sdkScenario(stage, "contracts", { savedPatchReport });
 });
 test("compiled background tools complete, notify once, retain same process on reload, stop and clean up", { timeout: 30000 }, async () => {
 	await sdkScenario(stage, "background");
@@ -66,7 +67,7 @@ test("mounted package footer preserves local-loop/background statuses and dock/U
 });
 
 for (const mode of ["print", "json", "rpc"]) {
-	test(`compiled eight-entry package in bundled CLI ${mode} has no UI-owned stdout/timer/prototype pollution`, { timeout: 30000 }, async () => {
+	test(`compiled release in bundled CLI ${mode} has no UI-owned stdout/timer/prototype pollution`, { timeout: 30000 }, async () => {
 		const sandbox = await sandboxFixture(stage.release);
 		try {
 			let records;

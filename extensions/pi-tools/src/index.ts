@@ -4,7 +4,6 @@ import {
 	createLsToolDefinition,
 	type ExtensionAPI,
 } from "@earendil-works/pi-coding-agent";
-import { createApplyPatchTool } from "./tool.ts";
 
 // One namespace keeps the three same-name replacements grouped in codemode listings.
 const FILESYSTEM_NAMESPACE = {
@@ -13,12 +12,11 @@ const FILESYSTEM_NAMESPACE = {
 };
 
 /**
- * Registers apply_patch plus same-name replacements for the built-in grep, find
- * and ls tools. The replacements reuse the host definitions without their
+ * Registers same-name replacements for the built-in grep, find and ls tools.
+ * The replacements reuse the host definitions without their
  * renderers and are reachable from codemode unless a session activates them.
  */
 export default function toolsExtension(pi: ExtensionAPI): void {
-	pi.registerTool(createApplyPatchTool());
 	for (const definition of [
 		createGrepToolDefinition(process.cwd()),
 		createFindToolDefinition(process.cwd()),

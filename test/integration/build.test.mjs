@@ -6,6 +6,7 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 import { isolatedEnvironment } from "../../scripts/lib/environment.mjs";
 import { discoverPackages, selectExtensions } from "../../scripts/lib/packages.mjs";
+import { names } from "./fixtures/contracts.mjs";
 
 const root = resolve(import.meta.dirname, "../..");
 
@@ -19,9 +20,7 @@ test("build produces executable ESM for every entry allowed by the package manif
 		});
 		assert.equal(built.status, 0, built.stderr || built.stdout);
 		const packages = selectExtensions(await discoverPackages());
-		assert.deepEqual(packages.map((pkg) => pkg.name), [
-			"context-view", "pi-add-dir", "pi-ask-user-question", "pi-background-shell", "pi-loop", "pi-subagents", "pi-tools", "pi-ui",
-		]);
+		assert.deepEqual(packages.map((pkg) => pkg.name), names);
 		for (const pkg of packages) {
 			const manifest = JSON.parse(await readFile(join(pkg.directory, "package.json"), "utf8"));
 			for (const entry of manifest.pi?.extensions ?? []) {
