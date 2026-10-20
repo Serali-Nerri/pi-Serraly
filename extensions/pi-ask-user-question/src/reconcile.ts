@@ -1,12 +1,10 @@
 /**
  * Mid-session availability for ask_user_question.
  *
- * Non-interactive runs must not offer a tool that can only fail, so the
- * `before_agent_start` reconciler strips it from the active set when the host
- * reports no UI. It never re-adds the tool: registration already activates it,
- * and an operator who removed it — through tool settings or `setActiveTools` —
- * keeps that choice. The execution path keeps its own `ctx.hasUI` guard as a
- * one-turn backstop for a reordered tool-list snapshot.
+ * The tool is script-callable and inactive by default. If explicitly activated,
+ * `before_agent_start` strips that direct activation when the host has no UI.
+ * It never re-adds a tool the operator removed. Script calls remain callable;
+ * the execution path's `ctx.hasUI` guard returns no_ui without opening a dialog.
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";

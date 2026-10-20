@@ -149,7 +149,7 @@ function inventory(h, names) {
 	for (const name of ["read", "bash", "edit", "write"]) assert.ok(active.includes(name), "+tool_search retains default built-ins");
 	const exposures = { grep: "codemode", find: "codemode", ls: "codemode",
 		bg_run: "codemode", bg_status: "codemode", bg_logs: "codemode", bg_kill: "codemode",
-		Agent: "direct", StopAgent: "direct", MessageAgent: "direct", AgentStatus: "direct", ask_user_question: "model-only", imagegen: "direct" };
+		Agent: "direct", StopAgent: "direct", MessageAgent: "direct", AgentStatus: "direct", ask_user_question: "codemode", imagegen: "direct" };
 	for (const tool of h.session.getAllTools().filter((tool) => expectedTools.includes(tool.name))) {
 		const exposure = exposures[tool.name] ?? "deferred";
 		assert.equal(tool.exposure, exposure);
@@ -230,7 +230,9 @@ async function contracts(h) {
 	assert.match(listingText, /codemode-listing\.txt:1: codemode listing marker/);
 	assert.match(listingText, /"find":"find"/);
 	const ask = h.session.getToolDefinition("ask_user_question");
-	assert.equal(ask.exposure, "model-only");
+	assert.equal(ask.exposure, "codemode");
+	assert.ok(!h.session.getActiveToolNames().includes("ask_user_question"));
+	assert.ok(h.session.getCallableToolNames().includes("ask_user_question"));
 	assert.equal(ask.executionMode, "sequential");
 	assert.equal(ask.promptSnippet, undefined);
 	assert.equal(ask.promptGuidelines, undefined);
@@ -242,8 +244,11 @@ async function contracts(h) {
 	assert.equal(ask.parameters.properties.questions.items.properties.options.minItems, 2);
 	assert.equal(ask.parameters.properties.questions.items.properties.options.maxItems, 4);
 	assert.equal(ask.parameters.properties.questions.items.properties.options.items.properties.label.maxLength, 60);
-	const noUi = await execute(h, "ask_user_question", questionArgs);
-	assert.deepEqual(noUi.details, { answers: [], cancelled: true, error: "no_ui" });
+	const fromScript = (signal) => execute(h, "codemode", {
+		code: `text(await tools.ask_user_question(${JSON.stringify(questionArgs)}));`,
+	}, signal);
+	const noUi = await fromScript();
+	assert.match(noUi.content.map((part) => part.text ?? "").join("\n"), /UI not available/);
 	const ui = await mount(h);
 	try {
 		const tooFew = await execute(h, "ask_user_question", {
@@ -265,17 +270,25 @@ async function contracts(h) {
 			assert.deepEqual(result, frozen, "UI does not mutate model result or immutable patch report");
 		}
 		// Drive the real compiled dialog through the host custom UI: Enter picks the
-		// first option, Escape abandons the questionnaire.
+		// first option, Escape abandons it, and a script abort closes the overlay.
+		const listeners = ui.rawListeners.size;
+		const controller = new AbortController();
+		ui.nextAction = () => controller.abort();
+		await fromScript(controller.signal);
+		assert.equal(ui.tui.hasOverlay(), false, "an aborted script releases the questionnaire overlay");
+		assert.equal(ui.rawListeners.size, listeners, "an aborted script releases the questionnaire input listener");
 		ui.nextAction = (component) => component.handleInput("\r");
-		const answered = await execute(h, "ask_user_question", questionArgs);
-		assert.deepEqual(answered.details, {
-			answers: [{ questionIndex: 0, question: "Which local database?", kind: "option", answer: "SQLite" }], cancelled: false,
-		});
-		assert.equal(answered.content[0].text,
-			'User has answered your questions: "Which local database?"="SQLite". You can now continue with the user\'s answers in mind.');
+		const answered = await fromScript();
+		assert.equal(answered.isError, undefined);
+		assert.match(answered.content.map((part) => part.text ?? "").join("\n"), /"Which local database\?"="SQLite"/);
+		assert.equal(ui.tui.hasOverlay(), false);
+		assert.equal(ui.rawListeners.size, listeners);
 		ui.nextAction = (component) => component.handleInput("\u001b");
-		const declined = await execute(h, "ask_user_question", questionArgs);
-		assert.deepEqual(declined.details, { answers: [], cancelled: true });
+		const declined = await fromScript();
+		assert.match(declined.content.map((part) => part.text ?? "").join("\n"), /User declined to answer questions/);
+		assert.equal(ui.tui.hasOverlay(), false);
+		assert.equal(ui.rawListeners.size, listeners);
+		assert.ok(!h.session.getActiveToolNames().includes("ask_user_question"), "script calls never activate the standalone tool");
 	} finally { ui.dispose(); }
 }
 
@@ -510,9 +523,9 @@ async function mount(h) {
 		moveBy() {}, clearLine() {}, clearFromCursor() {}, setTitle() {}, drainInput: async () => {} };
 	const tui = new TUI.TuiMainScreen(terminal);
 	tui.requestRender = () => {};
-	const mounted = new Map(), statuses = new Map(), interactions = [];
+	const mounted = new Map(), statuses = new Map(), interactions = [], rawListeners = new Set();
 	const editor = new TUI.Input(); tui.setFocus(editor);
-	const state = { tui, editor, mounted, statuses, interactions, nextAction: undefined, dispose() { for (const component of mounted.values()) component.dispose?.(); } };
+	const state = { tui, editor, mounted, statuses, interactions, rawListeners, nextAction: undefined, dispose() { for (const component of mounted.values()) component.dispose?.(); } };
 	const keybindings = { matches: (data, name) => TUI.matchesKey(data, {
 		"tui.select.confirm": "enter", "tui.input.submit": "enter", "tui.select.cancel": "escape",
 		"tui.select.up": "up", "tui.select.down": "down", "tui.input.newLine": "shift+enter",
@@ -521,7 +534,8 @@ async function mount(h) {
 	}[name] ?? name) };
 	const ui = { ...h.session.extensionRunner.getUIContext(), theme,
 		getToolsExpanded: () => false, getThinkingVisible: () => false, getEditorText: () => "", setEditorText() {},
-		onTerminalInput: () => () => {}, requestRender() {}, setTitle() {}, notify() {},
+		onTerminalInput(listener) { rawListeners.add(listener); return () => rawListeners.delete(listener); },
+		requestRender() {}, setTitle() {}, notify() {},
 		setStatus(key, value) { if (value === undefined) statuses.delete(key); else statuses.set(key, value); },
 		setWidget(key, factory) { if (!factory) mounted.delete(key); else if (typeof factory === "function") mounted.set(key, factory(tui, theme)); },
 		setHeader(factory) { if (!factory) mounted.delete("header"); else mounted.set("header", factory(tui, theme)); },
@@ -824,12 +838,12 @@ if (scenario === "filters") {
 			h.session.agent.state.messages.push({ role: "assistant", content: [], api: h.model.api, provider: h.model.provider, model: h.model.id,
 				usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
 				stopReason: "toolUse", timestamp: Date.now() });
-			const result = await execute(h, "codemode", { code: `const names = ["bg_run", "bg_status", "bg_logs", "bg_kill"];
+			const result = await execute(h, "codemode", { code: `const names = ["bg_run", "bg_status", "bg_logs", "bg_kill", "ask_user_question"];
 				text({tools: ALL_TOOLS.filter(tool => names.includes(tool.name)).map(tool => tool.name).sort()});
 				text(await tools.bg_status({}));` });
 			assert.equal(result.isError, undefined);
 			const text = result.content.filter(part => part.type === "text").map(part => part.text).join("\n");
-			assert.match(text, /"tools":\["bg_kill","bg_logs","bg_run","bg_status"\]/);
+			assert.match(text, /"tools":\["ask_user_question","bg_kill","bg_logs","bg_run","bg_status"\]/);
 			assert.match(text, /No background tasks in this Pi extension runtime/);
 			assert.deepEqual(h.session.getActiveToolNames(), active, "script discovery and calls do not directly activate background tools");
 		} else assert.fail("Unknown worker scenario " + scenario);

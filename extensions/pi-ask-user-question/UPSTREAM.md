@@ -33,11 +33,11 @@
    the jiti store-churn workarounds — `loadQuestionnaireSession()`, the
    `session_load_failed`/`stale_module_cache` results and the 2-second prewarm
    timer — are removed. Those two error codes are gone from the result type.
-6. **Model-only, sequential execution.** Upstream registers a default `direct`
+6. **Script discovery, sequential execution.** Upstream registers a default `direct`
    tool with no execution mode and a guideline telling the model not to call it
-   twice. This module sets `exposure: "model-only"` (declared to the model,
-   never callable from codemode or nested calls — the documented Pi exposure for
-   user-asking tools) and `executionMode: "sequential"`.
+   twice. This module sets `exposure: "codemode"` for script discovery and
+   nested calls without default direct activation, and
+   `executionMode: "sequential"`.
 7. **Strip-only reconciliation.** Upstream re-added the tool whenever `hasUI`
    was true, overriding an operator's removal. The reconciler only strips it in
    no-UI runs and never re-adds it.

@@ -12,6 +12,7 @@ export interface CodeModeImageTool {
 	usage: string;
 	description: string;
 	deferLoading: boolean;
+	discoverWhenDeferred: boolean;
 	kind: "function";
 	executionPipeline: "pi";
 	inputSchema: unknown;
@@ -32,7 +33,7 @@ export function registerImagegenInCodeMode(pi: ExtensionAPI, tool: ImageTool): v
 		name: "image_gen__imagegen", topLevelName: tool.name,
 		toolName: { namespace: "image_gen", name: "imagegen" },
 		usage: "generatedImage(await tools.image_gen__imagegen({prompt:string,transparent_background?:boolean,referenced_image_paths?:string[],num_last_images_to_include?:number})) // prompt: include target aspect ratio and quality; transparency for cutouts, preserve existing transparency in edits; no selectors=generate; paths/recent count=edit; never text/serialize base64 result",
-		description: tool.description, deferLoading: false, kind: "function",
+		description: tool.description, deferLoading: true, discoverWhenDeferred: true, kind: "function",
 		executionPipeline: "pi", inputSchema: tool.parameters,
 		renderCall: tool.renderCall, renderResult: tool.renderResult,
 		async invoke(input, context, signal) {

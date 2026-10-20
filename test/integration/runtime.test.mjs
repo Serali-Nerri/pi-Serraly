@@ -43,7 +43,7 @@ test("compiled subagents alone validates real control tools without spawning and
 test("actual package settings can disable each compiled entry independently, including UI", { timeout: 60000 }, async () => {
 	await sdkScenario(stage, "filters", {}, 55000);
 });
-test("compiled background tools are discoverable and callable from codemode without direct activation", { timeout: 30000 }, async () => {
+test("compiled background and question tools are discoverable from codemode without direct activation", { timeout: 30000 }, async () => {
 	await sdkScenario(stage, "discovery");
 });
 test("compiled external-directory commands load context, skills, and widget through the real host reload boundary", { timeout: 30000 }, async () => {
@@ -55,7 +55,7 @@ test("Latest reflects updated directory instructions while startup queues backgr
 test("context-view keeps the latest declaration when Anthropic retries preferred strict tools", { timeout: 30000 }, async () => {
 	await sdkScenario(stage, "context-strict-fallback", { names: ["context-view"] });
 });
-test("compiled search tools and saved patch reports survive UI modes; real question dialog answers/cancels", { timeout: 30000 }, async () => {
+test("compiled search tools and saved patch reports survive UI modes; nested questionnaire answers, cancels and aborts", { timeout: 30000 }, async () => {
 	const savedPatchReport = JSON.parse(await readFile(new URL("../../extensions/pi-ui/test/fixtures/apply-patch-v1.json", import.meta.url), "utf8"));
 	await sdkScenario(stage, "contracts", { savedPatchReport });
 });

@@ -177,8 +177,11 @@ UI 读取公共工具元数据和已有结果。background-shell、subagents 的
 工具 renderer 及 `subagent-result` 消息 renderer 保持专用展示；第三方
 Agent/StopAgent 的专用 renderer 同样保持优先，不因属于私有包而被接管。
 footer 消费宿主提供的 extension statuses，不清理其他模块的状态键。
-questions 以 `model-only` 注册，模型可见但不进入 codemode/嵌套调用面，并按
-sequential 执行，避免并发问卷互相干扰。
+questions 以 `codemode` 注册，默认不直接声明给模型，由内置 codemode 或 PCC
+Code/Notebook Mode 在发现清单中提供契约并通过脚本调用；仍按 sequential 执行。
+问卷的 UI、答案、取消和清理归 questions 所有；无 UI 的脚本调用返回 `no_ui`。
+imagegen 保留原生 direct 注册；可选 PCC 桥接以 deferred 且 discoverable 的
+投影进入发现清单和 `ALL_TOOLS`，调用仍通过 Pi 的嵌套执行入口。
 
 后台通知、`.pi/tasks` 元数据和补丁报告由对应能力维护，UI 不改写格式。
 background 的四个 `bg_*` 工具以 `codemode` 注册，默认不直接声明给模型，

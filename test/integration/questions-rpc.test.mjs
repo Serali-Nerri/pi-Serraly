@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { diagnostics, releaseFixture, sandboxFixture } from "./helpers/runtime.mjs";
 
-test("the real RPC CLI sequences question dialogs, dismisses and aborts pending input without poisoning later calls", { timeout: 60000 }, async () => {
+test("an explicitly activated questionnaire in the real RPC CLI sequences, dismisses and aborts dialogs without poisoning later calls", { timeout: 60000 }, async () => {
 	const stage = await releaseFixture({ packages: ["pi-ask-user-question"] });
 	let sandbox;
 	try {
@@ -13,6 +13,7 @@ test("the real RPC CLI sequences question dialogs, dismisses and aborts pending 
 		const manifest = JSON.parse(await readFile(join(stage.release, "package.json"), "utf8"));
 		const child = spawn(process.execPath, [stage.host.cli, "--mode", "rpc", "--offline", "--no-session",
 			"--no-skills", "--no-prompt-templates", "--no-themes", "--no-context-files", "--no-approve", "--no-extensions",
+			"--tools", "+ask_user_question",
 			...manifest.pi.extensions.flatMap((entry) => ["-e", join(stage.release, entry)]),
 			"-e", join(sandbox.base, "fixtures/questions-rpc-fixture.js"),
 			"--provider", "serraly-questions", "--model", "fixture", "--thinking", "off"],

@@ -31,6 +31,8 @@
   nested executor, preserving admission and hooks without bundling PCC or
   resolving a peer from outside the immutable release. The native `imagegen`
   name is reserved by this projection and the result uses upstream's image mapper.
+  The projection is deferred and discoverable in PCC's toolkit and `ALL_TOOLS`;
+  native direct registration is retained for PCC's eligibility check.
 - Upstream image request validation, history selection, artifacts and renderers
   are retained. The upstream package update popup is not registered: local
   distribution and provenance are owned by this workspace, not its npm package.

@@ -32,7 +32,7 @@ export function registerScriptedProvider(pi, state) {
 					const results = context.messages.filter((item) => item.role === "toolResult");
 					const plan = config.tui ? [
 						{ name: "read", arguments: { path: "seed.txt" } },
-						{ name: "ask_user_question", arguments: questionArgs },
+						{ name: "codemode", arguments: { code: `text(await tools.ask_user_question(${JSON.stringify(questionArgs)}));` } },
 						{ name: "bg_status", arguments: {} },
 						{ name: "Agent", arguments: { prompt: "fixture", agent: "no-such-agent" } },
 						{ name: "StopAgent", arguments: { agent_id: "missing" } },

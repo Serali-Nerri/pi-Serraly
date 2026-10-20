@@ -224,6 +224,8 @@ test("PCC image projection uses Pi's nested executor and releases its registrati
 	const [adapted] = pccTools(events);
 	assert.equal(adapted?.name, "image_gen__imagegen");
 	assert.equal(adapted.topLevelName, "imagegen");
+	assert.equal(adapted.deferLoading, true);
+	assert.equal(adapted.discoverWhenDeferred, true);
 	network.get("https://gateway.invalid").intercept({ path: "/v1/images/generations", method: "POST" })
 		.reply(200, { data: [{ b64_json: png }] });
 	const signal = new AbortController().signal;

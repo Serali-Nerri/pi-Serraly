@@ -6,9 +6,8 @@
  * for RPC hosts where `ui.custom()` cannot render. Results are returned as
  * model-facing prose plus structured `details`.
  *
- * The tool is model-only (declared to the model, never callable through
- * codemode or nested tool calls) and executes sequentially, so two
- * questionnaires never race for the same overlay stack.
+ * The tool is discoverable through codemode and executes sequentially. Script
+ * calls use the same host routing, validation and cancellation as direct calls.
  */
 
 import { SettingsManager, type ExtensionAPI, type ExtensionContext, type Theme } from "@earendil-works/pi-coding-agent";
@@ -35,7 +34,7 @@ const ERROR_NO_UI = "Error: UI not available (running in non-interactive mode)";
 const ERROR_NO_CUSTOM_UI =
 	"Error: this client cannot render the questionnaire (custom UI is unavailable). The user never saw the questions — do NOT treat this as a decline. Ask the questions as plain chat text instead, without using this tool.";
 
-/** Non-interactive host backstop (the reconciler normally strips the tool first). */
+/** Non-interactive guard for both script calls and explicit direct activation. */
 function rejectWithoutUi() {
 	return buildToolResult(ERROR_NO_UI, { answers: [], cancelled: true, error: "no_ui" });
 }
@@ -230,7 +229,7 @@ export function registerAskUserQuestionTool(pi: ExtensionAPI): void {
 		name: ASK_USER_QUESTION_TOOL_NAME,
 		label: "Ask User Question",
 		description: config.description ?? DEFAULT_TOOL_DESCRIPTION,
-		exposure: "model-only",
+		exposure: "codemode",
 		executionMode: "sequential",
 		parameters: QuestionParamsSchema,
 

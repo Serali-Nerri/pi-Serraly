@@ -59,7 +59,7 @@ export default function (pi) {
 		assert.ok(pi.getActiveTools().includes("tool_search"));
 		const exposures = { grep: "codemode", find: "codemode", ls: "codemode",
 			bg_run: "codemode", bg_status: "codemode", bg_logs: "codemode", bg_kill: "codemode",
-			Agent: "direct", StopAgent: "direct", MessageAgent: "direct", AgentStatus: "direct", ask_user_question: "model-only", imagegen: "direct" };
+			Agent: "direct", StopAgent: "direct", MessageAgent: "direct", AgentStatus: "direct", ask_user_question: "codemode", imagegen: "direct" };
 		for (const tool of ours) {
 			const exposure = exposures[tool.name] ?? "deferred";
 			assert.equal(tool.exposure, exposure);
@@ -106,7 +106,7 @@ export default function (pi) {
 			const rows = walk(state.tui).filter((component) => component instanceof ToolExecutionComponent);
 			assert.equal(rows.length, 6, "six genuine agent tool executions created six host-owned rows");
 			const names = rows.map((row) => row.toolName).sort();
-			assert.deepEqual(names, ["Agent", "StopAgent", "ask_user_question", "bg_status", "read", "write"]);
+			assert.deepEqual(names, ["Agent", "StopAgent", "bg_status", "codemode", "read", "write"]);
 			for (const row of rows) {
 				assert.equal(Object.getPrototypeOf(row), state.toolPrototype, "live host ToolExecutionComponent instance identity");
 				for (const width of [40, 80, 120]) for (const line of row.render(width)) assert.ok(visibleWidth(line) <= width);

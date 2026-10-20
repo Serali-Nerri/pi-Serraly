@@ -58,14 +58,14 @@ async function withAgentDir(run: (agentDir: string) => Promise<void>): Promise<v
 	}
 }
 
-test("the tool registers as sequential and model-only with exactly one prompt field", async () => {
+test("the tool registers as sequential and codemode with exactly one prompt field", async () => {
 	await withAgentDir(async () => {
 		const host = createHost();
 		registerAskUserQuestionTool(host.api as never);
 		const tool = host.tools.get(ASK_USER_QUESTION_TOOL_NAME);
 		assert.ok(tool);
 		assert.equal(tool.description, DEFAULT_TOOL_DESCRIPTION);
-		assert.equal(tool.exposure, "model-only");
+		assert.equal(tool.exposure, "codemode");
 		assert.equal(tool.executionMode, "sequential");
 		assert.equal(tool.promptSnippet, undefined);
 		assert.equal(tool.promptGuidelines, undefined);

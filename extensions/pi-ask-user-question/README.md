@@ -6,10 +6,13 @@ guess. The module owns the tabbed dialog, the native RPC dialog fallback and
 the optional config file. It registers no commands, no renderers and no prompt
 sections.
 
-The tool is registered `exposure: "model-only"` with `executionMode:
-"sequential"`: the model sees and calls it directly, while codemode scripts and
-nested tool calls cannot open a second questionnaire on top of one already
-waiting.
+The tool is registered `exposure: "codemode"` with `executionMode:
+"sequential"`: it is discoverable and callable from scripts without direct
+activation, rather than declared as a standalone model tool by default. Built-in
+codemode and PCC Code/Notebook Mode expose its contract in `ALL_TOOLS` and accept
+`text(await tools.ask_user_question({...}))`. The dialog and result are the same
+as a direct call; questionnaires execute sequentially. Explicit activation as a
+standalone tool is still supported.
 
 ## Parameters
 
@@ -86,7 +89,7 @@ declined.
 | --- | --- |
 | Interactive TUI | The full tabbed overlay |
 | RPC (`ctx.mode === "rpc"`) | Sequential native `select`/`input` dialogs; no tabs, notes or side-by-side previews, multi-select is typed indices, and dismissing any dialog cancels the questionnaire |
-| No UI | `before_agent_start` strips the tool from the active set, and `execute` still returns `no_ui` if a call arrives |
+| No UI | Any explicit direct activation is stripped at `before_agent_start`; script calls return `no_ui` without opening a dialog |
 
 If a non-RPC host cannot render the custom overlay, the tool returns
 `no_custom_ui`; native dialogs are not used to disguise that host failure.

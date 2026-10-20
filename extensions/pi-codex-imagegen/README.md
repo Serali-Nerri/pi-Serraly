@@ -38,9 +38,11 @@ OAuth 图片工具和聊天模型的权限仍由服务端决定；离线测试�
 其他 provider 的条目仍按上游约定声明 Codex 兼容路由。
 
 图片保存在工作区 `.pi/openai-codex-images/`，首图同时写入 `latest.png`。
-普通 Pi 使用 `imagegen`；可选 PCC ≥4.0.2 保留
-`generatedImage(await tools.image_gen__imagegen({...}))` 的图片投影。
-安装 PCC 不是图片工具的前提。
+普通 Pi 使用直接注册的 `imagegen`；可选 PCC ≥4.0.2 将图片投影放入
+Code/Notebook Mode 的发现清单和 `ALL_TOOLS`，按需读取其完整契约后以
+`generatedImage(await tools.image_gen__imagegen({...}))` 调用。PCC 桥接使用
+`deferLoading: true`、`discoverWhenDeferred: true`；原生工具仍直接注册，保证
+桥接的宿主调用资格。安装 PCC 不是图片工具的前提。
 
 ## 安装边界与维护
 
