@@ -39,13 +39,13 @@ function libraryManifest(overrides = {}) {
 
 const license = { "LICENSE": "MIT\n" };
 const uiKit = { directory: "packages/pi-ui-kit", manifest: libraryManifest(), files: license };
-const loop = { directory: "extensions/pi-loop", manifest: extensionManifest({ name: "pi-loop" }), files: license };
+const extra = { directory: "extensions/pi-extra", manifest: extensionManifest({ name: "pi-extra" }), files: license };
 const ui = (overrides = {}) => ({ directory: "extensions/pi-ui", manifest: extensionManifest(overrides), files: license });
 
 test("discovery reads the real workspace layout and keeps a stable order", async (t) => {
-	const { root } = await workspaceFixture(t, [ui({ devDependencies: { "pi-ui-kit": "0.1.0" } }), loop, uiKit]);
+	const { root } = await workspaceFixture(t, [ui({ devDependencies: { "pi-ui-kit": "0.1.0" } }), extra, uiKit]);
 	const packages = await discoverPackages(root);
-	assert.deepEqual(packages.map((pkg) => pkg.name), ["pi-loop", "pi-ui", "pi-ui-kit"]);
+	assert.deepEqual(packages.map((pkg) => pkg.name), ["pi-extra", "pi-ui", "pi-ui-kit"]);
 	assert.deepEqual(packages.map((pkg) => pkg.kind), ["extension", "extension", "library"]);
 	const found = packages.find((pkg) => pkg.name === "pi-ui");
 	assert.equal(found.relativeDirectory, "extensions/pi-ui");
@@ -58,18 +58,18 @@ test("unmatched workspace globs are empty, not an error", async (t) => {
 });
 
 test("build order places internal dependencies first and keeps independent packages stable", async (t) => {
-	const { root } = await workspaceFixture(t, [ui({ devDependencies: { "pi-ui-kit": "0.1.0" } }), loop, uiKit]);
+	const { root } = await workspaceFixture(t, [ui({ devDependencies: { "pi-ui-kit": "0.1.0" } }), extra, uiKit]);
 	const packages = await discoverPackages(root);
 	assert.deepEqual(buildOrder(packages, ["pi-ui"]).map((pkg) => pkg.name), ["pi-ui-kit", "pi-ui"]);
-	assert.deepEqual(buildOrder(packages).map((pkg) => pkg.name), ["pi-loop", "pi-ui-kit", "pi-ui"]);
-	assert.throws(() => buildOrder(packages, ["pi-loop", "pi-loop"]), /duplicate/i);
+	assert.deepEqual(buildOrder(packages).map((pkg) => pkg.name), ["pi-extra", "pi-ui-kit", "pi-ui"]);
+	assert.throws(() => buildOrder(packages, ["pi-extra", "pi-extra"]), /duplicate/i);
 	assert.throws(() => buildOrder(packages, ["pi-missing"]), /unknown/i);
 });
 
 test("release selection takes extensions only and rejects library, unknown or duplicate names", async (t) => {
-	const { root } = await workspaceFixture(t, [ui({ devDependencies: { "pi-ui-kit": "0.1.0" } }), loop, uiKit]);
+	const { root } = await workspaceFixture(t, [ui({ devDependencies: { "pi-ui-kit": "0.1.0" } }), extra, uiKit]);
 	const packages = await discoverPackages(root);
-	assert.deepEqual(selectExtensions(packages).map((pkg) => pkg.name), ["pi-loop", "pi-ui"]);
+	assert.deepEqual(selectExtensions(packages).map((pkg) => pkg.name), ["pi-extra", "pi-ui"]);
 	assert.deepEqual(selectExtensions(packages, ["pi-ui"]).map((pkg) => pkg.name), ["pi-ui"]);
 	assert.throws(() => selectExtensions(packages, ["pi-ui-kit"]), /library/i);
 	assert.throws(() => selectExtensions(packages, ["pi-ui", "pi-ui"]), /duplicate/i);
@@ -80,7 +80,7 @@ test("release selection takes extensions only and rejects library, unknown or du
 for (const [label, definition, pattern, extras = [uiKit]] of [
 	["an undeclared internal dependency", ui({ devDependencies: { "pi-ui-kit": "0.1.0" } }), /not part of the workspace/i, []],
 	["a mismatched internal version", ui({ devDependencies: { "pi-ui-kit": "9.9.9" } }), /exact version/i],
-	["a cross-extension dependency", ui({ devDependencies: { "pi-loop": "0.2.0" } }), /extension cannot depend on extension/i, [loop, uiKit]],
+	["a cross-extension dependency", ui({ devDependencies: { "pi-extra": "0.2.0" } }), /extension cannot depend on extension/i, [extra, uiKit]],
 	["an installable runtime dependency", ui({ dependencies: { diff: "8.0.4" } }), /runtime dependencies/i],
 	["a bundled library declared as a peer", ui({ peerDependencies: { "pi-ui-kit": "*" } }), /devDependency/i],
 	["an escaping extension entry", ui({ pi: { extensions: ["./dist/../outside.js"] } }), /entry/i],

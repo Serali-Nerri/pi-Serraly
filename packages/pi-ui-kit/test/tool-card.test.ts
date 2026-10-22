@@ -24,16 +24,16 @@ function recordingTheme() {
 
 describe("renderToolHeader", () => {
 	it("renders one line with the title and summary", () => {
-		const lines = renderToolHeader(recordingTheme(), { title: "bg_logs", summary: "task-123", state: "running" }, 80);
+		const lines = renderToolHeader(recordingTheme(), { title: "read", summary: "src/config.ts", state: "running" }, 80);
 		assert.equal(lines.length, 1);
-		assert.match(lines[0]!, /\*<toolTitle>bg_logs<\/toolTitle>\*/);
-		assert.match(lines[0]!, /<muted>task-123<\/muted>/);
+		assert.match(lines[0]!, /\*<toolTitle>read<\/toolTitle>\*/);
+		assert.match(lines[0]!, /<muted>src\/config\.ts<\/muted>/);
 	});
 
 	it("omits an absent or empty summary", () => {
 		for (const summary of [undefined, "", "   "]) {
-			const line = renderToolHeader(plainTheme, { title: "bg_status", summary }, 80)[0]!;
-			assert.equal(line, "● bg_status");
+			const line = renderToolHeader(plainTheme, { title: "bash", summary }, 80)[0]!;
+			assert.equal(line, "● bash");
 		}
 	});
 

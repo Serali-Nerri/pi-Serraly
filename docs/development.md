@@ -21,30 +21,21 @@ registry。
 调试单个包或套件：
 
 ```sh
-node scripts/test.mjs --package context-view
-node scripts/test.mjs --package pi-loop
-node scripts/test.mjs --package pi-background-shell
-node scripts/test.mjs --package pi-subagents
+node scripts/test.mjs --package pi-ui
+node scripts/test.mjs --package pi-ui --list
 node scripts/test.mjs --suite integration
-node scripts/test.mjs --package pi-subagents --list
 ```
 
-subagents 保留 Vitest 4.1.10 的原有 mocking/fake-timer 套件；其他包及根集成
-使用 node:test。根 runner 按 `serraly.test` 分派各包的 testCommand，并为 subagents 与 context-view 启用网络拒绝；
-context-view 使用显式原生 `node --test` 命令（Node 原生 TypeScript stripping），
-避免 tsx 的本地 IPC 与网络拒绝冲突；真实 AgentSession、公开命令与 TUI 输出使用
-隔离内存 settings/auth/session 和请求局部脚本化 transport，不连接 provider。
-`--list` 只发现测试文件，不执行 Vitest 或写构建产物。定向调试同样复用隔离：
+包测试及根集成使用 node:test。根 runner 按 `serraly.test` 发现各包测试。
+真实 AgentSession、公开命令与
+TUI 输出使用隔离内存 settings/auth/session 和请求局部脚本化 transport，不连接
+provider。`--list` 只发现测试文件，不执行测试或写构建产物。定向调试同样复用隔离：
 
 ```sh
 node --input-type=module -e '
   import { isolatedRun } from "./scripts/lib/workspace.mjs";
-  await isolatedRun("npm", ["exec", "--workspace=extensions/pi-subagents", "--", "vitest", "run", ...process.argv.slice(1)], undefined, { denyNetwork: true });
-' -- test/agents/extension-selection.test.ts
-node --input-type=module -e '
-  import { isolatedRun } from "./scripts/lib/workspace.mjs";
   await isolatedRun(process.execPath, ["--test", ...process.argv.slice(1)]);
-' -- test/integration/runtime.test.mjs test/integration/subagents-runtime.test.mjs
+' -- test/integration/runtime.test.mjs
 ```
 
 涉及编译产物的定向测试需要先构建受影响的包，例如
@@ -55,10 +46,6 @@ RED/GREEN 只运行新增或失败的测试文件；功能完成后运行受影�
 一次完整变更收尾时运行 `npm run verify`，不在每个小步骤、每个提交后重复全量。
 同一代码、锁文件和运行环境已有成功记录时复用结果，只补缺口。
 入口路径和构建策略见[架构](architecture.md)。
-后台 shell 的源码或人类文档变更经审阅后，先运行
-`npm run docs:generate --workspace pi-background-shell` 更新哈希管控产物，
-再运行相关门禁；生成哈希不替代行为审阅。
-
 ## 测试层级与质量要求
 
 1. **领域单测**：解析/校验、预检和报告、预算、时序、状态转换；期望由手工
@@ -66,7 +53,7 @@ RED/GREEN 只运行新增或失败的测试文件；功能完成后运行受影�
 2. **模块边界测试**：实际注册定义、renderer、文件/进程/worker 和宿主 SDK。
    外部或慢操作才允许 test double；保留真正影响断言的副作用。
 3. **产物集成**：实际编译入口、release 树、新路径 lazy import、宿主 loader
-   和类身份、资源过滤、独立入口共存、脚本化 child 与合成 stdio MCP。CLI 的模块
+   和类身份、资源过滤、脚本化 child 与合成 stdio MCP。CLI 的模块
    计时器/UI 守卫按当前 release 成员路径归属调用，并有能触发计数的正向控制。
 4. **操作演练**：临时目录内真实文件锁、原子发布和故障中断恢复。
 5. **人工交互**：目标终端的视觉、快捷键、鼠标和焦点；自动渲染宽度检查不替代它。
@@ -131,7 +118,7 @@ node scripts/capture.mjs /tmp/pi-ui-captures
 
 仅临时数据；覆盖范围见 [UI 验收说明](../extensions/pi-ui/docs/acceptance.md)。
 编译 release 的 CLI 集成使用真实宿主 PTY，覆盖 regular/fullscreen 的 40/80/120
-列、专用子代理 renderer 和 host class identity。自动宽度/ANSI 断言不替代人工
+列和 host class identity。自动宽度/ANSI 断言不替代人工
 视觉、输入和焦点验收；无 PTY 或未人工查看时必须如实报告。
 
 工作汇总的 scrollback 验收以真宿主主屏和记录终端写入的 Adapter 为 Seam：
@@ -152,16 +139,14 @@ node scripts/capture.mjs /tmp/pi-ui-captures
 
 ```sh
 npm run release                                  # → ~/.local/share/pi-Serraly/releases/<version>
-# 只交付部分扩展；重复 --package 选择子集，默认九个全部
-npm run release -- --package context-view
-npm run release -- --package context-view --package pi-ui
-npm run release -- --package pi-ask-user-question --package pi-subagents
+# 默认交付全部扩展；--package 显式选择当前唯一扩展
+npm run release -- --package pi-ui
 # 显式覆盖（临时验收目录或特殊 build id）
 npm run release -- --build-id <id> --output /absolute/path/to/new-release
 ```
 
 选择在创建目标目录、构建或启动任何子进程之前校验：空名称、重复、未知名称和库
-名称都会直接失败。release 默认包含九个扩展；聚合 manifest 只声明被选中的入口，
+名称都会直接失败。release 默认包含全部扩展（当前为 pi-ui）；聚合 manifest 只声明被选中的入口，
 `release.json` 记录每个成员的路径与封印摘要。
 
 release 不构建、不安装运行依赖、不携带 lock 或 `node_modules`，只复制已构建并
@@ -175,12 +160,6 @@ release 不构建、不安装运行依赖、不携带 lock 或 `node_modules`，
 consumer 目录里以 `--offline --ignore-scripts --legacy-peer-deps` 安装本地 tarball，
 再由开发树外的真实宿主 loader 加载。该 fixture 证明包的独立性与 bundled 闭包，
 不投影 registry 依赖图，也不安装宿主 peer。
-
-imagegen 的认证验收使用内存凭据和 undici 模拟响应：检查公开工具调用的请求、
-图片落盘与错误处理，不登录、不读取真实凭据，也不发送图片生成请求。
-上游固定来源、本地差异与后续同步步骤由其模块 `UPSTREAM.md` 持有。
-与原 npm imagegen 包的替换属于真实配置变更，须单独授权；两者不能同时启用，
-因为都注册 `imagegen`。
 
 ## Node 门禁与本地验收
 
@@ -212,13 +191,11 @@ settings 切换需要单独授权，并满足以下约束：
    检查和 CLI/SDK 验收，记录实际宿主/Node 版本。平台 skip 或未人工查看的
    PTY 必须如实列出，不额外制造未承诺的 Node 版本矩阵。
 2. 备份 user settings 与需要修改的已信任项目 settings 的精确内容，并验证备份
-   可原样恢复。切换引用不要求停止正在运行的 Pi 实例，不终止会话或 child/MCP/
-   后台资源，也不自动触发热重载。
+   可原样恢复。切换引用不要求停止正在运行的 Pi 实例，不终止会话或 child/MCP
+   资源，也不自动触发热重载。
 3. 切换只改 `packages`：先校验目标 release 的 manifest 与 digest，再按 Pi 的
    settings 锁协议原子写入，写入后确认引用恰好一条且不影响其他条目。
 4. 已运行实例继续使用已加载的代码；下次完整启动加载新 release。核对新启动的
    受影响入口各注册一次、无冲突诊断。
 5. 回滚恢复备份 settings 并指回旧版本目录；新旧 release 和备份都保留供检查，
-   **不覆写**，不把内存会话假定为可跨重启恢复。配置保留
-   `<agentDir>/subagents-lite.json`、`subagents-lite-prompt.md`、`agents/*.md`
-   及项目中的对应文件，不删除或重命名。
+   **不覆写**，不把内存会话假定为可跨重启恢复。

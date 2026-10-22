@@ -10,95 +10,10 @@ import {
 	TOTAL_DIFF_MAX_BYTES,
 	TOTAL_DIFF_MAX_LINES,
 } from "../../packages/pi-apply-patch-protocol/src/index.ts";
-import { buildPatchReport } from "../../extensions/pi-tools/src/report.ts";
 import { parseApplyPatchDetails } from "../../extensions/pi-ui/src/transcript/tool/apply-patch.ts";
 import { buildPackages } from "../../scripts/lib/build-package.mjs";
 import { discoverPackages } from "../../scripts/lib/packages.mjs";
 import { packedFixture } from "./helpers/packed.mjs";
-
-const outcome = (snapshots) => ({
-	changes: snapshots.map(({ kind, path, moveFrom }) => (moveFrom === undefined ? { kind, path } : { kind, path, moveFrom })),
-	snapshots,
-});
-const add = (path, after) => ({ kind: "add", path, before: null, after });
-const update = (path, before, after) => ({ kind: "update", path, before, after });
-const remove = (path, before) => ({ kind: "delete", path, before, after: null });
-const move = (path, moveFrom, before, after, sourceBefore) => ({ kind: "update", path, moveFrom, before, after, sourceBefore });
-
-/** Drop absent keys so an unset optional field never reads as a mismatch. */
-const plain = (value) => JSON.parse(JSON.stringify(value));
-
-/** Hand-written wire facts, derived from the documented v1 contract. */
-const conformance = [
-	{
-		label: "an added file",
-		outcome: outcome([add("new.txt", "x\ny\n")]),
-		changes: [{ kind: "add", path: "new.txt", views: [{ role: "file", added: 2, removed: 0, availability: "complete" }] }],
-	},
-	{
-		label: "an updated file",
-		outcome: outcome([update("edit.txt", "a\nb\nc\n", "a\nB\nc\n")]),
-		changes: [{ kind: "update", path: "edit.txt", views: [{ role: "file", added: 1, removed: 1, availability: "complete" }] }],
-	},
-	{
-		label: "a deleted file",
-		outcome: outcome([remove("gone.txt", "x\ny\n")]),
-		changes: [{ kind: "delete", path: "gone.txt", views: [{ role: "file", added: 0, removed: 2, availability: "complete" }] }],
-	},
-	{
-		// The destination ends up byte-identical to the captured source: the move moved the text.
-		label: "a move that overwrites its destination with the source text",
-		outcome: outcome([move("to.txt", "from.txt", "destination\n", "source\n", "source\n")]),
-		changes: [{ kind: "update", path: "to.txt", moveFrom: "from.txt", contentChanged: false,
-			views: [{ role: "source-delete", added: 0, removed: 1, availability: "complete" },
-				{ role: "destination", added: 1, removed: 1, availability: "complete" }] }],
-	},
-	{
-		// The destination differs from the captured source: the move also edited the text.
-		label: "a move that edits the text on the way",
-		outcome: outcome([move("to.txt", "from.txt", "destination\n", "changed\n", "source\n")]),
-		changes: [{ kind: "update", path: "to.txt", moveFrom: "from.txt", contentChanged: true,
-			views: [{ role: "source-delete", added: 0, removed: 1, availability: "complete" },
-				{ role: "destination", added: 1, removed: 1, availability: "complete" }] }],
-	},
-	{
-		label: "a BOM and CRLF update",
-		outcome: outcome([update("crlf.txt", "\uFEFFa\r\nb\r\n", "\uFEFFa\r\nB\r\n")]),
-		changes: [{ kind: "update", path: "crlf.txt", views: [{ role: "file", added: 1, removed: 1, availability: "complete" }] }],
-		facts: (view) => {
-			assert.equal(view.before.bom, true);
-			assert.equal(view.before.endings.crlf, 2);
-			assert.equal(view.lineEndingsChanged, false);
-		},
-	},
-];
-
-for (const { label, outcome: patch, changes, facts } of conformance) {
-	test(`the producer report for ${label} survives the consumer parser`, () => {
-		const report = buildPatchReport(patch);
-		assert.equal(report.format, APPLY_PATCH_FORMAT);
-		const parsed = parseApplyPatchDetails(report);
-		assert.ok(parsed, `${label}: the consumer accepts a real producer report`);
-		assert.equal(parsed.format, APPLY_PATCH_FORMAT);
-		assert.deepEqual(plain(parsed.changes.map((change) => ({
-			kind: change.kind, path: change.path, moveFrom: change.moveFrom, contentChanged: change.contentChanged,
-			views: change.views.map((view) => ({ role: view.role, added: view.added, removed: view.removed, availability: view.availability })),
-		}))), plain(changes));
-		if (facts) facts(parsed.changes[0].views[0]);
-	});
-}
-
-test("truncated and omitted views stay inside the shared output budget", () => {
-	const long = (name, lines) => update(name, Array.from({ length: lines }, (_, index) => `before ${index}\n`).join(""),
-		Array.from({ length: lines }, (_, index) => `after ${index}\n`).join(""));
-	const report = buildPatchReport(outcome([long("a.txt", 260), long("b.txt", 260), long("c.txt", 260), long("d.txt", 260)]));
-	const parsed = parseApplyPatchDetails(report);
-	assert.ok(parsed, "a truncated report is still a valid v1 payload");
-	const views = parsed.changes.flatMap((change) => change.views);
-	assert.deepEqual(views.map((view) => view.availability), ["truncated", "truncated", "truncated", "omitted"]);
-	assert.equal(views.filter((view) => view.diff).reduce((rows, view) => rows + view.diff.split("\n").length, 0), TOTAL_DIFF_MAX_LINES);
-	for (const view of views) assert.ok((view.diff ?? "").split("\n").length <= PER_VIEW_DIFF_MAX_LINES);
-});
 
 function detailsWith(diff, { views = 1 } = {}) {
 	const facts = { exists: true, bytes: 1, lines: 1, bom: false, endings: { lf: 1, crlf: 0, cr: 0 }, finalNewline: true };

@@ -1,33 +1,25 @@
 # 仓库架构
 
-## 九个维护边界
+## 维护边界
 
 根 package 是资源清单和开发工作区，不是总 extension factory。
 每个模块仅注册自己的能力；关闭一个入口不会通过总工厂间接重新启用它。
 
 | 模块 | 拥有的资源 | 不拥有 |
 | --- | --- | --- |
-| `context-view` | `/context`、Latest 被动捕获与会话临时差异、Usage 组成估算、工具声明最新单槽观测与诊断、私有预览、显示偏好 | Footer 缓存、业务工具、主动探测、请求内容持久化、最终 wire 审计 |
-| `ui` | 展示生命周期、私有兼容补丁、shell、Markdown、Thinking、文字预览、`/ccstyle` | 上下文 Inspector、业务工具定义、执行和后台进程 |
-| `questions` | `ask_user_question` schema 与运行校验、tabbed 问卷（preview/备注/多选/自由回答）、折叠、RPC 原生对话框降级、答案结果 | UI 总体刷新、其他 overlay、工具卡语法、本地化 |
-| `loop` | `/loop` 解析、内存任务、忙闲调度、`local-loop` | UI scheduler、持久化恢复 |
-| `tools` | `grep`/`find`/`ls` 同名替换的 codemode 注册；保留未注册的补丁实现与行为测试 | `apply_patch` 运行时注册、UI 历史 diff 重建 |
-| `background-shell` | 进程/日志、dock、通知、状态、同进程 reload handoff | 跨进程恢复或 UI 工具卡接管 |
-| `add-dir` | 目录作用域与存储、外部指令 prompt section、skill 路径发现、`@` 补全包装、目录 widget | 模型工具、自动 reload、cwd 切换或工具权限 |
-| `subagents` | `Agent`/`StopAgent`/`MessageAgent`/`AgentStatus`、`/agents`、子会话选择/准入/可信状态、调度与关闭、专用展示 | 父工具闭包、兄弟模块私有实现、共享 MCP 连接池或跨进程任务恢复 |
-| `imagegen` | `imagegen`、OpenAI／Codex 图片请求与认证选择、编辑输入、工作区图片产物、可选 PCC 图片投影 | 登录流程、凭据存储、会话模型切换、其他扩展安装 |
+| `ui` | 展示生命周期、私有兼容补丁、shell、Markdown、Thinking、文字预览、`/ccstyle` | 业务工具定义与执行 |
 
-共享库只承载两侧都必须逐字一致的构建期契约，不承载任一方的策略：
+共享库只承载消费者必须逐字一致的构建期契约，不承载 UI 策略：
 
 | 库 | 拥有的契约 | 不拥有 |
 | --- | --- | --- |
-| `pi-apply-patch-protocol` | `apply_patch.v1` 格式标识、四项输出预算、`ApplyPatch*` wire 类型 | 生产者的 diff 算法/工作量预算/截断策略，消费者的防御阈值/清洗/降级 |
+| `pi-apply-patch-protocol` | `apply_patch.v1` 格式标识、四项输出预算、`ApplyPatch*` wire 类型 | 消费者的 diff 重建、防御阈值/清洗/降级 |
 | `pi-config-core` | 有界 JSON 读取与原子写入机制（大小/UTF-8/权限/并发语义） | 缺失/损坏/不可信文件的错误与信任策略、字段合并、路径与文件名 |
 | `pi-ui-kit` | 工具卡公共语法：标题/摘要行、结果状态行、语义主题角色、宽度安全 padding 与按宽度缓存的行组件 | 正文与 diff/IO 预览、hover/hitbox、展开状态、动画帧、renderer 注册和业务信息 |
 
 工具契约和详细算法留在各模块 README/子系统文档。UI 的私有宿主访问只在
 `extensions/pi-ui/src/compat/`；其 host 事件只由 `src/lifecycle.ts` 注册。
-UI 的共享 scheduler 不管理 loop 定时器、后台进程或子会话资源。
+UI 的共享 scheduler 只服务展示，不管理业务执行。
 compact 工作汇总的持续更新在其工作组尾部展示，结束后成为静态记录；它不是
 单槽 live preview，不轮换 Thinking/工具正文，也不猜测收尾静默期。生命周期与
 scrollback 契约见 [UI 工作汇总](../extensions/pi-ui/docs/work-summary.md)。
@@ -47,10 +39,10 @@ instance 字段布局，实际宿主与人工视觉验收仍必需。同一预�
 ## 源码与运行树
 
 ```text
-extensions/*/         九个 private npm workspace；源码、测试、包文档/许可、dist/
+extensions/pi-ui/     private npm workspace；源码、测试、包文档/许可、dist/
 packages/pi-*/        构建期共享库；无 Pi 资源入口
 scripts/              工作区命令、单包构建/封印和 release 组装
-test/integration/     产物、实际 loader、子会话和独立入口共存
+test/integration/     产物、实际 loader 和包边界
 docs/                 跨模块设计与开发
 ```
 
@@ -83,8 +75,7 @@ interface SerralyMetadata {
 
 依赖方向：扩展（`extensions/*`）只能依赖库（`packages/*`）；三个库保持独立，
 不得依赖其他 workspace 包。内部依赖必须用精确版本写在 `devDependencies` 并随产物
-bundle；`dependencies` 必须为空，`peerDependencies` 只列宿主。imagegen 的可选
-PCC 图片投影使用其版本化事件协议，不依赖或 bundle PCC 包。构建顺序来自
+bundle；`dependencies` 必须为空，`peerDependencies` 只列宿主。构建顺序来自
 该依赖图（先依赖后使用者），拒绝缺依赖、版本不符、循环、跨扩展依赖、越界入口
 和符号链接 workspace。
 
@@ -97,39 +88,16 @@ dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace
 
 ## 构建闭包
 
-- context-view、UI、questions、loop、tools 是独立 ESM bundle。tools 入口只包含搜索
-  工具；保留的补丁源码及其测试使用 `diff@8.0.4`，不进入运行 bundle。
-- background-shell 用 tsc 编译完整 `extensions/` + `src/`，保留 lazy import；
-  根入口只是同目录转发，不另行注册能力。唯一例外是 manifest 声明的
-  `src/ui/tool-cards.ts` 叶（见下），其余文件仍是逐文件 tsc 产物。
-- add-dir 的主入口 bundle 将 `@henryqw/pi-config-store@2.0.2` 及其 CJS 锁依赖
-  全部打入产物，不增加根运行依赖。
-- subagents 是独立 ESM bundle，保留上游 MIT 许可及固定来源；Pi SDK、pi-ai、
-  pi-tui 和 TypeBox external，不增加运行依赖或额外 worker。
-- imagegen 保留 howaboua 包的源码相对路径，独立 ESM bundle 内联固定版本的
-  undici、proxy-from-env；保留 MIT 与 Codex 参考的 Apache-2.0 许可。OpenAI
-  适配集中在本地源码，复用宿主的凭据刷新、base URL 与 headers，不保存 token。
-  API Key 使用 Images 接口；新版订阅 OAuth 使用 Responses 的 image_generation，
-  生成与编辑均复用上游输入校验、图片落盘和结果展示。
-- ui bundle `pi-apply-patch-protocol`；tools 保留的补丁源码也使用同一契约库，
-  但不随入口打包。wire 常量与类型只有该库一处定义，两侧只保留各自的算法、
-  阈值与展示策略。契约一致性由根一致性套件用保留的生产者输出与真实消费者
-  解析器互验，不做常量自证。
-- ui、questions 与 subagents 各自 bundle 同一份 `pi-config-core`：读取上限 64 KiB、严格
-  UTF-8、`0600` 文件、`0700` 新父目录和 `<pid>.<uuid>` 临时名只在该库一处实现；
-  加载失败回退、保存前重读合并、项目层信任状态和 log/throw 语义仍各自保留。
-  context-view 与 questions 也 bundle 该库的 64 KiB 有界读取：questions 的字段校验、
-  类型回退与默认值由模块自己拥有；context-view 的验证、默认回退和每次文件修订的警告由查看器拥有，
-  显式偏好创建用独占 `wx` 写入而非替换式原子保存。add-dir 继续使用自己的异步锁定 store，不迁移到该库。
-- ui、background-shell 与 subagents 共用 `pi-ui-kit` 的卡语法：`● title
+- UI 是独立 ESM bundle，宿主包与 TypeBox external。
+- ui bundle `pi-apply-patch-protocol`。wire 常量与类型只有该库一处定义，
+  消费者保留自己的解析、防御阈值与展示策略；契约行为由 UI 包测试覆盖。
+- ui bundle `pi-config-core`：读取上限 64 KiB、严格 UTF-8、`0600` 文件、
+  `0700` 新父目录和 `<pid>.<uuid>` 临时名只在该库一处实现；加载失败回退、
+  保存前重读合并、项目层信任状态和 log/throw 语义仍由 UI 保留。
+- ui 直接 bundle `pi-ui-kit` 的卡语法：`● title
   summary` 标题行与 `  ⎿ message` 结果状态行只有该库一处定义，运行/成功/失败/取消
-  用语义主题角色和状态文字区分，不集中任何 renderer。ui、subagents
-  直接 bundle 该库；background-shell 的 `src/ui/tool-cards.ts` 是唯一引用 kit 的
-  无状态叶（只接收展示输入，不读 registry/config），tsc 之后由共享 builder 按
-  manifest 的 `serraly.build.bundles` 把它内联为同一位置的
-  `dist/src/ui/tool-cards.js`：宿主包 external、多源 source map、kit 许可复制到
-  `dist/licenses/<library>/`。构建期 gate 只允许该叶引用已声明的 workspace 包，
-  编译闭包中不允许残留裸 workspace import。
+  用语义主题角色和状态文字区分，不集中任何 renderer。构建期 gate 只允许包内
+  源码引用已声明的 workspace 包，编译闭包中不允许残留裸 workspace import。
 - 在非发现暂存目录构建，检查 emitted import 图、必要许可和文件哈希后才发布
   开发 dist。许可检查使用完整的必需文件清单，不以目录存在代替法律闭包。
 - 每个包先在同级 `.build-dist-*` 候选目录编译（与 live `dist` 同深度，保证
@@ -158,65 +126,8 @@ dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace
 
 ## 跨模块交互
 
-context-view 与 UI 可独立选择、按任意顺序共存：只有 context-view 注册 `/context`，
-UI 只注册 `/ccstyle`。查看器在公开 `before_agent_start` / `context_with_system` 事件中
-被动更新本 runtime 的 Latest，按 edit-aware 会话投影识别请求临时增删改，
-含强制 prompt 与隐藏声明；Injections 和 Usage 共用最近捕获，避免替换、删除及隐藏声明的重复统计。
-未捕获或上下文失效后只显示 session estimate / not captured，
-不从会话恢复为观测证据、不发送消息、执行工具或修改请求。压缩中不打开依赖会话投影的视图；
-模型、预览与缓存不与 Footer 合并。Tools 分开呈现打开视图时的公开宿主库存/active
-与本扩展 `before_provider_request` handler 同步复制的最新工具声明；只支持可靠识别的
-Anthropic collapsed 顶层定义与原生增删协议、Kimi Chat Completions 函数声明与消息内新增，
-按 payload 顺序推导可证明的有效集合；
-本次 payload 内的更新位置/历史、adapter placeholder 与 codemode 描述内容分别归属。
-未知/失败不宣称有效集合，也替换旧观测，
-不持有整份请求历史，不从会话重放或其他 runtime 继承；来源可能包括 warming，不作最终 wire
-或发送/接受声明。具体预览、推导调用资格与支持边界由模块 README 定义。
-
-UI 读取公共工具元数据和已有结果。background-shell、subagents 的
-工具 renderer 及 `subagent-result` 消息 renderer 保持专用展示；第三方
-Agent/StopAgent 的专用 renderer 同样保持优先，不因属于私有包而被接管。
-footer 消费宿主提供的 extension statuses，不清理其他模块的状态键。
-questions 以 `codemode` 注册，默认不直接声明给模型，由内置 codemode 或 PCC
-Code/Notebook Mode 在发现清单中提供契约并通过脚本调用；仍按 sequential 执行。
-问卷的 UI、答案、取消和清理归 questions 所有；无 UI 的脚本调用返回 `no_ui`。
-imagegen 保留原生 direct 注册；可选 PCC 桥接以 deferred 且 discoverable 的
-投影进入发现清单和 `ALL_TOOLS`，调用仍通过 Pi 的嵌套执行入口。
-
-后台通知、`.pi/tasks` 元数据和补丁报告由对应能力维护，UI 不改写格式。
-background 的四个 `bg_*` 工具以 `codemode` 注册，默认不直接声明给模型，
-可由内置 `codemode` 或支持该曝光模式的代码执行适配器发现和调用。
-`defaultTools: ["+codemode"]` 是用户选择，不由安装脚本隐式重写。
-tools 模块以同名扩展覆盖内置 `grep`/`find`/`ls`，exposure 为 `codemode`：
-默认不直接声明给模型，启用内置 `codemode` 后由脚本调用，显式激活仍然有效。
-CLI 加载内置 codemode/tool_search 扩展，但默认不激活这些工具；SDK 会话
-不自动加载它们，嵌入宿主需通过 `DefaultResourceLoader.extensionFactories`
-显式提供 `createCodemodeExtension()` / `createToolSearchExtension()`。
-
-## 子会话边界
-
-subagents 使用进程内 SDK 为每个子代理创建独立 `AgentSession`，以目标 cwd、
-agentDir 和可信状态创建同一 `SettingsManager`，共同驱动资源 loader 与会话。
-不可信目标不加载受保护的项目配置/扩展/skills/MCP；用户级配置仍生效。
-AGENTS.md 按宿主 context 合同处理，不把项目可信状态等同于完全隔绝所有文本。
-
-子会话显式提供 Pi 的 `createCodemodeExtension()`、`createToolSearchExtension()`、
-`createMcpExtension()`，身份分别是 `builtin:codemode`、`builtin:tool-search`、
-`builtin:mcp`。PackageManager 先发现已启用的候选，模块在工厂执行前选择；
-loader 不再隐式加载其他候选，宿主禁用和 replaceable 语义仍然有效。
-无显式配置的 general-purpose 默认只选择这三原生扩展，而非全包入口。
-
-工具准入与 active 展示分开：继承模式不向 SDK 传静态 registry 快照；exact
-allow/exclude 限制作用于注册与直接/嵌套调用。`Agent` 系列始终排除于子会话，
-跨编译实例的 AsyncLocalStorage 子调用标记另行避免递归注册。
-MCP 延迟工具由宿主处理，搜索激活与 codemode store 只保留在该子会话内。
-每个子会话拥有自己的 MCP 连接，不共享父/其他子会话的客户端或工具闭包。
-
-普通完成和 Stop 保留 session，允许 continuation；widget 行过期只隐藏展示，
-不释放连接。Clear 或父 reload/quit/new/resume/fork 关闭其所有权：发出 abort、
-等待初始化边界、发 `session_shutdown`、dispose 并解除引用；关闭入口幂等且可等待，
-不因无限等待模型 idle 而阻塞清理。运行并发上限不限制 retained session/MCP
-进程总数，长会话需要显式 Clear。详见[模块契约](../extensions/pi-subagents/README.md)。
+UI 读取公共工具元数据和已有结果，专用 renderer 保持原生展示，不因来源私有而
+被接管。footer 消费宿主提供的 extension statuses，不清理其他模块的状态键。
 
 ## 文档职责
 

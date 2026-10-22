@@ -2,10 +2,12 @@
 
 ## Extracted from
 
-- Source module: `extensions/pi-tools`.
-- Extracted in the current working tree: the `apply_patch.v1` wire types and the four
-  output budgets were moved verbatim from `src/report.ts`, and the consumer-side type
-  declarations were moved verbatim from the UI parser.
+- Source: the `apply_patch.v1` wire report and parser previously maintained in this
+  workspace. The current tree retains the presentation parser in
+  `extensions/pi-ui/src/transcript/tool/apply-patch.ts`.
+- The wire types and the four output budgets were moved verbatim from the report
+  implementation, and the consumer-side type declarations were moved verbatim from
+  the UI parser.
 
 ## Contract split
 
@@ -13,9 +15,5 @@ The library owns the wire contract only: `APPLY_PATCH_FORMAT`, the four output b
 (`PER_VIEW_DIFF_MAX_LINES`, `PER_VIEW_DIFF_MAX_BYTES`, `TOTAL_DIFF_MAX_LINES`,
 `TOTAL_DIFF_MAX_BYTES`) and the `ApplyPatch*` type declarations.
 
-Both sides keep their own policy:
-
-- the producer keeps its diff algorithm, edit/time/work budgets, truncation strategy and
-  `reportUnavailable` fallback;
-- the consumer keeps its change/view defence thresholds, sanitizer and degradation
-  behavior for unknown or legacy shapes.
+The consumer keeps its own policy: diff reconstruction, change/view defence
+thresholds, sanitizer and degradation behavior for unknown or legacy shapes.

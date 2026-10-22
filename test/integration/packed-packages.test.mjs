@@ -9,7 +9,6 @@ import { isolatedEnvironment } from "../../scripts/lib/environment.mjs";
 import { npmCliPath } from "../../scripts/lib/package-artifacts.mjs";
 import { names, toolsByName, commandsByName } from "./fixtures/contracts.mjs";
 import { packedFixture } from "./helpers/packed.mjs";
-import { sdkScenario } from "./helpers/runtime.mjs";
 
 const root = resolve(import.meta.dirname, "../..");
 
@@ -39,11 +38,6 @@ const extension = loaded.extensions.find((candidate) => candidate.path === entry
 assert.ok(extension, "the packed entry path loads exactly once");
 assert.deepEqual([...extension.tools.keys()].sort(), [...expected.tools].sort());
 assert.deepEqual([...extension.commands.keys()].sort(), [...expected.commands].sort());
-if (expected.lazy) {
-	// The deferred module ships with the payload; it is imported by the host TUI,
-	// which supplies the host peers this standalone consumer intentionally lacks.
-	assert.ok(existsSync(expected.lazy), "the packed payload keeps its deferred module");
-}
 `;
 
 for (const name of names) {
@@ -55,7 +49,6 @@ for (const name of names) {
 		const expectation = join(packed.base, "expectation.json");
 		await writeFile(expectation, JSON.stringify({
 			tools: toolsByName[name], commands: commandsByName[name],
-			lazy: name === "pi-background-shell" ? join(packed.directory, "dist/src/ui/task-log-viewport.js") : undefined,
 		}));
 		const worker = join(packed.base, "loader-probe.mjs");
 		await writeFile(worker, loaderProbe);
@@ -63,16 +56,6 @@ for (const name of names) {
 			packed.host.directory, packed.entry, expectation],
 		{ cwd: packed.consumer, env: { ...packed.env, SERRALY_REPORT: join(packed.base, "report.jsonl") }, encoding: "utf8", timeout: 120000 });
 		assert.equal(result.status, 0, `${name}: ${result.stderr}\n${result.stdout}`);
-		if (name === "context-view") {
-			// Only a manifest contract here: no release dist or sibling sources can satisfy the packed entry.
-			const contract = join(packed.base, "contract");
-			await mkdir(contract);
-			await writeFile(join(contract, "package.json"), JSON.stringify({ pi: { extensions: ["./extensions/context-view/dist/context-view.js"] } }));
-			for (const native of [false, true]) for (const codemodeMode of ["on", "only"]) {
-				await sdkScenario({ release: contract, host: packed.host }, "context-tools",
-					{ names: ["context-view"], packedContextEntry: packed.entry, native, codemodeMode });
-			}
-		}
 	});
 }
 

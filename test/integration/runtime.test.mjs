@@ -24,46 +24,8 @@ for (const name of names) {
 	});
 }
 
-for (const [order, selection] of [["manifest", [...names]], ["reversed", [...names].reverse()]]) {
-	test(`compiled entries coexist without duplicate tools/commands (${order} order)`, { timeout: 30000 }, async () => {
-		await sdkScenario(stage, "inventory", { names: selection });
-	});
-}
-
-for (const selection of [["context-view"], ["context-view", "pi-ui"], ["pi-ui", "context-view"]]) {
-	test(`passive /context and retained /ccstyle through real TUI commands (${selection.join(" → ")})`, { timeout: 30000 }, async () => {
-		await sdkScenario(stage, "context-view", { names: selection });
-	});
-}
-
-test("compiled subagents alone validates real control tools without spawning and retains its dedicated message renderer", { timeout: 30000 }, async () => {
-	await sdkScenario(stage, "subagents-contracts", { names: ["pi-subagents"] });
-});
-
-test("actual package settings can disable each compiled entry independently, including UI", { timeout: 60000 }, async () => {
+test("actual package settings can disable the compiled UI entry independently", { timeout: 60000 }, async () => {
 	await sdkScenario(stage, "filters", {}, 55000);
-});
-test("compiled background and question tools are discoverable from codemode without direct activation", { timeout: 30000 }, async () => {
-	await sdkScenario(stage, "discovery");
-});
-test("compiled external-directory commands load context, skills, and widget through the real host reload boundary", { timeout: 30000 }, async () => {
-	await sdkScenario(stage, "add-dir");
-});
-test("Latest reflects updated directory instructions while startup queues background completion and loops", { timeout: 30000 }, async () => {
-	await sdkScenario(stage, "startup-lifecycle", { names: ["context-view", "pi-add-dir", "pi-background-shell", "pi-loop"] });
-});
-test("context-view keeps the latest declaration when Anthropic retries preferred strict tools", { timeout: 30000 }, async () => {
-	await sdkScenario(stage, "context-strict-fallback", { names: ["context-view"] });
-});
-test("compiled search tools and saved patch reports survive UI modes; nested questionnaire answers, cancels and aborts", { timeout: 30000 }, async () => {
-	const savedPatchReport = JSON.parse(await readFile(new URL("../../extensions/pi-ui/test/fixtures/apply-patch-v1.json", import.meta.url), "utf8"));
-	await sdkScenario(stage, "contracts", { savedPatchReport });
-});
-test("compiled background tools complete, notify once, retain same process on reload, stop and clean up", { timeout: 30000 }, async () => {
-	await sdkScenario(stage, "background");
-});
-test("mounted package footer preserves local-loop/background statuses and dock/UI overlay focus ownership", { timeout: 30000 }, async () => {
-	await sdkScenario(stage, "footer-focus");
 });
 
 for (const mode of ["print", "json", "rpc"]) {
@@ -98,7 +60,7 @@ for (const mode of ["print", "json", "rpc"]) {
 // defaults to fullscreen; explicit regular/fullscreen selections still work.
 for (const [selection, mode] of [["default", "fullscreen"], ["regular", "regular"], ["fullscreen", "fullscreen"]]) {
 	for (const width of selection === "default" ? [80] : [40, 80, 120]) {
-		test(`final release under bundled CLI ${selection}/${width}: host-owned TUI rows protect question/bg and real subagents renderers`,
+			test(`final release under bundled CLI ${selection}/${width}: compiled UI renders host-owned TUI rows`,
 			{ timeout: 40000, skip: ptyAvailability() }, async () => {
 				const sandbox = await sandboxFixture(stage.release, { tui: true });
 				try {
@@ -108,11 +70,10 @@ for (const [selection, mode] of [["default", "fullscreen"], ["regular", "regular
 					const result = await captureReleasePty(sandbox, cliArgs(sandbox, stage.host, [...modeArgs, "Local fixture tool sequence"]), width);
 					assert.ok(result.reports.some((report) => report.phase === "host-identity" && report.tuiMode === mode), JSON.stringify(result.reports));
 					assert.ok(result.reports.some((report) => report.phase === "host-identity" && report.fullscreen === (mode === "fullscreen")));
-					assert.ok(result.reports.some((report) => report.phase === "settled" && report.providerCalls === 7));
+					assert.ok(result.reports.some((report) => report.phase === "settled" && report.providerCalls === 3));
 					assert.ok(result.reports.some((report) => report.phase === "shutdown"));
 					assert.ok(!result.reports.some((report) => ["network-denied", "fixture-error"].includes(report.phase)));
-					assert.match(result.ansi, /Subagent Result/);
-					assert.ok(result.reports.some((report) => report.phase === "host-identity" && report.renderer === "subagent-result"));
+					assert.match(result.ansi, /Read seed\.txt/);
 				} finally { await sandbox.cleanup(); }
 			});
 	}

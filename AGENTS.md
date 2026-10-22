@@ -19,20 +19,12 @@ Each change follows this order:
 
 ## Project Structure & Module Organization
 
-`pi-Serraly` is a private npm workspace with nine independent Pi extensions. Target Node ≥22.19 and Pi 1.3.0.
+`pi-Serraly` is a private npm workspace with one independent Pi extension. Target Node ≥22.19 and Pi 1.3.0.
 
 ```text
 .
 ├── extensions/
-│   ├── context-view/          # src/, test/, dist/ (built)
-│   ├── pi-ui/                 # src/, test/, dist/ (built)
-│   ├── pi-ask-user-question/  # src/, test/
-│   ├── pi-loop/               # src/, test/
-│   ├── pi-tools/              # src/, test/fixtures/
-│   ├── pi-background-shell/   # src/, extensions/, tests/, scripts/
-│   ├── pi-add-dir/            # src/, test/
-│   ├── pi-subagents/          # src/, test/ (Vitest)
-│   └── pi-codex-imagegen/     # index.ts, src/, test/, licenses/
+│   └── pi-ui/                 # src/, test/, dist/ (built)
 ├── packages/             # shared build-time libraries (no Pi entry point)
 ├── scripts/              # check, build, test, pack:check, release and lib/
 ├── test/integration/     # *.test.mjs, fixtures/
@@ -41,7 +33,7 @@ Each change follows this order:
 └── package-lock.json
 ```
 
-Follow module-local `AGENTS.md` instructions. Keep entry points independent; UI owns presentation, not business execution.
+Follow module-local `AGENTS.md` instructions. Keep the entry point independent; UI owns presentation, not business execution.
 
 ## Build, Test, and Development Commands
 
@@ -54,7 +46,7 @@ Run from the repository root:
 - `npm run pack:check` — verify existing sealed artifacts without rebuilding.
 - `npm run verify` — build once (including artifact validation), then check and run all suites.
 - `npm run build && npm run release && pi install "$HOME/.local/share/pi-Serraly/releases/$(node -p 'require("./package.json").version')"` — build, seal a release directory and install it into Pi; after a version change, `pi remove` the previous release path.
-- `node scripts/test.mjs --package pi-loop` — debug one package; does not replace full verification.
+- `node scripts/test.mjs --package pi-ui` — debug one package; does not replace full verification.
 - `node scripts/preview.mjs regular` — preview UI with temporary data.
 
 Every root entry point refuses to start below Node 22.19.0 (`scripts/lib/node-version.mjs`);
@@ -66,7 +58,7 @@ See `docs/development.md` for release preparation and additional commands.
 
 ## Coding Style & Naming Conventions
 
-Use strict TypeScript and ESM. Preserve local formatting: tabs in UI/questions/loop/tools; two spaces in background-shell/subagents. Retain neighboring quote styles and import extensions. Use camelCase functions/variables, PascalCase types/classes, and descriptive kebab-case filenames.
+Use strict TypeScript and ESM. Preserve local formatting: tabs in UI. Retain neighboring quote styles and import extensions. Use camelCase functions/variables, PascalCase types/classes, and descriptive kebab-case filenames.
 
 ## Testing Guidelines
 
@@ -74,11 +66,11 @@ Use strict TypeScript and ESM. Preserve local formatting: tabs in UI/questions/l
 - Change-detector tests considered harmful.
 - Do not create regression tests for bug fixes without a genuine gap in behavior testing.
 - Test behavior this repository owns: extension features, adapters, configuration and security rules, lifecycle/resource cleanup, and build/release artifacts. Exercise public interfaces or established seams, with independently derived expectations.
-- Do not duplicate upstream tests for Pi, TypeBox, Node or other dependencies. Upstream algorithms, resource limits (such as codemode worker admission), and API semantics belong in their owning repositories; investigate them with disposable probes when needed, not permanent local tests.
+- Do not duplicate upstream tests for Pi, TypeBox, Node or other dependencies. Upstream algorithms, resource limits, and API semantics belong in their owning repositories; investigate them with disposable probes when needed, not permanent local tests.
 - Retain integration tests that exercise our code against the real host or compiled artifacts and catch a concrete failure in our adapter, admission/isolation policy, packaging or lifecycle. Merely calling an upstream API and asserting its documented result is not a local integration contract.
 - Before adding or retaining a test, identify the repository-owned behavior it protects. Remove upstream-only, tautological, change-detector and redundant cases; do not replace them with assertions on source text, private call sequences or dependency version constants. Host qualification and package metadata gates remain repository-owned behavior.
 
-Root integration and most package tests use Node’s `node:test` runner, with `tsx` for TypeScript. Subagents retains its imported Vitest suites and runs through the same isolated root runner with network denial. Name package tests `*.test.ts` and root integration tests `*.test.mjs`. When a regression test is warranted, write a behavior-focused test before implementation; observe failure, then success. No numeric coverage threshold is configured. Preserve boundary/compiled-artifact tests, deterministic timing, and process/worker cleanup. Run `npm run verify` before submitting; document platform skips and manually verify visual changes.
+Root integration and package tests use Node’s `node:test` runner, with `tsx` for TypeScript. Name package tests `*.test.ts` and root integration tests `*.test.mjs`. When a regression test is warranted, write a behavior-focused test before implementation; observe failure, then success. No numeric coverage threshold is configured. Preserve boundary/compiled-artifact tests, deterministic timing, and process/worker cleanup. Run `npm run verify` before submitting; document platform skips and manually verify visual changes.
 
 ## Commit & Pull Request Guidelines
 
@@ -86,7 +78,7 @@ Use concise, descriptive subjects with conventional prefixes where they fit. PRs
 
 ## Security & Configuration
 
-Use isolated HOME/config/session fixtures; never access real credentials or send real model requests. Do not run `pi install .` or load development `dist/` into real settings. Deployment references one immutable versioned release directory. Keep the `subagents-lite.json`, `subagents-lite-prompt.md` and `agents/*.md` config filenames. Changing real settings requires explicit authorization, a verified settings backup and a restore-based rollback.
+Use isolated HOME/config/session fixtures; never access real credentials or send real model requests. Do not run `pi install .` or load development `dist/` into real settings. Deployment references one immutable versioned release directory. Changing real settings requires explicit authorization, a verified settings backup and a restore-based rollback.
 
 ## Agent skills
 

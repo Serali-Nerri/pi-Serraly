@@ -30,7 +30,6 @@ export async function sandboxFixture(release, config = {}) {
 	try {
 		await Promise.all([cwd, env.HOME, env.PI_CODING_AGENT_DIR].map((path) => mkdir(path, { recursive: true })));
 		await cp(fixtures, join(base, "fixtures"), { recursive: true });
-		await writeFile(join(base, "fixtures/cli-safety.js"), 'export { installGuard as default } from "./cli-fixture.js";\n');
 		await writeFile(join(base, "package.json"), '{"type":"module"}\n');
 		env.NODE_OPTIONS = `--import=${join(base, "fixtures/network-guard.mjs")}`;
 		env.SERRALY_REPORT = join(base, "report.jsonl");
@@ -38,9 +37,8 @@ export async function sandboxFixture(release, config = {}) {
 		env.SERRALY_CONFIG = join(base, "config.json");
 		await writeFile(env.SERRALY_CONFIG, JSON.stringify(config));
 		await writeFile(join(env.PI_CODING_AGENT_DIR, "settings.json"), JSON.stringify({
-			theme: "dark", hideThinkingBlock: true, defaultTools: ["+tool_search", "+codemode"],
+			theme: "dark", hideThinkingBlock: true, defaultTools: ["+tool_search"],
 			defaultProvider: "serraly-fixture", defaultModel: "fixture", cacheWarming: "off",
-			codemode: { mode: config.codemodeMode ?? "on" },
 			compaction: { enabled: false }, retry: { enabled: false },
 			enableInstallTelemetry: false, enableAnalytics: false, defaultProjectTrust: "never",
 			packages: config.packageFilter === undefined ? [] : [{ source: release, extensions: config.packageFilter }],
@@ -72,7 +70,7 @@ export function cliArgs(sandbox, host, extra = []) {
 	const manifest = JSON.parse(readFileSync(join(sandbox.env.SERRALY_RELEASE, "package.json"), "utf8"));
 	const entries = manifest.pi.extensions.map((entry) => join(sandbox.env.SERRALY_RELEASE, entry.slice(2)));
 	return [host.cli, "--offline", "--no-session", "--no-skills", "--no-prompt-templates", "--no-themes", "--no-context-files", "--no-approve",
-		"--no-extensions", "-e", join(sandbox.base, "fixtures/cli-guard.js"), "-e", join(sandbox.base, "fixtures/cli-safety.js"),
+		"--no-extensions", "-e", join(sandbox.base, "fixtures/cli-guard.js"),
 		...entries.flatMap((entry) => ["-e", entry]),
 		"-e", "builtin:tool-search", "-e", join(sandbox.base, "fixtures/cli-fixture.js"),
 		"--provider", "serraly-fixture", "--model", "fixture", "--thinking", "off", ...extra];

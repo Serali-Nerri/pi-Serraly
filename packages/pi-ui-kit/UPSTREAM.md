@@ -4,7 +4,7 @@
 
 - `extensions/pi-ui/src/transcript/tool/files.ts`: the `RenderLines` width-caching
   component and the tool-card layout (dot, title, `⎿` result branch, indentation).
-- `extensions/pi-ask-user-question/src/render.ts`: `padToWidth`.
+- a question-dialog renderer formerly maintained in this workspace: `padToWidth`.
 
 Both are this repository's own code; the tool-card rendering helpers in `pi-ui` were
 in turn adapted from pi-cc-extensions, whose notice travels in `licenses/`.

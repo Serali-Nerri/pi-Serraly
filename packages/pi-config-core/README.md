@@ -27,8 +27,6 @@ writeTextFileAtomicSync(path, `${JSON.stringify(value, null, 2)}\n`, 64 * 1024);
   concurrent writers are last-writer-wins, and every successful write is complete.
 - `maxBytes` must be a positive safe integer; a bad argument throws before any I/O.
 
-Consumers: `pi-ui` (64 KiB, `claude-style-tools.json`), `pi-subagents` (64 KiB,
-`subagents-lite.json`) and `context-view` (64 KiB, `context-view.json`). The library
-is bundled into each consumer at build time. context-view uses bounded reading only;
-its explicit create-only preferences command does not use the replacing atomic writer.
+Consumer: `pi-ui` (64 KiB, `claude-style-tools.json`). The library is bundled into the
+consumer at build time.
 Provenance: [UPSTREAM.md](./UPSTREAM.md).

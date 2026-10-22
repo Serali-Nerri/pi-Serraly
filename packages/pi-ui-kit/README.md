@@ -7,12 +7,12 @@ indented status line, coloured through Pi's semantic theme roles.
 import { RenderLines, renderToolHeader, renderToolStatus, toolHeaderText, toolStatusText } from "pi-ui-kit";
 
 new RenderLines((width) => [
-  ...renderToolHeader(theme, { title: "bg_logs", summary: "task-123", state: "running" }, width),
-  ...renderToolStatus(theme, { state: "success", message: "tail · 4 KiB · truncated" }, width),
+  ...renderToolHeader(theme, { title: "read", summary: "src/config.ts", state: "running" }, width),
+  ...renderToolStatus(theme, { state: "success", message: "read · 1.2 KiB" }, width),
 ]);
 
 // An owner that wraps through Pi's Text component builds the same text directly.
-new Text(toolHeaderText(theme, { title: "Agent", summary: "(claude-sonnet-4-5)", state: "running" }), 0, 0);
+new Text(toolHeaderText(theme, { title: "read", summary: "src/config.ts", state: "running" }), 0, 0);
 new Text(toolStatusText(theme, { state: "success", message: statsLine, styled: true }), 0, 0);
 ```
 
@@ -49,6 +49,5 @@ owning extension. It has no Pi resources and uses no private host API: `ToolCard
 is the public slice of Pi's theme that the card needs, and Pi's `Theme` satisfies it
 structurally.
 
-Consumers: `pi-ui`, `pi-background-shell` (bundled into its
-tsc output as a stateless leaf) and `pi-subagents`. Provenance:
+Consumers: `pi-ui` (bundled into its ESM output). Provenance:
 [UPSTREAM.md](./UPSTREAM.md).

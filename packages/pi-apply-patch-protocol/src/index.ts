@@ -1,11 +1,9 @@
 /**
- * `apply_patch.v1` wire contract shared by the producer (`pi-tools`) and the
- * presentation parser (`pi-ui`).
+ * `apply_patch.v1` wire contract for the presentation parser in `pi-ui`.
  *
  * This library owns the format identifier, the four output budgets and the wire
- * type declarations. Both sides keep their own policy: the producer owns its diff
- * algorithm, work/edit/time budgets and truncation strategy; the consumer owns its
- * change/view defence thresholds, sanitizer and degradation for unknown shapes.
+ * type declarations. The consumer owns its diff reconstruction, change/view defence
+ * thresholds, sanitizer and degradation for unknown shapes.
  */
 
 /** Format identifier carried by every `apply_patch` report. */

@@ -1,13 +1,11 @@
 import { appendFileSync, readFileSync } from "node:fs";
 import { createAssistantMessageEventStream } from "@earendil-works/pi-ai";
-import { questionArgs } from "./contracts.mjs";
 
 export function report(phase, extra = {}) {
 	appendFileSync(process.env.SERRALY_REPORT, JSON.stringify({ phase, ...extra }) + "\n");
 }
 
-// All calls use compiled tools. Invalid Agent/StopAgent calls exercise their
-// real schema/error/rendering boundaries without creating child sessions.
+// All calls use compiled tools.
 export function registerScriptedProvider(pi, state) {
 	const config = JSON.parse(readFileSync(process.env.SERRALY_CONFIG, "utf8"));
 	pi.registerProvider("serraly-fixture", {
@@ -32,10 +30,6 @@ export function registerScriptedProvider(pi, state) {
 					const results = context.messages.filter((item) => item.role === "toolResult");
 					const plan = config.tui ? [
 						{ name: "read", arguments: { path: "seed.txt" } },
-						{ name: "codemode", arguments: { code: `text(await tools.ask_user_question(${JSON.stringify(questionArgs)}));` } },
-						{ name: "bg_status", arguments: {} },
-						{ name: "Agent", arguments: { prompt: "fixture", agent: "no-such-agent" } },
-						{ name: "StopAgent", arguments: { agent_id: "missing" } },
 						{ name: "write", arguments: { path: "boundary.txt", content: "first\nsecond\n" } },
 					] : [];
 					const next = plan[results.length];

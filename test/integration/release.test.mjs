@@ -81,8 +81,8 @@ test("release target defaults to the package version, not a digest", async () =>
 		{ output: resolve("relative/out"), buildId: "0.1.0", packages: [] });
 	assert.deepEqual(releaseTarget(["--output", join(home, "elsewhere"), "--build-id", "2.0.0"], { version: "0.1.0", home }),
 		{ output: join(home, "elsewhere"), buildId: "2.0.0", packages: [] });
-	assert.deepEqual(releaseTarget(["--package", "pi-ui", "--package", "pi-loop"], { version: "0.1.0", home }),
-		{ output: join(home, ".local/share/pi-Serraly/releases/0.1.0"), buildId: "0.1.0", packages: ["pi-ui", "pi-loop"] });
+	assert.deepEqual(releaseTarget(["--package", "pi-ui"], { version: "0.1.0", home }),
+		{ output: join(home, ".local/share/pi-Serraly/releases/0.1.0"), buildId: "0.1.0", packages: ["pi-ui"] });
 	assert.throws(() => releaseTarget(["--nope"], { version: "0.1.0", home }), /Usage/);
 	assert.throws(() => releaseTarget(["--build-id"], { version: "0.1.0", home }), /Usage/);
 });

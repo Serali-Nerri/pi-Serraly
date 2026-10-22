@@ -46,10 +46,8 @@ export async function runRpc(sandbox, args) {
 		await request("prompt", "prompt", { message: "Local synthetic reply" }); await settled;
 		child.stdin.end(); assert.equal(await closed, 0, stderr);
 		assert.equal(stderr, ""); assert.equal(parseError, undefined); assert.equal(stdout, "", "strict LF-terminated JSONL");
-		// Loop's existing local-loop domain status is part of the RPC contract.
-		// No terminal widget/custom UI or new subagents UI bridge may be added.
-		assert.deepEqual(records.filter((record) => record.type === "extension_ui_request" &&
-			!(record.method === "setStatus" && record.statusKey === "local-loop")), [], "no UI-owned bridge in this noninteractive RPC scenario");
+		// No terminal widget/custom UI bridge may be added.
+		assert.deepEqual(records.filter((record) => record.type === "extension_ui_request"), [], "no UI-owned bridge in this noninteractive RPC scenario");
 		return records;
 	} finally { clearTimeout(timer); if (child.exitCode === null) child.kill("SIGKILL"); await closed.catch(() => {}); }
 }

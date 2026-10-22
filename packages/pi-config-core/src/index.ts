@@ -1,6 +1,5 @@
 /**
- * Bounded, atomic JSON file I/O shared by the UI and subagents configuration
- * layers.
+ * Bounded, atomic JSON file I/O for the UI configuration layer.
  *
  * This library owns the mechanism only: a caller-declared byte ceiling, strict
  * UTF-8 decoding, a collision-free temporary file, private permissions and the

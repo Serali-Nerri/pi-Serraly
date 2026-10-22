@@ -1,27 +1,18 @@
 # pi-Serraly
 
-私有本地 Pi package：九个可独立启停的扩展，一个维护仓库。
+私有本地 Pi package：一个可独立启停的扩展，一个维护仓库。
 支持基线为 **Pi 1.3.0 / Node ≥22.19**。不发布 npm，不提供总 factory 再次注册能力。
 
-## 九个入口
+## 入口
 
 | 能力 | 运行入口 | 使用与契约 |
 | --- | --- | --- |
-| 上下文 | `extensions/context-view/dist/context-view.js` | [`/context`、Usage 估算、Latest 注入差异与预览](extensions/context-view/README.md) |
 | UI | `extensions/pi-ui/dist/pi-ui.js` | [工具卡、Thinking、shell、`/ccstyle`](extensions/pi-ui/README.md) |
-| 提问 | `extensions/pi-ask-user-question/dist/pi-ask-user-question.js` | [`ask_user_question` 结构化问卷、preview/备注与 RPC 原生对话框](extensions/pi-ask-user-question/README.md) |
-| 循环 | `extensions/pi-loop/dist/pi-loop.js` | [`/loop`、内存任务和忙闲调度](extensions/pi-loop/README.md) |
-| 基础工具 | `extensions/pi-tools/dist/pi-tools.js` | [codemode 专用的 `grep`/`find`/`ls`](extensions/pi-tools/README.md) |
-| 后台 shell | `extensions/pi-background-shell/dist/extensions/background-tasks.js` | [`bg_*`、任务 UI、通知和同进程 reload](extensions/pi-background-shell/README.md) |
-| 外部目录 | `extensions/pi-add-dir/dist/pi-add-dir.js` | [`/dir-add`、`/dir-ls`、外部指令与 skills](extensions/pi-add-dir/README.md) |
-| 子代理 | `extensions/pi-subagents/dist/pi-subagents.js` | [`Agent`、`StopAgent`、`MessageAgent`、`AgentStatus`、`/agents` 与独立原生 SDK 会话](extensions/pi-subagents/README.md) |
-| 图片生成 | `extensions/pi-codex-imagegen/dist/pi-codex-imagegen.js` | [`imagegen`、OpenAI API Key／订阅认证、Codex 与本地图片编辑](extensions/pi-codex-imagegen/README.md) |
 
 每个扩展是独立的 private npm workspace 包，拥有自己的 manifest、构建、测试、许可
-和版本；`packages/` 下的共享库只被这些扩展在构建期 bundle。根 `pi` 显式声明空
-资源清单，安装 release 后才由聚合 manifest 声明以上九入口，可在 `pi config`
+和版本；`packages/` 下的共享库只被该扩展在构建期 bundle。根 `pi` 显式声明空
+资源清单，安装 release 后才由聚合 manifest 声明该入口，可在 `pi config`
 分别启停。本仓库不声明 skills、prompts 或 themes；外部 npm 扩展也不属于本仓库。
-同包发布不意味着子代理自动加载所有入口；子代理默认能力与配置见其模块文档。
 
 Pi 默认使用 fullscreen；需要终端原生滚动历史时，可显式设置
 `"tuiMode": "regular"` 或使用 `--tui-mode regular`。
@@ -37,9 +28,9 @@ npm run verify
 涉及编译产物的定向测试先显式构建受影响包，`pack:check` 可独立验证现有产物：
 
 ```sh
-node scripts/test.mjs --package pi-loop
+node scripts/test.mjs --package pi-ui
 node scripts/test.mjs --suite integration
-node scripts/test.mjs --package pi-subagents --list
+node scripts/test.mjs --package pi-ui --list
 ```
 
 验证使用临时 HOME/agent/cwd、合成会话、离线脚本化 provider 和本地 fixture，
