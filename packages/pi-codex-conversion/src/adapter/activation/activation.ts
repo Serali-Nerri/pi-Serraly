@@ -3,7 +3,7 @@ import { getCodeModeExtensionToolSnapshot } from "../../code-mode-extension-tool
 import { discoverExternalNotesOwner } from "../../context-management/external-notes-bridge.ts";
 import { TOOL_NAMES as EXTERNAL_NOTES_TOOL_NAMES } from "../../context-management/external-notes-protocol.ts";
 import { renderCodexStatus } from "../../ui/status.ts";
-import { ALL_CODEX_ADAPTER_TOOL_NAMES, isAdapterRuntime, resolveCodexRuntimePlanForState, type CodexRuntimePlan } from "./runtime-plan.ts";
+import { ALL_CODEX_ADAPTER_TOOL_NAMES, isRuntimeToolAllowed, isAdapterRuntime, resolveCodexRuntimePlanForState, type CodexRuntimePlan } from "./runtime-plan.ts";
 import type { AdapterState } from "./state.ts";
 import { DEFAULT_TOOL_NAMES, STATUS_KEY, buildExtraToolsOnlyStatusText } from "./tool-set.ts";
 
@@ -219,7 +219,7 @@ function applyRuntimeTools(
 			tool.name === "tool_search" && tool.sourceInfo?.path === "builtin:tool-search");
 		projected = toolNames.filter((name) => name !== "codemode" && !(nativeSearch && name === "tool_search"));
 	}
-	setActiveTools(pi, projected);
+	setActiveTools(pi, projected.filter(name => isRuntimeToolAllowed(plan, name)));
 	state.appliedRuntimeKind = plan.kind;
 	state.appliedRuntimeToolNames = [...plan.toolNames];
 	state.appliedActiveToolNames = [...pi.getActiveTools()];

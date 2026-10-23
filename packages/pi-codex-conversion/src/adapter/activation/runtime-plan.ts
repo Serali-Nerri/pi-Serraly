@@ -306,4 +306,12 @@ export function isCodeModeRuntime(plan: CodexRuntimePlan): plan is CodeRuntimePl
 	return plan.kind === "code" || plan.kind === "notebook";
 }
 
+/** Bound admission without enabling tools absent from the current loadout. */
+export function isRuntimeToolAllowed(plan: CodexRuntimePlan, name: string): boolean {
+	if (!plan.ownedToolNames.includes(name) || plan.toolNames.some(tool => tool === name)) return true;
+	// Notes routers stay admitted for Pi's branch replay, even when nested in exec.
+	return isCodeModeRuntime(plan) && (plan.contextManagementNested || plan.contextManagementExternal)
+		&& (name === "history" || name === "notes");
+}
+
 export const ALL_CODEX_ADAPTER_TOOL_NAMES = ALL_ADAPTER_TOOL_NAMES;

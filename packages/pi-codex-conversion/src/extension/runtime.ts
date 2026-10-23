@@ -8,7 +8,7 @@ import { resolveDaybreakAccess } from "../providers/openai-codex/daybreak.ts";
 import { readCodexCacheEnvironment } from "../adapter/activation/cache-environment.ts";
 import { resolveCodexCacheKeepalivePlan, type CodexCacheKeepalivePlan, type CodexCacheKeepaliveStrategy } from "../adapter/activation/cache-keepalive.ts";
 import { getCodexConversionConfigPath, readEffectiveCodexConversionConfig } from "../adapter/activation/config-store.ts";
-import { isAdapterRuntime, isCodeModeRuntime, resolveCodexRuntimePlanForState } from "../adapter/activation/runtime-plan.ts";
+import { isAdapterRuntime, isCodeModeRuntime, isRuntimeToolAllowed, resolveCodexRuntimePlanForState, type CodexRuntimePlan } from "../adapter/activation/runtime-plan.ts";
 import { CODE_MODE_TOOL_NAMES, NOTEBOOK_MODE_TOOL_NAMES } from "../adapter/activation/tool-set.ts";
 import type { AdapterState } from "../adapter/activation/state.ts";
 import { rewriteCodexProviderHeaders, rewriteCodexProviderRequest, supportsCodexDeveloperMessages } from "../adapter/provider-request.ts";
@@ -88,6 +88,18 @@ export interface CodexExtensionRuntime {
 
 function prewarmReasoningOption(level: ReturnType<ExtensionAPI["getThinkingLevel"]>): Pick<OpenAICodexStreamOptions, "reasoning"> | Record<never, never> {
 	return level === "off" ? {} : { reasoning: level };
+}
+
+function projectRuntimeToolDeclarations(messages: AgentMessage[], plan: CodexRuntimePlan): AgentMessage[] {
+	if (!isAdapterRuntime(plan) && plan.kind !== "extras") return messages;
+	return messages.map(message => {
+		if (message.role !== "system" || (!message.toolsAdded && !message.toolsRemoved)) return message;
+		const toolsAdded = message.toolsAdded?.filter(tool => isRuntimeToolAllowed(plan, tool.name));
+		const toolsRemoved = message.toolsRemoved?.filter(tool => isRuntimeToolAllowed(plan, tool.name));
+		if (toolsAdded?.length === message.toolsAdded?.length && toolsRemoved?.length === message.toolsRemoved?.length) return message;
+		const { toolsAdded: _added, toolsRemoved: _removed, ...rest } = message;
+		return { ...rest, ...(toolsAdded?.length ? { toolsAdded } : {}), ...(toolsRemoved?.length ? { toolsRemoved } : {}) };
+	});
 }
 
 export function createCodexExtensionRuntime(pi: ExtensionAPI, recordUsage?: CodexUsageRecorder): CodexExtensionRuntime {
@@ -308,13 +320,13 @@ export function createCodexExtensionRuntime(pi: ExtensionAPI, recordUsage?: Code
 	};
 
 	const projectContextMessages = (ctx: CodexContext, messages?: readonly AgentMessage[], refreshNotesFrom?: readonly SessionEntry[]) => {
+		const plan = resolveCodexRuntimePlanForState(ctx, state);
 		if (state.externalNotes) {
 			// Message projection preserves the committed prompt before retiring conversation.
 			const branch = ctx.sessionManager.getBranch();
-			return state.externalNotes.owner.projectMessages(projectCodexDeveloperHistory(branch, messages), refreshNotesFrom)
-				.filter(message => !isProviderContextExcludedMessage(message));
+			return projectRuntimeToolDeclarations(state.externalNotes.owner.projectMessages(projectCodexDeveloperHistory(branch, messages), refreshNotesFrom)
+				.filter(message => !isProviderContextExcludedMessage(message)), plan);
 		}
-		const plan = resolveCodexRuntimePlanForState(ctx, state);
 		const branch = ctx.sessionManager.getBranch();
 		const archived = hasTreeArchives(branch);
 		const allEntries = archived ? ctx.sessionManager.getEntries() : branch;
@@ -326,8 +338,8 @@ export function createCodexExtensionRuntime(pi: ExtensionAPI, recordUsage?: Code
 			branch,
 			allEntries,
 		);
-		return projectTreeHandoffReads(state.notesProjection?.projectMessages(projected, refreshNotesFrom) ?? projected, checkpointBranch)
-			.filter((message) => !isProviderContextExcludedMessage(message));
+		return projectRuntimeToolDeclarations(projectTreeHandoffReads(state.notesProjection?.projectMessages(projected, refreshNotesFrom) ?? projected, checkpointBranch)
+			.filter((message) => !isProviderContextExcludedMessage(message)), plan);
 	};
 
 	const currentMessages = (ctx: CodexContext) => {

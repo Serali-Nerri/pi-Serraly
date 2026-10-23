@@ -56,6 +56,8 @@ Provider scope can stay on **Codex and configured**, expand to **all providers**
 
 Custom-tool contract changes and removals, including promoted tools, are announced before the next model request without rebuilding the standing Code or Notebook instructions. `ALL_TOOLS` contains complete callable contracts.
 
+PCC checks its own tool admission against the current mode and configuration on every runtime sync and model transcript projection, including plain tree navigation and replay after a mode change. Restored history and extension integrations cannot admit PCC tools outside that policy. Code and Notebook retain eligible nested history and notes integrations, and unrelated third-party tools are preserved. This check only removes disallowed tools; it does not force missing tools back on or persist individual tool selections across historical declaration replay.
+
 </details>
 
 <a name="settings"></a>
