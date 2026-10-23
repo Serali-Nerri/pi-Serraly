@@ -3,7 +3,7 @@ import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, readlink, realpath,
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
-const memberCount = 7;
+const memberCount = 8;
 const commandTimeoutMs = 120_000;
 const emptyPiResources = ["extensions", "skills", "prompts", "themes"];
 const installArgs = [

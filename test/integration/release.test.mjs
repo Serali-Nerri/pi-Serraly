@@ -57,6 +57,7 @@ const specifications = [
 	{ slug: "p-c-dev" },
 	{ slug: "p-d" },
 	{ slug: "p-e", peerDependencies: { "@fx/p-c": "1.0.0" }, peerDependenciesMeta: { "@fx/p-c": { optional: true } } },
+	{ slug: "p-f" },
 ];
 
 async function makeFixture(base) {

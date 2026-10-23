@@ -47,7 +47,7 @@ function restoreEnvironment(name, value) {
 }
 
 /**
- * Run the released Pi 1.4 host loader and lifecycle against the seven package
+ * Run the released Pi 1.4 host loader and lifecycle against the workspace package
  * directories under `directory`. No model is selected or prompted, and the
  * only writable paths are inside a disposable temporary directory.
  */

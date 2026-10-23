@@ -1,0 +1,22 @@
+{
+	"name": "pi-ui",
+	"version": "0.3.0",
+	"private": true,
+	"type": "module",
+	"description": "Minimal Thinking, footer and sticky prompt presentation for Pi",
+	"license": "MIT",
+	"engines": { "node": ">=22.19.0" },
+	"files": ["dist", "README.md", "UPSTREAM.md", "LICENSE", "licenses"],
+	"main": "./dist/index.ts",
+	"pi": { "extensions": ["./dist/index.ts"] },
+	"peerDependencies": {
+		"@earendil-works/pi-ai": "*",
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*"
+	},
+	"scripts": {
+		"build": "bun build.mjs",
+		"check": "tsgo -p tsconfig.json",
+		"test": "node --import tsx --test test/*.test.ts"
+	}
+}

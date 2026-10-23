@@ -14,7 +14,7 @@ npm run verify
 bun run release -- --output /absolute/path/to/new-release
 ```
 
-build 构建 conversion、browser、agent-board，其余包保留 TS 入口。check 执行七包静态检查和根脚本语法检查；test:packages 运行包测试；test 运行包和集成测试；verify 按 build → check → test 执行一次。定向调试：`bun run check -- --package pi-browser` 或 `bun run test -- --package pi-codex-conversion`。检查和测试不修复产物。
+build 构建 conversion、browser、agent-board、pi-ui，其余包保留 TS 入口。check 执行各包静态检查和根脚本语法检查；test:packages 运行包测试；test 运行包和集成测试；verify 按 build → check → test 执行一次。定向调试：`bun run check -- --package pi-ui` 或 `bun run test -- --package pi-codex-conversion`。检查和测试不修复产物。
 
 不使用 Changesets、全仓发布工作流或 npm 发布命令。原生源码改变时显式运行 conversion 对应构建脚本，普通 TS 构建不重新编译跨平台原生程序。
 
@@ -27,6 +27,8 @@ build 构建 conversion、browser、agent-board，其余包保留 TS 入口。ch
 实际 Pi loader 加载 release 包并触发合成 session/shutdown；渲染使用真实宿主组件及合成结果。浏览器/CDP、Herdr、图像服务等外部登录/网络场景不被离线验证替代，须报告未验收部分。
 
 收尾只运行一次 npm run verify；迭代只跑相关检查。视觉变化查看隔离 PTY，回收通过可达性验证，不断言固定堆字节数。
+
+pi-ui 的行为测试通过真实 Pi 消息/终端组件、扩展事件和隔离配置文件覆盖展示、历史、交互及清理。编译入口必须经 bundled Pi loader 验证真实宿主组件得到装饰，不能仅在直接导入源码时验收；流式回收测试确认旧帧和启动 context 可回收。动画检查不得依靠每帧读取 session 历史。界面验收包含明暗主题、窄屏、拖选和宿主快捷键，不请求真实模型。
 
 ## Release
 

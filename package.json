@@ -1,9 +1,9 @@
 {
   "name": "pi-serraly",
-  "version": "0.4.0-preview.1",
+  "version": "0.4.0-preview.4",
   "private": true,
   "type": "module",
-  "description": "Seven locally maintained Pi extensions.",
+  "description": "Seven retained Pi extensions and an independent presentation extension.",
   "engines": {
     "node": ">=22.19.0"
   },

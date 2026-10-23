@@ -13,8 +13,9 @@
 | [pi-shepherdr](packages/pi-shepherdr/README.md) | Herdr 多代理编排 |
 | [pi-agent-board](packages/pi-agent-board/README.md) | 共享任务板与查看器；Shepherdr 的运行依赖 |
 | [pi-auto-trees](packages/pi-auto-trees/README.md) | 会话 marker、prime 与 end |
+| [pi-ui](packages/pi-ui/README.md) | Thinking、Footer、活动完成提示和置顶用户消息；不接管工具渲染 |
 
-每包独立注册，只启用需要的包，不使用上游聚合包。context-view 从其独立上游安装；本仓库不包含 pi-ui。
+每包独立注册，只启用需要的包，不使用上游聚合包。context-view 从其独立上游安装。
 
 ## 开发与部署
 

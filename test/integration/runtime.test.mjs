@@ -13,6 +13,7 @@ const extensionEntries = [
 	"packages/pi-codex-conversion/dist/index.js",
 	"packages/pi-codex-imagegen/index.ts",
 	"packages/pi-shepherdr/index.ts",
+	"packages/pi-ui/dist/index.ts",
 ].sort();
 
 test("released Pi 1.4 loads every imported package and completes session cleanup", {
@@ -35,6 +36,7 @@ test("released Pi 1.4 loads every imported package and completes session cleanup
 		"packages/pi-codex-conversion",
 		"packages/pi-codex-imagegen",
 		"packages/pi-shepherdr",
+		"packages/pi-ui",
 	]);
 	assert.deepEqual(
 		[
@@ -63,6 +65,7 @@ test("released Pi 1.4 loads every imported package and completes session cleanup
 		"board",
 		"browser",
 		"codex",
+		"ui",
 		"end",
 		"herdr",
 		"marker",

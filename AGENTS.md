@@ -2,8 +2,8 @@
 
 ## Contract and document ownership
 
-- Private Bun workspace: packages/pi-codex-conversion, pi-ask, pi-browser, pi-codex-imagegen, pi-shepherdr, pi-agent-board and pi-auto-trees.
-- Target Node ≥22.19, Bun 1.4.2, Pi 1.4.0. No pi-ui or legacy extensions/shared-library framework.
+- Private Bun workspace: seven retained howaboua packages plus the independent packages/pi-ui presentation extension.
+- Target Node ≥22.19, Bun 1.4.2, Pi 1.4.0. No legacy extensions/shared-library framework.
 - README indexes entry points; docs/architecture.md owns dependencies/resources; docs/development.md owns commands, isolation, release and manual updates; package README/LICENSE/UPSTREAM own usage, terms and provenance; root UPSTREAM is an index.
 - State current contracts, not stage narratives/work logs. Do not import upstream personal AGENTS/.pi or full-monorepo publishing workflows.
 
