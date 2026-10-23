@@ -11,7 +11,7 @@
 
 1. Update the owning document first.
 2. Write a behavior-focused test at an established seam, observe failure, implement the minimum.
-3. Iterate with focused checks. Inspect leftovers/contradictions and run npm run verify once at completion.
+3. Iterate with focused checks. Inspect leftovers/contradictions and run npm run verify only when necessary.
 4. No compatibility layers/data migration for our legacy implementation. Retained upstream runtime contracts and operator safeguards still apply.
 
 Strict TypeScript/ESM; preserve each package's formatting/import style. Use public package exports, not sibling private source. Host packages are runtime peers. Normal runtime dependencies and Shepherdr → agent-board are allowed.
@@ -34,5 +34,6 @@ Protect repository-owned features/adapters/configuration/isolation/lifecycle and
 Use isolated HOME/config/session and an environment allowlist. Never read real credentials or request real models. Registry access only during explicit dependency installation; checks/tests/release stay offline.
 Do not pi install . or load development code into real settings. Deployment references a new immutable release with complete dependencies/resources. Real settings changes require explicit authorization, verified backup and restore-based rollback.
 Preserve upstream licenses, binary/WASM/vendor/profiles and pinned UPSTREAM. Manual updates compare and merge rather than overwrite local renderer/lifecycle work.
+Retained package `package.json.version` tracks the synchronized upstream release baseline.
 
 Issues: docs/agents/issue-tracker.md. Domain/ADRs: docs/agents/domain.md.
