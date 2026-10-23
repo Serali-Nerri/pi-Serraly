@@ -34,6 +34,7 @@ export async function recordNotebookStatus(
 	messages: readonly AgentMessage[],
 	codeMode: Pick<CodeModeRegistration, "notebookStatus">,
 ): Promise<boolean> {
+	if (ctx.signal?.aborted) return false;
 	if (state.notebookStatusMessageId && messages.some((message) => message.role === "custom"
 		&& (message.customType === CODEX_NOTEBOOK_STATUS_TYPE || message.customType === CODEX_DEVELOPER_MESSAGE_TYPE)
 		&& isCodexDeveloperMessageDetails(message.details) && message.details.id === state.notebookStatusMessageId)) return false;
@@ -50,11 +51,11 @@ export async function recordNotebookStatus(
 			typeof status.details["pinnedBindings"] === "number" ? `${status.details["pinnedBindings"]} pinned` : undefined,
 		].filter(Boolean).join(" · ");
 	} catch (error) {
-		if (ctx.signal?.aborted) throw error;
+		if (ctx.signal?.aborted) return false;
 		title = "Notebook status unavailable";
 		content = `Notebook startup status unavailable: ${error instanceof Error ? error.message : String(error)}\nUse notebook diagnostics to inspect the failure before relying on retained state`;
 	}
-	ctx.signal?.throwIfAborted();
+	if (ctx.signal?.aborted) return false;
 	const status: NotebookStatus = { protocol: 1, id: randomUUID(), content, title };
 	// Durable at admission even during a live run; entry rendering owns the same UI notice.
 	pi.appendEntry(CODEX_NOTEBOOK_STATUS_TYPE, status);

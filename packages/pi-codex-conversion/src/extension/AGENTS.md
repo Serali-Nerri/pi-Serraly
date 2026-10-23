@@ -5,3 +5,4 @@
 - Native compaction presentation is a custom entry: never route it through `sendMessage`, which can queue an empty continuation during auto-compaction.
 - Automatic compaction can resume without another agent_start. Preserve live delivery context through same-session transport resets; canonical summary requests must supply their own context.
 - Notice renderers use Pi's theme tokens and expansion hooks. Summaries are user-facing metadata, not first-line previews of model content; provider-role promotion does not own their UI.
+- Pi attributes a throwing hook to the extension that registered it. Context built for a run whose owner already aborted is discarded rather than reported: `context-briefings.ts` swallows provider failures and `adapter/notebook-status.ts` records no status once `ctx.signal` aborted. Live-run failures still surface.

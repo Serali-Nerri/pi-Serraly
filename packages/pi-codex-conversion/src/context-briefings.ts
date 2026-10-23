@@ -42,7 +42,12 @@ export function registerCodexContextBriefingHost(pi: ExtensionAPI): () => void {
 export async function recordCodexContextBriefings(pi: ExtensionAPI, ctx: ExtensionContext, windowId: string | undefined, messages?: readonly AgentMessage[]): Promise<void> {
 	const request: Request = { protocol: 1, action: "record", ctx, windowId, messages, pending: [] };
 	pi.events.emit(CHANNEL, request);
-	await Promise.all(request.pending);
+	try {
+		await Promise.all(request.pending);
+	} catch (error) {
+		// An aborted run discards this context, so a provider's failure is not an extension error.
+		if (!ctx.signal?.aborted) throw error;
+	}
 }
 
 export function readCodexContextBriefing(value: unknown): CodexContextBriefing {
