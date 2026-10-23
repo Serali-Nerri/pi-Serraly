@@ -1,0 +1,2 @@
+- Compare generation/edit contracts with the OpenAI Codex checkout's `codex-rs/ext/image-generation/`, `codex-rs/codex-api/src/endpoint/images.rs` and `codex-rs/codex-api/src/images.rs`. `UPSTREAM_SYNC.md` pins the reference and reviewed deltas. Inspect changes since that pin when touching the adapter; do not restore inert Rust snapshots. Pi-facing auth, artifacts, rendering and Code Mode projection remain TypeScript.
+- Local edit targets accept validated PNG, JPEG, GIF, or WebP bytes. Recent targets come only from Pi's active compaction-aware context.

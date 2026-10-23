@@ -1,0 +1,253 @@
+import { getAgentDir, type AgentToolResult, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type { CodexExtensionRuntime } from "../extension/runtime.ts";
+import { getCodeModeExtensionToolSnapshot } from "../code-mode-extension-tools.ts";
+import {
+	type CodeModeRegistration,
+	registerCodeModeTools,
+	registerCustomTools,
+} from "../tools/code-mode/tools.ts";
+import type { ProgrammaticCodeModeToolDefinition } from "../tools/code-mode/types.ts";
+import { createApplyPatchTool } from "../tools/apply-patch/tool.ts";
+import { createExecCommandTool } from "../tools/exec/command-tool.ts";
+import { createWriteStdinTool } from "../tools/exec/write-stdin-tool.ts";
+import { createViewImageTool } from "../tools/view-image/tool.ts";
+import { supportsViewImageInputs } from "./tool-support.ts";
+import { isCodeModeRuntime, resolveCodexRuntimePlanForState } from "./activation/runtime-plan.ts";
+import { CODE_MODE_TOOL_NAMES, NOTEBOOK_MODE_TOOL_NAMES } from "./activation/tool-set.ts";
+import { codeModeImageResult, toNestedTool } from "./code-mode/nested-tool-adapter.ts";
+import { createContextWindowTools } from "../context-management/tools.ts";
+import { resolveRemoteContextScope } from "../context-management/remote-scope.ts";
+import { appendRemoteDelivery } from "../context-management/remote-delivery.ts";
+import { createPiCodeModeBridge } from "./code-mode/pi-tools.ts";
+import { syncAdapter } from "./activation/activation.ts";
+
+const LONG_RUNNING_TOOL_OUTER_YIELD_MS = 1_800_000;
+
+export async function registerCodexCodeMode(
+	pi: ExtensionAPI,
+	runtime: CodexExtensionRuntime,
+	beforePrepare?: (ctx: ExtensionContext) => void,
+): Promise<CodeModeRegistration> {
+	let latestContext: ExtensionContext | undefined;
+	let stopped = false;
+	let pendingNativeProjection = false;
+	const piTools = createPiCodeModeBridge(pi);
+	const isActive = (ctx: unknown) => {
+		if (ctx) latestContext = ctx as ExtensionContext;
+		const plan = resolveCodexRuntimePlanForState(ctx as ExtensionContext, runtime.state);
+		if (!isCodeModeRuntime(plan)) return false;
+		const requiredTools = plan.kind === "notebook"
+			? NOTEBOOK_MODE_TOOL_NAMES
+			: CODE_MODE_TOOL_NAMES;
+		const activeTools = pi.getActiveTools();
+		return requiredTools.every((name) => activeTools.includes(name));
+	};
+	const customToolsRuntime = await registerCustomTools(pi, undefined, {
+		isActive,
+	});
+	const programmaticRuntime = await registerCodeModeTools(pi, {
+		prepareLoadout: (loadout) => {
+			if (!latestContext) return undefined;
+			const plan = resolveCodexRuntimePlanForState(latestContext, runtime.state);
+			if (!isCodeModeRuntime(plan)) return undefined;
+			const required = plan.kind === "notebook" ? NOTEBOOK_MODE_TOOL_NAMES : CODE_MODE_TOOL_NAMES;
+			if (!required.every((name) => loadout.declared.some((tool) => tool.name === name))) return undefined;
+			// MCP can activate native discovery after our preparation hook or during
+			// a run. Reconcile outside Pi's synchronous loadout callback.
+			const nativeSearch = pi.getAllTools().some(tool =>
+				tool.name === "tool_search" && tool.sourceInfo?.path === "builtin:tool-search");
+			if (!pendingNativeProjection && loadout.declared.some((tool) =>
+				tool.name === "codemode" || (nativeSearch && tool.name === "tool_search"))) {
+				pendingNativeProjection = true;
+				queueMicrotask(() => {
+					pendingNativeProjection = false;
+					if (!stopped && latestContext && isActive(latestContext)
+						&& pi.getActiveTools().some(name => name === "codemode" || (nativeSearch && name === "tool_search")))
+						syncAdapter(pi, latestContext, runtime.state);
+				});
+			}
+			return piTools.prepareLoadout(loadout, ["codemode", ...(nativeSearch ? ["tool_search"] : [])]);
+		},
+		getTools: (ctx) => {
+			const context = ctx as ExtensionContext | undefined;
+			const extensions = getCodeModeExtensionToolSnapshot(pi, context, {
+				eligibleTopLevelNames: runtime.state.previousToolNames ?? pi.getActiveTools(),
+			});
+			return [
+				...createNestedTools(pi, runtime, context),
+				...extensions.tools,
+				...piTools.getTools(extensions.allToolNames),
+			];
+		},
+		isActive,
+		opaqueResultScope: (ctx) => resolveRemoteContextScope(ctx, runtime.state),
+		lazyOpaqueResultScope: () => Boolean(runtime.state.externalNotes),
+		deliverOpaqueResponse: (response, callId, scope, ctx) => appendRemoteDelivery(pi, response, callId, scope, ctx),
+		executionKind: (ctx) =>
+			resolveCodexRuntimePlanForState(ctx as ExtensionContext, runtime.state).kind === "notebook"
+				? "notebook"
+				: "code",
+		notebookOptions: () => ({
+			maxHeapMiB: runtime.state.config.notebook.maxHeapMiB,
+			agentDir: getAgentDir(),
+			...(runtime.state.config.notebook.profile ? { profile: runtime.state.config.notebook.profile } : {}),
+		}),
+		providesRenderers: true,
+		richRendering: () => runtime.state.config.ui.codeModeDetails,
+		minimalOutput: () => runtime.state.config.ui.compactTools === "minimal",
+	});
+	return {
+		prepare: (ctx) => {
+			if (ctx) beforePrepare?.(ctx as ExtensionContext);
+			return programmaticRuntime.prepare(ctx);
+		},
+		getTools: (ctx) => programmaticRuntime.getTools(ctx),
+		getPromptTools: (ctx) => programmaticRuntime.getPromptTools(ctx),
+		notebookStatus: (ctx) => programmaticRuntime.notebookStatus(ctx),
+		checkpointNotebook: () => programmaticRuntime.checkpointNotebook(),
+		shutdownHost: () => programmaticRuntime.shutdownHost(),
+		async shutdown() {
+			stopped = true;
+			latestContext = undefined;
+			await programmaticRuntime.shutdown();
+			await customToolsRuntime.shutdown();
+		},
+	};
+}
+
+function createNestedTools(
+	pi: ExtensionAPI,
+	runtime: CodexExtensionRuntime,
+	ctx?: ExtensionContext,
+): ProgrammaticCodeModeToolDefinition[] {
+	const registeredToolNames = new Set(
+		pi.getAllTools().map((tool) => tool.name),
+	);
+	const options = {
+		describeImagesForTextModels: runtime.state.config.tools.viewImageFallback,
+		promptSnippet: false,
+		customRendering: runtime.state.config.ui.toolRenaming,
+		showOutputWhenCollapsed: true,
+	};
+	const textOutput = runtime.state.config.notebook.plainCommandOutput
+		? { textOutput: "plain-command" as const }
+		: { textOutput: "command" as const };
+	const tools: ProgrammaticCodeModeToolDefinition[] = [
+		toNestedTool(
+			createApplyPatchTool({
+				customRustBinariesDir: runtime.state.config.tools.customRustBinariesDir,
+				promptSnippet: false,
+				showDiffWhenCollapsed: runtime.state.config.ui.compactTools === "off",
+			}),
+			"await tools.apply_patch(patch) // *** Begin Patch / *** End Patch; actions: *** Add File: path | *** Update File: path | *** Delete File: path; *** Move to: path must immediately follow its Update File header and still needs a nonempty @@ hunk (use one unchanged context line for a pure move); Update hunks MUST follow file order; copy exact context; @@ text is context, not a line range; reread a file before patching if it changed since your last read",
+			{},
+			{
+				kind: "freeform",
+				prepareInput(input) {
+					if (typeof input !== "string")
+						throw new Error("apply_patch expects a patch string");
+					return { input };
+				},
+				resultError(result) {
+					if (
+						result.details &&
+						typeof result.details === "object" &&
+						"status" in result.details &&
+						result.details.status === "partial_failure"
+					)
+						return result.content
+							.filter((item) => item.type === "text")
+							.map((item) => item.text)
+							.join("\n") || "apply_patch partially failed";
+					return undefined;
+				},
+			},
+		),
+		toNestedTool(
+			createExecCommandTool(runtime.tracker, runtime.sessions, options),
+			"await tools.exec_command({ cmd: string, workdir?: string, shell?: string, tty?: boolean, yield_time_ms?: number, max_output_tokens?: number, login?: boolean }) // returns { output: string, session_id?: number, exit_code?: number }",
+			{
+				start(id, input) {
+					const cmd =
+						input &&
+						typeof input === "object" &&
+						"cmd" in input &&
+						typeof input.cmd === "string"
+							? input.cmd
+							: "";
+					if (cmd) runtime.tracker.recordStart(id, cmd);
+				},
+				end: (id) => runtime.tracker.recordEnd(id),
+			},
+			{
+				yieldTimeMs: LONG_RUNNING_TOOL_OUTER_YIELD_MS,
+				...textOutput,
+				resultValue(result) {
+					const details = result.details;
+					if (result.content.some((item) => item.type === "image")) {
+						const outputHint = isExecResult(details)
+							? details.output
+							: result.content.filter((item) => item.type === "text").map((item) => item.text).join("\n") || undefined;
+						return codeModeImageResult(result, outputHint);
+					}
+					if (isExecResult(details)) return details;
+					return result.content
+						.filter((item): item is { type: "text"; text: string } => item.type === "text")
+						.map((item) => item.text)
+						.join("\n") || "(no output)";
+				},
+			},
+		),
+		toNestedTool(
+			createWriteStdinTool(runtime.sessions, options),
+			"await tools.write_stdin({ session_id: number, chars?: string, yield_time_ms?: number, max_output_tokens?: number }) // non-empty chars only when the original exec_command used tty=true",
+			{},
+			{ yieldTimeMs: LONG_RUNNING_TOOL_OUTER_YIELD_MS, ...textOutput },
+		),
+	];
+	if (!ctx || supportsViewImageInputs(ctx.model) || runtime.state.config.tools.viewImageFallback) {
+		const imageCapable = !ctx || supportsViewImageInputs(ctx.model);
+		tools.push(toNestedTool(
+			createViewImageTool({
+				customRustBinariesDir: runtime.state.config.tools.customRustBinariesDir,
+				describeForTextModels: runtime.state.config.tools.viewImageFallback,
+				promptSnippet: false,
+				customRendering: runtime.state.config.ui.toolRenaming,
+			}),
+			imageCapable
+				? "const result = await tools.view_image({ path: string, detail?: \"original\" }); image(result)"
+				: "const description = await tools.view_image({ path: string }); text(description)",
+			{},
+			{ ...(imageCapable ? { resultValue: codeModeImageResult } : {}) },
+		));
+	}
+	if (ctx && (runtime.state.externalNotes || resolveCodexRuntimePlanForState(ctx, runtime.state).contextManagement)) {
+		const externalRemaining = runtime.state.externalNotes?.tools?.find(tool => tool.name === "get_context_remaining");
+		if (externalRemaining) tools.push(toNestedTool(externalRemaining, "await tools.get_context_remaining({})", {}, {
+			resultValue: result => {
+				const text = result.content.find(part => part.type === "text");
+				const remaining = text?.type === "text" ? JSON.parse(text.text) as { remainingTokens?: number | null } : undefined;
+				return { tokens_left: remaining?.remainingTokens ?? null };
+			},
+		}));
+		else if (!runtime.state.externalNotes) tools.push(toNestedTool(
+			createContextWindowTools(pi, runtime.state)[1],
+			"await tools.get_context_remaining({})",
+			{},
+			{
+				resultValue: (result) => {
+					const details = result.details as { remainingTokens?: number };
+					return { tokens_left: details.remainingTokens ?? null };
+				},
+			},
+		));
+	}
+	if (ctx && resolveCodexRuntimePlanForState(ctx, runtime.state).autoReasoning) {
+		tools.push(toNestedTool(runtime.autoReasoning.tool, `await tools.change_reasoning({ level: "low" | "medium" | "high" | "xhigh" | "max" }) // ${runtime.autoReasoning.tool.description}`));
+	}
+	return tools.filter((tool) => registeredToolNames.has(tool.name));
+}
+
+function isExecResult(details: AgentToolResult<unknown>["details"]): details is Record<string, unknown> & { output: string } {
+	return Boolean(details && typeof details === "object" && "output" in details && typeof details.output === "string");
+}

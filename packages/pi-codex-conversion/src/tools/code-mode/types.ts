@@ -1,0 +1,219 @@
+import type {
+	AgentToolResult,
+	ExtensionContext,
+	ExtensionToolContext,
+	ToolAnnotations,
+	ToolNamespace,
+} from "@earendil-works/pi-coding-agent";
+import type { Component } from "@earendil-works/pi-tui";
+import type { CodeModeToolPreflightRunner } from "./nested-tool-preflight.js";
+import type { CodeModeToolCompletion } from "./preflight-protocol.js";
+import type { PiToolCallScope } from "./pi-tool-call-scope.ts";
+
+export type CustomToolInputMode = "arg" | "stdin";
+
+export interface CodeModeToolIdentity {
+	name: string;
+	namespace?: string | undefined;
+}
+
+export interface CodeModeToolMetadata {
+	name: string;
+	topLevelName?: string | undefined;
+	toolName?: CodeModeToolIdentity | undefined;
+	usage: string;
+	description?: string | undefined;
+	namespace?: ToolNamespace | undefined;
+	annotations?: ToolAnnotations | undefined;
+	promptSnippet?: string | undefined;
+	promptGuidelines?: string[] | undefined;
+	output?: string | undefined;
+	deferLoading: boolean;
+	yieldTimeMs?: number | undefined;
+}
+
+export interface CustomToolDefinition extends CodeModeToolMetadata {
+	command: string;
+	args: string[];
+	input: CustomToolInputMode;
+	sourcePath: string;
+	disabledReason?: string | undefined;
+}
+
+export interface ProgrammaticCodeModeToolDefinition
+	extends CodeModeToolMetadata {
+	kind: "function" | "freeform";
+	textOutput?: "command" | "plain-command" | undefined;
+	blocking?: boolean | undefined;
+	isBlocking?(input: unknown): boolean;
+	discoverWhenDeferred?: boolean | undefined;
+	/** Compact callable spine; full help remains in ALL_TOOLS. */
+	discoveryUsage?: string | undefined;
+	/** Help entries accept an empty call without performing an operation. Server summaries own MCP discovery. */
+	discovery?: "help" | "server" | undefined;
+	translatePromptMetadata?: boolean | undefined;
+	executionMode?: "sequential" | "parallel" | undefined;
+	/** Pi or the adapter owns argument preparation and admission hooks. */
+	executionPipeline?: "pi" | "adapter" | undefined;
+	/** Protected results reach the model, never JavaScript. */
+	opaqueResult?: boolean | undefined;
+	/** Forward owned handoff completion to the outer exec/wait result. */
+	propagateTermination?: boolean | undefined;
+	isContextNoteWrite?(input: unknown): boolean;
+	inputSchema?: unknown;
+	invoke(
+		input: unknown,
+		context: ToolExecutionContext,
+		signal: AbortSignal,
+	): Promise<unknown>;
+	renderCall?(
+		input: unknown,
+		theme: CodeModeRenderTheme,
+		context: CodeModeNestedRenderContext,
+	): Component;
+	renderResult?(
+		result: RuntimeToolResult,
+		options: { expanded: boolean; isPartial: boolean },
+		theme: CodeModeRenderTheme,
+		context: CodeModeNestedRenderContext,
+	): Component;
+}
+
+export type CodeModeToolDefinition =
+	| CustomToolDefinition
+	| ProgrammaticCodeModeToolDefinition;
+
+export interface ToolExecutionContext {
+	cwd: string;
+	toolCallId?: string | undefined;
+	/** Set only when the host starts the original outer exec. */
+	originalExecCallId?: string | undefined;
+	extensionContext?: ExtensionContext | undefined;
+	piToolScope?: PiToolCallScope | undefined;
+	executeTool?: ExtensionToolContext["executeTool"] | undefined;
+	preflight?: CodeModeToolPreflightRunner | undefined;
+	completion?: CodeModeToolCompletion | undefined;
+	onUpdate?: ((result: AgentToolResult<unknown>) => void) | undefined;
+	captureResult?: ((result: RuntimeToolResult) => void) | undefined;
+	captureOpaqueResult?: ((output: OpaqueToolOutput, images: RuntimeContentItem[]) => void) | undefined;
+	opaqueScope?: string | undefined;
+	opaqueContextGeneration?: number | undefined;
+	opaqueContextValid?: (() => Promise<boolean>) | undefined;
+	resolveOpaqueScope?: (() => Promise<string>) | undefined;
+	refreshTrace?: (() => void) | undefined;
+	setBlocked?: ((blockerId: string, active: boolean) => void) | undefined;
+}
+
+export interface CodeModeRenderTheme {
+	fg(role: string, text: string): string;
+	bold(text: string): string;
+}
+
+export interface CodeModeNestedRenderContext {
+	toolCallId?: string | undefined;
+	cwd?: string | undefined;
+	lastComponent?: Component | undefined;
+	state?: Record<string, unknown> | undefined;
+	executionStarted?: boolean | undefined;
+	argsComplete?: boolean | undefined;
+	isPartial?: boolean | undefined;
+	expanded?: boolean | undefined;
+	showImages?: boolean | undefined;
+	isError?: boolean | undefined;
+	isBlocked?: boolean | undefined;
+	args?: unknown;
+	invalidate?: (() => void) | undefined;
+}
+
+export interface CodeModeRenderContext extends CodeModeNestedRenderContext {
+	executionStarted?: boolean | undefined;
+	isPartial?: boolean | undefined;
+	durationMs?: number | undefined;
+}
+
+export interface RuntimeToolResult {
+	terminate?: boolean | undefined;
+	content: Array<
+		| { type: "text"; text: string }
+		| { type: "image"; data: string; mimeType: string }
+	>;
+	details?: unknown;
+}
+
+export interface RuntimeToolTrace {
+	id: string;
+	name: string;
+	input: unknown;
+	status: "running" | "blocked" | "done" | "error";
+	/** Completed Pi nested-call identities; may stay empty until in-flight calls return. */
+	nativeCallIds?: string[] | undefined;
+	result?: RuntimeToolResult | undefined;
+	error?: string | undefined;
+}
+
+export interface RuntimeContentItem {
+	type: "input_text" | "input_image";
+	text?: string;
+	image_url?: string;
+	detail?: "auto" | "low" | "high" | "original" | null;
+}
+
+export interface OpaqueToolOutput {
+	resultId: string;
+	name: string;
+	encryptedOutput: string;
+}
+
+export interface NotebookMemoryUsage {
+	heapUsedBytes: number;
+	heapTotalBytes: number;
+	rssBytes: number;
+	externalBytes: number;
+	heapLimitBytes: number;
+}
+
+export type NotebookHook = "startup" | "tool_result";
+
+export type NotebookControlRequest =
+	| { action: "status"; query?: string | undefined }
+	| { action: "list"; query?: string | undefined }
+	| { action: "checkpoint" }
+	| { action: "save"; name: string }
+	| { action: "load"; name: string }
+	| { action: "pin"; names: string[]; hook?: NotebookHook | false | undefined }
+	| { action: "unpin"; names: string[] }
+	| { action: "release"; names: string[] }
+	| { action: "prune"; query: string }
+	| { action: "restart" }
+	| { action: "diagnostics" }
+	| { action: "reset" };
+
+export interface NotebookControlResult {
+	message: string;
+	details: Record<string, unknown>;
+}
+
+export type RuntimeResponse = (
+	| { kind: "yielded"; cellId: string; contentItems: RuntimeContentItem[] }
+	| { kind: "terminated"; cellId: string; contentItems: RuntimeContentItem[] }
+	| {
+			kind: "result";
+			cellId: string;
+			contentItems: RuntimeContentItem[];
+			errorText?: string | undefined;
+	  }
+) & {
+	opaqueOutputs?: OpaqueToolOutput[] | undefined;
+	opaqueScope?: string | undefined;
+	opaqueDeliveryId?: string | undefined;
+	originalExecCallId?: string | undefined;
+	terminate?: true | undefined;
+	contextNotesSaved?: boolean | undefined;
+	contextNotesSource?: "remote" | undefined;
+	maxOutputTokens?: number | undefined;
+	missingCell?: true | undefined;
+	execSessionIds?: number[] | undefined;
+	traces?: RuntimeToolTrace[] | undefined;
+	droppedTraceCount?: number | undefined;
+	notebookMemory?: NotebookMemoryUsage | undefined;
+};

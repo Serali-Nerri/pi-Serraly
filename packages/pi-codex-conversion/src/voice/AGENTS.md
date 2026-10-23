@@ -1,0 +1,27 @@
+- Controllers own Pi lifecycle. Keep context replacement, startup/auth, reconnects and mode loading in their respective controller modules. Controls route commands and shortcuts.
+- Conversation owns V3 sequencing, HTTP setup, delegation handoff and wire validation. Keep auth, dictation and Pi message delivery separate.
+- Keep process ownership in helper.ts, JSONL framing in helper-protocol.ts and LAN connection/session/wire handling in their named modules.
+- Voice and Pi are one screenless-capable assistant. Share typed/spoken work, speak progress and outcomes, hide routing and preserve cache.
+- Realtime converses, not executes. Delegate actions, facts, state and substantial reasoning. Clarify only cutoffs or material ambiguity.
+- Spoken requests have typed authority. Apply Pi safeguards, hide partials and duplicates, retain final audit. No voice-only approval gate.
+- Helpers never read credentials or execute agent work. IPC is versioned, bounded, validated JSONL. Stdout is protocol-only, stderr diagnostics.
+- V3 conversation and V2 dictation have independent transport state. Never fall back between them.
+- Before V3 opens, await the sidecar summary. Seed developer initial_items labelled <startup_context> and display its exact output in a UI-only Voice Context entry. User-selected reasoning defaults high and applies only to the sidecar.
+- Plaintext sidecar history includes user text, final assistant text, textual compaction/branch summaries and realtime delegation/tails. Exclude thinking, tools, images and presentation entries. Preserve native Responses checkpoints and protocol-valid live tails.
+- Deliver realtime delegations as user-role custom messages, without duplicate rendering. Steer active Pi turns. Use session context for speakable interactive/RPC output. Never mirror extension input.
+- Start/end use the developer custom-message API with ordinary Pi fallback. Preserve fixed purple display and delivery options, never trigger a turn. While active, request progress between tools. Scope spoken formatting to delegations, restore normal interaction on end. Delegations/tails remain user-role.
+- Delegation <input> is authoritative. <transcript_delta> contains deduplicated final frontend history before that input, never partial recognition or the current utterance.
+- Before routing a delegation, display its input once as You said. Suppress duplicate turn.done display. Other turns use final transcripts. Never render partial recognition.
+- Stream visible Pi text after two opening sentences, then by paragraph. Send unsent text and final results immediately. If forwardReasoningSummaries is on and a tool-use message has no visible text, speak its completed compatible-model summary at message_end, never thinking_delta.
+- Hold delegations through native compaction and post-compaction prewarm. Never start a competing Pi turn there.
+- Each mode owns its helper and idempotent cleanup. The controller orders replacement, reload and shutdown.
+- Opt-in auto-resume replaces only established host-to-OpenAI V3 calls after terminal drops. Rerun context startup without lifecycle chatter, preserve LAN ownership. Failed replacement startup is terminal.
+- Refresh once before a successor window continues, or after ordinary compaction. Tree uses the outgoing leaf, not the archive stub. Bypass summary cache. Keep the call active while summarising, hold delegations, finish accepted input, carry final voice history, then replace serially without lifecycle chatter. New speech cannot invalidate the summary. Delegation IDs are call-local, carried work returns via replacement session context. Summary failure keeps the call, replacement failure is terminal. Preserve LAN ownership, mute and the stored refreshRealtimeAfterCompaction key.
+- One host-owned helper V3 WebRTC call owns LAN setup and delegation. Browser disconnect/takeover preserves it. Explicit Stop closes it so Start snapshots fresh context. Never replace V3 WebRTC with ChatGPT OAuth WebSocket.
+- Mic mute keeps V3 warm: gate browser tracks, discard samples, send silence RTP. Reset mute when input ownership ends.
+- Keep signaling/session state in v3.rs, tracks/playout in v3_media.rs and encoding/mute/silence in v3_capture.rs. Preserve DSP provenance/licenses in rust/VENDORED.md and rust/vendor/.
+- Pi model selection changes delegation, not realtime transport. Keep voice connected.
+- REALTIME-SYSTEM-PROMPT.md owns template/schema. Users own identity, tone and presentation. Routing owns continuity, delegation and immediacy. Log schema changes, never overwrite user prompts. Check only when engaged and direct agent migration.
+- Normal Codex Responses has no usable output-audio channel. Use Realtime, not speculative provider audio events.
+- Live network/hardware checks are opt-in. Keep framing bounded and cleanup process-owned.
+- After handoff, source controls retain the mic. Transferred is not a local conversation and must allow return arrival. Peer refresh preserves LAN binding. Change handoff protocol in both voice packages and Shepherdr together.

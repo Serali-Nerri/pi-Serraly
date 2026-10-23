@@ -1,137 +1,54 @@
 # 仓库架构
 
-## 维护边界
+## 源码与职责
 
-根 package 是资源清单和开发工作区，不是总 extension factory。
-每个模块仅注册自己的能力；关闭一个入口不会通过总工厂间接重新启用它。
+`packages/*` 是七个 Pi 功能包，保留 howaboua-pi-stuff 包名、源码组织和公开导出；根目录协调开发与本地交付，不再次注册能力。
 
-| 模块 | 拥有的资源 | 不拥有 |
+| 包 | 拥有 | 依赖边界 |
 | --- | --- | --- |
-| `ui` | 展示生命周期、私有兼容补丁、shell、Markdown、Thinking、文字预览、`/ccstyle` | 业务工具定义与执行 |
+| pi-codex-conversion | provider、工具定义/执行、真实 trace、Notebook、默认工具卡、资源清理 | Pi host 与自身运行依赖 |
+| pi-ask | 问卷与交互状态 | 可选接入 conversion 公共协议 |
+| pi-browser | 浏览器工具、连接与 worker 生命周期 | 可选接入 conversion 公共协议 |
+| pi-codex-imagegen | 图像请求、产物与工具 | 可选接入 conversion 公共协议 |
+| pi-shepherdr | Herdr fleet、agent 工具、profiles 与共享上下文 | 硬依赖 pi-agent-board；可选接入 conversion |
+| pi-agent-board | 任务板、运行时与 Web 查看器 | 可选接入 conversion 公共协议 |
+| pi-auto-trees | marker/prime/end 会话流程 | 可选接入 conversion 公共协议 |
 
-共享库只承载消费者必须逐字一致的构建期契约，不承载 UI 策略：
+跨包依赖使用公开导出，不读取兄弟私有源码。宿主包是 peer，不随正式运行树安装；开发使用精确 Pi 1.4.0。外部运行依赖正常安装，不再要求无 dependencies 或全部 bundle。
 
-| 库 | 拥有的契约 | 不拥有 |
-| --- | --- | --- |
-| `pi-apply-patch-protocol` | `apply_patch.v1` 格式标识、四项输出预算、`ApplyPatch*` wire 类型 | 消费者的 diff 重建、防御阈值/清洗/降级 |
-| `pi-config-core` | 有界 JSON 读取与原子写入机制（大小/UTF-8/权限/并发语义） | 缺失/损坏/不可信文件的错误与信任策略、字段合并、路径与文件名 |
-| `pi-ui-kit` | 工具卡公共语法：标题/摘要行、结果状态行、语义主题角色、宽度安全 padding 与按宽度缓存的行组件 | 正文与 diff/IO 预览、hover/hitbox、展开状态、动画帧、renderer 注册和业务信息 |
+## 工具卡
 
-工具契约和详细算法留在各模块 README/子系统文档。UI 的私有宿主访问只在
-`extensions/pi-ui/src/compat/`；其 host 事件只由 `src/lifecycle.ts` 注册。
-UI 的共享 scheduler 只服务展示，不管理业务执行。
-compact 工作汇总的持续更新在其工作组尾部展示，结束后成为静态记录；它不是
-单槽 live preview，不轮换 Thinking/工具正文，也不猜测收尾静默期。生命周期与
-scrollback 契约见 [UI 工作汇总](../extensions/pi-ui/docs/work-summary.md)。
+conversion 自有默认工具卡，使用宿主 pending/success/error 背景与 padding。保留脚本前 10 个视觉行、最近 8 个普通内部调用、每调用输入 80 个 Unicode 字符、完成输出前 5 个视觉行，以及脚本/输出/补丁各自点击与 Ctrl+O。补丁沿用原 renderer 和执行前缓存。
 
-UI 在修改 thinking/transcript 前先做一次无副作用的宿主能力预检（只读
-descriptor/继承/extensibility，不执行 getter、不写槽位）：缺少必需方法、
-方法不可替换或原型不可扩展时跳过整个兼容域，保留原生展示、shell、命令与
-Markdown，每 session 只通知一次并列出能力名；安装器保留就地检查以覆盖预检后
-的竞态，失败按逆序释放已获取的部分。预检只覆盖公开方法，不声称能验证私有
-instance 字段布局，实际宿主与人工视觉验收仍必需。同一预检还校验补丁槽位的
-所有权：本模块写入的 owner/pipeline 带 `Symbol.for("pi-serraly.ui.patch-owner")`
-品牌，未标记的值（即使带 `dispose`/`stop` 或形状相似）视为 foreign，不调用、
-不接管、不覆盖，兼容域在修改任何槽位前整体失败并只通知一次具体槽位名；上游
-槽位名保留用于发现冲突，不自动兼容未知 patch。安装后外部替换 wrapper 或槽位
-时，shutdown 按 identity 只释放自己写入的值。
+渲染组件不得捕获完整宿主 context 或串联 lastComponent；状态只保留展开选择和当前 invalidate 回调。普通调用不展开原始内部结果。错误、重要通知与生产端截断不可被预览开关吞掉。细则由 conversion README 持有。
 
-## 源码与运行树
+没有 pi-ui、旧工具分组、Thinking/footer 私有兼容框架或旧共享库；未来 UI 另行设计。
+
+## 资源与构建
+
+- conversion 保留原生工具源码/随附二进制、WASM、tokenizer、vendor、Code runtime 资源和许可。
+- browser 构建 dist 和远端 worker；agent-board 构建查看器及 Web 静态文件。
+- ask、imagegen、Shepherdr、auto-trees 使用 Pi 支持的 TS 入口；prompts、profiles、远端脚本及包内资源跟随交付。
+- conversion 的 `examples/custom-tools/browser/cdp-lib` 是本仓维护源，不再同步未迁入的 skill 包。
+- 不迁入上游个人 AGENTS/.pi、聚合包、Changesets 发布系统或无关跨包原生工作流。
+
+build 只生成产物；check/test 不隐式构建；verify 构建一次后检查、测试。release 只消费现有产物和锁定缓存，不重新构建或联网。
+
+## 固定版本运行树
 
 ```text
-extensions/pi-ui/     private npm workspace；源码、测试、包文档/许可、dist/
-packages/pi-*/        构建期共享库；无 Pi 资源入口
-scripts/              工作区命令、单包构建/封印和 release 组装
-test/integration/     产物、实际 loader 和包边界
-docs/                 跨模块设计与开发
+<release>/
+  package.json
+  bun.lock
+  release.json
+  packages/<七包>/       清单允许的源码、dist、许可与资源
+  node_modules/          运行依赖及树内 workspace 链接
 ```
 
-工作区统一 npm 锁定。开发宿主是精确 Pi 1.3.0、TypeBox 1.3.27。
-宿主提供的包以 `peerDependencies: "*"` 声明并 external，不能作为正式包的
-物理运行依赖。workspace 内的开发宿主副本不得延伸到正式运行树。
+根 manifest 不注册扩展，安装时选择各包路径。运行依赖以及指向已交付成员的 peer 导入保留树内链接，包括可选的 conversion 集成；可导入不等于自动启用。release 不含物理 Pi host、开发工具或指向开发树的链接。目标必须是开发树之外的新绝对路径，完整组装校验后才发布，不覆写正在使用的版本。
 
-### 工作区清单
+本地 release 版本来自根 package.json；包版本保留上游基线。release.json 记录版本与成员身份，不是来源真实性签名。真实设置切换不属于 release 命令。
 
-根 `workspaces` 只声明本项目的一级 glob（`extensions/*`、`packages/*`）；
-未匹配的 glob 视为空，不报错。包目录名与 npm 包名解耦，包的身份来自自身
-manifest。每个 workspace 包必须是真实目录（非链接）、`private`、`type: module`、
-`engines.node: ">=22.19.0"`，并声明非空 `files` allowlist。
+## 文档边界
 
-包元数据只有 manifest 的 `serraly` 一处：
-
-```ts
-type BuildRecipe =
-  | { kind: "bundle"; entry: string; cjsRequire?: boolean }
-  | { kind: "tsc"; project: string }
-  | { kind: "script"; script: string; verifyArtifact?: string;
-      bundles?: Record<string, { output: string; packages: string[] }> };
-interface SerralyMetadata {
-  build: BuildRecipe;
-  licenses: string[];
-  bundledLicenses?: { package: string; file: string; from?: string; to: string }[];
-  test?: { directory: "test" | "tests"; command?: string; denyNetwork?: boolean; concurrency?: number; exclude?: string[] };
-}
-```
-
-依赖方向：扩展（`extensions/*`）只能依赖库（`packages/*`）；三个库保持独立，
-不得依赖其他 workspace 包。内部依赖必须用精确版本写在 `devDependencies` 并随产物
-bundle；`dependencies` 必须为空，`peerDependencies` 只列宿主。构建顺序来自
-该依赖图（先依赖后使用者），拒绝缺依赖、版本不符、循环、跨扩展依赖、越界入口
-和符号链接 workspace。
-
-`pi.extensions` 入口必须是包内 `./dist/` 下的 `.js` 路径；扩展必须声明至少
-一个入口，库不声明 Pi 资源。
-
-正式运行包位于开发依赖树之外的不可变 release 目录，只有运行 manifest、
-dist 和许可。它没有运行依赖安装、lock、`node_modules`、workspace 链接或
-开发工具，也不声明技能/模板/主题资源。
-
-## 构建闭包
-
-- UI 是独立 ESM bundle，宿主包与 TypeBox external。
-- ui bundle `pi-apply-patch-protocol`。wire 常量与类型只有该库一处定义，
-  消费者保留自己的解析、防御阈值与展示策略；契约行为由 UI 包测试覆盖。
-- ui bundle `pi-config-core`：读取上限 64 KiB、严格 UTF-8、`0600` 文件、
-  `0700` 新父目录和 `<pid>.<uuid>` 临时名只在该库一处实现；加载失败回退、
-  保存前重读合并、项目层信任状态和 log/throw 语义仍由 UI 保留。
-- ui 直接 bundle `pi-ui-kit` 的卡语法：`● title
-  summary` 标题行与 `  ⎿ message` 结果状态行只有该库一处定义，运行/成功/失败/取消
-  用语义主题角色和状态文字区分，不集中任何 renderer。构建期 gate 只允许包内
-  源码引用已声明的 workspace 包，编译闭包中不允许残留裸 workspace import。
-- 在非发现暂存目录构建，检查 emitted import 图、必要许可和文件哈希后才发布
-  开发 dist。许可检查使用完整的必需文件清单，不以目录存在代替法律闭包。
-- 每个包先在同级 `.build-dist-*` 候选目录编译（与 live `dist` 同深度，保证
-  emitted source map 在最终位置仍解析回包内源码），再原子替换 live dist；
-  候选 dist 内先写入封印，替换后运行包自带的 artifact 校验器和通用 source 校验，任一步失败
-  都恢复旧的完整 dist，不留下候选或封印残余。封印（`dist/artifacts.json`）
-  记录本次真实 pack 清单除自身外的每个文件及其 SHA-256。
-- 封印校验分两侧：构建侧对本次真实 pack 清单逐个比对，部署侧按全部物理文件
-  严格比对，拒绝额外文件、symlink、非普通文件和逃逸 import。
-- bundle 输入归属按 realpath 检查实际输入：包内源码、第三方 devDependency 与
-  经 `exports` 解析的内部库 dist 允许；宿主包、退役依赖、兄弟扩展、库私有
-  源码和包外相对路径均拒绝。被 bundle 的内部库按其 `serraly.licenses` 复制到
-  消费者的 `dist/licenses/<library>/`。
-- 分析所有 emitted JS/MJS/CJS，仅允许读取同一已遍历的常规文件集及声明的
-  externals。编译后文件 import 使用普通显式路径；URL 编码、query/fragment、
-  反斜杠和控制字符 specifier 均保守拒绝，避免文件系统路径与原生 ESM URL
-  指向不同实现。
-- release 不执行任何依赖安装，检查自身及所有祖先的物理宿主、拒绝路径中的
-  符号链接，并要求运行树不含 `node_modules`、链接或非普通文件；manifest 与
-  dist 完整性记录共同绑定 release digest。digest 用于漂移检测，不构成来源
-  真实性签名。
-- 构建、测试和 release 组装分离：完整 verify 只构建一次，测试与 release
-  复用已封印产物，不隐式重建或修复损坏产物。pack:check 供独立检查现有产物，
-  不重复嵌套在已经执行同一校验的 build/verify 中。
-- 正式更新创建新目录，不能覆写旧 release。在途 worker 不会读到半更新产物。
-
-## 跨模块交互
-
-UI 读取公共工具元数据和已有结果，专用 renderer 保持原生展示，不因来源私有而
-被接管。footer 消费宿主提供的 extension statuses，不清理其他模块的状态键。
-
-## 文档职责
-
-根 README 负责定位、入口索引和安全边界；本文负责跨模块职责与依赖/产物结构；
-`development.md` 负责构建、测试、隔离和发布流程；模块 README 与
-`LICENSE` 负责单能力用法及许可；根 [`UPSTREAM.md`](../UPSTREAM.md) 汇总仍保留的
-外部上游。
+README 索引入口；本文定义职责与产物；development 定义操作；各包 README/许可定义使用与条款，各包 UPSTREAM 定义固定来源和当前差异；根 UPSTREAM 只做索引。

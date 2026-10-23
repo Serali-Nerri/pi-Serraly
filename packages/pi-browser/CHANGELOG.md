@@ -1,0 +1,63 @@
+# @howaboua/pi-browser
+
+## 0.0.10
+
+- Use denser browser help in PCC GPT prompt mode.
+
+## 0.0.9
+
+- Use consistent tool discovery across native, Code and Notebook modes, with compact help in PCC GPT prompt mode.
+
+## 0.0.8
+
+- ### Improvements
+  - Browser returns help when called without arguments, including an empty structured object. Explicit help remains supported.
+
+  ### Fixes
+  - Screenshots bring the target tab to the foreground, avoiding capture timeouts caused by background focus emulation.
+
+## 0.0.7
+
+- Browser operations tolerate unused `response_length` hints. Page-length controls for `open` and `find` are unchanged.
+
+## 0.0.6
+
+- Requires Pi 1.0.0 or later.
+
+  Browser now uses help-first discovery in ordinary Pi and Structured mode. Native calls accept help and single or batched JSON requests through `command`, matching Code and Notebook. Existing object calls remain supported.
+
+## 0.0.5
+
+- Browser snapshots now include link destinations.
+
+  - Browser help and schemas now describe single-action requests, shared batch fields and JSON results with less repetition.
+  - Click errors now identify zero-sized browser viewports.
+
+## 0.0.4
+
+- Added session-owned background browser work and direct form controls.
+
+  - Fill or clear fields, select options, and set checkbox states, including indeterminate checkboxes.
+  - Press keys and shortcuts on the focused element.
+  - Wait for an element, page text, or URL with cancellation and a bounded timeout.
+  - Page snapshots now report checked, selected, expanded, and disabled states.
+  - New tabs open in the background and keep rendering during control. Show them explicitly, list session-owned tabs, and close any tab by reference.
+  - Tab ownership survives reloads, worker restarts, and visits to hidden browser pages. Old ownership records expire after 30 days of inactivity. Concurrent Pi sessions keep separate element references.
+
+## 0.0.3
+
+- Removed redundant tool guidance from Ask, Shepherdr, Skills and Browser. Code and Notebook Mode now show one callable contract per tool, with detailed Browser and agent rules in help.
+
+## 0.0.2
+
+- Keep tool results actionable.
+
+  - Browser evaluation errors preserve JavaScript exception details instead of a generic “Uncaught”.
+  - Skill path inventories omit installed dependencies; reference reads list only the requested sources instead of repeating the full inventory.
+
+## 0.0.1
+
+- Initial release of Browser, a persistent typed CDP tool for normal Pi, Code Mode, and Notebook Mode.
+
+  - Inspect existing browser tabs, follow references, find text, click, type, capture screenshots, and use raw CDP when needed.
+  - Connect to local or configured remote hosts, with aliases and worker setup managed through `/browser`.

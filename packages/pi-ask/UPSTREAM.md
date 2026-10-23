@@ -1,0 +1,13 @@
+# Upstream provenance
+
+- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/a06eae4d141fae421a8d0108a4a560013d6508a8/packages/pi-ask
+- Baseline version: 0.0.16
+- Upstream history and license: CHANGELOG.md and LICENSE are retained unchanged.
+
+## Current local differences
+
+- package.json removes npm publish/prepack/pack lifecycle configuration, adds UPSTREAM.md to the shipped files, keeps the check, typecheck, lint and format scripts, and pins the typebox devDependency to the Pi 1.4.0 host's 1.3.27.
+- README.md installs from an immutable release, uses an explicit one-session load instead of npm, and links Pi Codex Conversion by name rather than npm.
+- AGENTS.md describes changelog.ts as shared release UI and keeps its registration and channel contract stable.
+
+Runtime TypeScript sources match the baseline.

@@ -1,0 +1,91 @@
+# @howaboua/pi-ask
+
+## 0.0.16
+
+- Use denser question and handoff help in PCC GPT prompt mode.
+
+## 0.0.15
+
+- Use consistent tool discovery across native, Code and Notebook modes, with compact help in PCC GPT prompt mode.
+
+## 0.0.14
+
+- Ask now separates exact choice labels from descriptions in forwarded questions.
+
+## 0.0.13
+
+- Ask now accepts supervisor replies through Shepherdr's `reply` action. Update and reload Ask and Shepherdr together on controllers and workers.
+
+  - Supervisors receive questions, choices and a reply template. Valid replies complete the worker's existing wait or steer panel. Human handoffs still require the user's confirmation.
+  - Unknown or misnamed fields, such as `options` instead of `choices`, and malformed choices now return errors naming the invalid field and accepted shape instead of silently dropping input.
+
+## 0.0.12
+
+- ### Improvements
+  - Ask returns help when called without arguments, including an empty structured object. Explicit help remains supported.
+
+## 0.0.11
+
+- Parents can receive and answer asynchronous questions through Shepherdr while workers continue.
+
+## 0.0.10
+
+- Requires Pi 1.0.0 or later.
+
+  Fixed Ask text cursor and input-method candidate window placement in Pi's fullscreen interface.
+
+## 0.0.9
+
+- Removed redundant tool guidance from Ask, Shepherdr, Skills and Browser. Code and Notebook Mode now show one callable contract per tool, with detailed Browser and agent rules in help.
+
+## 0.0.8
+
+- Shepherdr now discovers and answers waiting questions invoked inside Code and Notebook Mode.
+
+## 0.0.7
+
+- The `ask` tool now supports steering questions that return immediately, preserve the full response panel, and deliver answers at the next safe boundary using the developer role under active Pi Codex Responses.
+
+## 0.0.6
+
+- Added a Code and Notebook Mode bridge API. This allows extensions that use Pi TUI to run inside `exec`.
+
+## 0.0.5
+
+### Changes
+
+- [#269](https://github.com/IgorWarzocha/howaboua-pi-stuff/pull/269) [`6138ffd`](https://github.com/IgorWarzocha/howaboua-pi-stuff/commit/6138ffd735bb4f7f80e451320dbfd0933a4acaa7) Thanks [@howaclawa](https://github.com/howaclawa)!:
+  - Add shared realtime voice prompts for ask prompts, Auto Trees, Shepherdr settlements, and review progress.
+  - Announce compaction and stream conversational Pi updates after two sentences.
+  - Keep silent tool-step summaries compatible without exposing Chat Completions thinking content.
+  - Configure delegation acknowledgements and deliver V3 delegations immediately.
+  - Preserve late delegations, calls after data-channel closure, prepared Code Mode prompts, and Codex cache continuity.
+  - Reduce LAN playback dropouts with one more jitter-buffer frame.
+
+## 0.0.4
+
+### Changes
+
+- [#131](https://github.com/IgorWarzocha/howaboua-pi-stuff/pull/131) [`828f52e`](https://github.com/IgorWarzocha/howaboua-pi-stuff/commit/828f52eff1291629d73c3058173cff2fa60e3b28) Thanks [@IgorWarzocha](https://github.com/IgorWarzocha)!:
+  - Uses configured Pi keybindings for ask navigation and theme-native TUI colors.
+
+## 0.0.3
+
+### Changes
+
+- [#128](https://github.com/IgorWarzocha/howaboua-pi-stuff/pull/128) [`9604ec3`](https://github.com/IgorWarzocha/howaboua-pi-stuff/commit/9604ec3505eff2d9ee789f42ef45038bc00da02e) Thanks [@IgorWarzocha](https://github.com/IgorWarzocha)!:
+  - Remove the duplicated ask tool name from the model-facing prompt inventory.
+
+## 0.0.2
+
+### Changes
+
+- [#120](https://github.com/IgorWarzocha/howaboua-pi-stuff/pull/120) [`8f82078`](https://github.com/IgorWarzocha/howaboua-pi-stuff/commit/8f82078a8e733dbe770c7b5fd9ad1b20cd5a21af) Thanks [@IgorWarzocha](https://github.com/IgorWarzocha)!:
+  - Report open ask panels as blocked to Herdr's Pi integration.
+
+## 0.0.1
+
+### Changes
+
+- [#113](https://github.com/IgorWarzocha/howaboua-pi-stuff/pull/113) [`f516f97`](https://github.com/IgorWarzocha/howaboua-pi-stuff/commit/f516f97c76ae27a354f80f85a5a34ecd56c4e9c4) Thanks [@IgorWarzocha](https://github.com/IgorWarzocha)!:
+  - Add interactive human input, review triage, and handoff prompts through the `ask` tool, plus configurable `/fold` and `/grill` workflows.

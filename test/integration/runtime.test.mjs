@@ -1,80 +1,142 @@
 import assert from "node:assert/strict";
-import { after, before, test } from "node:test";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { names, releaseEntries, releaseFixture, sdkScenario, sandboxFixture, cliArgs, diagnostics } from "./helpers/runtime.mjs";
-import { runChild } from "../../scripts/lib/process.mjs";
-import { runRpc, captureReleasePty } from "./helpers/host-cli.mjs";
-import { ptyAvailability } from "../../scripts/capture.mjs";
+import test from "node:test";
 
-let stage;
-before(async () => { stage = await releaseFixture(); }, { timeout: 180000 });
-after(async () => { await stage?.cleanup(); });
+import { runRuntimeAcceptance } from "./fixtures/runtime.mjs";
 
-// Break caught: a missing compiled entry/lazy module or a release that still loads
-// through workspace dependencies cannot reach any real loader scenario.
-test("release manifest exposes only compiled extensions, never companion skills", async () => {
-	const manifest = JSON.parse(await readFile(join(stage.release, "package.json"), "utf8"));
-	assert.deepEqual(manifest.pi, { extensions: releaseEntries });
-});
+const extensionEntries = [
+	"packages/pi-agent-board/changelog.ts",
+	"packages/pi-agent-board/index.ts",
+	"packages/pi-ask/index.ts",
+	"packages/pi-auto-trees/index.ts",
+	"packages/pi-browser/changelog.ts",
+	"packages/pi-browser/dist/index.js",
+	"packages/pi-codex-conversion/dist/index.js",
+	"packages/pi-codex-imagegen/index.ts",
+	"packages/pi-shepherdr/index.ts",
+].sort();
 
-for (const name of names) {
-	test(`compiled ${name} loads independently through Pi 1.3.0`, { timeout: 30000 }, async () => {
-		await sdkScenario(stage, "inventory", { names: [name] });
-	});
-}
+test("released Pi 1.4 loads every imported package and completes session cleanup", {
+	timeout: 120_000,
+}, async () => {
+	const report = await runRuntimeAcceptance();
 
-test("actual package settings can disable the compiled UI entry independently", { timeout: 60000 }, async () => {
-	await sdkScenario(stage, "filters", {}, 55000);
-});
+	assert.deepEqual(report.loadErrors, []);
+	assert.deepEqual(report.runtimeErrors, []);
+	assert.equal(report.extensionCount, extensionEntries.length);
+	assert.deepEqual(
+		report.extensions.map((extension) => extension.path),
+		extensionEntries,
+	);
+	assert.deepEqual(report.packageDirectories, [
+		"packages/pi-agent-board",
+		"packages/pi-ask",
+		"packages/pi-auto-trees",
+		"packages/pi-browser",
+		"packages/pi-codex-conversion",
+		"packages/pi-codex-imagegen",
+		"packages/pi-shepherdr",
+	]);
+	assert.deepEqual(
+		[
+			...new Set(report.extensions.map((extension) => extension.package)),
+		].sort(),
+		report.packageDirectories.map((directory) =>
+			directory.replace("packages/", ""),
+		),
+	);
 
-for (const mode of ["print", "json", "rpc"]) {
-	test(`compiled release in bundled CLI ${mode} has no UI-owned stdout/timer/prototype pollution`, { timeout: 30000 }, async () => {
-		const sandbox = await sandboxFixture(stage.release);
-		try {
-			let records;
-			if (mode === "rpc") records = await runRpc(sandbox, cliArgs(sandbox, stage.host, ["--mode", "rpc"]));
-			else {
-				const result = await runChild(sandbox, cliArgs(sandbox, stage.host, [...(mode === "print" ? ["--print"] : ["--mode", "json"]), "Local synthetic reply"]));
-				assert.equal(result.code, 0, result.stderr); assert.equal(result.stderr, "");
-				if (mode === "print") assert.equal(result.stdout.trim(), "Serraly synthetic fixture complete.");
-				else {
-					records = result.stdout.trim().split("\n").map(JSON.parse);
-					assert.equal(records[0].type, "session");
-					assert.ok(records.some((record) => record.type === "agent_settled"));
-				}
-			}
-			if (records) assert.ok(!records.some((record) => record.type === "extension_error"));
-			const reports = await diagnostics(sandbox);
-			assert.ok(!reports.some((report) => ["network-denied", "fixture-error"].includes(report.phase)), JSON.stringify(reports));
-			const final = reports.find((report) => report.phase === "shutdown");
-			assert.ok(final, "post-cleanup assertions reached shutdown");
-			assert.equal(final.mode, mode); assert.equal(final.timers, 0); assert.deepEqual(final.uiCalls, []);
-			assert.equal(final.providerCalls, 1);
-			assert.ok(reports.some((report) => report.phase === "settled"));
-		} finally { await sandbox.cleanup(); }
-	});
-}
-
-// Break caught: loading the package must not force regular mode when the host
-// defaults to fullscreen; explicit regular/fullscreen selections still work.
-for (const [selection, mode] of [["default", "fullscreen"], ["regular", "regular"], ["fullscreen", "fullscreen"]]) {
-	for (const width of selection === "default" ? [80] : [40, 80, 120]) {
-			test(`final release under bundled CLI ${selection}/${width}: compiled UI renders host-owned TUI rows`,
-			{ timeout: 40000, skip: ptyAvailability() }, async () => {
-				const sandbox = await sandboxFixture(stage.release, { tui: true });
-				try {
-					const settings = JSON.parse(await readFile(join(sandbox.env.PI_CODING_AGENT_DIR, "settings.json"), "utf8"));
-					assert.equal(settings.tuiMode, undefined, "isolated settings do not override the host default");
-					const modeArgs = selection === "default" ? [] : ["--tui-mode", selection];
-					const result = await captureReleasePty(sandbox, cliArgs(sandbox, stage.host, [...modeArgs, "Local fixture tool sequence"]), width);
-					assert.ok(result.reports.some((report) => report.phase === "host-identity" && report.tuiMode === mode), JSON.stringify(result.reports));
-					assert.ok(result.reports.some((report) => report.phase === "host-identity" && report.fullscreen === (mode === "fullscreen")));
-					assert.ok(result.reports.some((report) => report.phase === "settled" && report.providerCalls === 3));
-					assert.ok(result.reports.some((report) => report.phase === "shutdown"));
-					assert.ok(!result.reports.some((report) => ["network-denied", "fixture-error"].includes(report.phase)));
-					assert.match(result.ansi, /Read seed\.txt/);
-				} finally { await sandbox.cleanup(); }
-			});
+	for (const tool of [
+		"agents",
+		"apply_patch",
+		"ask",
+		"browser",
+		"exec",
+		"exec_command",
+		"imagegen",
+		"view_image",
+		"wait",
+		"write_stdin",
+	]) {
+		assert.ok(report.tools.includes(tool), `missing registered tool ${tool}`);
 	}
-}
+	for (const command of [
+		"board",
+		"browser",
+		"codex",
+		"end",
+		"herdr",
+		"marker",
+		"prime",
+	]) {
+		assert.ok(
+			report.commands.includes(command),
+			`missing registered command ${command}`,
+		);
+	}
+	assert.deepEqual(report.prompts, ["fold", "grill"]);
+
+	for (const name of ["autoTrees", "ask"]) {
+		assert.equal(
+			report.config[name].readError,
+			undefined,
+			`${name} seed file should be readable`,
+		);
+		assert.equal(typeof report.config[name], "object");
+	}
+	assert.deepEqual(report.profiles, ["explorer", "general", "reviewer"]);
+	assert.equal(report.profileMarker, true);
+	assert.equal(report.viewer.protocol, "pi-board-viewer/1");
+	assert.equal(report.viewer.startServer, "function");
+	assert.equal(report.viewer.indexReferencesAssets, true);
+	assert.ok(report.viewer.assets["web/index.html"] > 0);
+	assert.ok(report.viewer.assets["web/app.js"] > 0);
+	assert.ok(report.viewer.assets["web/style.css"] > 0);
+
+	assert.equal(report.authFileExists, true);
+	assert.deepEqual(report.authFile, {});
+	assert.ok(
+		report.modelFallbackMessage,
+		"fixture should start without a configured model",
+	);
+	assert.deepEqual(report.projectEntries, []);
+
+	assert.equal(report.execution.execCommand.isError, false);
+	assert.equal(report.execution.execCommand.exitCode, 0);
+	assert.match(report.execution.execCommand.output, /runtime-probe-ok/);
+	assert.equal(report.execution.execCommand.sessionId, null);
+	assert.equal(report.execution.applyPatch.isError, false);
+	assert.equal(report.execution.applyPatch.status, "success");
+	assert.ok(
+		report.execution.applyPatch.createdFiles.some((path) =>
+			path.endsWith("runtime-probe.txt"),
+		),
+		"apply_patch should report the created fixture file",
+	);
+	assert.equal(report.execution.applyPatch.fileText, "runtime-probe-ok\n");
+	assert.ok(report.resources.bashWasm.bytes > 0);
+	assert.equal(report.resources.bashWasm.valid, true);
+	assert.equal(report.optionalIntegrations.codeMode.providers, 6);
+	assert.deepEqual(report.optionalIntegrations.codeMode.allToolNames, [
+		"agents",
+		"ask",
+		"board",
+		"browser",
+		"imagegen",
+	]);
+	assert.deepEqual(report.optionalIntegrations.promptMode.tools, [
+		"agents",
+		"ask",
+		"board",
+		"browser",
+		"exec",
+		"imagegen",
+	]);
+	assert.equal(report.optionalIntegrations.promptMode.errors, 0);
+	assert.equal(
+		report.optionalIntegrations.promptMode.imagegenActiveDescription,
+		"Generate/edit images; no selectors=generate",
+	);
+	assert.equal(report.shutdownCleanup.codeModeProviders, 0);
+	assert.equal(report.runtimeDisposed, true);
+	assert.equal(report.workspaceRemoved, true);
+});

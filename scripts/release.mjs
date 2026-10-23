@@ -1,41 +1,42 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createRelease } from "./lib/package.mjs";
-import { assertSupportedNode } from "./lib/node-version.mjs";
+import { createRelease } from "./lib/release.mjs";
+import { requireNode } from "./lib/workspace.mjs";
 
-/**
- * Releases are named by the package version (directory and release.json
- * buildId), so every build keeps a stable, human-readable identity and
- * immutable directories never overwrite each other. Bump package.json before
- * releasing a new version; --build-id/--output remain explicit overrides.
- */
-export function releaseTarget(args, { version, home = homedir() } = {}) {
-	let output, buildId;
-	const packages = [];
+const root = fileURLToPath(new URL("../", import.meta.url));
+const usage = "Usage: bun run release -- [--output <new-absolute-path-outside-the-repository>]";
+
+export function parseReleaseArgs(args) {
+	let output;
 	for (let index = 0; index < args.length; index++) {
-		if (args[index] === "--output" && args[index + 1]) output = args[++index];
-		else if (args[index] === "--build-id" && args[index + 1]) buildId = args[++index];
-		else if (args[index] === "--package" && args[index + 1]) packages.push(args[++index]);
-		else throw new Error("Usage: npm run release -- [--package <npm-name>]... [--build-id <id>] [--output <absolute-path>]");
+		if (args[index] !== "--output" || output !== undefined) throw new Error(usage);
+		if (!args[index + 1] || args[index + 1].startsWith("--")) throw new Error(usage);
+		output = args[++index];
 	}
-	buildId ??= version;
-	if (!buildId) throw new Error("No version available; pass --build-id or set package.json version");
-	output ??= join(home, ".local/share/pi-Serraly/releases", buildId);
-	return { output: resolve(output), buildId, packages };
+	return { output };
+}
+
+/** Resolve the immutable release destination without creating it. */
+export async function releaseTarget(args, { root: source = root, home = homedir() } = {}) {
+	const { output } = parseReleaseArgs(args);
+	if (output !== undefined) {
+		if (!isAbsolute(output)) throw new Error("--output must be an absolute path");
+		return { output: resolve(output) };
+	}
+	const manifest = JSON.parse(await readFile(join(source, "package.json"), "utf8"));
+	if (!manifest.version || typeof manifest.version !== "string") throw new Error("Root package.json has no version");
+	return { output: join(home, ".local/share/pi-Serraly/releases", manifest.version) };
 }
 
 async function main() {
-	assertSupportedNode();
-	const version = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")).version;
-	const target = releaseTarget(process.argv.slice(2), { version });
-	const result = await createRelease(target.output, {
-		buildId: target.buildId,
-		packages: target.packages.length ? target.packages : undefined,
-	});
-	console.log(`Prepared immutable runtime package: ${result.path}\nNo settings or global extensions were changed.`);
+	requireNode();
+	const target = await releaseTarget(process.argv.slice(2));
+	const result = await createRelease(target.output, { root });
+	console.log(`Prepared immutable offline runtime release: ${result.path}`);
+	console.log("No Pi settings, host packages, or global extensions were changed.");
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

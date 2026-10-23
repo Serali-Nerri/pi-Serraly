@@ -1,91 +1,38 @@
 # Repository Guidelines
 
-## Engineering Standards
+## Contract and document ownership
 
-- Keep code readable, structure and dependency direction explicit, and the repository maintainable.
-- Each document owns exactly one concern: README positions the repository and its entry points; `docs/architecture.md` covers module boundaries and artifacts; `docs/development.md` covers commands, testing, isolation and release; module docs and each `LICENSE` cover that module's usage, terms and provenance; root `UPSTREAM.md` indexes the retained external upstreams.
-- State the current contract only. Do not accumulate work logs, stage narratives, evidence dumps, or obsolete instructions in repository documents; delete what is no longer true instead of annotating it.
+- Private Bun workspace: packages/pi-codex-conversion, pi-ask, pi-browser, pi-codex-imagegen, pi-shepherdr, pi-agent-board and pi-auto-trees.
+- Target Node ≥22.19, Bun 1.4.2, Pi 1.4.0. No pi-ui or legacy extensions/shared-library framework.
+- README indexes entry points; docs/architecture.md owns dependencies/resources; docs/development.md owns commands, isolation, release and manual updates; package README/LICENSE/UPSTREAM own usage, terms and provenance; root UPSTREAM is an index.
+- State current contracts, not stage narratives/work logs. Do not import upstream personal AGENTS/.pi or full-monorepo publishing workflows.
 
-## Development Cycle
+## Development
 
-This is an internal, in-progress project: no backward compatibility and no data migration. Rewrite legacy formats, interfaces and behavior into the current ideal KISS implementation instead of adding compatibility layers, transition paths or migration code for this repository's own code and state. The operator safeguards in "Security & Configuration" and the retained-upstream conventions in module docs still apply.
+1. Update the owning document first.
+2. Write a behavior-focused test at an established seam, observe failure, implement the minimum.
+3. Iterate with focused checks. Inspect leftovers/contradictions and run npm run verify once at completion.
+4. No compatibility layers/data migration for our legacy implementation. Retained upstream runtime contracts and operator safeguards still apply.
 
-Each change follows this order:
+Strict TypeScript/ESM; preserve each package's formatting/import style. Use public package exports, not sibling private source. Host packages are runtime peers. Normal runtime dependencies and Shepherdr → agent-board are allowed.
 
-1. **Update documents first.** Update the owning document before the code, and confirm it holds no contradiction or stale statement.
-2. **Write the test first.** Follow TDD: write the behavior-focused test, observe it fail, then implement. See "Testing Guidelines" for what not to test.
-3. **Implement the minimum.** Write only what the current contract requires; no speculative abstraction.
-4. **Close the loop.** Run focused tests during iteration; after the complete change, confirm there is no leftover code, duplicated source of truth or document/implementation contradiction, then run `npm run verify` once. Do not repeat full verification per subtask or commit.
+## Commands
 
-## Project Structure & Module Organization
+- bun install --frozen-lockfile --ignore-scripts — locked dependency installation.
+- bun run build — package artifacts.
+- bun run check — package/static/root-script checks, no build.
+- bun run test -- --package pi-codex-conversion — focused isolated tests.
+- npm run verify — one build, checks and all tests.
+- bun run release -- --output /absolute/path/to/new-release — offline fixed-version runtime, no settings writes.
 
-`pi-Serraly` is a private npm workspace with one independent Pi extension. Target Node ≥22.19 and Pi 1.3.0.
+## Testing
 
-```text
-.
-├── extensions/
-│   └── pi-ui/                 # src/, test/, dist/ (built)
-├── packages/             # shared build-time libraries (no Pi entry point)
-├── scripts/              # check, build, test, pack:check, release and lib/
-├── test/integration/     # *.test.mjs, fixtures/
-├── docs/                 # architecture.md, development.md
-├── package.json
-└── package-lock.json
-```
+Protect repository-owned features/adapters/configuration/isolation/lifecycle and build/release behavior through public interfaces or established seams. No duplicated dependency algorithms, tautological/change-detector tests, source assertions or private call sequences. Keep meaningful imported tests. Bug tests require a genuine coverage gap. Time/process tests need deadlines and cleanup. Qualify compiled artifacts against released Pi with synthetic providers, never real model requests. Report unavailable external-service/platform acceptance.
 
-Follow module-local `AGENTS.md` instructions. Keep the entry point independent; UI owns presentation, not business execution.
+## Safety and provenance
 
-## Build, Test, and Development Commands
+Use isolated HOME/config/session and an environment allowlist. Never read real credentials or request real models. Registry access only during explicit dependency installation; checks/tests/release stay offline.
+Do not pi install . or load development code into real settings. Deployment references a new immutable release with complete dependencies/resources. Real settings changes require explicit authorization, verified backup and restore-based rollback.
+Preserve upstream licenses, binary/WASM/vendor/profiles and pinned UPSTREAM. Manual updates compare and merge rather than overwrite local renderer/lifecycle work.
 
-Run from the repository root:
-
-- `npm ci --ignore-scripts --include=optional --legacy-peer-deps` — install locked dependencies.
-- `npm run check` — run each package's check and root-script syntax checks against already-built library declarations.
-- `npm run build` — build and seal every package artifact in its own `dist/`.
-- `npm test` — run package and integration suites using existing artifacts; no implicit build.
-- `npm run pack:check` — verify existing sealed artifacts without rebuilding.
-- `npm run verify` — build once (including artifact validation), then check and run all suites.
-- `npm run build && npm run release && pi install "$HOME/.local/share/pi-Serraly/releases/$(node -p 'require("./package.json").version')"` — build, seal a release directory and install it into Pi; after a version change, `pi remove` the previous release path.
-- `node scripts/test.mjs --package pi-ui` — debug one package; does not replace full verification.
-- `node scripts/preview.mjs regular` — preview UI with temporary data.
-
-Every root entry point refuses to start below Node 22.19.0 (`scripts/lib/node-version.mjs`);
-this repository has no CI workflows. Local acceptance uses the actual managed Pi host/runtime; the
-22.19 lower bound is a startup constraint, not a mandatory local compatibility matrix.
-Registry access belongs to the dependency-install phase only.
-
-See `docs/development.md` for release preparation and additional commands.
-
-## Coding Style & Naming Conventions
-
-Use strict TypeScript and ESM. Preserve local formatting: tabs in UI. Retain neighboring quote styles and import extensions. Use camelCase functions/variables, PascalCase types/classes, and descriptive kebab-case filenames.
-
-## Testing Guidelines
-
-- Tautological tests considered harmful.
-- Change-detector tests considered harmful.
-- Do not create regression tests for bug fixes without a genuine gap in behavior testing.
-- Test behavior this repository owns: extension features, adapters, configuration and security rules, lifecycle/resource cleanup, and build/release artifacts. Exercise public interfaces or established seams, with independently derived expectations.
-- Do not duplicate upstream tests for Pi, TypeBox, Node or other dependencies. Upstream algorithms, resource limits, and API semantics belong in their owning repositories; investigate them with disposable probes when needed, not permanent local tests.
-- Retain integration tests that exercise our code against the real host or compiled artifacts and catch a concrete failure in our adapter, admission/isolation policy, packaging or lifecycle. Merely calling an upstream API and asserting its documented result is not a local integration contract.
-- Before adding or retaining a test, identify the repository-owned behavior it protects. Remove upstream-only, tautological, change-detector and redundant cases; do not replace them with assertions on source text, private call sequences or dependency version constants. Host qualification and package metadata gates remain repository-owned behavior.
-
-Root integration and package tests use Node’s `node:test` runner, with `tsx` for TypeScript. Name package tests `*.test.ts` and root integration tests `*.test.mjs`. When a regression test is warranted, write a behavior-focused test before implementation; observe failure, then success. No numeric coverage threshold is configured. Preserve boundary/compiled-artifact tests, deterministic timing, and process/worker cleanup. Run `npm run verify` before submitting; document platform skips and manually verify visual changes.
-
-## Commit & Pull Request Guidelines
-
-Use concise, descriptive subjects with conventional prefixes where they fit. PRs should explain affected modules, link relevant issues, report validation results, and include screenshots for UI changes. Preserve upstream licenses and provenance.
-
-## Security & Configuration
-
-Use isolated HOME/config/session fixtures; never access real credentials or send real model requests. Do not run `pi install .` or load development `dist/` into real settings. Deployment references one immutable versioned release directory. Changing real settings requires explicit authorization, a verified settings backup and a restore-based rollback.
-
-## Agent skills
-
-### Issue tracker
-
-Issues and specs live as local markdown under `.scratch/<feature-slug>/`. See `docs/agents/issue-tracker.md`.
-
-### Domain docs
-
-Single-context layout: root `GLOSSARY.md` and `docs/adr/`. See `docs/agents/domain.md`.
+Issues: docs/agents/issue-tracker.md. Domain/ADRs: docs/agents/domain.md.

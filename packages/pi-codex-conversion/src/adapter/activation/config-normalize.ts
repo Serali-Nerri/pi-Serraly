@@ -1,0 +1,260 @@
+import { normalizeTaskBoundaryReminder } from "../../context-management/task-boundary.ts";
+import {
+	type CodexConversionConfig,
+	DEFAULT_CODEX_CONVERSION_CONFIG,
+	MAX_NOTEBOOK_HEAP_MIB,
+	MIN_NOTEBOOK_HEAP_MIB,
+} from "./config-contract.ts";
+import {
+	isObject,
+	normalizeAllProvidersMode,
+	normalizeCacheDiagnosticsMode,
+	normalizeCodexVerbosity,
+	normalizeCompactionMethod,
+	normalizeCompactToolsMode,
+	normalizeContinuityStrategy,
+	normalizeCustomRustBinariesDir,
+	normalizeDictationShortcutMode,
+	normalizeHistoryStorage,
+	normalizeIdleNotesMinutes,
+	normalizeLunaCacheKeepaliveMinutes,
+	normalizeProviderList,
+	normalizeRealtimeV3Voice,
+	normalizeV2UserMessageRetention,
+	normalizeVoiceContextReasoning,
+} from "./config-normalizers.ts";
+import {
+	normalizeBoolean,
+	normalizeIntegerInRange,
+	normalizeNotebookProfile,
+	normalizeOptionalString,
+	normalizeString,
+	normalizeVoiceContextModel,
+} from "./config-values.ts";
+import { normalizeExecutionMode } from "./execution-mode.ts";
+import { normalizeFastMode } from "./fast-mode.ts";
+
+export function normalizeCodexConversionConfig(
+	value: unknown,
+): CodexConversionConfig {
+	if (!isObject(value)) return structuredClone(DEFAULT_CODEX_CONVERSION_CONFIG);
+	const prompt = isObject(value["prompt"]) ? value["prompt"] : {};
+	const scope = isObject(value["scope"]) ? value["scope"] : {};
+	const tools = isObject(value["tools"]) ? value["tools"] : {};
+	const ui = isObject(value["ui"]) ? value["ui"] : {};
+	const compaction = isObject(value["compaction"]) ? value["compaction"] : {};
+	const notebook = isObject(value["notebook"]) ? value["notebook"] : {};
+	const voice = isObject(value["voice"]) ? value["voice"] : {};
+	const openai = isObject(value["openai"]) ? value["openai"] : {};
+	const inputDevice = normalizeOptionalString(voice["inputDevice"]);
+	const outputDevice = normalizeOptionalString(voice["outputDevice"]);
+	const contextModel = normalizeVoiceContextModel(voice["contextModel"]);
+	const notebookProfile = normalizeNotebookProfile(notebook["profile"]);
+	const executionMode =
+		normalizeExecutionMode(value["executionMode"]) ??
+		DEFAULT_CODEX_CONVERSION_CONFIG.executionMode;
+	return {
+		executionMode,
+		voiceFeaturesOnly: normalizeBoolean(
+			value["voiceFeaturesOnly"],
+			DEFAULT_CODEX_CONVERSION_CONFIG.voiceFeaturesOnly,
+		),
+		prompt: {
+			currentTimeReminderMinutes: prompt["currentTimeReminderMinutes"] === 30 || prompt["currentTimeReminderMinutes"] === 60
+				? prompt["currentTimeReminderMinutes"] : 0,
+			heavySystemPromptOverwrite: prompt["heavySystemPromptOverwrite"] === "gpt" || typeof prompt["heavySystemPromptOverwrite"] === "boolean"
+				? prompt["heavySystemPromptOverwrite"]
+				: DEFAULT_CODEX_CONVERSION_CONFIG.prompt.heavySystemPromptOverwrite,
+		},
+		scope: {
+			allProviders:
+				normalizeAllProvidersMode(scope["allProviders"]) ??
+				DEFAULT_CODEX_CONVERSION_CONFIG.scope["allProviders"],
+			additionalProviders: normalizeProviderList(scope["additionalProviders"]),
+		},
+		tools: {
+			autoReasoning: normalizeBoolean(tools["autoReasoning"], DEFAULT_CODEX_CONVERSION_CONFIG.tools.autoReasoning),
+			customRustBinariesDir: normalizeCustomRustBinariesDir(
+				tools["customRustBinariesDir"],
+			),
+			viewImageFallback: normalizeBoolean(
+				tools["viewImageFallback"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.tools["viewImageFallback"],
+			),
+			applyPatchOnly: normalizeBoolean(
+				tools["applyPatchOnly"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.tools["applyPatchOnly"],
+			),
+			viewImageOnly: normalizeBoolean(
+				tools["viewImageOnly"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.tools["viewImageOnly"],
+			),
+		},
+		ui: {
+			statusLine: normalizeBoolean(
+				ui["statusLine"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.ui["statusLine"],
+			),
+			toolRenaming: normalizeBoolean(
+				ui["toolRenaming"],
+				normalizeBoolean(
+					ui["toolRendering"],
+					DEFAULT_CODEX_CONVERSION_CONFIG.ui["toolRenaming"],
+				),
+			),
+			compactTools: normalizeCompactToolsMode(ui["compactTools"])
+				?? DEFAULT_CODEX_CONVERSION_CONFIG.ui.compactTools,
+			codeModeDetails: normalizeBoolean(
+				ui["codeModeDetails"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.ui["codeModeDetails"],
+			),
+			backgroundShellWidget: normalizeBoolean(
+				ui["backgroundShellWidget"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.ui["backgroundShellWidget"],
+			),
+			noteSaveMarkers: normalizeBoolean(
+				ui["noteSaveMarkers"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.ui.noteSaveMarkers,
+			),
+			backgroundShellToggleShortcut: normalizeString(
+				ui["backgroundShellToggleShortcut"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.ui["backgroundShellToggleShortcut"],
+			),
+			backgroundShellPrevShortcut: normalizeString(
+				ui["backgroundShellPrevShortcut"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.ui["backgroundShellPrevShortcut"],
+			),
+			backgroundShellNextShortcut: normalizeString(
+				ui["backgroundShellNextShortcut"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.ui["backgroundShellNextShortcut"],
+			),
+			backgroundShellCloseShortcut: normalizeString(
+				ui["backgroundShellCloseShortcut"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.ui["backgroundShellCloseShortcut"],
+			),
+		},
+		compaction: {
+			newWindowRequests: compaction["newWindowRequests"] === "off" || compaction["newWindowRequests"] === "pi-limits"
+				? compaction["newWindowRequests"] : "unrestricted",
+			continuity: normalizeContinuityStrategy(compaction["continuity"])
+				?? DEFAULT_CODEX_CONVERSION_CONFIG.compaction.continuity,
+			historyStorage: normalizeHistoryStorage(compaction["historyStorage"])
+				?? DEFAULT_CODEX_CONVERSION_CONFIG.compaction.historyStorage,
+			notesTreeHandoff: normalizeBoolean(
+				compaction["notesTreeHandoff"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.compaction.notesTreeHandoff,
+			),
+			shareSubagentContext: normalizeBoolean(
+				compaction["shareSubagentContext"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.compaction.shareSubagentContext,
+			),
+			idleNotesRollover: normalizeIdleNotesMinutes(compaction["idleNotesRollover"]),
+			taskBoundaryReminder: normalizeTaskBoundaryReminder(compaction["taskBoundaryReminder"]),
+			method: normalizeCompactionMethod(compaction["method"])
+				?? DEFAULT_CODEX_CONVERSION_CONFIG.compaction.method,
+			v2UserMessageRetention:
+				normalizeV2UserMessageRetention(compaction["v2UserMessageRetention"]) ??
+				DEFAULT_CODEX_CONVERSION_CONFIG.compaction.v2UserMessageRetention,
+		},
+		notebook: {
+			journals: notebook["journals"] === "off" || notebook["journals"] === "on" ? notebook["journals"] : "week",
+			checkpointCleanup: notebook["checkpointCleanup"] === "month" || notebook["checkpointCleanup"] === "week" ? notebook["checkpointCleanup"] : "never",
+			maxHeapMiB: normalizeIntegerInRange(
+				notebook["maxHeapMiB"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.notebook.maxHeapMiB,
+				MIN_NOTEBOOK_HEAP_MIB,
+				MAX_NOTEBOOK_HEAP_MIB,
+			),
+			plainCommandOutput: normalizeBoolean(
+				notebook["plainCommandOutput"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.notebook.plainCommandOutput,
+			),
+			...(notebookProfile ? { profile: notebookProfile } : {}),
+		},
+		voice: {
+			v3Voice:
+				normalizeRealtimeV3Voice(voice["v3Voice"]) ??
+				DEFAULT_CODEX_CONVERSION_CONFIG.voice.v3Voice,
+			v3AlternateVoice:
+				normalizeRealtimeV3Voice(voice["v3AlternateVoice"]) ??
+				DEFAULT_CODEX_CONVERSION_CONFIG.voice.v3AlternateVoice,
+			autoResumeRealtime: normalizeBoolean(
+				voice["autoResumeRealtime"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.voice.autoResumeRealtime,
+			),
+			refreshRealtimeAfterCompaction: normalizeBoolean(
+				voice["refreshRealtimeAfterCompaction"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.voice.refreshRealtimeAfterCompaction,
+			) && contextModel !== undefined,
+			audioSetupCompleted: normalizeBoolean(
+				voice["audioSetupCompleted"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.voice.audioSetupCompleted,
+			),
+			delegationAcknowledgements: normalizeBoolean(
+				voice["delegationAcknowledgements"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.voice.delegationAcknowledgements,
+			),
+			forwardReasoningSummaries: normalizeBoolean(
+				voice["forwardReasoningSummaries"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.voice.forwardReasoningSummaries,
+			),
+			dictationShortcut: normalizeString(
+				voice["dictationShortcut"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.voice.dictationShortcut,
+			),
+			realtimeShortcut: normalizeString(
+				voice["realtimeShortcut"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.voice.realtimeShortcut,
+			),
+			muteShortcut: normalizeString(
+				voice["muteShortcut"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.voice.muteShortcut,
+			),
+			serverShortcut: normalizeString(
+				voice["serverShortcut"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.voice.serverShortcut,
+			),
+			dictationShortcutMode:
+				normalizeDictationShortcutMode(voice["dictationShortcutMode"]) ??
+				DEFAULT_CODEX_CONVERSION_CONFIG.voice.dictationShortcutMode,
+			...(contextModel ? { contextModel } : {}),
+			contextReasoning: normalizeVoiceContextReasoning(
+				voice["contextReasoning"],
+			),
+			...(inputDevice ? { inputDevice } : {}),
+			...(outputDevice ? { outputDevice } : {}),
+		},
+		openai: {
+			fast: normalizeFastMode(openai["fast"]),
+			daybreak: openai["daybreak"] === true,
+			verbosity:
+				normalizeCodexVerbosity(openai["verbosity"]) ??
+				DEFAULT_CODEX_CONVERSION_CONFIG.openai["verbosity"],
+			lunaCacheKeepaliveMinutes:
+				normalizeLunaCacheKeepaliveMinutes(
+					openai["lunaCacheKeepaliveMinutes"],
+				) ?? DEFAULT_CODEX_CONVERSION_CONFIG.openai.lunaCacheKeepaliveMinutes,
+			cacheKeepalive: normalizeBoolean(
+				openai["cacheKeepalive"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.openai["cacheKeepalive"],
+			),
+			lunaCacheKeepaliveIntervalMinutes: openai["lunaCacheKeepaliveIntervalMinutes"] === 4.5 ? 4.5 : 2.5,
+			cacheKeepaliveIntervalMinutes: openai["cacheKeepaliveIntervalMinutes"] === 55 ? 55 : 25,
+			proxyResponsesLite: normalizeBoolean(
+				openai["proxyResponsesLite"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.openai.proxyResponsesLite,
+			),
+			forceCachedWebSockets: normalizeBoolean(
+				openai["forceCachedWebSockets"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.openai["forceCachedWebSockets"],
+			),
+			cacheDiagnostics:
+				normalizeCacheDiagnosticsMode(openai["cacheDiagnostics"]) ??
+				DEFAULT_CODEX_CONVERSION_CONFIG.openai.cacheDiagnostics,
+			harnessIdentifierHeader: openai["harnessIdentifierHeader"] === "codex" ? "codex" : normalizeBoolean(
+				openai["harnessIdentifierHeader"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.openai.harnessIdentifierHeader === true,
+			),
+		},
+	};
+}

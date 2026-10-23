@@ -1,9 +1,10 @@
 # Dependencies and generated builds
 node_modules/
 dist/
-.build-dist-*/
 .codegraph/
 *.tsbuildinfo
+packages/*/changelog.js
+packages/*/src/**/target/
 
 # Test output, caches and temporary work
 coverage/

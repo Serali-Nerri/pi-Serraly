@@ -1,66 +1,37 @@
 # pi-Serraly
 
-私有本地 Pi package：一个可独立启停的扩展，一个维护仓库。
-支持基线为 **Pi 1.3.0 / Node ≥22.19**。不发布 npm，不提供总 factory 再次注册能力。
+自用的 Pi 扩展源码工作区：Bun workspaces，**Pi 1.4.0 / Node ≥22.19 / Bun 1.4.2**，不发布 npm。
 
-## 入口
+## 扩展
 
-| 能力 | 运行入口 | 使用与契约 |
-| --- | --- | --- |
-| UI | `extensions/pi-ui/dist/pi-ui.js` | [工具卡、Thinking、shell、`/ccstyle`](extensions/pi-ui/README.md) |
+| 包 | 职责 |
+| --- | --- |
+| [pi-codex-conversion](packages/pi-codex-conversion/README.md) | Codex provider、工具执行、Code/Notebook、默认工具卡 |
+| [pi-ask](packages/pi-ask/README.md) | 交互式提问、steer/handoff/review |
+| [pi-browser](packages/pi-browser/README.md) | 浏览器工具与托管 worker |
+| [pi-codex-imagegen](packages/pi-codex-imagegen/README.md) | 图像生成与编辑 |
+| [pi-shepherdr](packages/pi-shepherdr/README.md) | Herdr 多代理编排 |
+| [pi-agent-board](packages/pi-agent-board/README.md) | 共享任务板与查看器；Shepherdr 的运行依赖 |
+| [pi-auto-trees](packages/pi-auto-trees/README.md) | 会话 marker、prime 与 end |
 
-每个扩展是独立的 private npm workspace 包，拥有自己的 manifest、构建、测试、许可
-和版本；`packages/` 下的共享库只被该扩展在构建期 bundle。根 `pi` 显式声明空
-资源清单，安装 release 后才由聚合 manifest 声明该入口，可在 `pi config`
-分别启停。本仓库不声明 skills、prompts 或 themes；外部 npm 扩展也不属于本仓库。
+每包独立注册，只启用需要的包，不使用上游聚合包。context-view 从其独立上游安装；本仓库不包含 pi-ui。
 
-Pi 默认使用 fullscreen；需要终端原生滚动历史时，可显式设置
-`"tuiMode": "regular"` 或使用 `--tui-mode regular`。
-
-## 开发
+## 开发与部署
 
 ```sh
-npm ci --ignore-scripts --include=optional --legacy-peer-deps
+bun install --frozen-lockfile --ignore-scripts
 npm run verify
+bun run release -- --output /absolute/path/to/new-release
 ```
 
-`verify` 只构建一次（含产物校验），然后执行 check 和 test；后二者不隐式构建。
-涉及编译产物的定向测试先显式构建受影响包，`pack:check` 可独立验证现有产物：
+release 离线消费已构建产物和本地依赖缓存，拒绝覆盖已有目录，不安装到 Pi、不修改设置。正式启用时逐包引用不可变 release 中的 `packages/<包名>`，不要安装开发根目录。
 
-```sh
-node scripts/test.mjs --package pi-ui
-node scripts/test.mjs --suite integration
-node scripts/test.mjs --package pi-ui --list
-```
-
-验证使用临时 HOME/agent/cwd、合成会话、离线脚本化 provider 和本地 fixture，
-不读取真实 auth/session/settings，也不发送真实模型请求。
-根入口在 Node 低于 **22.19** 时直接失败；本仓库不配置 CI。
-本地验收使用实际 managed Pi 的运行时，不重复执行 Node 矩阵。
-安装阶段之外保持网络拒绝。
-命令、测试层级、release 和更新/回滚流程见[开发指南](docs/development.md)。
-真实配置切换须另行授权。
-
-## 运行与安全边界
-
-源码工作区的 Pi 依赖只用于开发测试。**不要 `pi install .`，不要把源码根或开发
-`dist` 加入真实 settings。** 正式包由 release 工具准备在：
-
-```text
-~/.local/share/pi-Serraly/releases/<version>/
-```
-
-该目录由聚合 manifest、`release.json` 和 `extensions/<包名>/` 下的密封 payload
-组成，没有运行依赖安装、lock、`node_modules`、物理 Pi host 副本或 workspace
-链接。已安装的 Pi 通过 settings `packages` 引用 release 绝对路径；
-更新时发布新的版本目录并切换引用，不覆写正在使用的目录。
+验证使用临时 HOME/config/session、合成夹具和网络拒绝，不读取真实凭据、不发送模型请求。浏览器、Herdr、Codex 登录等外部集成仍需另行授权验收。
 
 ## 维护导航
 
-- [跨模块职责、依赖和产物结构](docs/architecture.md)
-- [开发、测试和 release 准备](docs/development.md)
-- [上游与许可汇总](UPSTREAM.md)：仍保留外部上游的扩展及其固定来源
-- 各包 README 与 `LICENSE`：单能力用法及许可
+- [架构与依赖](docs/architecture.md)
+- [命令、隔离、发布与手动更新](docs/development.md)
+- [来源索引](UPSTREAM.md)与各包 UPSTREAM、README、LICENSE
 
-旧源码仓库只作历史参考，不再用于常规更新。模块保留各自许可证，
-私有组织不将继承代码重新标记为统一的自有许可证。
+旧扩展、共享库与旧构建发布框架不参与当前运行或维护；历史保留在 Git 中。

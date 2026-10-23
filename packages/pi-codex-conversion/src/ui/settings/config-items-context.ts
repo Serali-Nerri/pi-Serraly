@@ -1,0 +1,148 @@
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import {
+	type CodexConversionConfig,
+	normalizeHistoryStorage,
+	IDLE_NOTES_MINUTES_OPTIONS,
+	normalizeV2UserMessageRetention,
+	V2_USER_MESSAGE_RETENTION_OPTIONS,
+} from "../../adapter/activation/config.ts";
+import { TASK_BOUNDARY_PRESETS, taskBoundaryLabel } from "../../context-management/task-boundary.ts";
+import { isAdapterRuntime, resolveCodexRuntimePlan } from "../../adapter/activation/runtime-plan.ts";
+import { type ConfigSetting, setting, toggle } from "./config-items-shared.ts";
+
+export const CONTINUITY_LABELS = {
+	compaction: "Compaction",
+	notes: "Notes and history",
+	"notes-and-compaction": "Notes + history + compaction",
+} as const;
+
+export const COMPACTION_METHOD_LABELS = {
+	pi: "Pi summary",
+	v2: "Codex V2",
+	both: "Both",
+} as const;
+
+export function buildContextSettings(
+	config: CodexConversionConfig,
+	ctx: Pick<ExtensionContext, "model">,
+	externalNotes = false,
+): ConfigSetting[] {
+	const plan = resolveCodexRuntimePlan(ctx, config, undefined, externalNotes);
+	const supportsV2 = isAdapterRuntime(plan) && plan.effectiveOpenAICodex;
+	const { continuity, historyStorage, method, v2UserMessageRetention } = config.compaction;
+	const idleValue = (minutes: number) =>
+		minutes === 0 ? "Off" : minutes < 60 ? `${minutes}m` : `${Math.ceil(minutes / 60)}h`;
+	return [
+		...(!externalNotes && continuity !== "compaction" ? [setting({
+			id: "newWindowRequests", label: "New window requests",
+			currentValue: config.compaction.newWindowRequests,
+			values: ["off", "pi-limits", "unrestricted"],
+			description: "Agent requests only. Pi limits requires eligible history; unrestricted permits any size. Manual compaction and idle rollover are independent.",
+		}, (value, current) => ({ ...current, compaction: { ...current.compaction,
+			newWindowRequests: value === "off" || value === "pi-limits" ? value : "unrestricted",
+		} }))] : []),
+		...(!externalNotes ? [setting({
+			id: "taskBoundaryReminder", label: "Task-boundary reminder",
+			currentValue: taskBoundaryLabel(config.compaction.taskBoundaryReminder),
+			values: [...TASK_BOUNDARY_PRESETS.map(taskBoundaryLabel), "custom (edit JSON)"],
+			description: "Suggest a new window at a separate task boundary after this many used tokens, only with active capacity above 272k. Requires notes continuity. Custom: set compaction.taskBoundaryReminder to a positive whole token count in JSON; 0 is off.",
+		}, (value, current) => ({
+			...current,
+			compaction: { ...current.compaction,
+				taskBoundaryReminder: TASK_BOUNDARY_PRESETS.find(tokens => taskBoundaryLabel(tokens) === value) ?? current.compaction.taskBoundaryReminder,
+			},
+		}))] : []),
+		...(externalNotes ? [{ item: {
+			id: "externalNotes", label: "Notes continuity", currentValue: "Externally managed",
+			description: "The notes extension owns notes, history and window rollover. Saved PCC continuity settings are retained for sessions without it.",
+		} }] : [setting(
+			{
+				id: "continuity",
+				label: "Continuity strategy",
+				description: "Compaction carries a checkpoint. Notes and history rolls over with saved notes. Notes + history + compaction keeps normal compaction and adds notes and history lookup. Changing strategy preserves the current context. Notes-based strategies are experimental.",
+				currentValue: CONTINUITY_LABELS[continuity],
+				values: Object.values(CONTINUITY_LABELS),
+			},
+			(value, current) => ({
+				...current,
+				compaction: { ...current.compaction,
+					continuity: value === CONTINUITY_LABELS.notes ? "notes" : value === CONTINUITY_LABELS["notes-and-compaction"] ? "notes-and-compaction" : "compaction" },
+			}),
+		)]),
+		...(externalNotes || continuity === "compaction" ? [] : [setting(
+			{
+				id: "historyStorage",
+				label: "History and notes storage",
+				description: "Local: Pi session files. Tree: archived Pi branches. Remote: encrypted Codex service. Changing storage does not copy saved notes or change continuity." +
+					(historyStorage === "remote" ? "\nRemote does not support Sign in with ChatGPT under openai. Use the legacy openai-codex provider or a compatible Codex route, or choose Local or Tree." : ""),
+				currentValue: historyStorage === "local" ? "Local" : historyStorage === "tree" ? "Tree" : "Remote",
+				values: plan.codexTransport ? ["Local", "Tree", "Remote"] : ["Local", "Tree"],
+			},
+			(value, current) => ({
+				...current,
+				compaction: { ...current.compaction, historyStorage: normalizeHistoryStorage(value.toLowerCase()) ?? current.compaction.historyStorage },
+			}),
+		), toggle(
+			"notesTreeHandoff",
+			"Use notes for tree summaries",
+			config.compaction.notesTreeHandoff,
+			(enabled, current) => ({
+				...current,
+				compaction: { ...current.compaction, notesTreeHandoff: enabled },
+			}),
+			"On: save a handoff note before a summarized tree jump. Off: use Pi's branch summary without a note-writing run. Notes and history tools and window rollover stay unchanged.",
+		)]),
+		...(externalNotes || continuity !== "compaction" ? [toggle(
+			"shareSubagentContext",
+			"Share subagent context",
+			config.compaction.shareSubagentContext,
+			(enabled, current) => ({
+				...current,
+				compaction: { ...current.compaction, shareSubagentContext: enabled },
+			}),
+			"Share notes and history with new subagents through a compatible integration. Existing agents keep their identity. Turning this off does not disable cache sharing.",
+		)] : []),
+		...(!externalNotes && continuity === "notes" ? [] : [setting(
+			{
+				id: "compactionMethod",
+				label: "Compaction method",
+				description: supportsV2
+					? "Pi summary is readable. Codex V2 is encrypted. Both adds a readable Pi summary for provider switching, at extra cost."
+					: "This route uses Pi summary. Codex V2 and Both require an active Codex or configured compatible passthrough adapter. The saved choice is retained.",
+				currentValue: COMPACTION_METHOD_LABELS[method],
+				values: supportsV2 ? Object.values(COMPACTION_METHOD_LABELS) : ["Pi summary"],
+			},
+			(value, current) => ({
+				...current,
+				compaction: { ...current.compaction, method: value === "Both" ? "both" : value === "Codex V2" ? "v2" : "pi" },
+			}),
+		)]),
+		...(!externalNotes && continuity === "notes" && plan.contextManagement ? [setting(
+			{
+				id: "idleNotesRollover",
+				label: "Idle rollover",
+				currentValue: idleValue(config.compaction.idleNotesRollover),
+				values: IDLE_NOTES_MINUTES_OPTIONS.map(idleValue),
+				description: "Before the next prompt, open a window only if the last completed run saved fresh notes. Off by default. This is an idle policy, not a cache-expiry check.",
+			},
+			(value, current) => ({
+				...current,
+				compaction: { ...current.compaction, idleNotesRollover: IDLE_NOTES_MINUTES_OPTIONS.find(minutes => idleValue(minutes) === value) ?? current.compaction.idleNotesRollover },
+			}),
+		)] : []),
+		...((externalNotes || continuity !== "notes") && method !== "pi" ? [setting(
+			{
+				id: "v2UserMessageRetention",
+				label: "Preserved user messages (V2 only)",
+				description: "Token budget for recent user messages kept verbatim alongside the encrypted checkpoint, including when using Both.",
+				currentValue: v2UserMessageRetention + "k",
+				values: V2_USER_MESSAGE_RETENTION_OPTIONS.map((value) => value + "k"),
+			},
+			(value, current) => ({
+				...current,
+				compaction: { ...current.compaction,
+					v2UserMessageRetention: normalizeV2UserMessageRetention(Number.parseInt(value, 10)) ?? current.compaction.v2UserMessageRetention },
+			}),
+		)] : []),
+	];
+}

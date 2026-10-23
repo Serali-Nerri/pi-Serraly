@@ -1,0 +1,11 @@
+- Keep proxy transports cold. code-mode-proxy-provider.ts loads OpenAI SDK only for configured proxy streams. Ordinary Responses uses Pi's lazy API.
+- Code exec uses Pi grammar sampling end-to-end. Normal mode stays function-only for parallel calls. Never restore payload contract surgery.
+- Preserve stable, type-correct replay IDs across providers: ctc_* custom, fc_* function.
+- Replay historical custom calls/receipts by recorded origin in native-items.ts, not current declarations. Preserve input bytes across modes. Never reactivate removed grammar tools for replay.
+- openai-responses/tool-history.ts pairs calls/results after all message, replay and payload rewrites. Never bypass it before transport.
+- message-history.ts handles model switches, image downgrades, ID pairing and synthetic aborted results before shared.ts serialization.
+- Configured Code proxies own idempotent Responses Lite relocation/headers. Never depend on onPayload.
+- Only Responses Lite groups functions. Local/Tree keep flat context routers, Remote alone uses reserved namespaces. Stream/replay preserve recorded namespaces.
+- Configured-provider compaction uses its plan-aware registered stream. Code compaction/replay retains exec grammar.
+- Honour declared contracts. Never compensate incomplete providers with backend heuristics.
+- Execute only unambiguously finalised calls. Discard interrupted partial inputs. Preserve final custom input bytes through execution and continuation.
