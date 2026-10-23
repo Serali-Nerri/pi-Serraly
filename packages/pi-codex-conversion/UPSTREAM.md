@@ -6,7 +6,7 @@
 
 ## Current local differences
 
-- Runtime TypeScript carries the pre-import green-card and lifetime work from the source fork: src/adapter/activation/config-contract.ts, src/tools/code-mode/call-rendering.ts, public-tools.ts, result-rendering.ts, trace-rendering.ts, types.ts, src/ui/settings/config-items-display.ts, plus new card-rendering.ts and CARD-LICENSE.md. These files change tool-card rendering, compact tool output and the codeModeDetails default. The upstream card license and attribution are preserved.
+- src/tools/code-mode/local-expansion.ts adds per-call script, console-output and patch expansion choices. call-rendering.ts, result-rendering.ts and trace-rendering.ts wrap those regions without changing upstream rendering, preview budgets, tool naming or Display defaults. Ctrl+O remains host-owned and clears local choices on a global transition. Handlers retain only choices and the latest invalidate callback, never the host context or lastComponent. CARD-LICENSE.md preserves the local expansion provenance and MIT attribution.
 - src/tools/code-mode/AGENTS.md records the old-context lifetime hazard: renderers must not retain the host render context or lastComponent, and patch cards must use the existing trace renderer.
 - Local runtime is self-managed from immutable releases. src/extension/session-lifecycle.ts no longer polls the npm registry on session startup; src/adapter/local-version-warning.ts is removed, with no compatibility branch or skip flag.
 - package.json uses a local static check without test execution, removes npm publish/prepack/prepare lifecycle scripts, ships UPSTREAM.md, and pins the typebox devDependency to the Pi 1.4.0 host's 1.3.27. Build and native maintenance scripts remain.

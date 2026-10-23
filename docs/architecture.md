@@ -18,9 +18,9 @@
 
 ## 工具卡
 
-conversion 自有默认工具卡，使用宿主 pending/success/error 背景与 padding。保留脚本前 10 个视觉行、最近 8 个普通内部调用、每调用输入 80 个 Unicode 字符、完成输出前 5 个视觉行，以及脚本/输出/补丁各自点击与 Ctrl+O。补丁沿用原 renderer 和执行前缓存。
+conversion 保留上游默认渲染、预览规则、工具命名和 Display 设置，使用宿主 pending/success/error 背景与 padding。唯一的展示扩展是脚本、脚本输出和每次补丁的独立点击展开/折叠。Ctrl+O 沿用宿主全局控制，切换时清除局部选择；重绘、流式更新和主题变化不清除选择。补丁沿用原 renderer 和执行前缓存。
 
-渲染组件不得捕获完整宿主 context 或串联 lastComponent；状态只保留展开选择和当前 invalidate 回调。普通调用不展开原始内部结果。错误、重要通知与生产端截断不可被预览开关吞掉。细则由 conversion README 持有。
+渲染组件不得捕获完整宿主 context 或串联 lastComponent；状态只保留展开选择和当前 invalidate 回调，已离开 trace 列表的补丁选择及时清理。普通调用继续使用各工具的原始调用与结果渲染。局部点击不改变执行、trace、输出保留或历史 diff 的能力。细则由 conversion README 持有。
 
 没有 pi-ui、旧工具分组、Thinking/footer 私有兼容框架或旧共享库；未来 UI 另行设计。
 

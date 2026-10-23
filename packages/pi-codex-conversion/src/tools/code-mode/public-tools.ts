@@ -91,7 +91,6 @@ function createExecTool(
 ): ToolDefinition<typeof EXEC_PARAMETERS> {
 	return {
 		name: "exec",
-		renderShell: "default",
 		exposure: "model-only",
 		executionMode: "sequential",
 		label: "Exec",
@@ -147,7 +146,6 @@ function createExecTool(
 				context,
 				tracker,
 				runtime.useRichRendering(),
-				runtime.useMinimalOutput(),
 			)) as any,
 		renderResult: renderResult as any,
 	};
@@ -163,7 +161,6 @@ function createWaitTool(
 	const constrainedSampling = getExperimentalToolSampling("wait");
 	return {
 		name: "wait",
-		renderShell: "default",
 		exposure: "model-only",
 		executionMode: "sequential",
 		label: "Wait",

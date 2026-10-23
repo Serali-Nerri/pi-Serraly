@@ -1,12 +1,7 @@
 import { highlightCode } from "@earendil-works/pi-coding-agent";
-import { type Component, Text } from "@earendil-works/pi-tui";
-import {
-	cardSection,
-	cardState,
-	describeCardInput,
-	safeCardText,
-	toggleBody,
-} from "./card-rendering.js";
+import { type Component, Text, truncateToWidth } from "@earendil-works/pi-tui";
+import { clickToExpand, localExpansion, locallyExpanded } from "./local-expansion.js";
+import { expandHint } from "./render-content.js";
 import type { CodeModeRenderTracker } from "./render-tracker.js";
 import type { CodeModeRenderContext, CodeModeRenderTheme } from "./types.js";
 
@@ -16,28 +11,32 @@ export function renderExecCall(
 	context: CodeModeRenderContext | undefined,
 	tracker: CodeModeRenderTracker,
 	richRendering = true,
-	minimalOutput = false,
 ): Component {
 	tracker.register(context?.toolCallId, context?.invalidate);
-	const view = cardState(context);
+	const code = typeof args.code === "string" ? args.code : "";
 	if (!richRendering) {
-		if (!context?.executionStarted || !context.isPartial) return new Text("", 0, 0);
-		const running = tracker.status(context.toolCallId) !== "yielded";
+		if (!context?.executionStarted || !context.isPartial)
+			return new Text("", 0, 0);
+		const names = customToolNames(code);
+		const suffix = names.length > 0 ? ` · ${names.join(" · ")}` : "";
 		return new Text(
-			theme.fg("toolTitle", theme.bold(running ? "Running code" : "Started code")),
+			`${theme.fg("dim", "•")} ${theme.bold(`Running code${suffix}`)}`,
 			0,
 			0,
 		);
 	}
-	const code = typeof args.code === "string" ? safeCardText(args.code).trimEnd() : "";
-	return cardSection(
-		"exec",
-		new Text(highlightCode(code, "javascript").join("\n"), 0, 0),
-		view.script ?? view.global,
-		theme,
-		toggleBody(view, "script"),
-		minimalOutput ? 0 : 10,
-	);
+	const view = localExpansion(context);
+	const expanded = locallyExpanded(view, "script");
+	const status = tracker.status(context?.toolCallId);
+	const pending = context?.executionStarted === false && context.isPartial !== false;
+	const running = status === "running" || (status === undefined && context?.executionStarted && context.isPartial);
+	const verb = pending ? "Pending" : running ? "Running" : status === "yielded" ? "Started" : "Ran";
+	let text = `${theme.fg("dim", "•")} ${theme.bold(`${verb} code`)}`;
+	if (!expanded && code.trim()) text += `\n${previewCode(code, theme)}`;
+	const names = customToolNames(code);
+	if (names.length > 0) text += `\n${theme.fg("dim", "  └ ")}${theme.fg("accent", names.join(" · "))}`;
+	if (expanded && code.trim()) text += `\n\n${highlightCode(code, "javascript").join("\n")}`;
+	return clickToExpand(new Text(text, 0, 0), view, "script");
 }
 
 export function renderWaitCall(
@@ -48,11 +47,35 @@ export function renderWaitCall(
 	richRendering = true,
 ): Text {
 	tracker.register(context?.toolCallId, context?.invalidate);
-	cardState(context);
 	if (!richRendering) return new Text("", 0, 0);
-	return new Text(
-		`${theme.fg("toolTitle", theme.bold("wait"))} ${theme.fg("muted", describeCardInput(args.cell_id))}`,
-		0,
-		0,
-	);
+	const status = tracker.status(context?.toolCallId);
+	const pending = context?.executionStarted === false && context.isPartial !== false;
+	const done = status !== "running" && !(status === undefined && context?.executionStarted && context.isPartial);
+	const terminate = args.terminate === true;
+	const title = pending ? "Pending code cell request" : terminate
+		? done ? "Terminated code cell" : "Terminating code cell"
+		: done ? "Waited for code cell" : "Waiting for code cell";
+	const cell = typeof args.cell_id === "string" ? ` #${args.cell_id}` : "";
+	return new Text(`${theme.fg("dim", "•")} ${theme.bold(title)}${theme.fg("muted", cell)}`, 0, 0);
+}
+
+function customToolNames(code: string): string[] {
+	const names: string[] = [];
+	const seen = new Set<string>();
+	for (const match of code.matchAll(/\btools\.([A-Za-z_$][A-Za-z0-9_$]*)\s*\(/g)) {
+		const name = match[1]!;
+		if (seen.has(name)) continue;
+		seen.add(name);
+		names.push(name);
+	}
+	return names;
+}
+
+function previewCode(code: string, theme: CodeModeRenderTheme): string {
+	const highlighted = highlightCode(code.trim(), "javascript");
+	// Truncation resets must preserve the surrounding tool panel background.
+	const lines = highlighted.slice(0, 3).map((line) => truncateToWidth(`  ${line}`, 100, "...").replaceAll("\x1b[0m", "\x1b[39m"));
+	const skippedCount = highlighted.length - lines.length;
+	if (skippedCount > 0) lines.push(theme.fg("muted", `  ... (${skippedCount} more lines, ${expandHint()})`));
+	return lines.join("\n");
 }

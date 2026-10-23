@@ -1,7 +1,6 @@
-# Card renderer provenance
+# Local expansion provenance
 
-The card presentation, local expansion handling and terminal-text normalization
-in `card-rendering.ts`, `call-rendering.ts` and `result-rendering.ts` are adapted
+The local expansion handling in `local-expansion.ts` is adapted
 from pi-Serraly's pi-ui at commit `c3e3585232ca4b9ae709fe980d78ff345baceb0e`,
 `extensions/pi-ui/src/codemode/`, with the following license retained.
 

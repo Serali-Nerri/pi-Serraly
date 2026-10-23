@@ -31,7 +31,7 @@ export function buildDisplaySettings(
 				label: "Compact tool output",
 				currentValue: config.ui.compactTools,
 				values: ["off", "on", "minimal"],
-				description: "On hides collapsed patch diffs. Minimal also replaces collapsed Code / Notebook source and console previews with an expand hint; call rows and diagnostics stay visible.",
+				description: "On hides collapsed patch diffs. Minimal also replaces Code / Notebook text previews with an expand hint; nested tool output stays visible.",
 			},
 			(value, current) => ({
 				...current,
@@ -46,7 +46,7 @@ export function buildDisplaySettings(
 				...current,
 				ui: { ...current.ui, codeModeDetails: enabled },
 			}),
-			"Show Code and Notebook source and console previews. Call rows, patches and important diagnostics remain visible when off.",
+			"Show Code and Notebook source previews and execution output alongside nested tool results.",
 		),
 		toggle(
 			"noteSaveMarkers",

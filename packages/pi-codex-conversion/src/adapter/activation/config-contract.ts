@@ -145,7 +145,7 @@ export const DEFAULT_CODEX_CONVERSION_CONFIG: CodexConversionConfig = {
 		statusLine: true,
 		toolRenaming: true,
 		compactTools: "off",
-		codeModeDetails: true,
+		codeModeDetails: false,
 		noteSaveMarkers: false,
 		backgroundShellWidget: true,
 		backgroundShellToggleShortcut: "alt+w",

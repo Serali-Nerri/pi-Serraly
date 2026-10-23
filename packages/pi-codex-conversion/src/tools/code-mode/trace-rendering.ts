@@ -1,8 +1,10 @@
 import {
 	type Component,
 	Container,
+	Spacer,
 	Text,
 } from "@earendil-works/pi-tui";
+import { clickToExpand, localExpansion, locallyExpanded } from "./local-expansion.js";
 import { previewText, renderTextAndImages } from "./render-content.js";
 import {
 	CodeModeNestedRenderStore,
@@ -19,7 +21,63 @@ import type {
 
 export { CodeModeNestedRenderStore } from "./trace-render-state.js";
 
-export function renderTrace(
+export function renderTraceAndOutput(
+	traces: RuntimeToolTrace[],
+	droppedTraceCount: number,
+	tools: CodeModeToolDefinition[],
+	output: Component,
+	hasOutput: boolean,
+	options: { expanded: boolean; isPartial: boolean },
+	theme: CodeModeRenderTheme,
+	context: CodeModeRenderContext | undefined,
+	emittedImages: Map<string, Set<string>>,
+	renderStore: CodeModeNestedRenderStore,
+): Component {
+	const view = localExpansion(context, options.expanded);
+	const regions = new Set(traces.filter((trace) => trace.name === "apply_patch").map((trace) => `patch:${trace.id}`));
+	for (const region of view.choices.keys()) {
+		if (region.startsWith("patch:") && !regions.has(region)) view.choices.delete(region);
+	}
+	if (traces.length === 0 && droppedTraceCount === 0) return output;
+	const byName = new Map(tools.map((tool) => [tool.name, tool]));
+	const container = new Container();
+	if (droppedTraceCount > 0) {
+		container.addChild(
+			new Text(
+				theme.fg("muted", `… ${droppedTraceCount} earlier nested call${droppedTraceCount === 1 ? "" : "s"} omitted`),
+				0,
+				0,
+			),
+		);
+	}
+	for (const trace of traces) {
+		const region = `patch:${trace.id}`;
+		const patch = trace.name === "apply_patch";
+		const rendered = renderTrace(
+			trace,
+			byName.get(trace.name),
+			patch ? { ...options, expanded: locallyExpanded(view, region) } : options,
+			theme,
+			context,
+			emittedImages,
+			renderStore,
+		);
+		if (patch) {
+			const block = new Container();
+			for (const component of rendered) block.addChild(component);
+			container.addChild(clickToExpand(block, view, region));
+		} else {
+			for (const component of rendered) container.addChild(component);
+		}
+	}
+	if (hasOutput) {
+		container.addChild(new Spacer(1));
+		container.addChild(output);
+	}
+	return container;
+}
+
+function renderTrace(
 	trace: RuntimeToolTrace,
 	tool: CodeModeToolDefinition | undefined,
 	options: { expanded: boolean; isPartial: boolean },

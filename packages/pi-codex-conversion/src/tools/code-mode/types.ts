@@ -128,7 +128,6 @@ export interface CodeModeNestedRenderContext {
 export interface CodeModeRenderContext extends CodeModeNestedRenderContext {
 	executionStarted?: boolean | undefined;
 	isPartial?: boolean | undefined;
-	durationMs?: number | undefined;
 }
 
 export interface RuntimeToolResult {
