@@ -22,7 +22,7 @@ import type {
 export { CodeModeNestedRenderStore } from "./trace-render-state.js";
 
 export function renderTraceAndOutput(
-	traces: RuntimeToolTrace[],
+	traces: RuntimeToolTrace[] | undefined,
 	droppedTraceCount: number,
 	tools: CodeModeToolDefinition[],
 	output: Component,
@@ -34,11 +34,13 @@ export function renderTraceAndOutput(
 	renderStore: CodeModeNestedRenderStore,
 ): Component {
 	const view = localExpansion(context, options.expanded);
-	const regions = new Set(traces.filter((trace) => trace.name === "apply_patch").map((trace) => `patch:${trace.id}`));
-	for (const region of view.choices.keys()) {
-		if (region.startsWith("patch:") && !regions.has(region)) view.choices.delete(region);
+	if (traces) {
+		const regions = new Set(traces.map((trace) => `trace:${trace.id}`));
+		for (const region of view.choices.keys()) {
+			if (region.startsWith("trace:") && !regions.has(region)) view.choices.delete(region);
+		}
 	}
-	if (traces.length === 0 && droppedTraceCount === 0) return output;
+	if (!traces?.length && droppedTraceCount === 0) return output;
 	const byName = new Map(tools.map((tool) => [tool.name, tool]));
 	const container = new Container();
 	if (droppedTraceCount > 0) {
@@ -50,25 +52,20 @@ export function renderTraceAndOutput(
 			),
 		);
 	}
-	for (const trace of traces) {
-		const region = `patch:${trace.id}`;
-		const patch = trace.name === "apply_patch";
+	for (const trace of traces ?? []) {
+		const region = `trace:${trace.id}`;
 		const rendered = renderTrace(
 			trace,
 			byName.get(trace.name),
-			patch ? { ...options, expanded: locallyExpanded(view, region) } : options,
+			{ ...options, expanded: locallyExpanded(view, region) },
 			theme,
 			context,
 			emittedImages,
 			renderStore,
 		);
-		if (patch) {
-			const block = new Container();
-			for (const component of rendered) block.addChild(component);
-			container.addChild(clickToExpand(block, view, region));
-		} else {
-			for (const component of rendered) container.addChild(component);
-		}
+		const block = new Container();
+		for (const component of rendered) block.addChild(component);
+		container.addChild(clickToExpand(block, view, region));
 	}
 	if (hasOutput) {
 		container.addChild(new Spacer(1));
@@ -86,7 +83,9 @@ function renderTrace(
 	emittedImages: Map<string, Set<string>>,
 	renderStore: CodeModeNestedRenderStore,
 ): Component[] {
-	const renderedTrace = withoutEmittedImages(trace, emittedImages);
+	// Pi owns script-emitted images; nested view_image calls are title/path only.
+	const showResult = trace.name !== "view_image";
+	const renderedTrace = showResult ? withoutEmittedImages(trace, emittedImages) : trace;
 	const programmatic = isProgrammaticTool(tool) ? tool : undefined;
 	const renderState: NestedRenderState = programmatic?.renderCall || programmatic?.renderResult
 		? renderStore.get(trace.id)
@@ -123,7 +122,7 @@ function renderTrace(
 	}
 	const components = [call];
 	let customResultRendered = false;
-	if (rendererResult && programmatic?.renderResult) {
+	if (showResult && rendererResult && programmatic?.renderResult) {
 		try {
 			const resultComponent = programmatic.renderResult(
 				rendererResult,
@@ -142,8 +141,8 @@ function renderTrace(
 	if (trace.status === "error" && trace.error) {
 		if (!customResultRendered)
 			components.push(new Text(theme.fg("error", trace.error), 4, 0));
-	} else if (renderedTrace.result && !customResultRendered) {
-		components.push(renderGenericTraceResult(renderedTrace, theme, options.expanded || options.isPartial));
+	} else if (showResult && renderedTrace.result && !customResultRendered) {
+		components.push(renderGenericTraceResult(renderedTrace, theme, options.expanded || partial));
 	}
 	if (programmatic?.renderCall || programmatic?.renderResult)
 		renderStore.rebalance(trace.id);

@@ -324,6 +324,7 @@ export class CodeModeDelegateRuntime {
 		const captureRendererValues =
 			!isCustomToolDefinition(tool) &&
 			Boolean(tool.renderCall || tool.renderResult);
+		const captureRendererResult = captureRendererValues && tool.name !== "view_image";
 		let finalResultCaptured = false;
 		let resultSessionId: number | undefined;
 		const contextNoteWrite = !isCustomToolDefinition(tool) && tool.isContextNoteWrite?.(input) === true;
@@ -358,7 +359,7 @@ export class CodeModeDelegateRuntime {
 				return outcome;
 			},
 			onUpdate: (update) => {
-				if (captureRendererValues)
+				if (captureRendererResult)
 					this.renderStore.captureResult(trace.id, update);
 				trace.result = this.traces.captureResult(cellId, trace, update);
 				emitTrace();
@@ -368,7 +369,7 @@ export class CodeModeDelegateRuntime {
 				if (!isCustomToolDefinition(tool) && tool.propagateTermination && result.terminate)
 					this.terminatingCells.add(cellId);
 				resultSessionId = numericSessionId(result.details);
-				if (captureRendererValues)
+				if (captureRendererResult)
 					this.renderStore.captureResult(trace.id, result);
 				trace.result = this.traces.captureResult(cellId, trace, result);
 				emitTrace();
@@ -426,7 +427,8 @@ export class CodeModeDelegateRuntime {
 					content: [{ type: "text" as const, text: errorText }],
 					details: {},
 				};
-				this.renderStore.captureResult(trace.id, errorResult);
+				if (captureRendererResult)
+					this.renderStore.captureResult(trace.id, errorResult);
 				trace.result = this.traces.captureResult(
 					cellId,
 					trace,

@@ -262,7 +262,9 @@ text(status);
 
 `exec` and `wait` retain the upstream renderers and Pi's themed pending/success/error card shell. With **Code / Notebook details** enabled, the script previews its first 3 source lines and shows the tool-name summary extracted from source. Nested calls retain their own call and result renderers, including friendly command naming. Completed console output previews its last 5 visual lines; partial output follows the upstream streaming behavior. Patch calls retain the original renderer and pre-execution diff cache.
 
-The local addition is fullscreen click-to-expand for the script, console output and each patch call independently. Clicking a patch affects all files in that call, not other calls. Press **Ctrl+O** for the original whole-card expansion; changing it clears local choices. Resize, streaming updates and theme repaint preserve those choices. Drag selection, links and child mouse handlers remain host-owned.
+The local addition is fullscreen click-to-expand for the script, console output and each nested tool call independently, including repeated calls to the same tool. Clicking a call's title or result toggles only that call; clicking a patch affects all files in that call, not other calls. A completed nested call can be collapsed while the surrounding script continues running. Press **Ctrl+O** for the original whole-card expansion; changing it clears local choices. Resize, streaming updates, notifications without a trace snapshot and theme repaint preserve those choices. An explicit trace snapshot discards choices only for calls no longer present. Drag selection, links and child mouse handlers remain host-owned.
+
+Nested `view_image` calls show only their title and path, plus errors if any; they never draw images. Their hidden results do not displace other calls' cached renderer output. Images explicitly emitted by the script through `image(...)` are displayed once by Pi below the card. Without script image output, no image is displayed. This is a UI rule, not image deduplication or a change to model-visible content. Console output retains its existing preview and expansion behavior.
 
 The `/codex` → **Display** controls keep their upstream behavior and defaults. **Code / Notebook details** is off by default; enable it to show source previews and execution output alongside nested tool results. **Compact tool output → On** hides collapsed patch diffs; **Minimal** also replaces collapsed console previews with an expand hint, while nested tool output remains visible. Local clicks do not bypass disabled details. Display expansion cannot recover traces, output or historical diffs that the producer no longer retains.
 
@@ -404,7 +406,7 @@ bun run --cwd packages/pi-codex-conversion build
 pi --no-extensions --no-skills -e ./packages/pi-codex-conversion
 ```
 
-See [`UPSTREAM_SYNC.md`](./UPSTREAM_SYNC.md), [`CHANGELOG.md`](./CHANGELOG.md) and [GitHub issues](https://github.com/IgorWarzocha/howaboua-pi-stuff/issues).
+See [`CHANGELOG.local.md`](./CHANGELOG.local.md) for local changes, [`CHANGELOG.md`](./CHANGELOG.md) for upstream release history, [`UPSTREAM_SYNC.md`](./UPSTREAM_SYNC.md) for synchronization notes and [GitHub issues](https://github.com/IgorWarzocha/howaboua-pi-stuff/issues).
 
 </details>
 

@@ -80,6 +80,7 @@
     "examples/code-mode-extension",
     "examples/custom-tools",
     "CHANGELOG.md",
+    "CHANGELOG.local.md",
     "README.md",
     "UPSTREAM.md",
     "UPSTREAM_SYNC.md",

@@ -119,7 +119,7 @@ function renderCodeModeResult(
 		? clickToExpand(renderTextAndImages(displayText, [], theme), view, "output")
 		: new Container();
 	const body = renderTraceAndOutput(
-		details.traces ?? [],
+		details.traces,
 		details.droppedTraceCount ?? 0,
 		tools,
 		output,
