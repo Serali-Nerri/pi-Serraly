@@ -2,6 +2,11 @@ import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { packages, requireNode, root, runIsolated } from "./lib/workspace.mjs";
 
+const integrationTests = {
+	"pi-codex-conversion": ["cards.test.mjs", "codex-tools.test.mjs"],
+	"pi-ui": ["ui.test.mjs"],
+};
+
 requireNode();
 const args = process.argv.slice(2).filter((arg) => arg !== "--");
 const packagesOnly = args.length === 1 && args[0] === "--packages-only";
@@ -17,10 +22,12 @@ for (const pkg of selected) {
 		cwd: pkg.directory, env: { PI_SERRALY_ALLOW_LOOPBACK: "1" }, echo: true,
 	});
 }
-if (!focused && !packagesOnly) {
-	const tests = (await readdir(join(root, "test/integration")))
-		.filter((name) => name.endsWith(".test.mjs")).sort().map((name) => join(root, "test/integration", name));
-	await runIsolated(process.execPath, ["--test", "--test-concurrency=1", ...tests], {
+if (!packagesOnly) {
+	const tests = focused
+		? (integrationTests[args[1]] ?? []).map((name) => join(root, "test/integration", name))
+		: (await readdir(join(root, "test/integration")))
+			.filter((name) => name.endsWith(".test.mjs")).sort().map((name) => join(root, "test/integration", name));
+	if (tests.length) await runIsolated(process.execPath, ["--test", "--test-concurrency=1", ...tests], {
 		env: { PI_SERRALY_ALLOW_LOOPBACK: "1" }, echo: true, timeoutMs: 300_000,
 	});
 }

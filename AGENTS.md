@@ -1,47 +1,45 @@
 # Repository Guidelines
 
-## Contract and document ownership
+## Working practices
 
-- Private Bun workspace: seven retained howaboua packages plus the independent packages/pi-ui presentation extension.
-- Target Node ≥22.19, Bun 1.4.2, Pi 1.4.0. No legacy extensions/shared-library framework.
-- README indexes entry points; docs/architecture.md owns dependencies/resources; docs/development.md owns commands, isolation, release and manual updates; package README/LICENSE/UPSTREAM own usage, terms and provenance; root UPSTREAM is an index.
-- State current contracts, not stage narratives/work logs. Do not import upstream personal AGENTS/.pi or full-monorepo publishing workflows.
-
-## Development
-
-1. Update the owning document first.
-2. Write a behavior-focused test at an established seam, observe failure, implement the minimum.
-3. Iterate with focused checks. Inspect leftovers/contradictions and run npm run verify only when necessary.
-4. No compatibility layers/data migration for our legacy implementation. Retained upstream runtime contracts and operator safeguards still apply.
-
-Strict TypeScript/ESM; preserve each package's formatting/import style. Use public package exports, not sibling private source. Host packages are runtime peers. Normal runtime dependencies and Shepherdr → agent-board are allowed.
+- Edit owning source, never installed tooling. Validate and report changes. Source edits do not update running packages.
+- Trace failures through supported workflows before fixing them. A synthetic reproducer or possible interleaving alone does not prove exposure. Respect product tradeoffs; optional capabilities are not defects.
+- Update documentation when behavior or usage changes. Use focused package checks while editing; run `npm run verify` for cross-package dependencies, build, installation or release tooling changes.
+- Preserve dirty files and unpublished commits. Do not switch branches, create worktrees or rewrite commits without explicit instruction.
 
 ## Implementation principles
 
+- Every package must work against released upstream Pi. Use supported public Pi APIs; never depend on modifying, patching or forking Pi. Report unavailable capabilities honestly.
+- Use strict TypeScript/ESM and preserve each package's formatting/import style. Use public package exports, not sibling private source. Host packages are runtime peers.
 - Validate unknown values once at the boundary that owns them. Pass typed values inward instead of repeating `typeof value === "object"` and property-existence checks. Do not defensively revalidate values already guaranteed by a schema, constructor, or internal type.
 - Do not extract single-use helpers preemptively. Inline the logic at the call site unless the helper is reused, hides a genuinely complex boundary, or has a clear independent name that improves the caller.
 - Before adding complexity for a speculative or vanishingly unlikely race or security edge case, explain the concrete failure mode, likelihood, and complexity cost to the user and get their buy-in. Do not silently expand scope for theoretical robustness.
 - Avoid `try` / `catch` where possible.
 - Avoid using the `any` type.
 
-## Commands
+## Agent-facing contracts
 
-- bun install --frozen-lockfile --ignore-scripts — locked dependency installation.
-- bun run build — package artifacts.
-- bun run check — package/static/root-script checks, no build.
-- bun run test -- --package pi-codex-conversion — focused isolated tests.
-- npm run verify — one build, checks and all tests.
-- bun run release -- --output /absolute/path/to/new-release — offline fixed-version runtime, no settings writes.
+- Agent-facing text is behavior. Keep contracts, skills, prompt metadata and subagent prompts compact. Default to general-purpose assistance; scope coding assumptions to coding tasks.
+- Hide extension internals from agent-facing text, including errors. State what happened, what remains available and an actionable next step. Users own account and configuration decisions; do not invent workflow advice.
+- Extend existing tools, not overlapping choices. Do not repeat obvious contracts across names, descriptions, schemas, `promptSnippet` and `promptGuidelines`. Never rewrite prior tool calls or results to integrate a tool.
+- Skills and extensions must work for any user. Never ship personal names, local paths, machine assumptions or private workflows.
 
-## Testing
+## Validation
 
-Protect repository-owned features/adapters/configuration/isolation/lifecycle and build/release behavior through public interfaces or established seams. No duplicated dependency algorithms, tautological/change-detector tests, source assertions or private call sequences. Keep meaningful imported tests. Bug tests require a genuine coverage gap. Time/process tests need deadlines and cleanup. Qualify compiled artifacts against released Pi with synthetic providers, never real model requests. Report unavailable external-service/platform acceptance.
+- Delete permanent tests by default. Retain only consequential failure coverage that static checks and disposable probes cannot adequately provide. Contract labels do not justify retention. Add permanent tests only when the user explicitly requests more coverage.
+- If agents misuse tools or ignore prompts, fix the model-facing contract from real-use evidence, not programmatic tests. Tests may cover deterministic parser, executor, result and routing boundaries.
+- Put editing hazards and fragile ownership/order constraints in the nearest `AGENTS.md`, not regression suites. Keep runtime validation in owning code. Test behavior, not source text, private call sequences or duplicated dependency algorithms.
+- Automated checks and probes use isolated HOME/config/session and an environment allowlist. Keep them offline unless network use is explicitly authorized; registry access requires explicit dependency-installation authorization. Time/process checks need deadlines and cleanup.
+- Live sandbox acceptance using real login or models requires explicit user authorization, which may be agreed during planning. Use the authorized login and models only within that scope; never expose credentials in output or evidence.
+- Sandbox validation means interacting with Pi's TUI through Herdr: normal consecutive turns that execute tools and use the guest environment. Programmatic probes do not substitute for this interaction. Refresh the guest candidate after source changes; host edits alone do not update it.
+- Validate the candidate's packaged resources and bundled native helpers against released Pi without helper overrides. Report blocked or unperformed acceptance honestly.
 
-## Safety and provenance
+## Installation and upstream sync
 
-Use isolated HOME/config/session and an environment allowlist. Never read real credentials or request real models. Registry access only during explicit dependency installation; checks/tests/release stay offline.
-Do not pi install . or load development code into real settings. Deployment references a new immutable release with complete dependencies/resources. Real settings changes require explicit authorization, verified backup and restore-based rollback.
-Preserve upstream licenses, binary/WASM/vendor/profiles and pinned UPSTREAM. Manual updates compare and merge rather than overwrite local renderer/lifecycle work.
-Retained package `package.json.version` tracks the synchronized upstream release baseline.
+- Use a separate complete installation checkout. Prepare dependencies and artifacts through normal Bun workspace commands; register package paths with native `pi install`. Do not load the development checkout into real settings or add a custom installer/state file. Treat the installation checkout as one workspace, without per-package artifact freezing.
+- Default to individual package registration. Aggregates are optional; do not load an aggregate alongside the extensions it activates.
+- Real settings changes require explicit authorization, a verified backup and restore-based rollback.
+- Preserve upstream licenses, binary/WASM/vendor/profiles and pinned provenance. Compare and merge upstream changes rather than overwriting intentional local behavior.
+- Retained package versions track synchronized upstream baselines; local differences use Git and local changelogs. Optional aggregates have their own versions. Do not introduce Changesets or upstream npm publishing/version automation.
 
 Issues: docs/agents/issue-tracker.md. Domain/ADRs: docs/agents/domain.md.

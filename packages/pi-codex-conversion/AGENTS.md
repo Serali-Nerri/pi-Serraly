@@ -10,7 +10,7 @@
 - Keep src/voice/rust/** and scripts/build-voice-helper.mjs paired; this repository maintains the only voice copy.
 - Tool-card renderers must not retain the host render context or `lastComponent`; see src/tools/code-mode/AGENTS.md.
 - Keep the typebox devDependency aligned with the host Pi runtime. Pi 1.4.0 resolves typebox 1.3.27; a duplicate 1.3.37 copy breaks declaration emit for public schemas.
-- Session startup is offline. Do not poll npm or any registry for version updates; this project runs from immutable local releases and manages updates explicitly.
+- Session startup is offline. Do not poll npm or any registry for version updates; local checkout or optional release updates are managed explicitly.
 - tools.customRustBinariesDir is the filename-based bundled-helper override, not a Code host override. Bundled-helper startup incompatibility errors point there, not through loader noise.
 - Vendored apply-patch engine, path-uri and absolute-path track one Codex commit. Pi changes stay in standalone_executable.rs and pi-apply-patch-fs.
 - Reject review-driven drift from stock Pi unless backend-verified or intentional.

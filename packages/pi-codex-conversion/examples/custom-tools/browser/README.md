@@ -1,9 +1,9 @@
 # Browser
 
-This is the final legacy command-backed browser example. For the maintained browser in ordinary Pi, Code Mode and Notebook Mode, install from an immutable release:
+This is the final legacy command-backed browser example. For the maintained browser in ordinary Pi, Code Mode and Notebook Mode, register its path in a prepared installation checkout:
 
 ```bash
-pi install /absolute/path/to/release/packages/pi-browser
+pi install ~/.pi/pi-Serraly/packages/pi-browser
 ```
 
 The extension adds typed Pi schemas, persistent CDP sessions, configurable hosts and automatic remote-worker deployment. Do not load this custom tool alongside it.

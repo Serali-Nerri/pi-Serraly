@@ -7,7 +7,7 @@
 ## Current local differences
 
 - package.json removes npm publish/prepack/pack lifecycle configuration, adds UPSTREAM.md to the shipped files, keeps the check, typecheck, lint and format scripts, and pins the typebox devDependency to the Pi 1.4.0 host's 1.3.27.
-- README.md installs from an immutable release, uses an explicit one-session load instead of npm, and links Pi Codex Conversion by name rather than npm.
+- README.md uses a separately prepared installation checkout and native Pi registration, keeps an explicit one-session load, and links Pi Codex Conversion by name rather than npm.
 - AGENTS.md describes changelog.ts as shared release UI and keeps its registration and channel contract stable.
 
 Runtime TypeScript sources match the baseline.

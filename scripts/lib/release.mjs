@@ -3,7 +3,6 @@ import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, readlink, realpath,
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
-const memberCount = 8;
 const commandTimeoutMs = 120_000;
 const emptyPiResources = ["extensions", "skills", "prompts", "themes"];
 const installArgs = [
@@ -97,9 +96,7 @@ async function discoverMembers(root) {
 		validateManifest(manifest, directory);
 		members.push({ directory, directoryPath, path: `packages/${directory}`, name: manifest.name, version: manifest.version, manifest });
 	}
-	if (members.length !== memberCount) {
-		throw new Error(`Release requires exactly ${memberCount} packages; found ${members.length}`);
-	}
+	if (!members.length) throw new Error("Release requires at least one package");
 	const names = new Set();
 	for (const member of members) {
 		if (names.has(member.name)) throw new Error(`Duplicate release package name: ${member.name}`);

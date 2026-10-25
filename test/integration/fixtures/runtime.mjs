@@ -47,9 +47,9 @@ function restoreEnvironment(name, value) {
 }
 
 /**
- * Run the released Pi 1.4 host loader and lifecycle against the workspace package
- * directories under `directory`. No model is selected or prompted, and the
- * only writable paths are inside a disposable temporary directory.
+ * Run the released Pi 1.4 host loader and lifecycle against the individual package
+ * directories under `directory`, without their optional aggregate. No model is
+ * selected or prompted; writes stay inside a disposable temporary directory.
  */
 export async function runRuntimeAcceptance({ directory = root } = {}) {
 	const workspace = await mkdtemp(join(tmpdir(), "pi-serraly-runtime-"));
@@ -69,7 +69,7 @@ export async function runRuntimeAcceptance({ directory = root } = {}) {
 	delete process.env.HERDR_ENV;
 	delete process.env.HERDR_SOCKET_PATH;
 
-	const packageEntries = (await packages(directory)).map((entry) => ({
+	const packageEntries = (await packages(directory)).filter((entry) => entry.name !== "pi-extensions").map((entry) => ({
 		name: entry.name,
 		directory: entry.directory,
 	}));

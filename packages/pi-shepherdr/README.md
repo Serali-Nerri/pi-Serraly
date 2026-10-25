@@ -10,8 +10,10 @@ With Pi Codex's compatible custom developer-message API active, asynchronous wor
 
 ## Install
 
+Prepare the installation checkout as described in [development](../../docs/development.md#本地安装-checkout), then register its package path:
+
 ```bash
-pi install /absolute/path/to/release/packages/pi-shepherdr
+pi install ~/.pi/pi-Serraly/packages/pi-shepherdr
 ```
 
 Requires Pi 1.2.0 or newer, Node.js 22.18 or newer, Herdr 0.9 or newer and the Herdr Pi integration:
@@ -185,7 +187,7 @@ If an attached owner closes or dies, Local and Tree notes reads first use its la
 Boards are provided by the separate [Pi Agent Board](../pi-agent-board) extension. Install it in every participating Pi session, then reload:
 
 ```sh
-pi install /absolute/path/to/release/packages/pi-agent-board
+pi install ~/.pi/pi-Serraly/packages/pi-agent-board
 ```
 
 The same discussions, subscriptions and saved history continue without migration. Pi Agent Board owns the `board` tool, settings and `/board` browser viewer. Shepherdr has no fallback board or board controls under `/herdr`. If a saved board setting is on but the extension is missing, Shepherdr displays an installation warning once per session. Saved settings and archives remain untouched. Pi Codex Conversion is optional.

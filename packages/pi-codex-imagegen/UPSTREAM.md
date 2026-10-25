@@ -7,7 +7,7 @@
 ## Current local differences
 
 - package.json removes npm publish/prepack/pack lifecycle configuration, adds UPSTREAM.md to the shipped files, and pins the typebox devDependency to the Pi 1.4.0 host's 1.3.27.
-- README.md installs from an immutable release.
+- README.md uses a separately prepared installation checkout and native Pi registration.
 - AGENTS.md describes the OpenAI Codex reference relative to a checkout's codex-rs directory instead of a local absolute path.
 
 Runtime TypeScript sources match the baseline.

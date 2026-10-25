@@ -3,7 +3,7 @@
   "version": "0.4.0",
   "private": true,
   "type": "module",
-  "description": "Seven retained Pi extensions and an independent presentation extension.",
+  "description": "Independent Pi extensions with an optional aggregate.",
   "engines": {
     "node": ">=22.19.0"
   },

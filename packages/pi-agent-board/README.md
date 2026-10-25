@@ -6,10 +6,12 @@ Works without Shepherdr or Pi Codex Conversion. Shepherdr adds agent-family memb
 
 ## Install
 
+Prepare the installation checkout as described in [development](../../docs/development.md#本地安装-checkout), then register its package path:
+
 Requires Pi 1.1.0 or newer and Node.js 22.18 or newer.
 
 ```sh
-pi install /absolute/path/to/release/packages/pi-agent-board
+pi install ~/.pi/pi-Serraly/packages/pi-agent-board
 ```
 
 To run from a source checkout, build the package and load it explicitly from the repository root:

@@ -2,7 +2,7 @@
 
 ## 源码与职责
 
-`packages/*` 包含七个保留的 howaboua-pi-stuff 功能包和独立的 pi-ui。前七包保留上游包名、源码组织和公开导出；根目录协调开发与本地交付，不再次注册能力。
+`packages/*` 包含七个保留的 howaboua-pi-stuff 功能包、独立的 pi-ui 和可选的 pi-extensions 整合包。前七包保留上游包名、源码组织和公开导出；根目录协调开发与构建，不再次注册能力。
 
 | 包 | 拥有 | 依赖边界 |
 | --- | --- | --- |
@@ -14,14 +14,17 @@
 | pi-agent-board | 任务板、运行时与 Web 查看器 | 可选接入 conversion 公共协议 |
 | pi-auto-trees | marker/prime/end 会话流程 | 可选接入 conversion 公共协议 |
 | pi-ui | Thinking、Footer、活动完成提示、置顶用户消息、展示设置与清理 | 只依赖 Pi host，不接管工具或执行 |
+| pi-extensions | 显式组合前七包的注册入口，不包含 pi-ui | workspace 运行依赖；调用成员公开导出 |
 
-跨包依赖使用公开导出，不读取兄弟私有源码。宿主包是 peer，不随正式运行树安装；开发使用精确 Pi 1.4.0。外部运行依赖正常安装，不再要求无 dependencies 或全部 bundle。
+跨包依赖使用公开导出，不读取兄弟私有源码。宿主包是 peer，不随正式运行树安装；开发使用精确 Pi 1.4.0。外部运行依赖由 workspace 安装。
+
+pi-extensions 显式维护成员依赖和 manifest 入口顺序。七个成员及 browser、agent-board 的独立 changelog 共九个 TS 转发入口，默认全部启用，可由 `pi config` 分别开关。默认仍逐包登记，整合包不能与其成员重复加载。
 
 ## 工具卡
 
-conversion 保留上游默认渲染、预览规则、工具命名和 Display 设置，使用宿主 pending/success/error 背景与 padding。唯一的展示扩展是脚本、脚本输出和每次补丁的独立点击展开/折叠。Ctrl+O 沿用宿主全局控制，切换时清除局部选择；重绘、流式更新和主题变化不清除选择。补丁沿用原 renderer 和执行前缓存。
+conversion 保留上游默认渲染、预览规则、工具命名和 Display 设置，使用宿主 pending/success/error 背景与 padding。脚本、脚本输出和每次嵌套调用独立点击展开/折叠，包括同名重复调用。Ctrl+O 沿用宿主全局控制，切换时清除局部选择；重绘、流式更新和主题变化不清除选择。补丁沿用原 renderer 和执行前缓存。
 
-渲染组件不得捕获完整宿主 context 或串联 lastComponent；状态只保留展开选择和当前 invalidate 回调，已离开 trace 列表的补丁选择及时清理。普通调用继续使用各工具的原始调用与结果渲染。局部点击不改变执行、trace、输出保留或历史 diff 的能力。细则由 conversion README 持有。
+渲染组件不得捕获完整宿主 context 或串联 lastComponent；状态只保留展开选择和当前 invalidate 回调，完整 trace 快照中已离开的调用选择及时清理。普通调用继续使用各工具的原始调用与结果渲染；嵌套 view_image 只显示标题、路径和错误，显式脚本 image(...) 的图片由宿主展示。局部点击不改变执行、trace、输出保留或历史 diff 的能力。细则由 conversion README 持有。
 
 ## 界面
 
@@ -38,9 +41,28 @@ Thinking 以连续 reasoning run 为粒度，支持标题、尾部预览、局�
 - ask、imagegen、Shepherdr、auto-trees 使用 Pi 支持的 TS 入口；prompts、profiles、远端脚本及包内资源跟随交付。
 - pi-ui 将包内模块合为已去除类型的 `dist/index.ts` 单入口，Pi host imports 保持 external，避免原生 JS 加载绕过实际宿主组件绑定；保留包许可与来源，不导入旧 pi-ui 工具渲染及框架。
 - conversion 的 `examples/custom-tools/browser/cdp-lib` 是本仓维护源，不再同步未迁入的 skill 包。
-- 不迁入上游个人 AGENTS/.pi、聚合包、Changesets 发布系统或无关跨包原生工作流。
+- pi-extensions 使用 TS 入口与成员公开包入口；成员自己的资源仍由成员包拥有。
+- 不迁入上游个人 AGENTS/.pi、Changesets 发布系统、整合包自动生成流程或无关跨包原生工作流。
 
-build 只生成产物；check/test 不隐式构建；verify 构建一次后检查、测试。release 只消费现有产物和锁定缓存，不重新构建或联网。
+build 只生成产物，支持按包及其 workspace 构建依赖选择；check/test 不隐式构建，test 支持包对应的定向集成测试；verify 构建一次后检查、测试。release 只消费现有产物和锁定缓存，不重新构建或联网。
+
+## 完整安装 checkout
+
+```text
+~/.pi/pi-Serraly/
+  .git/
+  package.json
+  bun.lock
+  scripts/、docs/、test/  完整仓库源码
+  packages/             全部独立包与可选整合包
+  node_modules/         Bun workspace 依赖
+```
+
+安装 checkout 独立于开发树，按普通 Git/Bun workspace 更新。依赖安装和构建属于仓库，登记、资源过滤、加载与移除属于原生 Pi。生产依赖树不携带物理宿主包；准备命令由 development 持有。
+
+所有成员存在并可导入，不代表被启用。默认逐包 pi install；Shepherdr 的 agent-board 依赖不会自动登记 agent-board 入口。根 manifest 不注册资源。可选整合包只有被显式登记才提供七包入口，成员及独立 changelog 的加载由 Pi 资源开关控制。
+
+更新整个 checkout 可能同时改变多个已登记包，下次完整启动统一加载。备份与回滚以完整 checkout 和必要的 settings 为单位。
 
 ## 固定版本运行树
 
@@ -55,7 +77,7 @@ build 只生成产物；check/test 不隐式构建；verify 构建一次后检�
 
 根 manifest 不注册扩展，安装时选择各包路径。运行依赖以及指向已交付成员的 peer 导入保留树内链接，包括可选的 conversion 集成；可导入不等于自动启用。release 不含物理 Pi host、开发工具或指向开发树的链接。目标必须是开发树之外的新绝对路径，完整组装校验后才发布，不覆写正在使用的版本。
 
-本地 release 版本来自根 package.json；包版本保留上游基线。release.json 记录版本与成员身份，不是来源真实性签名。真实设置切换不属于 release 命令。
+整仓 release 是可选快照。本地 release 版本来自根 package.json；各包版本保留各自上游基线，本地差异由 Git 和包内本地 changelog 标识。release.json 记录根版本与成员身份，真实设置切换不属于 release 命令。
 
 ## 文档边界
 

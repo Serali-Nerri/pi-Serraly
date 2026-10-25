@@ -7,6 +7,6 @@
 ## Current local differences
 
 - package.json removes npm publish/prepack/prepare/pack lifecycle configuration and adds UPSTREAM.md to the shipped files.
-- README.md installs from an immutable release and its local development flow runs check and an explicit one-session load without a pack dry run.
+- README.md uses a separately prepared installation checkout and native Pi registration; its local development flow runs check and an explicit one-session load without a pack dry run.
 
 Runtime TypeScript sources match the baseline.

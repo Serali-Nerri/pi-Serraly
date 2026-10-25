@@ -30,4 +30,6 @@ Thinking 和置顶提示使用包内隔离的 Pi 1.4 适配；宿主能力不匹
 
 ## 本地使用
 
-从仓库根构建、验证并生成新的固定版本 release，另行授权后安装其 `packages/pi-ui` 路径，不把开发目录装入真实设置。构建将包内模块合为已去除类型的单个 `dist/index.ts` ESM 入口，Pi host imports 保持 external。`.ts` 入口让 bundled Pi 的 loader 保留实际宿主组件绑定；原生 `.js` 入口或内部 `.js` import 会绕过该绑定，不能用于此私有适配。编译产物通过真实 bundled Pi loader 验证展示与回收，不能把宿主类打进产物。运行依赖只有 Pi host peers。来源见 [UPSTREAM.md](UPSTREAM.md)，许可见 LICENSE 和 licenses/。
+按 [development](../../docs/development.md#本地安装-checkout) 准备独立安装 checkout，再运行 `pi install ~/.pi/pi-Serraly/packages/pi-ui`。
+
+构建将包内模块合为已去除类型的单个 `dist/index.ts` ESM 入口，Pi host imports 保持 external。`.ts` 入口让 bundled Pi 的 loader 保留实际宿主组件绑定；原生 `.js` 入口或内部 `.js` import 会绕过该绑定，不能用于此私有适配。编译产物通过真实 bundled Pi loader 验证展示与回收，不能把宿主类打进产物。运行依赖只有 Pi host peers。来源见 [UPSTREAM.md](UPSTREAM.md)，许可见 LICENSE 和 licenses/。

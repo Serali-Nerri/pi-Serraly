@@ -24,6 +24,7 @@
 	"main": "index.ts",
 	"exports": {
 		".": "./index.ts",
+		"./changelog": "./changelog.ts",
 		"./runtime": "./src/runtime.ts",
 		"./integration": "./src/integration.ts"
 	},

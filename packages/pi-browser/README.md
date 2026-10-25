@@ -6,8 +6,10 @@ The extension is the TypeScript counterpart of Pi Codex's browser custom tool. I
 
 ## Install
 
+Prepare the installation checkout as described in [development](../../docs/development.md#本地安装-checkout), then register its package path:
+
 ```bash
-pi install /absolute/path/to/release/packages/pi-browser
+pi install ~/.pi/pi-Serraly/packages/pi-browser
 ```
 
 Requires Pi 1.0.0 or newer, Node.js 22.19 or newer, and a Chrome-family browser with remote debugging enabled at `chrome://inspect/#remote-debugging`.

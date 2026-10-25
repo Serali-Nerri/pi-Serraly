@@ -7,6 +7,7 @@
 ## Current local differences
 
 - package.json removes npm publish/prepack/pack lifecycle configuration, adds UPSTREAM.md to the shipped files, and pins the typebox devDependency to the Pi 1.4.0 host's 1.3.27. The build, check, typecheck and lint scripts are retained.
-- README.md installs from an immutable release.
+- README.md uses a separately prepared installation checkout and native Pi registration.
+- package.json exposes the existing changelog entry as ./changelog so the optional local aggregate preserves both Pi entries through public exports.
 
 Runtime TypeScript sources, the remote worker build and bundled assets match the baseline.

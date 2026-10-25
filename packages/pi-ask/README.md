@@ -4,14 +4,16 @@ Adds one agent-callable `ask` tool for human input. It handles free-text prompts
 
 ## Install
 
+Prepare the installation checkout as described in [development](../../docs/development.md#本地安装-checkout), then register its package path:
+
 ```bash
-pi install /absolute/path/to/release/packages/pi-ask
+pi install ~/.pi/pi-Serraly/packages/pi-ask
 ```
 
 Try it for one session:
 
 ```bash
-pi --no-extensions --no-skills -e /absolute/path/to/release/packages/pi-ask
+pi --no-extensions --no-skills -e ~/.pi/pi-Serraly/packages/pi-ask
 ```
 
 When Pi Codex Conversion 3.0.52 or newer is installed too, `ask` is available inside Code and Notebook Mode as `await tools.ask({ prompts, delivery?, handoff? })`.

@@ -8,10 +8,10 @@ For the argument and token numbers, read [How I gave Pi 17 tools without loading
 
 ## Install
 
-From an immutable Serraly release:
+Prepare the installation checkout as described in [development](../../docs/development.md#本地安装-checkout), then register its package path:
 
 ```bash
-pi install /absolute/path/to/release/packages/pi-codex-conversion
+pi install ~/.pi/pi-Serraly/packages/pi-codex-conversion
 ```
 
 Requires Pi 1.4.0 or newer and Node.js 22.19 or newer. Native helpers for macOS, Linux and Windows are bundled for x64 and arm64.
@@ -369,16 +369,16 @@ Native compaction requires OpenAI Codex or an explicitly configured compatible p
 <details>
 <summary><strong>Migrating from Lite</strong></summary>
 
-Lite has graduated into this package and receives no updates. Remove it from Pi if installed because both packages share commands and configuration. Install this package from an immutable release:
+Lite has graduated into this package and receives no updates. Remove it from Pi if installed because both packages share commands and configuration. Install this package from the prepared installation checkout:
 
 ```bash
-pi install /absolute/path/to/release/packages/pi-codex-conversion
+pi install ~/.pi/pi-Serraly/packages/pi-codex-conversion
 ```
 
 Your existing `~/.pi/agent/pi-codex-conversion.json` still loads. Image generation is separate:
 
 ```bash
-pi install /absolute/path/to/release/packages/pi-codex-imagegen
+pi install ~/.pi/pi-Serraly/packages/pi-codex-imagegen
 ```
 
 Web search remains an external extension outside this repository.

@@ -15,19 +15,24 @@
 | [pi-auto-trees](packages/pi-auto-trees/README.md) | 会话 marker、prime 与 end |
 | [pi-ui](packages/pi-ui/README.md) | Thinking、Footer、活动完成提示和置顶用户消息；不接管工具渲染 |
 
-每包独立注册，只启用需要的包，不使用上游聚合包。context-view 从其独立上游安装。
+默认逐包注册，只启用需要的包。可选的 [pi-extensions](packages/pi-extensions/README.md) 一次登记前七包的独立入口，可在 `pi config` 中分别开关，不包含 pi-ui；不要与其中成员重复登记。context-view 从其独立上游安装。
 
 ## 开发与部署
 
 ```sh
 bun install --frozen-lockfile --ignore-scripts
-npm run verify
-bun run release -- --output /absolute/path/to/new-release
+bun run build -- --package pi-codex-conversion
+bun run check -- --package pi-codex-conversion
+bun run test -- --package pi-codex-conversion
 ```
 
-release 离线消费已构建产物和本地依赖缓存，拒绝覆盖已有目录，不安装到 Pi、不修改设置。正式启用时逐包引用不可变 release 中的 `packages/<包名>`，不要安装开发根目录。
+开发目录与安装 checkout 分开。安装 checkout 是完整仓库，默认放在 `~/.pi/pi-Serraly`：用 Bun 准备依赖和产物，再用原生 Pi 命令逐包登记，例如 `pi install ~/.pi/pi-Serraly/packages/pi-codex-conversion`。本地路径原地加载；Pi 不复制、不构建、不安装其依赖。根目录不注册扩展，安装全部依赖也不会自动启用所有包。
 
-验证使用临时 HOME/config/session、合成夹具和网络拒绝，不读取真实凭据、不发送模型请求。浏览器、Herdr、Codex 登录等外部集成仍需另行授权验收。
+安装 checkout 作为一个 workspace 更新，已登记的包在下一次完整启动时加载更新。依赖准备、设置变更、更新及回滚步骤见 [development](docs/development.md#本地安装-checkout)。
+
+跨包或构建、安装、release 工具修改使用 `npm run verify`。`bun run release -- --output /absolute/path/to/new-release` 保留为可选的离线整仓快照，不是日常安装的前置步骤。
+
+自动验证在隔离环境中离线运行。真实登录、模型及外部服务验收须另行授权，见 [测试与隔离](docs/development.md#测试与隔离)。
 
 ## 维护导航
 

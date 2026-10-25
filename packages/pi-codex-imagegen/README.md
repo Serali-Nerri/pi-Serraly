@@ -4,7 +4,9 @@ Codex image generation and editing for ordinary Pi, Code Mode, and Notebook Mode
 
 ## Install
 
-    pi install /absolute/path/to/release/packages/pi-codex-imagegen
+Prepare the installation checkout as described in [development](../../docs/development.md#本地安装-checkout), then register its package path:
+
+    pi install ~/.pi/pi-Serraly/packages/pi-codex-imagegen
 
 Requires Pi 1.0.0 or newer and Node.js 22.19 or newer.
 

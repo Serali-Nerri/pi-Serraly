@@ -1,0 +1,62 @@
+{
+	"name": "pi-extensions",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Optional aggregate for the seven retained Howaboua Pi extensions",
+	"type": "module",
+	"license": "MIT",
+	"keywords": [
+		"pi-package",
+		"pi-extension",
+		"pi",
+		"howaboua"
+	],
+	"engines": {
+		"node": ">=22.19.0"
+	},
+	"files": [
+		"extensions/",
+		"README.md",
+		"UPSTREAM.md",
+		"LICENSE",
+		"tsconfig.json",
+		"biome.json"
+	],
+	"pi": {
+		"extensions": [
+			"./extensions/pi-codex-conversion.ts",
+			"./extensions/pi-ask.ts",
+			"./extensions/pi-browser-changelog.ts",
+			"./extensions/pi-browser.ts",
+			"./extensions/pi-codex-imagegen.ts",
+			"./extensions/pi-agent-board-changelog.ts",
+			"./extensions/pi-agent-board.ts",
+			"./extensions/pi-auto-trees.ts",
+			"./extensions/pi-shepherdr.ts"
+		]
+	},
+	"scripts": {
+		"check": "bun run lint && bun run typecheck",
+		"typecheck": "tsgo --noEmit",
+		"lint": "biome check .",
+		"format": "biome check --write ."
+	},
+	"dependencies": {
+		"@howaboua/pi-agent-board": "workspace:*",
+		"@howaboua/pi-ask": "workspace:*",
+		"@howaboua/pi-auto-trees": "workspace:*",
+		"@howaboua/pi-browser": "workspace:*",
+		"@howaboua/pi-codex-conversion": "workspace:*",
+		"@howaboua/pi-codex-imagegen": "workspace:*",
+		"@howaboua/pi-shepherdr": "workspace:*"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-ai": "*",
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*",
+		"typebox": "*"
+	},
+	"devDependencies": {
+		"@earendil-works/pi-coding-agent": "1.4.0"
+	}
+}

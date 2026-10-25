@@ -4,14 +4,16 @@ Adds three commands for carrying useful context through long Pi sessions without
 
 ## Install
 
+Prepare the installation checkout as described in [development](../../docs/development.md#本地安装-checkout), then register its package path:
+
 ```bash
-pi install /absolute/path/to/release/packages/pi-auto-trees
+pi install ~/.pi/pi-Serraly/packages/pi-auto-trees
 ```
 
 Try it for one session:
 
 ```bash
-pi --no-extensions --no-skills -e /absolute/path/to/release/packages/pi-auto-trees
+pi --no-extensions --no-skills -e ~/.pi/pi-Serraly/packages/pi-auto-trees
 ```
 
 ## Usage

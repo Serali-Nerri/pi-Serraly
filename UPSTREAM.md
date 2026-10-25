@@ -16,4 +16,6 @@
 
 独立的 [pi-ui](packages/pi-ui/UPSTREAM.md) 从本仓精简 UI 分支抽取 Thinking/Footer/活动完成提示/置顶消息的最小展示契约，保留相关 MIT 来源与许可，不属于上述七包上游。
 
-不保留上游个人 AGENTS/.pi、聚合包和全仓发布系统。包原始 CHANGELOG 记录上游历史，本仓当前差异由各包 UPSTREAM 持有；更新步骤见 [development](docs/development.md#手动同步上游)。
+[pi-extensions](packages/pi-extensions/UPSTREAM.md) 是本仓可选整合包，参照同一固定提交的包依赖模式，使用可独立开关的多个转发入口；成员清单和版本由本仓维护。
+
+不保留上游个人 AGENTS/.pi 和全仓发布系统。包原始 CHANGELOG 记录上游历史，本仓当前差异由各包 UPSTREAM 持有；更新步骤见 [development](docs/development.md#手动同步上游)。
