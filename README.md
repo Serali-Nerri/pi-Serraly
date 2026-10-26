@@ -27,9 +27,9 @@ bun run check -- --package pi-codex-conversion
 bun run test -- --package pi-codex-conversion
 ```
 
-开发目录与安装 checkout 分开。安装 checkout 是完整仓库，默认放在 `~/.pi/pi-Serraly`：用 Bun 准备依赖和产物，再用原生 Pi 命令逐包登记，例如 `pi install ~/.pi/pi-Serraly/packages/pi-codex-conversion`。本地路径原地加载；Pi 不复制、不构建、不安装其依赖。根目录不注册扩展，安装全部依赖也不会自动启用所有包。
+开发仓库与安装工作区分开。安装工作区保留完整仓库文件但不含 `.git`，默认放在 `~/.pi/pi-Serraly`：用 Bun 准备依赖和产物，再用原生 Pi 命令逐包登记，例如 `pi install ~/.pi/pi-Serraly/packages/pi-codex-conversion`。pi-ui 和 pi-session-recap 也从同一工作区分别登记，不另复制仓库。本地路径原地加载；Pi 不复制、不构建、不安装其依赖。根目录不注册扩展，安装全部依赖也不会自动启用所有包。
 
-安装 checkout 作为一个 workspace 更新，已登记的包在下一次完整启动时加载更新。依赖准备、设置变更、更新及回滚步骤见 [development](docs/development.md#本地安装-checkout)。
+安装工作区整体更新，不在安装目录执行 Git 操作；历史保留在开发仓库。已登记的包在下一次完整启动时加载更新。依赖准备、设置变更、更新及回滚步骤见 [development](docs/development.md#本地安装工作区)。
 
 跨包或构建、安装、release 工具修改使用 `npm run verify`。`bun run release -- --output /absolute/path/to/new-release` 保留为可选的离线整仓快照，不是日常安装的前置步骤。
 

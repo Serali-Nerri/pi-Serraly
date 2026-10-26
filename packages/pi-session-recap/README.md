@@ -6,7 +6,7 @@
 
 ## 使用
 
-在准备好依赖的独立安装 checkout 中，按仓库 [交付流程](../../docs/development.md#本地安装-checkout) 注册本包：
+在准备好依赖的独立安装工作区中，按仓库 [交付流程](../../docs/development.md#本地安装工作区) 注册本包：
 
 ```sh
 pi install /path/to/pi-Serraly/packages/pi-session-recap

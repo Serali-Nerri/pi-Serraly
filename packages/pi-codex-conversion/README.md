@@ -8,7 +8,7 @@ For the argument and token numbers, read [How I gave Pi 17 tools without loading
 
 ## Install
 
-Prepare the installation checkout as described in [development](../../docs/development.md#本地安装-checkout), then register its package path:
+Prepare the installation workspace as described in [development](../../docs/development.md#本地安装工作区), then register its package path:
 
 ```bash
 pi install ~/.pi/pi-Serraly/packages/pi-codex-conversion
@@ -369,7 +369,7 @@ Native compaction requires OpenAI Codex or an explicitly configured compatible p
 <details>
 <summary><strong>Migrating from Lite</strong></summary>
 
-Lite has graduated into this package and receives no updates. Remove it from Pi if installed because both packages share commands and configuration. Install this package from the prepared installation checkout:
+Lite has graduated into this package and receives no updates. Remove it from Pi if installed because both packages share commands and configuration. Install this package from the prepared installation workspace:
 
 ```bash
 pi install ~/.pi/pi-Serraly/packages/pi-codex-conversion

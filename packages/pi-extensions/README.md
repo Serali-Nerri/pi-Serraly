@@ -8,7 +8,7 @@ This private package imports this repository's members and excludes `pi-ui`. Its
 
 - Pi 1.4.0 or newer.
 - Node.js 22.19 or newer.
-- A separate installation checkout prepared as described in [development](../../docs/development.md#本地安装-checkout). Pi loads local packages in place without installing dependencies or building outputs.
+- A separate installation workspace prepared as described in [development](../../docs/development.md#本地安装工作区). Pi loads local packages in place without installing dependencies or building outputs.
 
 ## Included packages
 
@@ -45,7 +45,7 @@ Each member is a `workspace:*` dependency so its public exports resolve from thi
 
 ## Install
 
-Install individual packages by default, or register this aggregate once and select its entries in `pi config`. Use a completed installation checkout:
+Install individual packages by default, or register this aggregate once and select its entries in `pi config`. Use a completed installation workspace:
 
 ```sh
 pi install ~/.pi/pi-Serraly/packages/pi-extensions
@@ -65,7 +65,7 @@ pi --no-extensions --no-skills -e ./packages/pi-extensions
 
 Do not register the aggregate and any of its seven members at the same time. Pi loads both sources, so tools, commands, listeners and changelog coordinators would be duplicated.
 
-Prepare the separate installation checkout from Requirements before changing registrations.
+Prepare the separate installation workspace from Requirements before changing registrations.
 
 1. Record the current sources with `pi list`.
 2. Back up Pi settings and any package resource filters.

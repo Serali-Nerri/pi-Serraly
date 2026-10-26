@@ -37,14 +37,18 @@ pi-ui 的行为测试通过真实 Pi 消息/终端组件、扩展事件和隔离
 
 pi-session-recap 不需要构建；使用 `bun run check -- --package pi-session-recap` 和 `bun run test -- --package pi-session-recap` 验证。包测试保留用户要求的大文本历史裁剪回归覆盖，通过公开历史构建 seam 检查 CPU 用时、UTF-8 头尾和字节预算。其余模型回包解析、历史裁剪与自动计费门控使用合成数据和假时钟一次性验证；真实验收须另获授权，在 Herdr sandbox 连续执行工具回合，再检查 `/recap` 和空闲摘要。缩短计时只能修改 sandbox 配置，不改变产品默认 30 分钟。配置 `auto: false` 可关闭后台模型请求。
 
-## 本地安装 checkout
+## 本地安装工作区
 
-使用独立于开发目录的完整仓库 checkout，例如 `~/.pi/pi-Serraly`；不必先创建 release，也不将开发目录登记到真实 Pi。同步时保留目录中与仓库无关的现有数据。
+使用独立于开发目录的完整安装工作区，例如 `~/.pi/pi-Serraly`。保留完整仓库文件，但不交付 `.git`；Git 历史和提交只保存在开发仓库。不必先创建 release，也不将开发目录登记到真实 Pi。所有包使用同一个安装工作区，pi-ui 与 pi-session-recap 仍各自登记，不另复制仓库。同步时保留目录中与仓库无关的现有数据。
 
-在安装 checkout 中按普通 workspace 流程准备依赖和构建：
+从开发仓库已验证的提交导出到新目录，再按普通 workspace 流程准备依赖和构建：
 
 ```sh
-cd ~/.pi/pi-Serraly
+# 在开发仓库执行；已有安装更新时使用新的暂存目录，不覆盖运行中的工作区：
+install_dir="$HOME/.pi/pi-Serraly"
+mkdir "$install_dir"
+git archive HEAD | tar -x -C "$install_dir"
+cd "$install_dir"
 bun install --frozen-lockfile --ignore-scripts
 bun run build
 # 构建后移除开发依赖树，再准备不含物理 Pi host 的运行依赖：
@@ -54,14 +58,17 @@ bun install --production --omit peer --frozen-lockfile --ignore-scripts --linker
 # 获得真实设置变更授权、验证备份和恢复后，逐包登记：
 pi install ~/.pi/pi-Serraly/packages/pi-codex-conversion
 pi install ~/.pi/pi-Serraly/packages/pi-ask
+# 独立扩展也使用同一工作区：
+pi install ~/.pi/pi-Serraly/packages/pi-ui
+pi install ~/.pi/pi-Serraly/packages/pi-session-recap
 pi list
 ```
 
 缓存齐全时两次 install 都可加 `--offline`。缓存不足时先申请依赖安装所需的 registry 访问。不要复制开发 node_modules；宿主包由运行中的 Pi 提供，不能把构建用的物理 Pi 副本留在运行依赖树。需要再次构建或检查时，先恢复完整开发依赖，结束后重新准备生产依赖。
 
-Pi 对本地包只登记并原地加载，不复制、不构建、不安装依赖；删除登记用 `pi remove <source>`。本地代码更新由 Git/Bun 完成，不依赖 `pi update` 拉取。workspace 运行依赖正常安装，例如 Shepherdr 使用 agent-board，但只有显式登记其包入口才启用 agent-board；根包的 pi 资源数组为空，不通过安装根目录启用全部扩展。
+Pi 对本地包只登记并原地加载，不复制、不构建、不安装依赖；删除登记用 `pi remove <source>`。本地代码更新由开发仓库导出和 Bun 准备完成，不在安装目录执行 `git pull`，也不依赖 `pi update` 拉取。workspace 运行依赖正常安装，例如 Shepherdr 使用 agent-board，但只有显式登记其包入口才启用 agent-board；根包的 pi 资源数组为空，不通过安装根目录启用全部扩展。
 
-更新前记录安装 checkout 的 Git 状态并保留可恢复副本，再同步完整仓库和锁文件、重新准备依赖与产物。整个 checkout 是一个 workspace，更新可影响其中多个已登记包。路径不变时无需重写设置，下一次完整启动加载更新。回滚恢复完整 checkout；如果改过登记路径，还需恢复 settings 备份。
+更新前保留完整安装工作区的可恢复副本；若原目录仍带 `.git`，先核对未提交文件和未发布提交已在开发仓库保存，再移除安装目录的 Git 元数据。将已验证提交导出到新暂存目录，准备依赖、产物并离线验收，再整体替换安装工作区，保留本地数据。整个工作区作为一个 workspace 更新，可能影响多个已登记包；不按包冻结旧产物。路径不变时无需重写设置，下一次完整启动加载更新。回滚恢复完整安装工作区；如果改过登记路径，还需恢复 settings 备份。
 
 真实设置切换必须验证备份可原样恢复；迁移时替换原 source，保留资源启停过滤及无关配置。Pi 会将本地路径规范化为相对配置目录的 source；`pi config` 显示该原文，实际路径以 `pi list` 为准。验收完成后可清理不再使用的安装目录和备份。
 
@@ -98,6 +105,6 @@ release 不构建、不联网、不改真实设置。按各包 files 清单交�
 2. 核对 peer/运行依赖、Pi/Node 基线、原生程序、WASM、profiles、远端脚本、许可和新增跨包引用。
 3. 手动合入所需变更，保留局部点击展开、生命周期约束和本仓 CDP 维护源；渲染主体及 Display 默认值跟随上游，不恢复未迁入包工作流。
 4. 更新来源和当前差异，文档只说明当前契约，不累积工作日志。
-5. 显式更新 Bun 锁文件，运行相关检查、完整 verify，同步安装 checkout 或创建整仓快照。
+5. 显式更新 Bun 锁文件，运行相关检查、完整 verify，同步不含 `.git` 的安装工作区或创建整仓快照。
 
 上游个人工作流不是本仓配置。各包已有配置/数据的运行行为沿用上游；工程迁移不读取或重写真实用户状态。

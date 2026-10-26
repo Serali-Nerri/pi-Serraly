@@ -4,7 +4,7 @@ Adds one agent-callable `ask` tool for human input. It handles free-text prompts
 
 ## Install
 
-Prepare the installation checkout as described in [development](../../docs/development.md#本地安装-checkout), then register its package path:
+Prepare the installation workspace as described in [development](../../docs/development.md#本地安装工作区), then register its package path:
 
 ```bash
 pi install ~/.pi/pi-Serraly/packages/pi-ask

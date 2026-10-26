@@ -48,11 +48,10 @@ Thinking 以连续 reasoning run 为粒度，支持标题、尾部预览、局�
 
 build 只生成产物，支持按包及其 workspace 构建依赖选择；check/test 不隐式构建，test 支持包对应的定向集成测试；verify 构建一次后检查、测试。release 只消费现有产物和锁定缓存，不重新构建或联网。
 
-## 完整安装 checkout
+## 完整安装工作区
 
 ```text
 ~/.pi/pi-Serraly/
-  .git/
   package.json
   bun.lock
   scripts/、docs/、test/  完整仓库源码
@@ -60,11 +59,11 @@ build 只生成产物，支持按包及其 workspace 构建依赖选择；check/
   node_modules/         Bun workspace 依赖
 ```
 
-安装 checkout 独立于开发树，按普通 Git/Bun workspace 更新。依赖安装和构建属于仓库，登记、资源过滤、加载与移除属于原生 Pi。生产依赖树不携带物理宿主包；准备命令由 development 持有。
+安装工作区独立于开发树，保留完整仓库文件但不含 `.git`；Git 历史只保留在开发仓库。所有包共用这一工作区，包括独立登记的 pi-ui 和 pi-session-recap。依赖安装和构建通过普通 Bun workspace 命令完成，登记、资源过滤、加载与移除属于原生 Pi。生产依赖树不携带物理宿主包；准备和整仓更新命令由 development 持有。
 
 所有成员存在并可导入，不代表被启用。默认逐包 pi install；Shepherdr 的 agent-board 依赖不会自动登记 agent-board 入口。根 manifest 不注册资源。可选整合包只有被显式登记才提供七包入口，成员及独立 changelog 的加载由 Pi 资源开关控制。
 
-更新整个 checkout 可能同时改变多个已登记包，下次完整启动统一加载。备份与回滚以完整 checkout 和必要的 settings 为单位。
+更新整个工作区可能同时改变多个已登记包，下次完整启动统一加载。备份与回滚以完整安装工作区和必要的 settings 为单位；安装目录不负责保存 Git 历史。
 
 ## 固定版本运行树
 

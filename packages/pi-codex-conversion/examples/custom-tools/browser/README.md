@@ -1,6 +1,6 @@
 # Browser
 
-This is the final legacy command-backed browser example. For the maintained browser in ordinary Pi, Code Mode and Notebook Mode, register its path in a prepared installation checkout:
+This is the final legacy command-backed browser example. For the maintained browser in ordinary Pi, Code Mode and Notebook Mode, register its path in a prepared installation workspace:
 
 ```bash
 pi install ~/.pi/pi-Serraly/packages/pi-browser

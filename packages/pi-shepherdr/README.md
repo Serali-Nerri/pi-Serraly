@@ -10,7 +10,7 @@ With Pi Codex's compatible custom developer-message API active, asynchronous wor
 
 ## Install
 
-Prepare the installation checkout as described in [development](../../docs/development.md#本地安装-checkout), then register its package path:
+Prepare the installation workspace as described in [development](../../docs/development.md#本地安装工作区), then register its package path:
 
 ```bash
 pi install ~/.pi/pi-Serraly/packages/pi-shepherdr

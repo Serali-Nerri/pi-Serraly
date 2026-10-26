@@ -7,6 +7,6 @@
 ## Current local differences
 
 - package.json removes npm publish/prepack/pack lifecycle configuration, adds UPSTREAM.md to the shipped files, and pins the typebox devDependency to the Pi 1.4.0 host's 1.3.27. The pi-agent-board dependency and runtime peer contracts are unchanged.
-- README.md uses a separately prepared installation checkout and native Pi registration for Shepherdr and Agent Board; it no longer links the removed root extension API guide.
+- README.md uses a separately prepared installation workspace and native Pi registration for Shepherdr and Agent Board; it no longer links the removed root extension API guide.
 
 Runtime TypeScript sources and bundled profiles match the baseline.

@@ -36,7 +36,7 @@
 
 ## Installation and upstream sync
 
-- Use a separate complete installation checkout. Prepare dependencies and artifacts through normal Bun workspace commands; register package paths with native `pi install`. Do not load the development checkout into real settings or add a custom installer/state file. Treat the installation checkout as one workspace, without per-package artifact freezing.
+- Use a separate complete installation workspace without `.git`; keep Git history in the development repository. Prepare dependencies and artifacts through normal Bun workspace commands; register package paths with native `pi install`. Do not load the development checkout into real settings or add a custom installer/state file. Update the installation as one workspace, without per-package artifact freezing.
 - Default to individual package registration. Aggregates are optional; do not load an aggregate alongside the extensions it activates.
 - Real settings changes require explicit authorization, a verified backup and restore-based rollback.
 - Preserve upstream licenses, binary/WASM/vendor/profiles and pinned provenance. Compare and merge upstream changes rather than overwriting intentional local behavior.

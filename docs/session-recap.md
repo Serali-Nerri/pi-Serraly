@@ -211,4 +211,4 @@ Codex 的相关源码：
 
 ## 下一步
 
-源码实施与模型验收已完成，用户已授权提交与本地安装。按 [开发与安装流程](development.md#本地安装-checkout) 准备独立完整安装 checkout，验证设置备份可恢复后使用原生 `pi install` 登记，设置 `recapModel: "opencode-go/deepseek-v4.1-flash"`，保留默认自动模式与其他扩展配置。已有安装 checkout 含未提交改动时保留原目录，另用完整安装 checkout；安装检查不额外请求真实模型。
+源码实施与模型验收已完成，用户已授权提交与本地安装。按 [开发与安装流程](development.md#本地安装工作区) 准备不含 `.git` 的完整安装工作区；本包与 pi-ui、可选整合包共用同一工作区，分别登记，不另复制仓库。更新前核对并保留原目录的本地改动，验证设置备份可恢复后使用原生 `pi install` 登记本包。保持 `recapModel: "opencode-go/deepseek-v4.1-flash"`、默认自动模式与其他扩展配置；安装检查不额外请求真实模型。

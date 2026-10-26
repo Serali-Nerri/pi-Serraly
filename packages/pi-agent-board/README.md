@@ -6,7 +6,7 @@ Works without Shepherdr or Pi Codex Conversion. Shepherdr adds agent-family memb
 
 ## Install
 
-Prepare the installation checkout as described in [development](../../docs/development.md#本地安装-checkout), then register its package path:
+Prepare the installation workspace as described in [development](../../docs/development.md#本地安装工作区), then register its package path:
 
 Requires Pi 1.1.0 or newer and Node.js 22.18 or newer.
 
