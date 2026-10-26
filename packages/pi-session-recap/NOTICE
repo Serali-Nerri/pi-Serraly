@@ -1,0 +1,12 @@
+pi-session-recap
+
+This package includes a recap prompt and history-selection logic adapted from:
+OpenAI Codex
+Copyright 2025 OpenAI
+https://github.com/openai/codex
+Commit 970111f6cb62cc02fe36a82ea7d71b37a2889c97
+
+Those portions are licensed under the Apache License, Version 2.0; see
+licenses/Apache-2.0.txt. They have been modified for Pi's message format,
+exchange completion rules, portable JSON prompting, and strict parsing.
+The remaining original implementation is licensed under MIT; see LICENSE.

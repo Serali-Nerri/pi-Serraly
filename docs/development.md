@@ -35,6 +35,8 @@ build 构建 conversion、browser、agent-board、pi-ui，其余包保留 TS 入
 
 pi-ui 的行为测试通过真实 Pi 消息/终端组件、扩展事件和隔离配置文件覆盖展示、历史、交互及清理。编译入口必须经 bundled Pi loader 验证真实宿主组件得到装饰，不能仅在直接导入源码时验收；流式回收测试确认旧帧和启动 context 可回收。动画检查不得依靠每帧读取 session 历史。界面验收包含明暗主题、窄屏、拖选和宿主快捷键，不请求真实模型。
 
+pi-session-recap 不需要构建；使用 `bun run check -- --package pi-session-recap` 和 `bun run test -- --package pi-session-recap` 验证。包测试保留用户要求的大文本历史裁剪回归覆盖，通过公开历史构建 seam 检查 CPU 用时、UTF-8 头尾和字节预算。其余模型回包解析、历史裁剪与自动计费门控使用合成数据和假时钟一次性验证；真实验收须另获授权，在 Herdr sandbox 连续执行工具回合，再检查 `/recap` 和空闲摘要。缩短计时只能修改 sandbox 配置，不改变产品默认 30 分钟。配置 `auto: false` 可关闭后台模型请求。
+
 ## 本地安装 checkout
 
 使用独立于开发目录的完整仓库 checkout，例如 `~/.pi/pi-Serraly`；不必先创建 release，也不将开发目录登记到真实 Pi。同步时保留目录中与仓库无关的现有数据。
@@ -65,7 +67,7 @@ Pi 对本地包只登记并原地加载，不复制、不构建、不安装依�
 
 ## 可选整合包
 
-`pi-extensions` 为除 pi-ui 外的七个功能包提供独立入口，包括 agent-board；browser 和 agent-board 的独立 changelog 也各有入口。默认全部启用，`pi config` 在包的 Extensions 分组中逐项列出这九个文件，可分别开关。pi-ui 继续独立安装。
+`pi-extensions` 为原七个功能包提供独立入口，包括 agent-board；browser 和 agent-board 的独立 changelog 也各有入口。默认全部启用，`pi config` 在包的 Extensions 分组中逐项列出这九个文件，可分别开关。pi-ui 和 pi-session-recap 继续独立安装。
 
 ```sh
 # 先移除这七个成员的单包登记，备份并保留所需配置：

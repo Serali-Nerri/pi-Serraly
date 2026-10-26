@@ -2,7 +2,7 @@
 
 ## 源码与职责
 
-`packages/*` 包含七个保留的 howaboua-pi-stuff 功能包、独立的 pi-ui 和可选的 pi-extensions 整合包。前七包保留上游包名、源码组织和公开导出；根目录协调开发与构建，不再次注册能力。
+`packages/*` 包含七个保留的 howaboua-pi-stuff 功能包、独立的 pi-ui 与 pi-session-recap，以及可选的 pi-extensions 整合包。前七包保留上游包名、源码组织和公开导出；根目录协调开发与构建，不再次注册能力。
 
 | 包 | 拥有 | 依赖边界 |
 | --- | --- | --- |
@@ -14,7 +14,8 @@
 | pi-agent-board | 任务板、运行时与 Web 查看器 | 可选接入 conversion 公共协议 |
 | pi-auto-trees | marker/prime/end 会话流程 | 可选接入 conversion 公共协议 |
 | pi-ui | Thinking、Footer、活动完成提示、置顶用户消息、展示设置与清理 | 只依赖 Pi host，不接管工具或执行 |
-| pi-extensions | 显式组合前七包的注册入口，不包含 pi-ui | workspace 运行依赖；调用成员公开导出 |
+| pi-session-recap | TUI 手动/空闲 recap、历史裁剪、临时卡片与请求清理 | 只依赖公开 Pi host API；模型注册表发起独立摘要请求 |
+| pi-extensions | 显式组合前七包的注册入口，不包含 pi-ui 和 pi-session-recap | workspace 运行依赖；调用成员公开导出 |
 
 跨包依赖使用公开导出，不读取兄弟私有源码。宿主包是 peer，不随正式运行树安装；开发使用精确 Pi 1.4.0。外部运行依赖由 workspace 安装。
 
@@ -36,6 +37,7 @@ Thinking 以连续 reasoning run 为粒度，支持标题、尾部预览、局�
 
 ## 资源与构建
 
+- pi-session-recap 使用 TS 入口；默认自动摘要在 settled 后空闲 30 分钟、3 个已完成用户 exchange 且距上次摘要新增 2 个 exchange 时请求模型。只展示临时 widget，不持久化 recap、不进入上下文；可独立配置摘要模型和关闭自动请求，详见包 README。许可随包交付。
 - conversion 保留原生工具源码/随附二进制、WASM、tokenizer、vendor、Code runtime 资源和许可。
 - browser 构建 dist 和远端 worker；agent-board 构建查看器及 Web 静态文件。
 - ask、imagegen、Shepherdr、auto-trees 使用 Pi 支持的 TS 入口；prompts、profiles、远端脚本及包内资源跟随交付。

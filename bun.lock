@@ -183,6 +183,15 @@
         "typebox": "*",
       },
     },
+    "packages/pi-session-recap": {
+      "name": "pi-session-recap",
+      "version": "0.1.0",
+      "peerDependencies": {
+        "@earendil-works/pi-ai": "*",
+        "@earendil-works/pi-coding-agent": "*",
+        "@earendil-works/pi-tui": "*",
+      },
+    },
     "packages/pi-shepherdr": {
       "name": "@howaboua/pi-shepherdr",
       "version": "0.2.23",
@@ -592,6 +601,8 @@
     "path-key": ["path-key@3.1.1", "", {}, "sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q=="],
 
     "pi-extensions": ["pi-extensions@workspace:packages/pi-extensions"],
+
+    "pi-session-recap": ["pi-session-recap@workspace:packages/pi-session-recap"],
 
     "pi-ui": ["pi-ui@workspace:packages/pi-ui"],
 

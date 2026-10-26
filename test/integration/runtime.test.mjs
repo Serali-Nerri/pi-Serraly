@@ -12,6 +12,7 @@ const extensionEntries = [
 	"packages/pi-browser/dist/index.js",
 	"packages/pi-codex-conversion/dist/index.js",
 	"packages/pi-codex-imagegen/index.ts",
+	"packages/pi-session-recap/index.ts",
 	"packages/pi-shepherdr/index.ts",
 	"packages/pi-ui/dist/index.ts",
 ].sort();
@@ -35,6 +36,7 @@ test("released Pi 1.4 loads every imported package and completes session cleanup
 		"packages/pi-browser",
 		"packages/pi-codex-conversion",
 		"packages/pi-codex-imagegen",
+		"packages/pi-session-recap",
 		"packages/pi-shepherdr",
 		"packages/pi-ui",
 	]);
@@ -70,6 +72,7 @@ test("released Pi 1.4 loads every imported package and completes session cleanup
 		"herdr",
 		"marker",
 		"prime",
+		"recap",
 	]) {
 		assert.ok(
 			report.commands.includes(command),

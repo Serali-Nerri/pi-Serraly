@@ -18,4 +18,6 @@
 
 [pi-extensions](packages/pi-extensions/UPSTREAM.md) 是本仓可选整合包，参照同一固定提交的包依赖模式，使用可独立开关的多个转发入口；成员清单和版本由本仓维护。
 
+[pi-session-recap](packages/pi-session-recap/UPSTREAM.md) 是独立扩展，提示词与历史选择参考 OpenAI Codex 的固定提交 `970111f6cb62cc02fe36a82ea7d71b37a2889c97`，包内保留 Apache-2.0 来源与条款；其余原创实现使用 MIT。
+
 不保留上游个人 AGENTS/.pi 和全仓发布系统。包原始 CHANGELOG 记录上游历史，本仓当前差异由各包 UPSTREAM 持有；更新步骤见 [development](docs/development.md#手动同步上游)。

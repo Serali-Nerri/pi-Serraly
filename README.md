@@ -14,8 +14,9 @@
 | [pi-agent-board](packages/pi-agent-board/README.md) | 共享任务板与查看器；Shepherdr 的运行依赖 |
 | [pi-auto-trees](packages/pi-auto-trees/README.md) | 会话 marker、prime 与 end |
 | [pi-ui](packages/pi-ui/README.md) | Thinking、Footer、活动完成提示和置顶用户消息；不接管工具渲染 |
+| [pi-session-recap](packages/pi-session-recap/README.md) | TUI 的 `/recap` 与默认开启的空闲任务摘要；临时展示，不写入模型上下文 |
 
-默认逐包注册，只启用需要的包。可选的 [pi-extensions](packages/pi-extensions/README.md) 一次登记前七包的独立入口，可在 `pi config` 中分别开关，不包含 pi-ui；不要与其中成员重复登记。context-view 从其独立上游安装。
+默认逐包注册，只启用需要的包。可选的 [pi-extensions](packages/pi-extensions/README.md) 一次登记前七包的独立入口，可在 `pi config` 中分别开关，不包含 pi-ui 和 pi-session-recap；不要与其中成员重复登记。context-view 从其独立上游安装。
 
 ## 开发与部署
 
