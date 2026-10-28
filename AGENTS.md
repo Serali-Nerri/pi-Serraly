@@ -2,6 +2,7 @@
 
 ## Working practices
 
+- Prefer CodeGraph for code exploration, call-chain tracing, and change-impact analysis; before first use, load its deferred tool contract in `exec` with `text(ALL_TOOLS.filter(t => t.name.includes("codegraph")))`.
 - Edit owning source, never installed tooling. Validate and report changes. Source edits do not update running packages.
 - Trace failures through supported workflows before fixing them. A synthetic reproducer or possible interleaving alone does not prove exposure. Respect product tradeoffs; optional capabilities are not defects.
 - Update documentation when behavior or usage changes. Use focused package checks while editing; run `npm run verify` for cross-package dependencies, build, installation or release tooling changes.
