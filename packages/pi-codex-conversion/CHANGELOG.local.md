@@ -2,6 +2,11 @@
 
 Local changes and their background, relative to upstream **4.0.5** (`d67cb69b22decc4ea024236ba59dc4ddae9a2334`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
 
+## Deferred-tool grouping
+
+- Group tool announcements by declared namespace, falling back to the registering extension entry so tools from one extension stay together. Namespace descriptions appear once per announcement; Added/Changed notices share the same layout.
+- Keep flat calls, deferred loading, full contracts in `ALL_TOOLS`, persisted snapshots and append-only history unchanged. Unchanged snapshots incur no source lookup or grouping; source labels require no filesystem or network access.
+
 ## Upstream 4.0.5 sync
 
 - Adopt upstream's inactive-by-default tool registration in place of the local runtime-admission and historical-declaration filters. Pi's recorded branch tool state is respected after `/tree` navigation.

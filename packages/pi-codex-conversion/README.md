@@ -192,6 +192,8 @@ Whole-notebook profiles and isolated candidates replace the live state when load
 
 Installed Pi tools and enabled MCP servers are available inside Code and all three notebook modes. Configure MCP servers through Pi. Existing permissions, tool restrictions and disabled servers still apply.
 
+Deferred-tool announcements group tools by their declared namespace, falling back to the registering extension when Pi provides a file source. Groups and tools are ordered by name. Calls remain flat (`tools.web_search(args)`), and full contracts remain in `ALL_TOOLS`. New announcements use this layout; earlier messages are not rewritten or re-announced just to regroup them.
+
 `exec` and `wait` wait for their active Pi tool calls to return before yielding, even when the cell's yield timeout has elapsed.
 
 If a server is still connecting, the agent may need to retry its call. Use **Ctrl+O** to expand or collapse tool details, or click individual notices in fullscreen mode.

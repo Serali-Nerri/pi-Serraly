@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { basename, dirname, extname, isAbsolute } from "node:path";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { ExtensionAPI, ExtensionContext, SessionEntry } from "@earendil-works/pi-coding-agent";
 import { isCodexDeveloperMessageDetails, type CodexDeveloperMessageDetails } from "../../developer-messages.ts";
@@ -76,7 +77,7 @@ export function recordCodeModeToolkit(
 		contract: toolContract(tool),
 		namespace: tool.namespace?.name ?? "",
 	})).sort((left, right) => left.name.localeCompare(right.name));
-	const namespaces = Object.fromEntries(discoverable.flatMap((tool) => tool.namespace
+	const namespaces: Record<string, string> = Object.fromEntries(discoverable.flatMap((tool) => tool.namespace
 		? [[tool.namespace.name, tool.namespace.description?.trim() ?? ""]] : []).sort(([left], [right]) => left!.localeCompare(right!)));
 	// Remember only previously announced tools, so a later removal can revoke the still-callable notice.
 	const known = previous ? [...previous.tools.map((tool) => tool.name), ...(previous.unlisted ?? [])] : [];
@@ -93,21 +94,50 @@ export function recordCodeModeToolkit(
 		: [...standingPromoted.keys()].filter((name) => !callable.has(name));
 	const newlyUnlisted = unlisted.filter((name) => !previous?.unlisted?.includes(name));
 	if (!previous && tools.length === 0 && removed.length === 0) return false;
-	const updateLines = (entries: ToolkitTool[]) => entries.flatMap((entry) => {
-		const tool = current.get(entry.name)!;
-		return !tool.deferLoading ? [`- ${entry.name}:\n${formatCodeModeToolHelp(tool)}`] : toolLines([entry]);
-	});
-	const instructions = Object.entries(namespaces).filter(([name, description]) => !previous || previous.namespaces[name] !== description)
-		.map(([name, description]) => `${name}${description ? `\n${description}` : ""}`);
+	// Group only announcements: provenance does not change contracts or persisted snapshots.
+	const registered = new Map(pi.getAllTools().map((tool) => [tool.name, tool]));
+	const descriptions = new Map(Object.entries(namespaces)
+		.filter(([name, description]) => !previous || previous.namespaces[name] !== description));
+	const groupedLines = (entries: ToolkitTool[], fullHelp = false): string[] => {
+		const groups = new Map<string, { name: string; namespace: string; tools: ToolkitTool[] }>();
+		for (const entry of entries) {
+			const tool = current.get(entry.name)!;
+			let key = entry.namespace ? `namespace:${entry.namespace}` : "";
+			let name = entry.namespace;
+			if (!key && "invoke" in tool) {
+				const source = registered.get(tool.topLevelName ?? tool.name)?.sourceInfo;
+				if (source && isAbsolute(source.path)) {
+					key = `extension:${source.path}`;
+					name = basename(source.path, extname(source.path));
+					if (name === "index") name = basename(source.origin === "package" && source.baseDir ? source.baseDir : dirname(source.path));
+				}
+			}
+			const group = groups.get(key);
+			if (group) group.tools.push(entry);
+			else groups.set(key, { name, namespace: entry.namespace, tools: [entry] });
+		}
+		return [...groups.values()].sort((left, right) => left.name.localeCompare(right.name)).flatMap((group): string[] => {
+			const description = descriptions.get(group.namespace);
+			descriptions.delete(group.namespace);
+			return [
+				...(group.name ? [`## ${group.name}`] : []),
+				...(description ? [description] : []),
+				...group.tools.map((entry) => {
+					const tool = current.get(entry.name)!;
+					return fullHelp && !tool.deferLoading ? `- ${entry.name}:\n${formatCodeModeToolHelp(tool)}` : `- ${entry.name}: ${entry.description}`;
+				}),
+			];
+		});
+	};
 	const content = [
 		previous ? "Toolkit update — current contracts in ALL_TOOLS; supersedes earlier contracts"
 			: standingPromoted.size || discoverable.some((tool) => !tool.deferLoading)
 				? "Tool contracts in ALL_TOOLS; updates supersede standing usage"
 				: "Deferred tools — contracts and arguments in ALL_TOOLS",
-		...instructions,
-		...(!previous ? toolLines(tools.filter((tool) => current.get(tool.name)!.deferLoading))
-			: added.length ? ["Added:", ...updateLines(added)] : []),
-		...(changed.length ? ["Changed:", ...updateLines(changed)] : []),
+		...(!previous ? groupedLines(tools.filter((tool) => current.get(tool.name)!.deferLoading))
+			: added.length ? ["Added:", ...groupedLines(added, true)] : []),
+		...(changed.length ? ["Changed:", ...groupedLines(changed, true)] : []),
+		...Array.from(descriptions, ([name, description]) => [`## ${name}`, ...(description ? [description] : [])]).flat(),
 		...(newlyUnlisted.length ? [`Unlisted: ${newlyUnlisted.join(", ")}. Still callable by name; omitted from ALL_TOOLS`] : []),
 		...(removed.length ? [`Removed: ${removed.join(", ")}. No longer callable; ignore earlier usage`] : []),
 	].join("\n");
@@ -129,8 +159,4 @@ function toolContract(tool: CodeModeToolDefinition): string {
 function excerpt(description: string): string {
 	const line = description.replace(/\s+/g, " ").trim();
 	return line.length > 160 ? `${line.slice(0, 159)}…` : line;
-}
-
-function toolLines(tools: ToolkitTool[]): string[] {
-	return tools.map((tool) => `- ${tool.name}: ${tool.description}`);
 }
