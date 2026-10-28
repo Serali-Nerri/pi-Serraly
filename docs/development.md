@@ -66,6 +66,15 @@ pi list
 
 缓存齐全时两次 install 都可加 `--offline`。缓存不足时先申请依赖安装所需的 registry 访问。不要复制开发 node_modules；宿主包由运行中的 Pi 提供，不能把构建用的物理 Pi 副本留在运行依赖树。需要再次构建或检查时，先恢复完整开发依赖，结束后重新准备生产依赖。
 
+Notes 的 `better-sqlite3@13.0.3` 包含 `prebuilds/**`，无需安装脚本即可在支持的平台加载；不能仅以依赖安装成功代替原生模块验证。完成开发或生产依赖准备后，在隔离 HOME/config 中执行内存数据库探针，交付离线快照后也从快照中的 Notes 包目录执行同一探针：
+
+```sh
+cd packages/pi-notes-compaction
+node --input-type=module -e 'import Database from "better-sqlite3"; const db = new Database(":memory:"); console.log(db.prepare("select sqlite_version() as sqlite").get()); db.close();'
+```
+
+没有匹配预构建的平台需要单独准备该依赖支持的原生构建工具并验证产物；不要盲目信任全部依赖脚本或把其他机器的原生文件复制过来。
+
 Pi 对本地包只登记并原地加载，不复制、不构建、不安装依赖；删除登记用 `pi remove <source>`。本地代码更新由开发仓库导出和 Bun 准备完成，不在安装目录执行 `git pull`，也不依赖 `pi update` 拉取。workspace 运行依赖正常安装，例如 Shepherdr 使用 agent-board，但只有显式登记其包入口才启用 agent-board；根包的 pi 资源数组为空，不通过安装根目录启用全部扩展。
 
 更新前保留完整安装工作区的可恢复副本；若原目录仍带 `.git`，先核对未提交文件和未发布提交已在开发仓库保存，再移除安装目录的 Git 元数据。将已验证提交导出到新暂存目录，准备依赖、产物并离线验收，再整体替换安装工作区，保留本地数据。整个工作区作为一个 workspace 更新，可能影响多个已登记包；不按包冻结旧产物。路径不变时无需重写设置，下一次完整启动加载更新。回滚恢复完整安装工作区；如果改过登记路径，还需恢复 settings 备份。
@@ -74,7 +83,7 @@ Pi 对本地包只登记并原地加载，不复制、不构建、不安装依�
 
 ## 可选整合包
 
-`pi-extensions` 为原七个功能包提供独立入口，包括 agent-board；browser 和 agent-board 的独立 changelog 也各有入口。默认全部启用，`pi config` 在包的 Extensions 分组中逐项列出这九个文件，可分别开关。pi-ui 和 pi-session-recap 继续独立安装。
+`pi-extensions` 为原七个功能包提供独立入口，包括 agent-board；browser 和 agent-board 的独立 changelog 也各有入口。默认全部启用，`pi config` 在包的 Extensions 分组中逐项列出这九个文件，可分别开关。pi-notes-compaction、pi-ui 和 pi-session-recap 继续独立安装。
 
 ```sh
 # 先移除这七个成员的单包登记，备份并保留所需配置：
@@ -82,6 +91,12 @@ pi install ~/.pi/pi-Serraly/packages/pi-extensions
 ```
 
 不要让整合包与成员同时登记。只想启用部分成员时，可逐包安装，也可在整合包的资源开关中禁用不需要的入口；独立 changelog 入口单独控制。整合包依赖使用 workspace 版本，整合包自己的版本独立于成员上游基线。
+
+## Notes 迁移
+
+conversion 4.0.5 将 Notes、History 和共享上下文移至独立的 `pi-notes-compaction`。包进入工作区并不表示启用；需要这些能力时单独执行 `pi install ~/.pi/pi-Serraly/packages/pi-notes-compaction`。主会话与使用共享上下文的 worker 应协调升级。
+
+已有 PCC Notes 配置在缺少新扩展时会阻止模型回合并提示迁移，不自动修改用户配置。Notes 在自己的设置尚不存在时只读兼容旧 PCC 设置。会话裁剪默认 `windows: 0, days: 0`；启用会重写会话 JSONL 且不创建备份，只能由用户在 `/notes` 中显式决定，安装和同步不能替用户开启。
 
 ## 可选整仓 Release
 
@@ -101,9 +116,9 @@ release 不构建、不联网、不改真实设置。按各包 files 清单交�
 
 ## 手动同步上游
 
-1. 选固定提交，阅读根和七包 UPSTREAM，逐包对比，不能直接覆盖目录。
+1. 选固定提交，阅读根和各保留包 UPSTREAM，逐包三方对比，不能直接覆盖目录。
 2. 核对 peer/运行依赖、Pi/Node 基线、原生程序、WASM、profiles、远端脚本、许可和新增跨包引用。
-3. 手动合入所需变更，保留局部点击展开、生命周期约束和本仓 CDP 维护源；渲染主体及 Display 默认值跟随上游，不恢复未迁入包工作流。
+3. 手动合入所需变更，上游已覆盖的修复优先采用上游；保留未覆盖的修复、局部点击展开、生命周期约束和本仓 CDP 维护源。渲染主体及 Display 默认值跟随上游，不恢复未迁入包工作流。
 4. 更新来源和当前差异，文档只说明当前契约，不累积工作日志。
 5. 显式更新 Bun 锁文件，运行相关检查、完整 verify，同步不含 `.git` 的安装工作区或创建整仓快照。
 

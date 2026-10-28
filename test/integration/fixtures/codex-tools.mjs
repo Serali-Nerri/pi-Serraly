@@ -20,7 +20,6 @@ let config = JSON.stringify({
 	executionMode: mode,
 	scope: { allProviders: "on" },
 	tools: { autoReasoning: false },
-	compaction: { continuity: "compaction", method: "v2" },
 	...options.config,
 });
 await writeFile(configPath, config);
@@ -63,9 +62,6 @@ try {
 	assert.deepEqual(session.resourceLoader.getExtensions().errors, []);
 	await session.bindExtensions({ onError: (error) => errors.push(error) });
 	await session.setModel(model);
-	// Keep the manual-hide case independent of Pi's historical declaration replay.
-	if (options.hide) await session.prompt(`/fixture-hide ${options.hide}`);
-
 	await session.prompt("First synthetic point");
 	const target = sessionManager.getBranch().find((entry) =>
 		entry.type === "message" && entry.message.role === "assistant").id;
@@ -77,8 +73,9 @@ try {
 		await writeFile(configPath, config);
 		await session.reload();
 		await session.setModel(model);
+		assert.deepEqual(session.getActiveToolNames().sort(), options.expectedAfterConfig);
 	}
-	if (!options.skipNavigation) await session.navigateTree(target, { summarize: false });
+	await session.navigateTree(target, { summarize: false });
 	await session.prompt("Continue after loadout synchronization");
 	assert.deepEqual(session.getActiveToolNames().sort(), options.expectedAfter ?? expectedActive);
 	assert.deepEqual(requests.at(-1), options.expectedAfter ?? expected);

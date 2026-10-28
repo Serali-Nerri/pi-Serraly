@@ -4,9 +4,9 @@ import type {
 	ContextSharingService,
 	SharedContextRequest,
 	SharedContextResult,
-} from "@howaboua/pi-codex-conversion/context-sharing";
+} from "@howaboua/pi-notes-compaction/context-sharing";
 
-/** Read-only continuity when a live owner disappears. Parsing remains Conversion-owned. */
+/** Read-only continuity when a live owner disappears. Parsing remains Notes-owned. */
 export class AttachmentNotes {
 	private readonly getService: () => ContextSharingService | undefined;
 	constructor(getService: () => ContextSharingService | undefined) {
@@ -19,7 +19,9 @@ export class AttachmentNotes {
 			!service.parseAttachmentNotes ||
 			!service.readAttachmentNotes
 		)
-			throw new Error("Update Codex Conversion to retain attached checkpoints");
+			throw new Error(
+				"Attached checkpoints are unavailable. Load or update Pi Notes Compaction and /reload.",
+			);
 		return {
 			export: service.exportAttachmentNotes,
 			parse: service.parseAttachmentNotes,
@@ -36,7 +38,9 @@ export class AttachmentNotes {
 		const service = this.service();
 		if (service.validate) return service.validate(snapshot, identity);
 		if (identity.storage === "remote")
-			throw new Error("Update Codex Conversion to retain Remote checkpoints");
+			throw new Error(
+				"Remote checkpoints cannot be retained. Update Pi Notes Compaction and /reload.",
+			);
 		this.service().read(snapshot, {
 			action: "list_files_by_prefix",
 			prefix: `${identity.agentName}/notes`,
@@ -53,7 +57,7 @@ export class AttachmentNotes {
 			const verify = this.service().verify;
 			if (!verify)
 				throw new Error(
-					"Update Codex Conversion to authenticate Remote attachments",
+					"Remote attachments cannot be authenticated. Update Pi Notes Compaction and /reload.",
 				);
 			try {
 				await verify(ctx, snapshot);
@@ -80,7 +84,7 @@ export class AttachmentNotes {
 		const execute = this.service().remote;
 		if (!execute)
 			throw new Error(
-				"Update Codex Conversion to read attached Remote context",
+				"Attached Remote context is unavailable. Update Pi Notes Compaction and /reload.",
 			);
 		return execute(ctx, reference, request, signal);
 	}
@@ -174,7 +178,19 @@ export class AttachmentNotes {
 					}),
 		};
 		return {
-			content: [{ type: "text", text: JSON.stringify(details) }],
+			content: [
+				...result.content,
+				{
+					type: "text",
+					text: `Read-only checkpoints captured ${details.captured_at}.${
+						detached
+							? " Counterpart detached."
+							: unavailable
+								? " Live owner and saved updates unavailable; these checkpoints may be stale. Resume the counterpart for current notes."
+								: " Live owner unavailable; reading saved checkpoints."
+					}`,
+				},
+			],
 			details: { codexHistoryNotes: details },
 		};
 	}

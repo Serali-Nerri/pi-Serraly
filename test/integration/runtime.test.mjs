@@ -12,6 +12,8 @@ const extensionEntries = [
 	"packages/pi-browser/dist/index.js",
 	"packages/pi-codex-conversion/dist/index.js",
 	"packages/pi-codex-imagegen/index.ts",
+	"packages/pi-notes-compaction/changelog.ts",
+	"packages/pi-notes-compaction/src/index.ts",
 	"packages/pi-session-recap/index.ts",
 	"packages/pi-shepherdr/index.ts",
 	"packages/pi-ui/dist/index.ts",
@@ -36,6 +38,7 @@ test("released Pi 1.4 loads every imported package and completes session cleanup
 		"packages/pi-browser",
 		"packages/pi-codex-conversion",
 		"packages/pi-codex-imagegen",
+		"packages/pi-notes-compaction",
 		"packages/pi-session-recap",
 		"packages/pi-shepherdr",
 		"packages/pi-ui",
@@ -57,6 +60,7 @@ test("released Pi 1.4 loads every imported package and completes session cleanup
 		"exec",
 		"exec_command",
 		"imagegen",
+		"notes",
 		"view_image",
 		"wait",
 		"write_stdin",
@@ -71,6 +75,7 @@ test("released Pi 1.4 loads every imported package and completes session cleanup
 		"end",
 		"herdr",
 		"marker",
+		"notes",
 		"prime",
 		"recap",
 	]) {
@@ -127,15 +132,22 @@ test("released Pi 1.4 loads every imported package and completes session cleanup
 		"ask",
 		"board",
 		"browser",
+		"history",
 		"imagegen",
+		"notes",
 	]);
 	assert.deepEqual(report.optionalIntegrations.promptMode.tools, [
 		"agents",
 		"ask",
 		"board",
 		"browser",
+		"change_reasoning",
 		"exec",
+		"get_context_remaining",
+		"history",
 		"imagegen",
+		"new_context",
+		"notes",
 	]);
 	assert.equal(report.optionalIntegrations.promptMode.errors, 0);
 	assert.equal(

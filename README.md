@@ -13,10 +13,13 @@
 | [pi-shepherdr](packages/pi-shepherdr/README.md) | Herdr 多代理编排 |
 | [pi-agent-board](packages/pi-agent-board/README.md) | 共享任务板与查看器；Shepherdr 的运行依赖 |
 | [pi-auto-trees](packages/pi-auto-trees/README.md) | 会话 marker、prime 与 end |
+| [pi-notes-compaction](packages/pi-notes-compaction/README.md) | 独立可选的 Notes、历史检索与共享上下文；使用 SQLite 原生模块 |
 | [pi-ui](packages/pi-ui/README.md) | Thinking、Footer、活动完成提示和置顶用户消息；不接管工具渲染 |
 | [pi-session-recap](packages/pi-session-recap/README.md) | TUI 的 `/recap` 与默认开启的空闲任务摘要；临时展示，不写入模型上下文 |
 
-默认逐包注册，只启用需要的包。可选的 [pi-extensions](packages/pi-extensions/README.md) 一次登记前七包的独立入口，可在 `pi config` 中分别开关，不包含 pi-ui 和 pi-session-recap；不要与其中成员重复登记。context-view 从其独立上游安装。
+默认逐包注册，只启用需要的包。可选的 [pi-extensions](packages/pi-extensions/README.md) 一次登记前七包的独立入口，可在 `pi config` 中分别开关，不包含 pi-notes-compaction、pi-ui 和 pi-session-recap；不要与其中成员重复登记。context-view 从其独立上游安装。
+
+conversion 4.0.5 不再内置 Notes/History，也不再导出旧的 `context-sharing`。需要这些能力时单独登记 Notes；旧 Notes 设置不会被静默关闭，缺少新扩展时会提示迁移。详见 [Notes README](packages/pi-notes-compaction/README.md)。
 
 ## 开发与部署
 

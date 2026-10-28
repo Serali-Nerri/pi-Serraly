@@ -70,7 +70,7 @@ async function registerImagegenInCodeMode(
 		return registerCodeModeExtensionTools(pi, () => [
 			adaptToolForCodeMode(tool, {
 				usage: gpt()
-					? "generatedImage(await tools.image_gen__imagegen({prompt:string,transparent_background?:boolean,referenced_image_paths?:string[],num_last_images_to_include?:number})) // prompt: aspect ratio + quality; cutouts: transparency; edits: preserve existing transparency; no selectors=generate, paths/recent count=edit; never text/serialize base64"
+					? "generatedImage(await tools.image_gen__imagegen({prompt:string,transparent_background?:boolean,referenced_image_paths?:string[],num_last_images_to_include?:number})) // prompt: aspect ratio+quality; cutouts=transparent; edits retain transparency; no selectors=generate; paths/recent count=edit; NEVER text/serialize base64"
 					: "generatedImage(await tools.image_gen__imagegen({prompt:string,transparent_background?:boolean,referenced_image_paths?:string[],num_last_images_to_include?:number})) // prompt: include target aspect ratio and quality; transparency for cutouts, preserve existing transparency in edits; no selectors=generate; paths/recent count=edit; never text/serialize base64 result",
 				promptMetadata: false,
 				toolName: { namespace: "image_gen", name: "imagegen" },
@@ -83,7 +83,7 @@ async function registerImagegenInCodeMode(
 			throw new Error(
 				"Update " +
 					CODE_MODE_PACKAGE +
-					" to 3.0.24 or newer to use Codex Imagegen with it",
+					" to 4.0.5 or newer to use Codex Imagegen with it",
 				{ cause: error },
 			);
 		}

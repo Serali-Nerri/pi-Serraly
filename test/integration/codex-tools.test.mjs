@@ -1,58 +1,27 @@
 import test from "node:test";
 import { runIsolated } from "../../scripts/lib/workspace.mjs";
 
-test("plain tree navigation keeps disabled PCC tools out of Code model requests", {
-	timeout: 120_000,
-}, async () => {
-	await runIsolated(process.execPath, ["test/integration/fixtures/codex-tools.mjs", "code"], {
-		timeoutMs: 90_000,
+const normalTools = ["apply_patch", "exec_command", "view_image", "write_stdin"];
+
+for (const mode of ["normal", "code", "ts", "js"]) {
+	test(`${mode} tree navigation keeps never-enabled optional tools inactive`, {
+		timeout: 120_000,
+	}, async () => {
+		const expected = mode === "normal" ? normalTools : mode === "code" ? ["exec", "wait"] : ["exec", "notebook", "wait"];
+		// Native tools restored by Pi remain available; /tree must not discard history.
+		const expectedAfter = [...new Set([...normalTools, ...expected])].sort();
+		await runIsolated(process.execPath, ["test/integration/fixtures/codex-tools.mjs", mode,
+			JSON.stringify({ expected, expectedAfter })], { timeoutMs: 90_000 });
 	});
-});
+}
 
-test("Code tree navigation preserves eligible nested notes and respects disabled window requests", {
-	timeout: 120_000,
-}, async () => {
-	await runIsolated(process.execPath, ["test/integration/fixtures/codex-tools.mjs", "code", JSON.stringify({
-		config: { compaction: { continuity: "notes", newWindowRequests: "off" } },
-		expected: ["exec", "history", "notes", "wait"],
-	})], { timeoutMs: 90_000 });
-});
-
-test("Code integrations cannot admit disabled PCC tools or discard unrelated tools", {
-	timeout: 120_000,
-}, async () => {
-	await runIsolated(process.execPath, ["test/integration/fixtures/codex-tools.mjs", "code", JSON.stringify({
-		integration: true,
-		expectedActive: ["exec", "fixture_lookup", "wait"],
-	})], { timeoutMs: 90_000 });
-});
-
-test("Code tree navigation respects external Notes ownership and its disabled window requests", {
-	timeout: 120_000,
-}, async () => {
-	await runIsolated(process.execPath, ["test/integration/fixtures/codex-tools.mjs", "code", JSON.stringify({
-		externalNotes: true,
-		expected: ["exec", "history", "notes", "wait"],
-	})], { timeoutMs: 90_000 });
-});
-
-test("unchanged Code sync does not force a manually hidden allowed tool back on", {
-	timeout: 120_000,
-}, async () => {
-	await runIsolated(process.execPath, ["test/integration/fixtures/codex-tools.mjs", "code", JSON.stringify({
-		config: { compaction: { continuity: "notes" } },
-		hide: "new_context", skipNavigation: true,
-		expected: ["exec", "history", "notes", "wait"],
-	})], { timeoutMs: 90_000 });
-});
-
-test("disabled auto reasoning is removed from previously admitted model declarations", {
+test("tree navigation restores tools explicitly enabled at the historical node", {
 	timeout: 120_000,
 }, async () => {
 	await runIsolated(process.execPath, ["test/integration/fixtures/codex-tools.mjs", "normal", JSON.stringify({
 		config: { tools: { autoReasoning: true } },
 		expected: ["apply_patch", "change_reasoning", "exec_command", "view_image", "write_stdin"],
 		switchConfig: { tools: { autoReasoning: false } },
-		expectedAfter: ["apply_patch", "exec_command", "view_image", "write_stdin"],
+		expectedAfterConfig: normalTools,
 	})], { timeoutMs: 90_000 });
 });

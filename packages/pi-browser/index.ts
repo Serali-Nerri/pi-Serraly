@@ -71,6 +71,7 @@ async function registerBrowserInCodeMode(
 				kind: "freeform",
 				prepareInput: prepareBrowserInput,
 				discovery: "help",
+				resultValue: (result) => result.details,
 			}),
 		]);
 	} catch (error) {
@@ -79,7 +80,7 @@ async function registerBrowserInCodeMode(
 			throw new Error(
 				"Update " +
 					CODE_MODE_PACKAGE +
-					" to 3.0.24 or newer to use Pi Browser with it",
+					" to 4.0.5 or newer to use Pi Browser with it",
 				{ cause: error },
 			);
 		}

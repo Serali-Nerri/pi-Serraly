@@ -16,7 +16,7 @@ Try it for one session:
 pi --no-extensions --no-skills -e ~/.pi/pi-Serraly/packages/pi-ask
 ```
 
-When Pi Codex Conversion 3.0.52 or newer is installed too, `ask` is available inside Code and Notebook Mode as `await tools.ask({ prompts, delivery?, handoff? })`.
+When Pi Codex Conversion 4.0.5 or newer is installed too, `ask` is available inside Code and Notebook Mode as `await tools.ask({ prompts, delivery?, handoff? })`.
 
 ## How it behaves
 
@@ -41,8 +41,8 @@ Both templates are enabled by default. The extension creates `ask.json` under Pi
 
 ```json
 {
-  "grill": true,
-  "fold": true
+	"grill": true,
+	"fold": true
 }
 ```
 
@@ -51,7 +51,6 @@ Set either value to `false`, then run `/reload`, to hide that template. The same
 ## TUI controls
 
 The panel uses Pi's active keybindings. The defaults are:
-
 - `Up` / `Down` — move through choices, free text, and comments
 - `Enter` — choose or edit the focused item, or save an edit
 - `Left` / `Right` — move between prompts and the review tab

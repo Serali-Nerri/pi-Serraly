@@ -1,6 +1,12 @@
 # Local changelog
 
-Local changes and their background, relative to upstream **4.0.4** (`a06eae4d141fae421a8d0108a4a560013d6508a8`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
+Local changes and their background, relative to upstream **4.0.5** (`d67cb69b22decc4ea024236ba59dc4ddae9a2334`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
+
+## Upstream 4.0.5 sync
+
+- Adopt upstream's inactive-by-default tool registration in place of the local runtime-admission and historical-declaration filters. Pi's recorded branch tool state is respected after `/tree` navigation.
+- Notes and shared context now belong to `pi-notes-compaction`. The `context-sharing` export is replaced by the generic `compaction` and `agent-relationship` exports; legacy Notes-enabled configurations require Notes or an explicit continuity setting change.
+- Preserve aborted-run guards, independent card expansion and `view_image` presentation/cache behavior through the upstream delegate-runtime split. Keep the local workspace installation instructions, static-only check, public exports, dependency alignment and no startup npm polling.
 
 ## 2026-10-25
 
@@ -21,8 +27,7 @@ Local changes and their background, relative to upstream **4.0.4** (`a06eae4d141
 ### `e1f7ec7` — Tool admission after tree navigation
 
 - Background: Pi's `/tree` navigation restores branch tool declarations and can reactivate PCC tools disabled by the current configuration, such as `notes`, `history` and `change_reasoning`. The unchanged-plan sync previously left them admitted, and historical declarations could expose them to the model again.
-- Reapply PCC tool admission on every runtime sync and in historical model-message projection, including unchanged plans after tree navigation.
-- Preserve eligible nested notes/history and external Notes ownership without admitting disabled PCC tools.
+- The former local change reapplied PCC tool admission on runtime sync and filtered historical model-message declarations. It was superseded by upstream's inactive-by-default registration in the 4.0.5 sync above.
 
 ### Repository metadata only
 

@@ -1,6 +1,6 @@
 {
 	"name": "@howaboua/pi-browser",
-	"version": "0.0.10",
+	"version": "0.0.11",
 	"description": "Logged-in browser inspection and control for Pi, Code Mode and Notebook Mode.",
 	"type": "module",
 	"license": "MIT",
@@ -44,7 +44,7 @@
 		"lint": "biome check ."
 	},
 	"peerDependencies": {
-		"@howaboua/pi-codex-conversion": ">=4.0.4",
+		"@howaboua/pi-codex-conversion": ">=4.0.5",
 		"@earendil-works/pi-ai": ">=1.0.0",
 		"@earendil-works/pi-coding-agent": ">=1.0.0",
 		"typebox": "*",
@@ -56,8 +56,8 @@
 		}
 	},
 	"devDependencies": {
-		"@howaboua/pi-codex-conversion": "4.0.4",
-		"@biomejs/biome": "^2.5.15",
+		"@howaboua/pi-codex-conversion": "4.0.5",
+		"@biomejs/biome": "^2.6.3",
 		"@earendil-works/pi-ai": "1.4.0",
 		"@earendil-works/pi-coding-agent": "1.4.0",
 		"@types/node": "^26.6.5",

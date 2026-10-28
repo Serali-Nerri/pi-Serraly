@@ -6,8 +6,8 @@ import { createAgentsTool } from "./src/agents-tool.js";
 import { AgentBoard } from "./src/board/host.js";
 import { registerAgentController } from "./src/controller.js";
 import { registerDeveloperDelivery } from "./src/delivery.js";
-import { AgentFleet } from "./src/fleet.js";
-import { registerAgentEventRenderer } from "./src/messages.js";
+import { AgentFleet } from "./src/fleet/index.js";
+import { registerAgentEventRenderer } from "./src/messages/render.js";
 import { createPeerCommands } from "./src/peer-commands.js";
 import { registerPeerInbox } from "./src/peer-inbox.js";
 import { registerProfilePrompt } from "./src/profile-prompt.js";
@@ -97,7 +97,7 @@ async function registerAgentsInCodeMode(
 			throw new Error(
 				"Update " +
 					CODE_MODE_PACKAGE +
-					" to 3.0.24 or newer to use Shepherdr with it",
+					" to 4.0.5 or newer to use Shepherdr with it",
 				{ cause: error },
 			);
 		}

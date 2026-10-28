@@ -2,7 +2,7 @@
 
 ## 源码与职责
 
-`packages/*` 包含七个保留的 howaboua-pi-stuff 功能包、独立的 pi-ui 与 pi-session-recap，以及可选的 pi-extensions 整合包。前七包保留上游包名、源码组织和公开导出；根目录协调开发与构建，不再次注册能力。
+`packages/*` 包含八个保留的 howaboua-pi-stuff 功能包、独立的 pi-ui 与 pi-session-recap，以及可选的 pi-extensions 整合包。八包保留上游包名、源码组织和公开导出；根目录协调开发与构建，不再次注册能力。
 
 | 包 | 拥有 | 依赖边界 |
 | --- | --- | --- |
@@ -10,16 +10,19 @@
 | pi-ask | 问卷与交互状态 | 可选接入 conversion 公共协议 |
 | pi-browser | 浏览器工具、连接与 worker 生命周期 | 可选接入 conversion 公共协议 |
 | pi-codex-imagegen | 图像请求、产物与工具 | 可选接入 conversion 公共协议 |
-| pi-shepherdr | Herdr fleet、agent 工具、profiles 与共享上下文 | 硬依赖 pi-agent-board；可选接入 conversion |
+| pi-shepherdr | Herdr fleet、agent 工具、profiles 与共享上下文 | 硬依赖 pi-agent-board；可选接入 conversion 与 Notes |
 | pi-agent-board | 任务板、运行时与 Web 查看器 | 可选接入 conversion 公共协议 |
 | pi-auto-trees | marker/prime/end 会话流程 | 可选接入 conversion 公共协议 |
+| pi-notes-compaction | Notes、历史检索、上下文窗口、共享上下文与显式会话裁剪 | better-sqlite3；可选接入 conversion 公共协议 |
 | pi-ui | Thinking、Footer、活动完成提示、置顶用户消息、展示设置与清理 | 只依赖 Pi host，不接管工具或执行 |
 | pi-session-recap | TUI 手动/空闲 recap、历史裁剪、临时卡片与请求清理 | 只依赖公开 Pi host API；模型注册表发起独立摘要请求 |
-| pi-extensions | 显式组合前七包的注册入口，不包含 pi-ui 和 pi-session-recap | workspace 运行依赖；调用成员公开导出 |
+| pi-extensions | 显式组合原七包的注册入口，不包含 Notes、pi-ui 和 pi-session-recap | workspace 运行依赖；调用成员公开导出 |
 
 跨包依赖使用公开导出，不读取兄弟私有源码。宿主包是 peer，不随正式运行树安装；开发使用精确 Pi 1.4.0。外部运行依赖由 workspace 安装。
 
 pi-extensions 显式维护成员依赖和 manifest 入口顺序。七个成员及 browser、agent-board 的独立 changelog 共九个 TS 转发入口，默认全部启用，可由 `pi config` 分别开关。默认仍逐包登记，整合包不能与其成员重复加载。
+
+Notes 独占 Notes/History 与共享上下文，公开 `@howaboua/pi-notes-compaction/context-sharing`；conversion 改为公开 `./compaction` 和 `./agent-relationship`，不再导出旧 `./context-sharing`。Notes 使用 conversion 的压缩协议；Shepherdr 分别接入 Notes 的共享上下文和 conversion 的代理关系。依赖存在不会自动加载 Notes；旧 PCC Notes 配置在未加载新拥有者时阻止运行并提示迁移，不静默改写设置。
 
 ## 工具卡
 
@@ -39,6 +42,8 @@ Thinking 以连续 reasoning run 为粒度，支持标题、尾部预览、局�
 
 - pi-session-recap 使用 TS 入口；默认自动摘要在 settled 后空闲 30 分钟、3 个已完成用户 exchange 且距上次摘要新增 2 个 exchange 时请求模型。只展示临时 widget，不持久化 recap、不进入上下文；可独立配置摘要模型和关闭自动请求，详见包 README。许可随包交付。
 - conversion 保留原生工具源码/随附二进制、WASM、tokenizer、vendor、Code runtime 资源和许可。
+- conversion 的 TS/JS Notebook 与 Deno Code 按需准备各自运行时；普通启动不要求提前下载全部可选运行时。
+- Notes 保留 TS 入口、历史检索 worker 与许可；better-sqlite3 随 npm 包提供平台预构建原生模块，开发、生产安装和离线快照均须验证数据库可加载。会话裁剪默认关闭，只由用户显式启用。
 - browser 构建 dist 和远端 worker；agent-board 构建查看器及 Web 静态文件。
 - ask、imagegen、Shepherdr、auto-trees 使用 Pi 支持的 TS 入口；prompts、profiles、远端脚本及包内资源跟随交付。
 - pi-ui 将包内模块合为已去除类型的 `dist/index.ts` 单入口，Pi host imports 保持 external，避免原生 JS 加载绕过实际宿主组件绑定；保留包许可与来源，不导入旧 pi-ui 工具渲染及框架。

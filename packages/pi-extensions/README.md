@@ -2,7 +2,7 @@
 
 Optional local aggregate that exposes all seven retained Howaboua Pi packages from this checkout as independently switchable Pi entries. It is one Pi package with explicit workspace dependencies. Installing packages individually remains the default.
 
-This private package imports this repository's members and excludes `pi-ui`. Its member set differs from the upstream `@howaboua/pi-extensions` npm bundle; see [UPSTREAM.md](UPSTREAM.md).
+This private package imports this repository's original seven members and excludes `pi-notes-compaction`, `pi-ui` and `pi-session-recap`. Its member set differs from the upstream `@howaboua/pi-extensions` npm bundle; see [UPSTREAM.md](UPSTREAM.md).
 
 ## Requirements
 
@@ -12,17 +12,17 @@ This private package imports this repository's members and excludes `pi-ui`. Its
 
 ## Included packages
 
-| Package | What the aggregate activates |
-| --- | --- |
-| `pi-codex-conversion` | Provider integration, tool execution, Code and Notebook integration, and tool cards. |
-| `pi-ask` | Interactive questions, review triage and human handoff. |
-| `pi-browser` | The logged-in browser tool and `/browser` settings. |
-| `pi-codex-imagegen` | Image generation and editing tools. |
-| `pi-agent-board` | The board tool, `/board` command and viewer. Existing board enablement settings are preserved. |
-| `pi-auto-trees` | The `/marker`, prime and `/end` session workflow. |
-| `pi-shepherdr` | Herdr multi-agent orchestration, including its Agent Board integration. |
+| Package               | What the aggregate activates                                                                   |
+| --------------------- | ---------------------------------------------------------------------------------------------- |
+| `pi-codex-conversion` | Provider integration, tool execution, Code and Notebook integration, and tool cards.           |
+| `pi-ask`              | Interactive questions, review triage and human handoff.                                        |
+| `pi-browser`          | The logged-in browser tool and `/browser` settings.                                            |
+| `pi-codex-imagegen`   | Image generation and editing tools.                                                            |
+| `pi-agent-board`      | The board tool, `/board` command and viewer. Existing board enablement settings are preserved. |
+| `pi-auto-trees`       | The `/marker`, prime and `/end` session workflow.                                              |
+| `pi-shepherdr`        | Herdr multi-agent orchestration, including its Agent Board integration.                        |
 
-`pi-ui` is not included; install it separately. `context-view` is also a separate upstream install.
+`pi-notes-compaction`, `pi-ui` and `pi-session-recap` are not included; install them separately when needed. Conversion no longer owns Notes/History, so the aggregate alone does not restore those capabilities. `context-view` is also a separate upstream install.
 
 The aggregate registers each member's public default extension entry. For `pi-agent-board` and `pi-browser` it also registers their separate public changelog entries, matching those packages' declared Pi manifests. The other five register their changelog coordinator from their default entry.
 
