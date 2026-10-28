@@ -12,7 +12,7 @@
 pi install /path/to/pi-Serraly/packages/pi-session-recap
 ```
 
-无需构建。不包含在 `pi-extensions` 整合包中。仅支持 Pi ≥1.4.0 的 TUI；print、JSON、RPC 模式的 `/recap` 不请求模型。
+无需构建。也可通过 [pi-extensions](../pi-extensions/README.md) 整合包启用，不要与单包重复登记。仅支持 Pi ≥1.4.0 的 TUI；print、JSON、RPC 模式的 `/recap` 不请求模型。
 
 生成时 footer 显示 `drafting recap...`，完成后编辑器上方显示 `Recap:` 和可选的 `Next:`，最多 10 个渲染行。下一次提交消息/命令或新 turn 会清除卡片；空 Enter 也会清除。普通编辑和滚动保留卡片。结果只存在内存中，不写 transcript，不进入模型上下文，恢复会话不会重现。
 

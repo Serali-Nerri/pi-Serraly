@@ -39,7 +39,7 @@ pi-session-recap 不需要构建；使用 `bun run check -- --package pi-session
 
 ## 本地安装工作区
 
-使用独立于开发目录的完整安装工作区，例如 `~/.pi/pi-Serraly`。保留完整仓库文件，但不交付 `.git`；Git 历史和提交只保存在开发仓库。不必先创建 release，也不将开发目录登记到真实 Pi。所有包使用同一个安装工作区，pi-ui 与 pi-session-recap 仍各自登记，不另复制仓库。同步时保留目录中与仓库无关的现有数据。
+使用独立于开发目录的完整安装工作区，例如 `~/.pi/pi-Serraly`。保留完整仓库文件，但不交付 `.git`；Git 历史和提交只保存在开发仓库。不必先创建 release，也不将开发目录登记到真实 Pi。所有包使用同一个安装工作区，可逐包登记或统一使用整合包，不另复制仓库。同步时保留目录中与仓库无关的现有数据。
 
 从开发仓库已验证的提交导出到新目录，再按普通 workspace 流程准备依赖和构建：
 
@@ -83,10 +83,10 @@ Pi 对本地包只登记并原地加载，不复制、不构建、不安装依�
 
 ## 可选整合包
 
-`pi-extensions` 为原七个功能包提供独立入口，包括 agent-board；browser 和 agent-board 的独立 changelog 也各有入口。默认全部启用，`pi config` 在包的 Extensions 分组中逐项列出这九个文件，可分别开关。pi-notes-compaction、pi-ui 和 pi-session-recap 继续独立安装。
+`pi-extensions` 为仓库全部十个扩展提供独立入口，包括 Notes、pi-ui 和 pi-session-recap；browser、agent-board 和 Notes 的独立 changelog 也各有入口。默认全部启用，`pi config` 在包的 Extensions 分组中逐项列出这十三个文件，可分别开关。Notes 的会话裁剪仍默认关闭；Recap 的空闲自动摘要默认开启，会产生模型用量，已有配置保持不变。
 
 ```sh
-# 先移除这七个成员的单包登记，备份并保留所需配置：
+# 先移除全部成员的单包登记（包括 Notes、pi-ui、pi-session-recap），备份并保留所需配置：
 pi install ~/.pi/pi-Serraly/packages/pi-extensions
 ```
 
@@ -94,7 +94,7 @@ pi install ~/.pi/pi-Serraly/packages/pi-extensions
 
 ## Notes 迁移
 
-conversion 4.0.5 将 Notes、History 和共享上下文移至独立的 `pi-notes-compaction`。包进入工作区并不表示启用；需要这些能力时单独执行 `pi install ~/.pi/pi-Serraly/packages/pi-notes-compaction`。主会话与使用共享上下文的 worker 应协调升级。
+conversion 4.0.5 将 Notes、History 和共享上下文移至独立的 `pi-notes-compaction`。包进入工作区并不表示启用；需要这些能力时单独执行 `pi install ~/.pi/pi-Serraly/packages/pi-notes-compaction`，或启用整合包中的 Notes 入口。主会话与使用共享上下文的 worker 应协调升级。
 
 已有 PCC Notes 配置在缺少新扩展时会阻止模型回合并提示迁移，不自动修改用户配置。Notes 在自己的设置尚不存在时只读兼容旧 PCC 设置。会话裁剪默认 `windows: 0, days: 0`；启用会重写会话 JSONL 且不创建备份，只能由用户在 `/notes` 中显式决定，安装和同步不能替用户开启。
 

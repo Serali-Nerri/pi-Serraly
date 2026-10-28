@@ -12,7 +12,7 @@ Prepare the separate installation workspace described in [development](../../doc
 pi install ~/.pi/pi-Serraly/packages/pi-notes-compaction
 ```
 
-Notes is an optional independent extension; installing the aggregate does not enable it. Its `better-sqlite3` 13.0.3 dependency includes prebuilt native addons. Use a compatible Node.js and platform, and retain those prebuilds in the production installation. Installing the Pi package path alone does not install dependencies.
+Notes can be registered independently or enabled through [pi-extensions](../pi-extensions/README.md); do not register both. Its `better-sqlite3` 13.0.3 dependency includes prebuilt native addons. Use a compatible Node.js and platform, and retain those prebuilds in the production installation. Installing the Pi package path alone does not install dependencies.
 
 After preparing or refreshing production dependencies, including an offline installation, verify that the native addon loads without overrides:
 

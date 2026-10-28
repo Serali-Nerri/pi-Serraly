@@ -6,8 +6,9 @@
 	"description": "Minimal Thinking, footer and sticky prompt presentation for Pi",
 	"license": "MIT",
 	"engines": { "node": ">=22.19.0" },
-	"files": ["dist", "README.md", "UPSTREAM.md", "LICENSE", "licenses"],
+	"files": ["dist", "types", "README.md", "UPSTREAM.md", "LICENSE", "licenses"],
 	"main": "./dist/index.ts",
+	"types": "./types/index.d.ts",
 	"pi": { "extensions": ["./dist/index.ts"] },
 	"peerDependencies": {
 		"@earendil-works/pi-ai": "*",

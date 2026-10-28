@@ -61,6 +61,7 @@
 	},
 	"exports": {
 		".": "./src/index.ts",
+		"./changelog": "./changelog.ts",
 		"./context-sharing": "./src/context-sharing.ts"
 	}
 }

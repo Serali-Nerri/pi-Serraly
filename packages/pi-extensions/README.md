@@ -1,8 +1,8 @@
 # pi-extensions
 
-Optional local aggregate that exposes all seven retained Howaboua Pi packages from this checkout as independently switchable Pi entries. It is one Pi package with explicit workspace dependencies. Installing packages individually remains the default.
+Optional local aggregate that exposes all ten extensions in this checkout as independently switchable Pi entries. It is one Pi package with explicit workspace dependencies. Installing packages individually remains the default.
 
-This private package imports this repository's original seven members and excludes `pi-notes-compaction`, `pi-ui` and `pi-session-recap`. Its member set differs from the upstream `@howaboua/pi-extensions` npm bundle; see [UPSTREAM.md](UPSTREAM.md).
+This private package includes the eight retained Howaboua packages, `pi-ui` and `pi-session-recap`. Its member set differs from the upstream `@howaboua/pi-extensions` npm bundle; see [UPSTREAM.md](UPSTREAM.md).
 
 ## Requirements
 
@@ -21,12 +21,15 @@ This private package imports this repository's original seven members and exclud
 | `pi-agent-board`      | The board tool, `/board` command and viewer. Existing board enablement settings are preserved. |
 | `pi-auto-trees`       | The `/marker`, prime and `/end` session workflow.                                              |
 | `pi-shepherdr`        | Herdr multi-agent orchestration, including its Agent Board integration.                        |
+| `pi-notes-compaction` | Persistent notes, session history search, context windows and shared context.                  |
+| `pi-ui`               | Thinking, footer, activity-completion hints and sticky user messages.                          |
+| `pi-session-recap`    | Manual and idle session recap cards.                                                           |
 
-`pi-notes-compaction`, `pi-ui` and `pi-session-recap` are not included; install them separately when needed. Conversion no longer owns Notes/History, so the aggregate alone does not restore those capabilities. `context-view` is also a separate upstream install.
+Enabling the Notes entry provides Notes/History; session auto-pruning remains off by default. Recap's idle automatic mode is on by default and makes model requests; existing member settings are preserved. See each member's README for configuration. `context-view` and other extensions outside this repository remain separate installs.
 
-The aggregate registers each member's public default extension entry. For `pi-agent-board` and `pi-browser` it also registers their separate public changelog entries, matching those packages' declared Pi manifests. The other five register their changelog coordinator from their default entry.
+The aggregate registers each member's public default extension entry. For `pi-agent-board`, `pi-browser` and `pi-notes-compaction` it also registers their separate public changelog entries, matching those packages' declared Pi manifests. Changelog coordinators registered inside other members remain owned by their default entry.
 
-The manifest lists nine entries under `extensions/`: seven member entries plus `pi-browser-changelog.ts` and `pi-agent-board-changelog.ts`. All are enabled by default. `pi config` lists each file separately under the package's **Extensions** group, so members and the two standalone changelog entries can be switched independently. The five changelog coordinators registered inside a member's default entry follow that member's switch.
+The manifest lists thirteen entries under `extensions/`: ten member entries plus `pi-browser-changelog.ts`, `pi-agent-board-changelog.ts` and `pi-notes-compaction-changelog.ts`. All are enabled by default. `pi config` lists each file separately under the package's **Extensions** group, so members and the three standalone changelog entries can be switched independently. Coordinators registered inside a member's default entry follow that member's switch.
 
 For example:
 
@@ -63,13 +66,13 @@ pi --no-extensions --no-skills -e ./packages/pi-extensions
 
 ## Migrate from individual packages
 
-Do not register the aggregate and any of its seven members at the same time. Pi loads both sources, so tools, commands, listeners and changelog coordinators would be duplicated.
+Do not register the aggregate and any of its ten members at the same time, including Notes, UI and Recap. Pi loads both sources, so tools, commands, listeners and changelog coordinators would be duplicated.
 
 Prepare the separate installation workspace from Requirements before changing registrations.
 
 1. Record the current sources with `pi list`.
 2. Back up Pi settings and any package resource filters.
-3. Remove all seven member registrations with `pi remove <source>`.
+3. Remove all member registrations with `pi remove <source>`, preserving any member resource filters when selecting aggregate entries.
 4. Install the aggregate once.
 5. Restart Pi to load the aggregate.
 

@@ -168,7 +168,7 @@
     },
     "packages/pi-extensions": {
       "name": "pi-extensions",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
         "@howaboua/pi-agent-board": "workspace:*",
         "@howaboua/pi-ask": "workspace:*",
@@ -176,7 +176,10 @@
         "@howaboua/pi-browser": "workspace:*",
         "@howaboua/pi-codex-conversion": "workspace:*",
         "@howaboua/pi-codex-imagegen": "workspace:*",
+        "@howaboua/pi-notes-compaction": "workspace:*",
         "@howaboua/pi-shepherdr": "workspace:*",
+        "pi-session-recap": "workspace:*",
+        "pi-ui": "workspace:*",
       },
       "devDependencies": {
         "@earendil-works/pi-coding-agent": "1.4.0",

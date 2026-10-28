@@ -1,8 +1,8 @@
 {
 	"name": "pi-extensions",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"private": true,
-	"description": "Optional aggregate for the seven retained Howaboua Pi extensions",
+	"description": "Optional aggregate for every Pi extension in this workspace",
 	"type": "module",
 	"license": "MIT",
 	"keywords": [
@@ -25,6 +25,8 @@
 	"pi": {
 		"extensions": [
 			"./extensions/pi-codex-conversion.ts",
+			"./extensions/pi-notes-compaction-changelog.ts",
+			"./extensions/pi-notes-compaction.ts",
 			"./extensions/pi-ask.ts",
 			"./extensions/pi-browser-changelog.ts",
 			"./extensions/pi-browser.ts",
@@ -32,7 +34,9 @@
 			"./extensions/pi-agent-board-changelog.ts",
 			"./extensions/pi-agent-board.ts",
 			"./extensions/pi-auto-trees.ts",
-			"./extensions/pi-shepherdr.ts"
+			"./extensions/pi-shepherdr.ts",
+			"./extensions/pi-ui.ts",
+			"./extensions/pi-session-recap.ts"
 		]
 	},
 	"scripts": {
@@ -48,7 +52,10 @@
 		"@howaboua/pi-browser": "workspace:*",
 		"@howaboua/pi-codex-conversion": "workspace:*",
 		"@howaboua/pi-codex-imagegen": "workspace:*",
-		"@howaboua/pi-shepherdr": "workspace:*"
+		"@howaboua/pi-notes-compaction": "workspace:*",
+		"@howaboua/pi-shepherdr": "workspace:*",
+		"pi-session-recap": "workspace:*",
+		"pi-ui": "workspace:*"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-ai": "*",

@@ -7,6 +7,7 @@
 ## Current local differences
 
 - package.json removes npm publishing configuration, ships UPSTREAM.md and LICENSE, and aligns development Pi and TypeBox versions with this workspace. Both Pi extension entries and the public context-sharing export are retained.
-- README.md describes the independent local installation workflow, native SQLite dependency and session-pruning defaults and consequences.
+- package.json exposes the existing changelog entry as ./changelog so the optional local aggregate preserves both Pi entries through public exports.
+- README.md describes individual or aggregate installation, the native SQLite dependency and session-pruning defaults and consequences.
 
 Runtime sources, migration and history safeguards match the baseline.

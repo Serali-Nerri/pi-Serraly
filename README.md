@@ -17,9 +17,9 @@
 | [pi-ui](packages/pi-ui/README.md) | Thinking、Footer、活动完成提示和置顶用户消息；不接管工具渲染 |
 | [pi-session-recap](packages/pi-session-recap/README.md) | TUI 的 `/recap` 与默认开启的空闲任务摘要；临时展示，不写入模型上下文 |
 
-默认逐包注册，只启用需要的包。可选的 [pi-extensions](packages/pi-extensions/README.md) 一次登记前七包的独立入口，可在 `pi config` 中分别开关，不包含 pi-notes-compaction、pi-ui 和 pi-session-recap；不要与其中成员重复登记。context-view 从其独立上游安装。
+默认逐包注册，只启用需要的包。可选的 [pi-extensions](packages/pi-extensions/README.md) 一次登记上述全部十个扩展的独立入口，可在 `pi config` 中分别开关；不要与其中成员重复登记。context-view 从其独立上游安装。
 
-conversion 4.0.5 不再内置 Notes/History，也不再导出旧的 `context-sharing`。需要这些能力时单独登记 Notes；旧 Notes 设置不会被静默关闭，缺少新扩展时会提示迁移。详见 [Notes README](packages/pi-notes-compaction/README.md)。
+conversion 4.0.5 不再内置 Notes/History，也不再导出旧的 `context-sharing`。需要这些能力时单独登记 Notes，或启用整合包中的 Notes 入口；旧 Notes 设置不会被静默关闭，缺少新扩展时会提示迁移。详见 [Notes README](packages/pi-notes-compaction/README.md)。
 
 ## 开发与部署
 
@@ -30,7 +30,7 @@ bun run check -- --package pi-codex-conversion
 bun run test -- --package pi-codex-conversion
 ```
 
-开发仓库与安装工作区分开。安装工作区保留完整仓库文件但不含 `.git`，默认放在 `~/.pi/pi-Serraly`：用 Bun 准备依赖和产物，再用原生 Pi 命令逐包登记，例如 `pi install ~/.pi/pi-Serraly/packages/pi-codex-conversion`。pi-ui 和 pi-session-recap 也从同一工作区分别登记，不另复制仓库。本地路径原地加载；Pi 不复制、不构建、不安装其依赖。根目录不注册扩展，安装全部依赖也不会自动启用所有包。
+开发仓库与安装工作区分开。安装工作区保留完整仓库文件但不含 `.git`，默认放在 `~/.pi/pi-Serraly`：用 Bun 准备依赖和产物，再用原生 Pi 命令逐包登记，例如 `pi install ~/.pi/pi-Serraly/packages/pi-codex-conversion`，或统一登记 `pi-extensions`。所有扩展共用这一工作区，不另复制仓库。本地路径原地加载；Pi 不复制、不构建、不安装其依赖。根目录不注册扩展，安装全部依赖也不会自动启用所有包。
 
 安装工作区整体更新，不在安装目录执行 Git 操作；历史保留在开发仓库。已登记的包在下一次完整启动时加载更新。依赖准备、设置变更、更新及回滚步骤见 [development](docs/development.md#本地安装工作区)。
 

@@ -16,11 +16,11 @@
 | pi-notes-compaction | Notes、历史检索、上下文窗口、共享上下文与显式会话裁剪 | better-sqlite3；可选接入 conversion 公共协议 |
 | pi-ui | Thinking、Footer、活动完成提示、置顶用户消息、展示设置与清理 | 只依赖 Pi host，不接管工具或执行 |
 | pi-session-recap | TUI 手动/空闲 recap、历史裁剪、临时卡片与请求清理 | 只依赖公开 Pi host API；模型注册表发起独立摘要请求 |
-| pi-extensions | 显式组合原七包的注册入口，不包含 Notes、pi-ui 和 pi-session-recap | workspace 运行依赖；调用成员公开导出 |
+| pi-extensions | 显式组合仓库全部十个扩展的注册入口 | workspace 运行依赖；调用成员公开导出 |
 
 跨包依赖使用公开导出，不读取兄弟私有源码。宿主包是 peer，不随正式运行树安装；开发使用精确 Pi 1.4.0。外部运行依赖由 workspace 安装。
 
-pi-extensions 显式维护成员依赖和 manifest 入口顺序。七个成员及 browser、agent-board 的独立 changelog 共九个 TS 转发入口，默认全部启用，可由 `pi config` 分别开关。默认仍逐包登记，整合包不能与其成员重复加载。
+pi-extensions 显式维护成员依赖和 manifest 入口顺序。十个成员及 browser、agent-board、Notes 的独立 changelog 共十三个 TS 转发入口，默认全部启用，可由 `pi config` 分别开关。默认仍逐包登记，整合包不能与其成员重复加载。
 
 Notes 独占 Notes/History 与共享上下文，公开 `@howaboua/pi-notes-compaction/context-sharing`；conversion 改为公开 `./compaction` 和 `./agent-relationship`，不再导出旧 `./context-sharing`。Notes 使用 conversion 的压缩协议；Shepherdr 分别接入 Notes 的共享上下文和 conversion 的代理关系。依赖存在不会自动加载 Notes；旧 PCC Notes 配置在未加载新拥有者时阻止运行并提示迁移，不静默改写设置。
 
@@ -46,7 +46,7 @@ Thinking 以连续 reasoning run 为粒度，支持标题、尾部预览、局�
 - Notes 保留 TS 入口、历史检索 worker 与许可；better-sqlite3 随 npm 包提供平台预构建原生模块，开发、生产安装和离线快照均须验证数据库可加载。会话裁剪默认关闭，只由用户显式启用。
 - browser 构建 dist 和远端 worker；agent-board 构建查看器及 Web 静态文件。
 - ask、imagegen、Shepherdr、auto-trees 使用 Pi 支持的 TS 入口；prompts、profiles、远端脚本及包内资源跟随交付。
-- pi-ui 将包内模块合为已去除类型的 `dist/index.ts` 单入口，Pi host imports 保持 external，避免原生 JS 加载绕过实际宿主组件绑定；保留包许可与来源，不导入旧 pi-ui 工具渲染及框架。
+- pi-ui 将包内模块合为已去除类型的 `dist/index.ts` 单入口，Pi host imports 保持 external，避免原生 JS 加载绕过实际宿主组件绑定；公开类型由 `types/index.d.ts` 提供，避免消费者检查类型已擦除的运行产物。保留包许可与来源，不导入旧 pi-ui 工具渲染及框架。
 - conversion 的 `examples/custom-tools/browser/cdp-lib` 是本仓维护源，不再同步未迁入的 skill 包。
 - pi-extensions 使用 TS 入口与成员公开包入口；成员自己的资源仍由成员包拥有。
 - 不迁入上游个人 AGENTS/.pi、Changesets 发布系统、整合包自动生成流程或无关跨包原生工作流。
@@ -66,7 +66,7 @@ build 只生成产物，支持按包及其 workspace 构建依赖选择；check/
 
 安装工作区独立于开发树，保留完整仓库文件但不含 `.git`；Git 历史只保留在开发仓库。所有包共用这一工作区，包括独立登记的 pi-ui 和 pi-session-recap。依赖安装和构建通过普通 Bun workspace 命令完成，登记、资源过滤、加载与移除属于原生 Pi。生产依赖树不携带物理宿主包；准备和整仓更新命令由 development 持有。
 
-所有成员存在并可导入，不代表被启用。默认逐包 pi install；Shepherdr 的 agent-board 依赖不会自动登记 agent-board 入口。根 manifest 不注册资源。可选整合包只有被显式登记才提供七包入口，成员及独立 changelog 的加载由 Pi 资源开关控制。
+所有成员存在并可导入，不代表被启用。默认逐包 pi install；Shepherdr 的 agent-board 依赖不会自动登记 agent-board 入口。根 manifest 不注册资源。可选整合包只有被显式登记才提供全部十个扩展的入口，成员及独立 changelog 的加载由 Pi 资源开关控制。
 
 更新整个工作区可能同时改变多个已登记包，下次完整启动统一加载。备份与回滚以完整安装工作区和必要的 settings 为单位；安装目录不负责保存 Git 历史。
 
