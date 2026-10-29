@@ -186,6 +186,7 @@ export function createApplyPatchTool(options: ApplyPatchToolOptions = {}): Apply
 	};
 	return {
 		name: "apply_patch",
+		defaultActive: false,
 		label: "apply_patch",
 		description: "Patch files",
 		...(options.promptSnippet === false ? {} : { promptSnippet: "Edit files with patch" }),

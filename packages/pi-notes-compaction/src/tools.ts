@@ -82,6 +82,7 @@ export function createTools(
 		},
 		{
 			name: "new_context",
+			defaultActive: false,
 			label: "new_context",
 			description: NEW_CONTEXT_DESCRIPTION,
 			parameters: Type.Object({}, { additionalProperties: false }),

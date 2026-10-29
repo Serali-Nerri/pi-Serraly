@@ -78,6 +78,7 @@ function createEmptyResultComponent(): Container {
 export function createWriteStdinTool(sessions: ExecSessionManager, options: { promptSnippet?: boolean | undefined; showOutputWhenCollapsed?: boolean | undefined } = {}) {
 	const tool: Parameters<ExtensionAPI["registerTool"]>[0] = {
 		name: "write_stdin",
+		defaultActive: false,
 		label: "write_stdin",
 		description: "Write/poll exec session",
 		...(options.promptSnippet === false ? {} : { promptSnippet: "Write to exec session" }),

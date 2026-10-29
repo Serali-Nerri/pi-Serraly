@@ -49,6 +49,8 @@ In Code Mode and Notebook, plaintext notes and history return ordinary JavaScrip
 
 By default, `new_context` starts a fresh window without generating a summary. The agent receives recent note paths, and Pi's saved history remains available for lookup.
 
+With **New window requests** set to **off**, conversation-tree navigation does not automatically enable `new_context` on a branch that never enabled it. Explicit historical tool activation remains part of the selected branch.
+
 The tool requires a successful checkpoint write immediately before the request. Direct `notes` writes and writes completed through `exec` or `wait` count. A missing, pending or failed write keeps the current run active and asks the agent to save a note first.
 
 Reminders arrive at 85% and 90% context use. With normal compaction off, `/compact` opens a fresh window immediately if the latest completed turn saved fresh notes. Otherwise it requests a checkpoint first. The new window waits for your next prompt; it does not start a continuation turn. Abort, errors and failed writes retain the old context. Overflow recovery still uses Pi's normal compaction.

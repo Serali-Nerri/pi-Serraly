@@ -10,6 +10,7 @@
 - Native runners execute bundled helpers directly. Rebuild locally and use the checkout, never patch installed npm files. Web/image tools belong to their TypeScript packages.
 - Keep src/voice/rust/** and scripts/build-voice-helper.mjs paired; this repository maintains the only voice copy.
 - Tool-card renderers must not retain the host render context or `lastComponent`; see src/tools/code-mode/AGENTS.md.
+- `view_image` result-content images are Pi-owned. Its custom renderer may draw only the details-only text-model preview, respecting `showImages`; never copy those images into model-visible content for display.
 - Keep the typebox devDependency aligned with the host Pi runtime. Pi 1.4.0 resolves typebox 1.3.27; a duplicate 1.3.37 copy breaks declaration emit for public schemas.
 - Session startup is offline. Do not poll npm or any registry for version updates; local checkout or optional release updates are managed explicitly.
 - tools.customRustBinariesDir is the filename-based bundled-helper override, not a Code host override. Bundled-helper startup incompatibility errors point there, not through loader noise.

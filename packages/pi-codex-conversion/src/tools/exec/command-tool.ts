@@ -171,6 +171,7 @@ export function createExecCommandTool(tracker: ExecCommandTracker, sessions: Exe
 	const constrainedSampling = getExperimentalToolSampling("exec_command");
 	const tool: Parameters<ExtensionAPI["registerTool"]>[0] = {
 		name: "exec_command",
+		defaultActive: false,
 		label: "exec_command",
 		description: "Run shell commands; may return session_id",
 		...(options.promptSnippet === false ? {} : { promptSnippet: "Run command" }),

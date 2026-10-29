@@ -161,6 +161,7 @@ export function createViewImageTool(options: CreateViewImageToolOptions = {}): T
 
 	return {
 		name: "view_image",
+		defaultActive: false,
 		label: "view_image",
 		description: "View image",
 		...(options.promptSnippet === false ? {} : { promptSnippet: "View image" }),
@@ -182,14 +183,17 @@ export function createViewImageTool(options: CreateViewImageToolOptions = {}): T
 		renderCall(args, theme) {
 			return renderCodexToolCell("Viewed Image", typeof args["path"]! === "string" ? args["path"]! : undefined, theme);
 		},
-		renderResult(result, { isPartial }, theme) {
+		renderResult(result, { isPartial }, theme, context) {
 			if (isPartial) {
 				return new Text(theme.fg("warning", "Loading image..."), 0, 0);
 			}
 			const textBlock = result.content.find((item) => item.type === "text");
 			const text = theme.fg("dim", textBlock?.type === "text" ? textBlock.text : "");
-			const content = result.content.some((item) => item.type === "image") ? result.content : [...result.content, ...imageContentsFromViewImageDetails(result.details)];
-			return renderTextWithImages(text, content, theme);
+			return renderTextWithImages(
+				text,
+				context.showImages ? imageContentsFromViewImageDetails(result.details) : [],
+				theme,
+			);
 		},
 		}),
 	};

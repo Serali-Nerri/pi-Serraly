@@ -53,7 +53,7 @@ Choose an execution mode under `/codex` → **General**:
 
 Code starts fresh for each cell. All three notebook modes retain state between cells and provide notebook management controls. They differ in runtime access and what can be restored after a restart. See [notebook modes](#code-mode-and-custom-tools) below.
 
-Optional Code, Notebook and reasoning tools register inactive by default. Pi's recorded tool state is preserved when navigating the conversation tree; selecting a mode or changing settings updates the active loadout at the normal runtime boundaries.
+All PCC tools register inactive by default and are enabled by the selected mode or settings. Conversation-tree navigation does not automatically enable tools never declared on the selected branch. Pi's explicitly recorded tool state is still preserved; selecting a mode or changing settings updates the active loadout at the normal runtime boundaries.
 
 Execution mode is separate from provider scope. Apply the adapter to **Codex and configured** providers or **all providers**. **Extra tools only** adds selected patch and image tools without replacing the normal setup. **Voice only** keeps voice and dictation without changing the model's tools or requests.
 
@@ -205,6 +205,8 @@ If a server is still connecting, the agent may need to retry its call. Use **Ctr
 In fullscreen mode, click the script, console output or an individual nested call to expand it independently, including repeated calls to the same tool. Clicking a patch affects all files in that call, not other calls. A completed nested call can be collapsed while the surrounding script continues running. **Ctrl+O** controls the whole card and clears local choices when the global expansion changes. Resize, streaming updates, notifications without a trace snapshot and theme repaint preserve local choices. Explicit snapshots discard choices only for calls no longer present. Drag selection, links and child mouse handlers remain host-owned.
 
 Nested `view_image` calls show only their title and path, plus errors if any; they never draw images or retain hidden raw results in the nested render cache. Images explicitly emitted through `image(...)` are displayed once by Pi below the card. This is a UI rule, not image deduplication or a change to model-visible content.
+
+Top-level `view_image` calls also leave result images to Pi, avoiding a second copy inside the card. For text-only models, the optional description fallback keeps its preview inside the card and respects Pi's image-display setting.
 
 The `/codex` → **Display** controls keep their upstream behavior and defaults. **Code / Notebook details** is off by default. **Compact tool output → On** hides collapsed patch diffs; **Minimal** also replaces collapsed console previews with an expand hint. Local clicks do not bypass disabled details. Expansion cannot recover traces, output or historical diffs that the producer no longer retains.
 

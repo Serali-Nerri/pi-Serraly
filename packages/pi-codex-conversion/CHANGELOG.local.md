@@ -2,6 +2,16 @@
 
 Local changes and their background, relative to upstream **4.0.5** (`d67cb69b22decc4ea024236ba59dc4ddae9a2334`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
 
+## Image rendering ownership
+
+- Leave top-level `view_image` result images to Pi instead of drawing a duplicate inside the card. The text-model description fallback reuses the existing image renderer only for its details-only preview and respects Pi's image-display setting.
+- Keep nested title/path/error rendering, tool content and details unchanged.
+
+## Tool registration after tree navigation
+
+- Extend upstream's inactive-by-default registration to `apply_patch`, `exec_command`, `write_stdin` and `view_image`. Pi no longer automatically adds these never-declared tools when restoring a Code or Notebook branch. Structured and extra-tool modes still explicitly enable their selected tools.
+- Correct the existing navigation checks to reject those extra declarations. Explicit historical activations remain Pi-owned; this does not restore the former runtime-admission or historical-declaration filters or repair earlier recorded activations.
+
 ## Deferred-tool grouping
 
 - Group tool announcements by declared namespace, falling back to the registering extension entry so tools from one extension stay together. Namespace descriptions appear once per announcement; Added/Changed notices share the same layout.
