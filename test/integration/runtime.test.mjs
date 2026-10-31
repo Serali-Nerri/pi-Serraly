@@ -9,7 +9,7 @@ const extensionEntries = [
 	"packages/pi-ask/index.ts",
 	"packages/pi-auto-trees/index.ts",
 	"packages/pi-browser/changelog.ts",
-	"packages/pi-browser/dist/index.js",
+	"packages/pi-browser/extension.ts",
 	"packages/pi-codex-conversion/dist/index.js",
 	"packages/pi-codex-imagegen/index.ts",
 	"packages/pi-notes-compaction/changelog.ts",

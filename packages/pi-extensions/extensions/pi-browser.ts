@@ -1,1 +1,1 @@
-export { default } from "@howaboua/pi-browser";
+export { default } from "@howaboua/pi-browser/extension";

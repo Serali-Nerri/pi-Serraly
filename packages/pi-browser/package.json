@@ -1,6 +1,6 @@
 {
 	"name": "@howaboua/pi-browser",
-	"version": "0.0.11",
+	"version": "0.0.13",
 	"description": "Logged-in browser inspection and control for Pi, Code Mode and Notebook Mode.",
 	"type": "module",
 	"license": "MIT",
@@ -26,6 +26,7 @@
 	"files": [
 		"dist/**/*.js",
 		"dist/**/*.d.ts",
+		"extension.ts",
 		"index.ts",
 		"remote-worker.ts",
 		"src",
@@ -38,13 +39,14 @@
 		"changelog.ts"
 	],
 	"scripts": {
+		"build:voice-api": "tsc -p tsconfig.voice-api.json",
 		"build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json && bun build remote-worker.ts --target=node --format=esm --outfile=dist/remote-worker.js --banner='// @howaboua/pi-browser managed worker'",
 		"check": "bun run lint && bun run typecheck",
 		"typecheck": "tsgo --noEmit",
 		"lint": "biome check ."
 	},
 	"peerDependencies": {
-		"@howaboua/pi-codex-conversion": ">=4.0.5",
+		"@howaboua/pi-codex-conversion": ">=4.0.7",
 		"@earendil-works/pi-ai": ">=1.0.0",
 		"@earendil-works/pi-coding-agent": ">=1.0.0",
 		"typebox": "*",
@@ -56,7 +58,7 @@
 		}
 	},
 	"devDependencies": {
-		"@howaboua/pi-codex-conversion": "4.0.5",
+		"@howaboua/pi-codex-conversion": "4.0.7",
 		"@biomejs/biome": "^2.6.3",
 		"@earendil-works/pi-ai": "1.4.0",
 		"@earendil-works/pi-coding-agent": "1.4.0",
@@ -67,7 +69,7 @@
 	"pi": {
 		"extensions": [
 			"./changelog.ts",
-			"./dist/index.js"
+			"./extension.ts"
 		]
 	},
 	"engines": {
@@ -79,10 +81,18 @@
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"exports": {
+		"./voice-start": {
+			"types": "./dist/src/browser/voice-start.d.ts",
+			"import": "./dist/src/browser/voice-start.js"
+		},
 		".": {
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js"
 		},
-		"./changelog": "./changelog.ts"
+		"./changelog": "./changelog.ts",
+		"./extension": {
+			"types": "./dist/extension.d.ts",
+			"import": "./extension.ts"
+		}
 	}
 }

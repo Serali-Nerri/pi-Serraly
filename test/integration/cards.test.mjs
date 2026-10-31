@@ -7,6 +7,7 @@ import { renderTrackedCodeModeResult } from "../../packages/pi-codex-conversion/
 import { createCodeModeRenderTracker } from "../../packages/pi-codex-conversion/dist/tools/code-mode/render-tracker.js";
 import { CodeModeNestedRenderStore } from "../../packages/pi-codex-conversion/dist/tools/code-mode/trace-render-state.js";
 import { CodeModeDelegateRuntime } from "../../packages/pi-codex-conversion/dist/tools/code-mode/delegate-runtime.js";
+import { prepareCodeModeToolInput } from "../../packages/pi-codex-conversion/dist/tools/code-mode/tool-input.js";
 import { createApplyPatchTool } from "../../packages/pi-codex-conversion/dist/tools/apply-patch/tool.js";
 import { createExecCommandTool } from "../../packages/pi-codex-conversion/dist/tools/exec/command-tool.js";
 import { createExecCommandTracker } from "../../packages/pi-codex-conversion/dist/tools/exec/command-state.js";
@@ -276,7 +277,7 @@ test("hidden image results do not evict other calls' full renderer output", { ti
 	};
 	const f = fixture([command, image], new CodeModeNestedRenderStore(128 * 1024));
 	const card = hostCard(f);
-	const runtime = new CodeModeDelegateRuntime(() => {}, f.store);
+	const runtime = new CodeModeDelegateRuntime(() => {}, prepareCodeModeToolInput, f.store);
 	t.after(() => runtime.clear());
 	runtime.bindCell("cache-cell", {
 		cwd: process.env.HOME,

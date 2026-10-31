@@ -13,7 +13,7 @@ for (const mode of ["normal", "code", "ts", "js"]) {
 	});
 }
 
-test("tree navigation restores tools explicitly enabled at the historical node", {
+test("tree navigation reapplies the current tool configuration instead of the historical loadout", {
 	timeout: 120_000,
 }, async () => {
 	await runIsolated(process.execPath, ["test/integration/fixtures/codex-tools.mjs", "normal", JSON.stringify({
@@ -21,5 +21,6 @@ test("tree navigation restores tools explicitly enabled at the historical node",
 		expected: ["apply_patch", "change_reasoning", "exec_command", "view_image", "write_stdin"],
 		switchConfig: { tools: { autoReasoning: false } },
 		expectedAfterConfig: normalTools,
+		expectedAfter: normalTools,
 	})], { timeoutMs: 90_000 });
 });

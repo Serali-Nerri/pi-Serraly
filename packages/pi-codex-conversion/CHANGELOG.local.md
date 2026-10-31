@@ -1,6 +1,13 @@
 # Local changelog
 
-Local changes and their background, relative to upstream **4.0.5** (`d67cb69b22decc4ea024236ba59dc4ddae9a2334`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
+Local changes and their background, relative to upstream **4.0.7** (`e4aa5bb43c560b722829a5123b3f2e05d3d9a19d`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
+
+## Upstream 4.0.7 sync
+
+- Adopt upstream voice, ordinary deferred-tool discovery, input preparation, tree-mode restoration and transport recovery changes. Discovery remains complementary to local announcement grouping and does not enable disabled tools.
+- Tree navigation now reapplies the current adapter mode and tool settings instead of reviving an older adapter loadout; unrelated tool state remains Pi-owned.
+- Preserve local expansion, Pi-owned image display, inactive-by-default structured tools, aborted-run guards and offline startup.
+- Align the eight retained packages with Browser 0.0.13, Notes 0.0.13 and Shepherdr 0.2.25. Bootstrap Browser's public voice API declarations before PCC, then build its full extension; the aggregate uses Browser's public TS entry with Pi's host aliases. Host Pi remains 1.4.0.
 
 ## Image rendering ownership
 
