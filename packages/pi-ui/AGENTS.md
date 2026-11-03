@@ -5,4 +5,6 @@
 - The type-erased dist/index.ts is the runtime entry, not a type-checking surface. Keep types/index.d.ts aligned with src/index.ts's default factory and ship it for public package consumers.
 - No full ExtensionContext/render context or lastComponent retained by components, timers or callbacks. Destructure only the current data/callbacks needed.
 - No history traversal or message rebuild on an animation tick. Cache only bounded current layouts; release subscriptions/timers and stale stream frames on shutdown/replacement.
+- Keep cached Thinking titles plain: `truncateToWidth` adds ANSI resets even for plain input; strip terminal sequences before character-wise animation and apply theme styling afterward.
+- The host omits empty thinking runs. Render a presentation-only placeholder for the active run from `thinking_start`; do not wait for summary text, modify model content, or make empty historical runs visible.
 - Test owned behavior through real Pi components/extension lifecycle and isolated files, not source-text or fixed heap-size assertions. Preserve terminal selection and theme/width correctness.

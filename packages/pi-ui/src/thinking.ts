@@ -2,7 +2,7 @@ import type { AssistantMessage } from "@earendil-works/pi-ai";
 import { AssistantMessageComponent } from "@earendil-works/pi-coding-agent";
 import type { ExtensionAPI, SessionEntry, Theme } from "@earendil-works/pi-coding-agent";
 import type { Component } from "@earendil-works/pi-tui";
-import { stripTerminalSequences, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
+import { Container, Spacer, stripTerminalSequences, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import type { UiConfig } from "./config.js";
 
 const DURATION_ENTRY_TYPE = "pi-ui-thinking-duration";
@@ -370,7 +370,7 @@ class ThinkingView implements Component {
 	private clipTitle(text: string, available: number): string {
 		const cached = this.titleMemo;
 		if (cached && cached.source === text && cached.width === available) return cached.text;
-		const clipped = truncateToWidth(text, Math.max(1, available));
+		const clipped = stripTerminalSequences(truncateToWidth(text, Math.max(1, available)));
 		this.titleMemo = { source: text, width: available, text: clipped };
 		return clipped;
 	}
@@ -488,25 +488,33 @@ class ThinkingControllerImpl implements ThinkingReader {
 		}
 		const runs = collectThinkingRuns(message.content);
 		nativeUpdate.call(host, message, isStreaming);
-		if (runs.length === 0 || this.disposed) return;
+		if (this.disposed) return;
 		const container = host.contentContainer;
 		if (!container || !Array.isArray(container.children)) return;
-		const activeIndex = this.active?.messageTimestamp === message.timestamp ? this.active.contentIndex : undefined;
+		const active = this.active?.messageTimestamp === message.timestamp ? this.active : undefined;
 		const overrides = host.thinkingVisibilityOverrides;
+		const padding = Math.max(0, Math.trunc(host.outputPad ?? 0));
+		const label = host.hiddenThinkingLabel || "Thinking...";
 		let runIndex = 0;
 		for (const child of container.children) {
 			if (!isHostRegion(child)) continue;
 			const run = runs[runIndex];
 			if (!run) break;
 			const hidden = overrides?.get(runIndex) ?? host.hideThinkingBlock ?? false;
-			const summary = summarizeRun(message.content, run, activeIndex);
+			const summary = summarizeRun(message.content, run, active?.contentIndex);
 			const data: RunViewData = summary === undefined
 				? { messageTimestamp: message.timestamp, start: run.start, fullText: run.fullText }
 				: { messageTimestamp: message.timestamp, start: run.start, fullText: run.fullText, summary };
-			const padding = Math.max(0, Math.trunc(host.outputPad ?? 0));
-			const label = host.hiddenThinkingLabel || "Thinking...";
 			child.child = new ThinkingView(data, hidden, child.child, padding, label, this);
 			runIndex += 1;
+		}
+		if (active && !runs.some((run) => run.start === active.runStart)) {
+			// The host omits empty thinking blocks, but thinking_start already starts the live run.
+			const data: RunViewData = { messageTimestamp: message.timestamp, start: active.runStart, fullText: "" };
+			container.children.push(
+				new Spacer(1),
+				new ThinkingView(data, host.hideThinkingBlock ?? false, new Container(), padding, label, this),
+			);
 		}
 	}
 
