@@ -13,6 +13,12 @@ This is the maintainer checklist for syncing the bundled provider with Pi and Op
 - Standalone web search: external extension outside this repository
 - Standalone image generation: [`../pi-codex-imagegen/UPSTREAM_SYNC.md`](../pi-codex-imagegen/UPSTREAM_SYNC.md)
 
+## November 3 request timeouts
+
+Compared the published Pi `1.4.0` and `1.5.0` Codex providers; their request-timeout policy is unchanged. Normal requests now share that policy: no implicit response-header or stream-idle deadline, positive `timeoutMs` bounds SSE headers or WebSocket idle waits, and zero disables it. SSE body parsing has no idle timer. Header timers are cleared when fetch settles so they cannot later abort the body; caller cancellation remains active.
+
+This replaces PCC's fixed 20-second SSE header deadline and default five-minute stream-idle deadline, not its transport implementation. Responses Lite, request conversion, cache continuation, recovery/advice budgets, retry policy, WebSocket setup/prewarm deadlines and stream settlement are unchanged. Whole-provider delegation would discard PCC's wire adaptations; Pi exports no standalone Codex header-timeout helper. No newer Codex behavior or reference pin is adopted by this change.
+
 ## October 23 continuity ownership
 
 Compared released Pi `1.4.0` and Codex `8eaf5fd115f0` for the touched compaction and prewarm paths. Pi owns session preparation, compaction entries and extension hook order. Notes now owns continuity policy and projected history. PCC consumes those projections through a generic compaction-preparation API and never reconstructs retired Notes windows. Native replay replaces only the surviving compaction summary and preserves the actual filtered tail.

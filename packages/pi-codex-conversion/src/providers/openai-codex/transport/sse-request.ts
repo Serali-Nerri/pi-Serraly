@@ -1,6 +1,5 @@
 import type { Api, Model } from "@earendil-works/pi-ai";
 import type { CodexAttemptTiming } from "../diagnostic-timing.ts";
-import { DEFAULT_SSE_HEADER_TIMEOUT_MS } from "../constants.ts";
 import { codexRetryAfterDeadline, isRetryableStreamStatus, parseErrorResponse } from "../errors.ts";
 import { CODEX_TURN_STATE_HEADER, withCodexTurnStateHeader, type CodexTurnState } from "../turn-state.ts";
 import { createCodexHttpError } from "../stream-events.ts";
@@ -14,39 +13,36 @@ export async function openCodexSSE<TApi extends Api>(
 	baseHeaders: Headers,
 	options: OpenAICodexStreamOptions | undefined,
 	turnState: CodexTurnState | undefined,
+	httpTimeoutMs: number | undefined,
 	startAttempt: () => CodexAttemptTiming,
 	onRetryableResponse: () => AbortSignal | undefined,
 ): Promise<Response> {
 	// The logical stream loop owns retries, including failures before headers.
 	if (options?.signal?.aborted) throw new Error("Request was aborted");
 	const timing = startAttempt();
-	const headerTimeout = createSSEHeaderTimeout(DEFAULT_SSE_HEADER_TIMEOUT_MS);
-	const combinedSignal = combineAbortSignals([options?.signal, headerTimeout.signal]);
+	// Like Pi, timeoutMs limits SSE headers only and has no implicit default.
+	const headerTimeout = httpTimeoutMs ? createSSEHeaderTimeout(httpTimeoutMs) : undefined;
+	const combinedSignal = combineAbortSignals([options?.signal, headerTimeout?.signal]);
 	let response: Response;
 	try {
-		try {
-			timing.sent();
-			response = await (options?.fetch ?? fetch)(resolveCodexUrl(model.baseUrl), {
-				method: "POST",
-				headers: withCodexTurnStateHeader(baseHeaders, turnState),
-				body,
-				signal: combinedSignal.signal,
-			});
-		} catch (error) {
-			const timeoutError = headerTimeout.error();
-			throw timeoutError && !options?.signal?.aborted ? timeoutError : error;
-		} finally {
-			headerTimeout.clear();
-		}
+		timing.sent();
+		response = await (options?.fetch ?? fetch)(resolveCodexUrl(model.baseUrl), {
+			method: "POST",
+			headers: withCodexTurnStateHeader(baseHeaders, turnState),
+			body,
+			signal: combinedSignal.signal,
+		});
 	} catch (error) {
 		combinedSignal.cleanup();
 		timing.finish(options?.signal?.aborted ? "aborted" : "failed");
+		const timeoutError = headerTimeout?.error();
+		if (timeoutError && !options?.signal?.aborted) throw timeoutError;
 		if (error instanceof Error && (error.name === "AbortError" || error.message === "Request was aborted")) {
 			throw new Error("Request was aborted");
 		}
 		throw error;
 	} finally {
-		headerTimeout.clear();
+		headerTimeout?.clear();
 	}
 
 	let errorSignal: ReturnType<typeof combineAbortSignals> | undefined;

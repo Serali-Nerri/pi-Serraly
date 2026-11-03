@@ -2,6 +2,11 @@
 
 Local changes and their background, relative to upstream **4.0.7** (`e4aa5bb43c560b722829a5123b3f2e05d3d9a19d`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
 
+## Native Pi request timeouts
+
+- Align normal Codex requests with released Pi 1.4.0/1.5.0: no implicit SSE response-header or SSE/WebSocket idle deadline. A positive `timeoutMs` limits SSE headers or WebSocket idle waits; zero disables it. SSE bodies remain cancellable without an idle timer.
+- Remove the fixed 20-second SSE header timeout that could exhaust retries on slow requests. Keep existing recovery/advice budgets, retry policy and WebSocket setup/prewarm deadlines; stalled initial requests may require manual cancellation.
+
 ## Upstream 4.0.7 sync
 
 - Adopt upstream voice, ordinary deferred-tool discovery, input preparation, tree-mode restoration and transport recovery changes. Discovery remains complementary to local announcement grouping and does not enable disabled tools.

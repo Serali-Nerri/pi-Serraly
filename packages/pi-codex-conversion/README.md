@@ -145,6 +145,8 @@ Pi's footer shows cache percentage. Enable **Codex diagnostics** under `/codex o
 
 **Status + log** writes diagnostic files to `~/.pi/agent/pi-codex-logs/`. They include usage, timings, retries and safe error metadata, but exclude prompts, tool arguments, images and credentials. These logs are useful when reporting a problem.
 
+**Request timeouts follow Pi.** Normal requests have no default response-header or stream-idle deadline. A caller's positive `timeoutMs` limits SSE response headers or WebSocket idle waits; zero disables it. SSE body streaming has no idle timeout. Stalled requests can therefore wait longer and may need manual cancellation. Existing recovery budgets and WebSocket setup/prewarm deadlines still apply.
+
 **Keepalive uses quota while idle and does not guarantee cache retention.** It is off by default. Astra, Sol and Terra offer per-project request intervals of 25 or 55 minutes. Luna has a global duration of 5, 10 or 15 minutes, with requests every 2.5 or 4.5 minutes until that duration expires.
 
 </details>

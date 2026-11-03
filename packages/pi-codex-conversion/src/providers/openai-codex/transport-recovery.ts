@@ -1,7 +1,7 @@
 import { createCodexRequestTiming, type CodexAttemptTiming } from "./diagnostic-timing.ts";
 import { codexRequestDiagnostics } from "./diagnostic-request.ts";
 import { appendAssistantMessageDiagnostic, createAssistantMessageDiagnostic, createAssistantMessageEventStream, type Api, type AssistantMessage, type AssistantMessageEventStream, type Model, type TranscriptContext } from "@earendil-works/pi-ai";
-import { DEFAULT_STREAM_IDLE_TIMEOUT_MS, MAX_WEBSOCKET_RECOVERY_RETRIES } from "./constants.ts";
+import { MAX_WEBSOCKET_RECOVERY_RETRIES } from "./constants.ts";
 import { createErrorMessage, NonRetryableProviderError } from "./errors.ts";
 import { resolveCodexWebSocketUrl } from "./headers.ts";
 import { codexDiagnosticsFailure, noThrowCodexDiagnosticsSink } from "./diagnostic-failure.ts";
@@ -197,7 +197,7 @@ export function createCodexTransportStream<TApi extends Api>(
 				}
 			}
 
-			const sseIdleTimeoutMs = normalizeTimeoutMs(effectiveOptions?.timeoutMs ?? DEFAULT_STREAM_IDLE_TIMEOUT_MS, "timeoutMs");
+			const sseHttpTimeoutMs = normalizeTimeoutMs(effectiveOptions.timeoutMs, "timeoutMs");
 			for (let attempt = 0; attempt <= streamMaxRetries; attempt++) {
 				if (attempt > 0) output = createInitialAssistantMessage(model);
 				if (callerSignal?.aborted) throw new Error("Request was aborted");
@@ -217,7 +217,7 @@ export function createCodexTransportStream<TApi extends Api>(
 							sentInputItems: body.input.length,
 						});
 					}
-					const response = await openCodexSSE(model, sseBody, baseSseHeaders, sseOptions, deps.turnState, () => {
+					const response = await openCodexSSE(model, sseBody, baseSseHeaders, sseOptions, deps.turnState, sseHttpTimeoutMs, () => {
 						timing = requestTiming.start(lane, "sse");
 						diagnostics?.({
 							type: "request",
@@ -242,7 +242,7 @@ export function createCodexTransportStream<TApi extends Api>(
 						stream.push({ type: "start", partial: output });
 					}
 					await processCodexResponsesStream(
-						parseSSE(response, sseOptions?.signal, sseIdleTimeoutMs),
+						parseSSE(response, sseOptions?.signal),
 						output,
 						stream,
 						model,
