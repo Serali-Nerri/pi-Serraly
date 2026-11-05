@@ -19,7 +19,7 @@ Thinking 和置顶提示使用包内隔离的 Pi 1.4 适配；宿主能力不匹
 | --- | --- | --- |
 | useSummaryTitlesAsThinkingTitle | true | reasoning summary 标题 |
 | previewLines | 3 | 0–20 个尾部视觉行 |
-| animationIntervalMs | 90 | 40–1000 ms；只影响活动标题扫光动画，长标题裁剪后仍保持动画 |
+| animationIntervalMs | 90 | 40–1000 ms；只影响活动标题扫光动画，按完整 Unicode 字素着色，长标题裁剪后仍保持动画 |
 | stickyUserMessage | true | fullscreen 置顶首行 |
 
 缺失、非普通文件、非法 UTF-8、无效或超过 64 KiB 的配置只读回退默认值；保存失败不更新内存，拒绝覆盖不合法已有文件。不会自动创建配置。

@@ -8,6 +8,7 @@ import type { UiConfig } from "./config.js";
 const DURATION_ENTRY_TYPE = "pi-ui-thinking-duration";
 const MAX_DURATION_ENTRIES = 2048;
 const PREVIEW_BUDGET_LIMIT = 16_000;
+const graphemeSegmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
 const fallbackConfig: UiConfig = {
 	useSummaryTitlesAsThinkingTitle: true,
@@ -252,17 +253,17 @@ function styleDim(text: string, theme: Theme | undefined): string {
 function animateThinking(text: string, theme: Theme | undefined, frame: number, baseBold: boolean): string {
 	if (!theme || text.length === 0) return text;
 	if (text.includes("\u001b")) return styleThinking(text, theme, baseBold);
-	const characters = Array.from(text);
-	const highlightWidth = Math.max(1, Math.min(5, Math.ceil(characters.length * 0.28)));
-	const start = (frame % (characters.length + highlightWidth)) - highlightWidth;
+	const graphemes = Array.from(graphemeSegmenter.segment(text), ({ segment }) => segment);
+	const highlightWidth = Math.max(1, Math.min(5, Math.ceil(graphemes.length * 0.28)));
+	const start = (frame % (graphemes.length + highlightWidth)) - highlightWidth;
 	const end = start + highlightWidth;
 	let result = "";
-	for (let index = 0; index < characters.length; index += 1) {
-		const character = characters[index] ?? "";
+	for (let index = 0; index < graphemes.length; index += 1) {
+		const grapheme = graphemes[index] ?? "";
 		const highlighted = index >= start && index < end;
 		const styled = highlighted
-			? theme.italic(theme.bold(theme.fg("text", character)))
-			: styleThinking(character, theme, baseBold);
+			? theme.italic(theme.bold(theme.fg("text", grapheme)))
+			: styleThinking(grapheme, theme, baseBold);
 		result += styled;
 	}
 	return result;
