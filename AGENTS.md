@@ -6,6 +6,7 @@
 - Edit owning source, never installed tooling. Validate and report changes. Source edits do not update running packages.
 - Trace failures through supported workflows before fixing them. A synthetic reproducer or possible interleaving alone does not prove exposure. Respect product tradeoffs; optional capabilities are not defects.
 - Update documentation when behavior or usage changes. Use focused package checks while editing; run `npm run verify` for cross-package dependencies, build, installation or release tooling changes.
+- Each document owns a clear concern. Keep definitions and rules in their owning document and link to them instead of duplicating them. Usage and contract docs describe current behavior, not work logs or obsolete instructions; changelogs, ADRs and issues retain their intended history.
 - Preserve dirty files and unpublished commits. Do not switch branches, create worktrees or rewrite commits without explicit instruction.
 
 ## Implementation principles
@@ -17,6 +18,7 @@
 - Before adding complexity for a speculative or vanishingly unlikely race or security edge case, explain the concrete failure mode, likelihood, and complexity cost to the user and get their buy-in. Do not silently expand scope for theoretical robustness.
 - Avoid `try` / `catch` where possible.
 - Avoid using the `any` type.
+- Comments explain non-obvious intent, constraints, or external API behavior. Do not restate the code, repeat repository policies, or narrate hypothetical failure scenarios. Keep shared rules in their owning document.
 
 ## Agent-facing contracts
 
