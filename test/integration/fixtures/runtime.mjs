@@ -47,7 +47,7 @@ function restoreEnvironment(name, value) {
 }
 
 /**
- * Run the released Pi 1.4 host loader and lifecycle against the individual package
+ * Run the released Pi host loader and lifecycle against the individual package
  * directories under `directory`, without their optional aggregate. No model is
  * selected or prompted; writes stay inside a disposable temporary directory.
  */
@@ -184,6 +184,7 @@ export async function runRuntimeAcceptance({ directory = root } = {}) {
 		);
 		const promptModeTools = [];
 		const promptModeErrors = [];
+		const imagegenOrdinaryDescription = registeredTools.get("imagegen")?.description;
 		extensionEventBus.emit(
 			"@howaboua/pi-codex-conversion.prompt-mode-prepare/v1",
 			{
@@ -318,6 +319,7 @@ export async function runRuntimeAcceptance({ directory = root } = {}) {
 				promptMode: {
 					tools: [...new Set(promptModeTools)].sort(),
 					errors: promptModeErrors.length,
+					imagegenOrdinaryDescription,
 					imagegenActiveDescription: imagegenDescription,
 				},
 			},

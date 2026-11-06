@@ -28,7 +28,7 @@ Prepare the installation workspace as described in [development](../../docs/deve
 pi install ~/.pi/pi-Serraly/packages/pi-codex-conversion
 ```
 
-Requires Pi 1.4.0 or newer and Node.js 22.19 or newer. Native helpers for macOS, Linux and Windows are bundled for x64 and arm64. TS Notebook has [narrower platform support](#code-mode-and-custom-tools).
+Requires Pi 1.5.0 or newer and Node.js 22.19 or newer. Native helpers for macOS, Linux and Windows are bundled for x64 and arm64. TS Notebook has [narrower platform support](#code-mode-and-custom-tools).
 
 Open `/codex` after installation. Codex-like GPT models use **Structured** mode by default.
 
@@ -317,7 +317,9 @@ See [`CHANGELOG.local.md`](./CHANGELOG.local.md) for local changes, [`CHANGELOG.
 <details>
 <summary><strong>Building an integration</strong></summary>
 
-Normal Pi tools work with PCC without additional registration. The [Code Mode example](./examples/code-mode-extension) shows custom tool integration. PCC exposes `code-mode`, `code-mode-hooks`, `code-mode-preflight`, `prompt-mode`, `developer-messages`, `compaction`, `agent-relationship`, `apply-patch-display` and `realtime-voice` entry points. Shared notes and context are owned by [Notes Compaction](../pi-notes-compaction/README.md).
+Normal Pi tools work with PCC without additional registration. The [Code Mode example](./examples/code-mode-extension) shows custom tool integration. PCC exposes `code-mode`, `code-mode-hooks`, `code-mode-preflight`, `prompt-mode`, `developer-messages`, `compaction`, `agent-relationship`, `apply-patch-display`, `realtime-voice` and `host-settings` entry points. Shared notes and context are owned by [Notes Compaction](../pi-notes-compaction/README.md).
+
+The `host-settings` entry point exports `hostSettings` for reading or patching global voice settings without starting Pi or voice. Supply the host's absolute agent directory and available `{ provider, modelId }` catalog. For writes, pass a `patch` and the `identity` returned by the latest read.
 
 To expose a tool directly to Realtime voice models, use `registerGippityVoiceTool` from `@howaboua/pi-codex-conversion/realtime-voice` during extension loading. Calls snapshot the registered tools at startup. Ordinary Pi tools are not automatically exposed to the voice model. Standalone GipPity exports the same API from `@howaboua/pi-gippity-control`.
 

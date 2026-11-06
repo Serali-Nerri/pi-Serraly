@@ -16,7 +16,7 @@ Try it for one session:
 pi --no-extensions --no-skills -e ~/.pi/pi-Serraly/packages/pi-ask
 ```
 
-When Pi Codex Conversion 4.0.5 or newer is installed too, `ask` is available inside Code and Notebook Mode as `await tools.ask({ prompts, delivery?, handoff? })`.
+Requires Pi 1.5 or newer. When Pi Codex Conversion 4.0.9 or newer is installed too, `ask` is available inside Code and Notebook Mode as `await tools.ask({ prompts, delivery?, handoff? })`.
 
 ## How it behaves
 
@@ -26,7 +26,7 @@ Questions wait for your response by default. When the agent can continue useful 
 
 For work only you can complete—sign-in, authorization, hardware access, or another manual step—the agent can open a handoff and wait until you mark it done or unable to complete.
 
-When Pi runs inside Herdr with its Pi integration installed, only a waiting ask marks the pane as blocked. A steering ask remains pending while the agent continues.
+Waiting questions report Pi as blocked in terminals that support program status. A steering ask remains pending while the agent continues.
 
 With Shepherdr, supervising agents receive the question, choices and a ready-to-fill reply. Replying completes the same panel. Ordinary agent messages do not answer it, and pending questions remain visible in later reports. Human handoffs still require your action and confirmation.
 

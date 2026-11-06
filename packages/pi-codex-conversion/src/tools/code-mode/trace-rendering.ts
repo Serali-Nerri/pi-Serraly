@@ -94,6 +94,8 @@ function renderTrace(
 	const rendererResult = renderState.result ?? renderedTrace.result;
 	const partial = trace.status === "running" || trace.status === "blocked";
 	const renderContext: CodeModeNestedRenderContext = {
+		...(context?.keyHint ? { keyHint: context.keyHint } : {}),
+		...(context?.keyText ? { keyText: context.keyText } : {}),
 		toolCallId: trace.id,
 		cwd: context?.cwd ?? "",
 		state: renderState.state,
@@ -142,7 +144,7 @@ function renderTrace(
 		if (!customResultRendered)
 			components.push(new Text(theme.fg("error", trace.error), 4, 0));
 	} else if (showResult && renderedTrace.result && !customResultRendered) {
-		components.push(renderGenericTraceResult(renderedTrace, theme, options.expanded || partial));
+		components.push(renderGenericTraceResult(renderedTrace, theme, options.expanded || partial, context));
 	}
 	if (programmatic?.renderCall || programmatic?.renderResult)
 		renderStore.rebalance(trace.id);
@@ -179,6 +181,7 @@ function renderGenericTraceResult(
 	trace: RuntimeToolTrace,
 	theme: CodeModeRenderTheme,
 	full: boolean,
+	context: CodeModeRenderContext | undefined,
 ): Component {
 	const result = trace.result;
 	if (!result) return new Container();
@@ -191,7 +194,7 @@ function renderGenericTraceResult(
 			item.type === "image" && typeof item.data === "string" && typeof item.mimeType === "string",
 	);
 	const renderedText = theme.fg("dim", text);
-	return renderTextAndImages(full ? renderedText : previewText(renderedText, theme), images, theme);
+	return renderTextAndImages(full ? renderedText : previewText(renderedText, theme, false, context), images, theme);
 }
 
 function isProgrammaticTool(

@@ -27,7 +27,11 @@ function harness(session = SessionManager.inMemory("/fixture")) {
 		completion, entries, session, renderers, theme,
 		emit(name: string, event: unknown = { type: name }) { for (const handler of [...(handlers.get(name) ?? [])]) handler(event); },
 		render(entry: CustomEntry, width = 80) {
-			return renderers.get(entry.customType)?.(entry, { expanded: false }, theme)?.render(width).map(stripTerminalSequences);
+			return renderers.get(entry.customType)?.(entry, {
+				expanded: false,
+				keyText: () => "",
+				keyHint: () => "",
+			}, theme)?.render(width).map(stripTerminalSequences);
 		},
 	};
 }

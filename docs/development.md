@@ -2,7 +2,7 @@
 
 ## 工具链与命令
 
-Node ≥22.19、Bun 1.4.2、Pi 1.4.0。依赖只在安装阶段访问 registry：
+Node ≥22.19、Bun 1.4.2、Pi 1.5.0。依赖只在安装阶段访问 registry：
 
 ```sh
 bun install --frozen-lockfile --ignore-scripts
@@ -19,7 +19,7 @@ bun run release -- --output /absolute/path/to/new-release
 
 build 构建 conversion、browser、agent-board、pi-ui，其余包保留 TS 入口；`--package` 只构建选定包及其 workspace 构建依赖。check 执行各包静态检查和根脚本语法检查。test:packages 只运行包测试；test 运行包和集成测试，`--package` 运行选定包测试及对应集成测试（conversion 的工具卡/工具接入、pi-ui 的宿主展示）。verify 按 build → check → test 执行一次。检查和测试不修复产物。
 
-conversion 4.0.7 运行依赖 Browser 的公开 `voice-start` API，Browser 的可选集成又依赖 conversion。根 build 先用 Browser 的 `build:voice-api` 严格生成独立 API 声明，再构建 conversion，最后完整构建 Browser；单包构建也保留该顺序。不要直接从缺少产物的包目录绕过 workspace build。
+conversion 运行依赖 Browser 的公开 `voice-start` API，Browser 的可选集成又依赖 conversion。根 build 先用 Browser 的 `build:voice-api` 严格生成独立 API 声明，再构建 conversion，最后完整构建 Browser；单包构建也保留该顺序。不要直接从缺少产物的包目录绕过 workspace build。
 
 单包修改先运行对应 build/check/test；跨包依赖、安装或 release 工具改变时运行完整 verify。包版本跟随各自上游基线，本地差异使用 Git 提交和包内本地 changelog 记录，不要求同步抬升所有包版本；根版本仅标识可选的整仓快照。
 
@@ -85,24 +85,24 @@ Pi 对本地包只登记并原地加载，不复制、不构建、不安装依�
 
 ## 可选整合包
 
-`pi-extensions` 为仓库全部十个扩展提供独立入口，包括 Notes、pi-ui 和 pi-session-recap；browser、agent-board 和 Notes 的独立 changelog 也各有入口。默认全部启用，`pi config` 在包的 Extensions 分组中逐项列出这十三个文件，可分别开关。Notes 的会话裁剪仍默认关闭；Recap 的空闲自动摘要默认开启，会产生模型用量，已有配置保持不变。
+`pi-extensions` 为仓库全部十个扩展提供独立入口，包括 Notes、pi-ui 和 pi-session-recap。默认全部启用，`pi config` 在包的 Extensions 分组中逐项列出这十个文件，可分别开关。Notes 的会话裁剪仍默认关闭；Recap 的空闲自动摘要默认开启，会产生模型用量，已有配置保持不变。
 
 ```sh
 # 先移除全部成员的单包登记（包括 Notes、pi-ui、pi-session-recap），备份并保留所需配置：
 pi install ~/.pi/pi-Serraly/packages/pi-extensions
 ```
 
-不要让整合包与成员同时登记。只想启用部分成员时，可逐包安装，也可在整合包的资源开关中禁用不需要的入口；独立 changelog 入口单独控制。整合包依赖使用 workspace 版本，整合包自己的版本独立于成员上游基线。
+不要让整合包与成员同时登记。只想启用部分成员时，可逐包安装，也可在整合包的资源开关中禁用不需要的入口。成员更新提示的限制见 [整合包 README](../packages/pi-extensions/README.md)。整合包依赖使用 workspace 版本，整合包自己的版本独立于成员上游基线。
 
 Browser 单包和整合包均加载其 TS 扩展入口；整合包通过公开 `./extension` 导出转发，不能改回编译后的库根入口，否则延迟导入会失去 Pi 的宿主别名。
 
 ## Notes 迁移
 
-conversion 4.0.5 将 Notes、History 和共享上下文移至独立的 `pi-notes-compaction`。包进入工作区并不表示启用；需要这些能力时单独执行 `pi install ~/.pi/pi-Serraly/packages/pi-notes-compaction`，或启用整合包中的 Notes 入口。主会话与使用共享上下文的 worker 应协调升级。
+conversion 4.0.5 将 Notes、History 和共享上下文移至独立的 `pi-notes-compaction`。包进入工作区并不表示启用；需要这些能力时单独执行 `pi install ~/.pi/pi-Serraly/packages/pi-notes-compaction`，或启用整合包中的 Notes 入口。Notes、Agent Board 与 Shepherdr 使用 Pi session ID 作为共享身份；主会话与使用共享上下文的 worker 应一起更新并完整重启，不能混用旧协议。详见 [Notes README](../packages/pi-notes-compaction/README.md)。
 
 已有 PCC Notes 配置在缺少新扩展时会阻止模型回合并提示迁移，不自动修改用户配置。Notes 在自己的设置尚不存在时只读兼容旧 PCC 设置。会话裁剪默认 `windows: 0, days: 0`；启用会重写会话 JSONL 且不创建备份，只能由用户在 `/notes` 中显式决定，安装和同步不能替用户开启。
 
-Notes 0.0.13 的模型角色由 `notes-compaction/model-roles.json` 定义，`/roles` 为只读状态视图；代理在 checkpoint 后通过 `new_context({role})` 选择。旧的角色启停和 accept/dismiss 流程已移除，配置格式见 [Notes README](../packages/pi-notes-compaction/README.md)。同步不创建角色、不代替用户选择账号或模型。
+Notes 的模型角色由 `notes-compaction/model-roles.json` 定义，`/roles` 为只读状态视图；代理在 checkpoint 后通过 `new_context({role})` 选择。旧的角色启停和 accept/dismiss 流程已移除，配置格式见 [Notes README](../packages/pi-notes-compaction/README.md)。同步不创建角色、不代替用户选择账号或模型。
 
 ## 可选整仓 Release
 

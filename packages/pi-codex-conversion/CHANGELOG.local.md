@@ -1,6 +1,14 @@
 # Local changelog
 
-Local changes and their background, relative to upstream **4.0.7** (`e4aa5bb43c560b722829a5123b3f2e05d3d9a19d`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
+Local changes and their background, relative to upstream **4.0.9** (`5ede06bdc32da2b513f0709966af1f32908f243c`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
+
+## Upstream 4.0.9 sync
+
+- Adopt Pi 1.5 compatibility, incremental tool-call parsing, configured keybinding hints, transport recovery diagnostics, voice updates and the public global voice settings integration. Sync bundled native binaries and voice Rust sources with upstream; the dormant cancellation path remains disabled.
+- Include the voice boolean fields in the public settings return type, matching the values returned at runtime.
+- Update the JS Notebook runtime to Pi codemode 1.5 and the TS Notebook runtime to tsrs 0.21.0-ts7.1.0-beta. Keep the TypeBox development version at 1.3.27, matching the released Pi 1.5 runtime.
+- Preserve Pi-aligned request timeouts, inactive-by-default tools, offline startup, aborted-run guards, Pi-owned image rendering and independent card expansion. Combine upstream's highlighting cache and configured hints with the local mouse wrappers without retaining render frames.
+- Remove PCC's changelog extension and obsolete build hook; Pi owns extension update notices.
 
 ## Native Pi request timeouts
 

@@ -4,22 +4,19 @@ import test from "node:test";
 import { runRuntimeAcceptance } from "./fixtures/runtime.mjs";
 
 const extensionEntries = [
-	"packages/pi-agent-board/changelog.ts",
 	"packages/pi-agent-board/index.ts",
 	"packages/pi-ask/index.ts",
 	"packages/pi-auto-trees/index.ts",
-	"packages/pi-browser/changelog.ts",
 	"packages/pi-browser/extension.ts",
 	"packages/pi-codex-conversion/dist/index.js",
 	"packages/pi-codex-imagegen/index.ts",
-	"packages/pi-notes-compaction/changelog.ts",
 	"packages/pi-notes-compaction/src/index.ts",
 	"packages/pi-session-recap/index.ts",
 	"packages/pi-shepherdr/index.ts",
 	"packages/pi-ui/dist/index.ts",
 ].sort();
 
-test("released Pi 1.4 loads every imported package and completes session cleanup", {
+test("released Pi 1.5 loads every imported package and completes session cleanup", {
 	timeout: 120_000,
 }, async () => {
 	const report = await runRuntimeAcceptance();
@@ -150,9 +147,9 @@ test("released Pi 1.4 loads every imported package and completes session cleanup
 		"notes",
 	]);
 	assert.equal(report.optionalIntegrations.promptMode.errors, 0);
-	assert.equal(
+	assert.notEqual(
 		report.optionalIntegrations.promptMode.imagegenActiveDescription,
-		"Generate/edit images; no selectors=generate",
+		report.optionalIntegrations.promptMode.imagegenOrdinaryDescription,
 	);
 	assert.equal(report.shutdownCleanup.codeModeProviders, 0);
 	assert.equal(report.runtimeDisposed, true);

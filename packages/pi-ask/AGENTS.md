@@ -1,4 +1,4 @@
-- index.ts wires features, changelog.ts is the shared release UI; keep its registration and channel contract stable across packages.
+- index.ts wires features.
 - ask is the sole human-input, review and handoff surface.
 - Wait/steer share one panel. Only wait reports blocked. Steer answers use developer role on active Codex Responses, user steering elsewhere.
 - Keep features under ask/. Coordinator owns queued delivery, pending owns restoration.

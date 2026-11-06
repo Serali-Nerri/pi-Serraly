@@ -111,10 +111,10 @@ function renderCodeModeResult(
 		&& !context?.isError && !details.scriptError && !details.notification;
 	const displayText = !showOutput ? "" : hidePreview
 		? [
-			previewText(text ? theme.fg(tone, text) : "", theme, true),
+			previewText(text ? theme.fg(tone, text) : "", theme, true, context),
 			status ? theme.fg(tone, status) : "",
 		].filter(Boolean).join("\n")
-		: expanded || options.isPartial ? renderedText : previewText(renderedText, theme);
+		: expanded || options.isPartial ? renderedText : previewText(renderedText, theme, false, context);
 	const output = showOutput
 		? clickToExpand(renderTextAndImages(displayText, [], theme), view, "output")
 		: new Container();

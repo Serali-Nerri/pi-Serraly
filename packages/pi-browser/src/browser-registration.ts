@@ -89,7 +89,7 @@ async function registerBrowserInCodeMode(
 			throw new Error(
 				"Update " +
 					CODE_MODE_PACKAGE +
-					" to 4.0.7 or newer to use Pi Browser with it",
+					" to 4.0.9 or newer to use Pi Browser with it",
 				{ cause: error },
 			);
 		}

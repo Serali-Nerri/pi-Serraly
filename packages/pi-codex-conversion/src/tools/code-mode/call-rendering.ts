@@ -5,6 +5,24 @@ import { expandHint } from "./render-content.js";
 import type { CodeModeRenderTracker } from "./render-tracker.js";
 import type { CodeModeRenderContext, CodeModeRenderTheme } from "./types.js";
 
+// Retain the text cache only while its mouse wrapper is held by Pi.
+const callTexts = new WeakMap<Component, CodeCallText>();
+
+class CodeCallText extends Text {
+	private highlighted: { code: string; theme: CodeModeRenderTheme; lines: string[] } | undefined;
+
+	highlight(code: string, theme: CodeModeRenderTheme): string[] {
+		if (this.highlighted?.code !== code || this.highlighted.theme !== theme)
+			this.highlighted = { code, theme, lines: highlightCode(code, "javascript") };
+		return this.highlighted.lines;
+	}
+
+	override invalidate(): void {
+		this.highlighted = undefined;
+		super.invalidate();
+	}
+}
+
 export function renderExecCall(
 	args: { code?: unknown },
 	theme: CodeModeRenderTheme,
@@ -27,16 +45,20 @@ export function renderExecCall(
 	}
 	const view = localExpansion(context);
 	const expanded = locallyExpanded(view, "script");
+	const component = (context?.lastComponent && callTexts.get(context.lastComponent)) ?? new CodeCallText("", 0, 0);
 	const status = tracker.status(context?.toolCallId);
 	const pending = context?.executionStarted === false && context.isPartial !== false;
 	const running = status === "running" || (status === undefined && context?.executionStarted && context.isPartial);
 	const verb = pending ? "Pending" : running ? "Running" : status === "yielded" ? "Started" : "Ran";
 	let text = `${theme.fg("dim", "•")} ${theme.bold(`${verb} code`)}`;
-	if (!expanded && code.trim()) text += `\n${previewCode(code, theme)}`;
+	if (!expanded && code.trim()) text += `\n${previewCode(component.highlight(code.trim(), theme), theme, context)}`;
 	const names = customToolNames(code);
 	if (names.length > 0) text += `\n${theme.fg("dim", "  └ ")}${theme.fg("accent", names.join(" · "))}`;
-	if (expanded && code.trim()) text += `\n\n${highlightCode(code, "javascript").join("\n")}`;
-	return clickToExpand(new Text(text, 0, 0), view, "script");
+	if (expanded && code.trim()) text += `\n\n${component.highlight(code, theme).join("\n")}`;
+	component.setText(text);
+	const wrapper = clickToExpand(component, view, "script");
+	callTexts.set(wrapper, component);
+	return wrapper;
 }
 
 export function renderWaitCall(
@@ -71,11 +93,10 @@ function customToolNames(code: string): string[] {
 	return names;
 }
 
-function previewCode(code: string, theme: CodeModeRenderTheme): string {
-	const highlighted = highlightCode(code.trim(), "javascript");
+function previewCode(highlighted: string[], theme: CodeModeRenderTheme, context: CodeModeRenderContext | undefined): string {
 	// Truncation resets must preserve the surrounding tool panel background.
 	const lines = highlighted.slice(0, 3).map((line) => truncateToWidth(`  ${line}`, 100, "...").replaceAll("\x1b[0m", "\x1b[39m"));
 	const skippedCount = highlighted.length - lines.length;
-	if (skippedCount > 0) lines.push(theme.fg("muted", `  ... (${skippedCount} more lines, ${expandHint()})`));
+	if (skippedCount > 0) lines.push(theme.fg("muted", `  ... (${skippedCount} more lines, ${expandHint(context)})`));
 	return lines.join("\n");
 }

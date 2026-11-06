@@ -1,7 +1,7 @@
 # UI constraints
 
 - Presentation only. Do not register tool renderers, change model messages or add Markdown transformations.
-- Keep Pi 1.4 private compatibility localized and capability-checked. Restore owned hooks on cleanup; do not overwrite another extension's replacement.
+- Keep private Pi compatibility localized and capability-checked. Restore owned hooks on cleanup; do not overwrite another extension's replacement.
 - The type-erased dist/index.ts is the runtime entry, not a type-checking surface. Keep types/index.d.ts aligned with src/index.ts's default factory and ship it for public package consumers.
 - No full ExtensionContext/render context or lastComponent retained by components, timers or callbacks. Destructure only the current data/callbacks needed.
 - No history traversal or message rebuild on an animation tick. Cache only bounded current layouts; release subscriptions/timers and stale stream frames on shutdown/replacement.

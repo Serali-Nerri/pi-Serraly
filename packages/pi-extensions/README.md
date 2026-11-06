@@ -6,7 +6,7 @@ This private package includes the eight retained Howaboua packages, `pi-ui` and 
 
 ## Requirements
 
-- Pi 1.4.0 or newer.
+- Pi 1.5.0 or newer.
 - Node.js 22.19 or newer.
 - A separate installation workspace prepared as described in [development](../../docs/development.md#本地安装工作区). Pi loads local packages in place without installing dependencies or building outputs.
 
@@ -27,9 +27,9 @@ This private package includes the eight retained Howaboua packages, `pi-ui` and 
 
 Enabling the Notes entry provides Notes/History; session auto-pruning remains off by default. Recap's idle automatic mode is on by default and makes model requests; existing member settings are preserved. See each member's README for configuration. `context-view` and other extensions outside this repository remain separate installs.
 
-The aggregate registers each member's public default extension entry. For `pi-agent-board`, `pi-browser` and `pi-notes-compaction` it also registers their separate public changelog entries, matching those packages' declared Pi manifests. Changelog coordinators registered inside other members remain owned by their default entry.
+The aggregate registers each member's public default extension entry, without separate changelog entries. Pi's native update notices cover the registered package, not its dependencies. This aggregate has no changelog of its own, so it does not show member update notices; individual member registrations retain those notices.
 
-The manifest lists thirteen entries under `extensions/`: ten member entries plus `pi-browser-changelog.ts`, `pi-agent-board-changelog.ts` and `pi-notes-compaction-changelog.ts`. All are enabled by default. `pi config` lists each file separately under the package's **Extensions** group, so members and the three standalone changelog entries can be switched independently. Coordinators registered inside a member's default entry follow that member's switch.
+The manifest lists ten entries under `extensions/`, one per member. All are enabled by default. `pi config` lists each file separately under the package's **Extensions** group, so members can be switched independently.
 
 For example:
 
@@ -37,7 +37,6 @@ For example:
 Extensions
   [x] pi-codex-conversion.ts
   [x] pi-ask.ts
-  [x] pi-browser-changelog.ts
   [x] pi-browser.ts
   ...
 ```
@@ -66,7 +65,7 @@ pi --no-extensions --no-skills -e ./packages/pi-extensions
 
 ## Migrate from individual packages
 
-Do not register the aggregate and any of its ten members at the same time, including Notes, UI and Recap. Pi loads both sources, so tools, commands, listeners and changelog coordinators would be duplicated.
+Do not register the aggregate and any of its ten members at the same time, including Notes, UI and Recap. Pi loads both sources, so tools, commands and listeners would be duplicated.
 
 Prepare the separate installation workspace from Requirements before changing registrations.
 
@@ -78,7 +77,7 @@ Prepare the separate installation workspace from Requirements before changing re
 
 Removing a registration does not delete member configuration or data such as `pi-shepherdr.json`, board archives or browser settings.
 
-Agent Board's command and tool load when `pi-agent-board.ts` is enabled. Existing `/board off` settings for the session, folder or global scope still apply and are not reset. Disable that entry in `pi config` to omit its command and tool; its standalone changelog entry has a separate switch.
+Agent Board's command and tool load when `pi-agent-board.ts` is enabled. Existing `/board off` settings for the session, folder or global scope still apply and are not reset. Disable that entry in `pi config` to omit its command and tool.
 
 To roll back, remove the aggregate and reinstall the desired member packages. Restore the backed-up settings if source paths changed.
 

@@ -1,6 +1,6 @@
 {
 	"name": "@howaboua/pi-ask",
-	"version": "0.0.17",
+	"version": "0.0.18",
 	"description": "Interactive decisions, review triage, and human handoffs for Pi.",
 	"type": "module",
 	"license": "MIT",
@@ -34,7 +34,6 @@
 		"LICENSE",
 		"tsconfig.json",
 		"biome.json",
-		"changelog.ts",
 		"CHANGELOG.md"
 	],
 	"pi": {
@@ -43,9 +42,9 @@
 		]
 	},
 	"peerDependencies": {
-		"@howaboua/pi-codex-conversion": ">=4.0.7",
+		"@howaboua/pi-codex-conversion": ">=4.0.9",
 		"@earendil-works/pi-ai": ">=1.0.0",
-		"@earendil-works/pi-coding-agent": ">=1.0.0",
+		"@earendil-works/pi-coding-agent": ">=1.5.0",
 		"@earendil-works/pi-tui": ">=1.0.0",
 		"typebox": "*"
 	},
@@ -55,11 +54,11 @@
 		}
 	},
 	"devDependencies": {
-		"@howaboua/pi-codex-conversion": "4.0.7",
+		"@howaboua/pi-codex-conversion": "4.0.9",
 		"@biomejs/biome": "^2.6.3",
-		"@earendil-works/pi-ai": "1.4.0",
-		"@earendil-works/pi-coding-agent": "1.4.0",
-		"@earendil-works/pi-tui": "1.4.0",
+		"@earendil-works/pi-ai": "1.5.0",
+		"@earendil-works/pi-coding-agent": "1.5.0",
+		"@earendil-works/pi-tui": "1.5.0",
 		"typebox": "1.3.27",
 		"typescript": "^7.0.2"
 	},

@@ -102,14 +102,6 @@ export class AttachmentNotes {
 			)
 		);
 	}
-	unavailable(error: unknown) {
-		return (
-			error instanceof Error &&
-			/^(Shared context (?:owner|controller) is unavailable|Shared context response was lost|Herdr machine .* is (?:unavailable|disconnected)|remote Shepherdr bridge (?:is unavailable|closed|exited\b)|remote Shepherdr context timed out)/.test(
-				error.message,
-			)
-		);
-	}
 	async read(
 		request: SharedContextRequest,
 		identity: ContextAgentIdentity,
@@ -152,7 +144,6 @@ export class AttachmentNotes {
 				unavailable = String(error);
 			}
 		}
-		const result = this.service().read(snapshot, request.params);
 		if (
 			!snapshot ||
 			typeof snapshot !== "object" ||
@@ -161,7 +152,6 @@ export class AttachmentNotes {
 		)
 			throw new Error("Invalid retained checkpoint timestamp");
 		const details = {
-			...result.details.codexHistoryNotes,
 			source,
 			read_only: true,
 			captured_at: new Date(snapshot.timestamp).toISOString(),
@@ -177,21 +167,32 @@ export class AttachmentNotes {
 							: {}),
 					}),
 		};
+		const warning = `Read-only checkpoints captured ${details.captured_at}.${
+			detached
+				? " Counterpart detached."
+				: unavailable
+					? " Live owner and saved updates unavailable; these checkpoints may be stale. Resume the counterpart for current notes."
+					: " Live owner unavailable; reading saved checkpoints."
+		}`;
+		const result = this.service().read(snapshot, request.params, {
+			read_only: true,
+			captured_at: details.captured_at,
+			...(savedAt === undefined ? {} : { saved_at: details.saved_at }),
+			warning,
+		});
+		if (
+			!result.structuredContent ||
+			typeof result.structuredContent !== "object" ||
+			!("warning" in result.structuredContent) ||
+			result.structuredContent["warning"] !== warning
+		)
+			throw new Error("Update Notes to read retained attached checkpoints");
 		return {
-			content: [
-				...result.content,
-				{
-					type: "text",
-					text: `Read-only checkpoints captured ${details.captured_at}.${
-						detached
-							? " Counterpart detached."
-							: unavailable
-								? " Live owner and saved updates unavailable; these checkpoints may be stale. Resume the counterpart for current notes."
-								: " Live owner unavailable; reading saved checkpoints."
-					}`,
-				},
-			],
-			details: { codexHistoryNotes: details },
+			...result,
+			details: {
+				...result.details,
+				codexHistoryNotes: { ...result.details.codexHistoryNotes, ...details },
+			},
 		};
 	}
 }

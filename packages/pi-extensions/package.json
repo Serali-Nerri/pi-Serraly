@@ -25,13 +25,10 @@
 	"pi": {
 		"extensions": [
 			"./extensions/pi-codex-conversion.ts",
-			"./extensions/pi-notes-compaction-changelog.ts",
 			"./extensions/pi-notes-compaction.ts",
 			"./extensions/pi-ask.ts",
-			"./extensions/pi-browser-changelog.ts",
 			"./extensions/pi-browser.ts",
 			"./extensions/pi-codex-imagegen.ts",
-			"./extensions/pi-agent-board-changelog.ts",
 			"./extensions/pi-agent-board.ts",
 			"./extensions/pi-auto-trees.ts",
 			"./extensions/pi-shepherdr.ts",
@@ -64,6 +61,6 @@
 		"typebox": "*"
 	},
 	"devDependencies": {
-		"@earendil-works/pi-coding-agent": "1.4.0"
+		"@earendil-works/pi-coding-agent": "1.5.0"
 	}
 }

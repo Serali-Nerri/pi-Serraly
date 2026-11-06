@@ -12,9 +12,9 @@ Prepare the installation workspace as described in [development](../../docs/deve
 pi install ~/.pi/pi-Serraly/packages/pi-browser
 ```
 
-Requires Pi 1.0.0 or newer, Node.js 22.19 or newer, and a Chrome-family browser with remote debugging enabled at `chrome://inspect/#remote-debugging`.
+Requires Pi 1.5 or newer, Node.js 22.19 or newer, and a Chrome-family browser with remote debugging enabled at `chrome://inspect/#remote-debugging`.
 
-Pi Codex Conversion 4.0.5 or newer is optional. Without it, Browser remains a normal top-level Pi tool. Do not load Pi Codex's example `browser.toml` custom tool alongside this extension.
+Pi Codex Conversion 4.0.9 or newer is optional. Without it, Browser remains a normal top-level Pi tool. Do not load Pi Codex's example `browser.toml` custom tool alongside this extension.
 
 ## Use
 

@@ -8,7 +8,7 @@
 
 This package follows the referenced upstream aggregate's Pi package pattern of explicit runtime dependencies on members. It uses separate TypeScript forwarding entries in `pi.extensions` for independent switches. The member set and forwarding entries are maintained here, without copying the upstream aggregate implementation.
 
-`pi-agent-board`, `pi-browser` and `pi-notes-compaction` each declare a separate `changelog.ts` Pi entry. Their local manifests expose that file through the public `./changelog` export so this aggregate can register the declared entry without importing private sibling source. The changelog files and behavior remain owned by those packages.
+Each member declares one Pi extension entry; the aggregate has no standalone changelog forwarding entries. Native update-notice limitations are documented in [README](./README.md).
 
 Browser forwards its public `./extension` TypeScript entry rather than the compiled library root, preserving Pi's host aliases for lazy optional integrations.
 
@@ -16,20 +16,20 @@ Browser forwards its public `./extension` TypeScript entry rather than the compi
 
 | Package               | Local version | Provenance                                     |
 | --------------------- | ------------- | ---------------------------------------------- |
-| `pi-codex-conversion` | 4.0.7         | [UPSTREAM](../pi-codex-conversion/UPSTREAM.md) |
-| `pi-ask`              | 0.0.17        | [UPSTREAM](../pi-ask/UPSTREAM.md)              |
+| `pi-codex-conversion` | 4.0.9         | [UPSTREAM](../pi-codex-conversion/UPSTREAM.md) |
+| `pi-ask`              | 0.0.18        | [UPSTREAM](../pi-ask/UPSTREAM.md)              |
 | `pi-browser`          | 0.0.13        | [UPSTREAM](../pi-browser/UPSTREAM.md)          |
-| `pi-codex-imagegen`   | 0.0.12        | [UPSTREAM](../pi-codex-imagegen/UPSTREAM.md)   |
-| `pi-agent-board`      | 0.0.4         | [UPSTREAM](../pi-agent-board/UPSTREAM.md)      |
+| `pi-codex-imagegen`   | 0.0.13        | [UPSTREAM](../pi-codex-imagegen/UPSTREAM.md)   |
+| `pi-agent-board`      | 0.0.5         | [UPSTREAM](../pi-agent-board/UPSTREAM.md)      |
 | `pi-auto-trees`       | 0.1.19        | [UPSTREAM](../pi-auto-trees/UPSTREAM.md)       |
-| `pi-shepherdr`        | 0.2.25        | [UPSTREAM](../pi-shepherdr/UPSTREAM.md)        |
-| `pi-notes-compaction` | 0.0.13        | [UPSTREAM](../pi-notes-compaction/UPSTREAM.md) |
+| `pi-shepherdr`        | 0.2.27        | [UPSTREAM](../pi-shepherdr/UPSTREAM.md)        |
+| `pi-notes-compaction` | 0.0.14        | [UPSTREAM](../pi-notes-compaction/UPSTREAM.md) |
 | `pi-ui`               | 0.3.0         | [UPSTREAM](../pi-ui/UPSTREAM.md)               |
 | `pi-session-recap`    | 0.1.0         | [UPSTREAM](../pi-session-recap/UPSTREAM.md)    |
 
 The eight Howaboua members come from the same pinned commit through this repository's retained packages. UI and Recap have independent provenance. Each member retains its own license and applicable changelogs and third-party notices.
 
-All ten extensions are dependencies and have explicit forwarding entries; the three standalone changelog entries bring the total to thirteen. Each entry can be disabled through Pi's package resource filters. Members remain independently installable, but must not be registered alongside this aggregate.
+All ten extensions are dependencies and have explicit forwarding entries. Each entry can be disabled through Pi's package resource filters. Members remain independently installable, but must not be registered alongside this aggregate.
 
 ## License
 

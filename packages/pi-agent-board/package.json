@@ -1,6 +1,6 @@
 {
 	"name": "@howaboua/pi-agent-board",
-	"version": "0.0.4",
+	"version": "0.0.5",
 	"description": "Standalone agent message boards and a read-only browser viewer for Pi",
 	"type": "module",
 	"license": "MIT",
@@ -18,19 +18,16 @@
 		"INTEGRATION.md",
 		"LICENSE",
 		"tsconfig.json",
-		"changelog.ts",
 		"CHANGELOG.md"
 	],
 	"main": "index.ts",
 	"exports": {
 		".": "./index.ts",
-		"./changelog": "./changelog.ts",
 		"./runtime": "./src/runtime/index.ts",
 		"./integration": "./src/integration.ts"
 	},
 	"pi": {
 		"extensions": [
-			"./changelog.ts",
 			"./index.ts"
 		]
 	},
@@ -50,9 +47,9 @@
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-ai": ">=1.1.0",
-		"@earendil-works/pi-coding-agent": ">=1.1.0",
+		"@earendil-works/pi-coding-agent": ">=1.5.0",
 		"@earendil-works/pi-tui": ">=1.1.0",
-		"@howaboua/pi-codex-conversion": ">=4.0.7",
+		"@howaboua/pi-codex-conversion": ">=4.0.9",
 		"typebox": "*"
 	},
 	"peerDependenciesMeta": {
@@ -61,6 +58,6 @@
 		}
 	},
 	"devDependencies": {
-		"@howaboua/pi-codex-conversion": "4.0.7"
+		"@howaboua/pi-codex-conversion": "4.0.9"
 	}
 }

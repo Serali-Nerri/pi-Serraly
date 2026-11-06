@@ -1,6 +1,6 @@
 {
 	"name": "@howaboua/pi-codex-imagegen",
-	"version": "0.0.12",
+	"version": "0.0.13",
 	"description": "Codex image generation and editing for Pi, Code Mode and Notebook Mode.",
 	"type": "module",
 	"license": "MIT",
@@ -31,7 +31,7 @@
 		"UPSTREAM_SYNC.md",
 		"LICENSE",
 		"CHANGELOG.md",
-		"changelog.ts",
+		"CHANGELOG.local.md",
 		"tsconfig.json",
 		"biome.json"
 	],
@@ -45,19 +45,19 @@
 		"undici": "8.12.3"
 	},
 	"peerDependencies": {
-		"@earendil-works/pi-coding-agent": ">=1.0.0",
+		"@earendil-works/pi-coding-agent": ">=1.5.0",
 		"@earendil-works/pi-tui": ">=1.0.0",
 		"typebox": "*",
-		"@howaboua/pi-codex-conversion": ">=4.0.7"
+		"@howaboua/pi-codex-conversion": ">=4.0.9"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.6.3",
-		"@earendil-works/pi-coding-agent": "1.4.0",
-		"@earendil-works/pi-tui": "1.4.0",
+		"@earendil-works/pi-coding-agent": "1.5.0",
+		"@earendil-works/pi-tui": "1.5.0",
 		"@types/node": "^26.6.5",
 		"typebox": "1.3.27",
 		"typescript": "^7.0.2",
-		"@howaboua/pi-codex-conversion": "4.0.7"
+		"@howaboua/pi-codex-conversion": "4.0.9"
 	},
 	"pi": {
 		"extensions": [

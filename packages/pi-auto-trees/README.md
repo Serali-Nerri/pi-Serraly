@@ -16,6 +16,8 @@ Try it for one session:
 pi --no-extensions --no-skills -e ~/.pi/pi-Serraly/packages/pi-auto-trees
 ```
 
+Requires Pi 1.5 or newer. Pi Codex Conversion 4.0.9 or newer is optional.
+
 ## Usage
 
 1. Run `/prime <scope>` to orient the agent on a repository area. When the agent fully settles, the extension marks the resulting conversation point automatically.

@@ -1,17 +1,17 @@
 # 上游来源索引
 
-八包来自 [IgorWarzocha/howaboua-pi-stuff](https://github.com/IgorWarzocha/howaboua-pi-stuff)，固定提交 `e4aa5bb43c560b722829a5123b3f2e05d3d9a19d`。从旧基线 `d67cb69b22decc4ea024236ba59dc4ddae9a2334` 三方合并，保留本地工具公告分组、局部点击展开、图片显示所有权、工具默认禁用和离线启动；Notes 仍为独立可选扩展。
+八包来自 [IgorWarzocha/howaboua-pi-stuff](https://github.com/IgorWarzocha/howaboua-pi-stuff)，固定提交 `5ede06bdc32da2b513f0709966af1f32908f243c`。从旧基线 `e4aa5bb43c560b722829a5123b3f2e05d3d9a19d` 三方合并，保留本地工具公告分组、局部点击展开、图片显示所有权、工具默认禁用和离线启动；Notes 仍为独立可选扩展。
 
 | 包 | 基线版本 | 来源与当前差异 |
 | --- | --- | --- |
-| pi-codex-conversion | 4.0.7 | [UPSTREAM](packages/pi-codex-conversion/UPSTREAM.md) |
-| pi-ask | 0.0.17 | [UPSTREAM](packages/pi-ask/UPSTREAM.md) |
+| pi-codex-conversion | 4.0.9 | [UPSTREAM](packages/pi-codex-conversion/UPSTREAM.md) |
+| pi-ask | 0.0.18 | [UPSTREAM](packages/pi-ask/UPSTREAM.md) |
 | pi-browser | 0.0.13 | [UPSTREAM](packages/pi-browser/UPSTREAM.md) |
-| pi-codex-imagegen | 0.0.12 | [UPSTREAM](packages/pi-codex-imagegen/UPSTREAM.md) |
-| pi-shepherdr | 0.2.25 | [UPSTREAM](packages/pi-shepherdr/UPSTREAM.md) |
-| pi-agent-board | 0.0.4 | [UPSTREAM](packages/pi-agent-board/UPSTREAM.md) |
+| pi-codex-imagegen | 0.0.13 | [UPSTREAM](packages/pi-codex-imagegen/UPSTREAM.md) |
+| pi-shepherdr | 0.2.27 | [UPSTREAM](packages/pi-shepherdr/UPSTREAM.md) |
+| pi-agent-board | 0.0.5 | [UPSTREAM](packages/pi-agent-board/UPSTREAM.md) |
 | pi-auto-trees | 0.1.19 | [UPSTREAM](packages/pi-auto-trees/UPSTREAM.md) |
-| pi-notes-compaction | 0.0.13 | [UPSTREAM](packages/pi-notes-compaction/UPSTREAM.md) |
+| pi-notes-compaction | 0.0.14 | [UPSTREAM](packages/pi-notes-compaction/UPSTREAM.md) |
 
 保留各包 LICENSE、NOTICE、vendor 和嵌套来源；MIT 包许可不替代所含 Apache-2.0 等第三方条款。conversion 卡片来源与 MIT 文本在包内 CARD-LICENSE.md。根工程不将继承代码重新授权为统一自有许可。
 

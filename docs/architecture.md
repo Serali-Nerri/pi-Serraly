@@ -18,9 +18,9 @@
 | pi-session-recap | TUI 手动/空闲 recap、历史裁剪、临时卡片与请求清理 | 只依赖公开 Pi host API；模型注册表发起独立摘要请求 |
 | pi-extensions | 显式组合仓库全部十个扩展的注册入口 | workspace 运行依赖；调用成员公开导出 |
 
-跨包依赖使用公开导出，不读取兄弟私有源码。宿主包是 peer，不随正式运行树安装；开发使用精确 Pi 1.4.0。外部运行依赖由 workspace 安装。
+跨包依赖使用公开导出，不读取兄弟私有源码。宿主包是 peer，不随正式运行树安装；开发使用精确 Pi 1.5.0。外部运行依赖由 workspace 安装。
 
-pi-extensions 显式维护成员依赖和 manifest 入口顺序。十个成员及 browser、agent-board、Notes 的独立 changelog 共十三个 TS 转发入口，默认全部启用，可由 `pi config` 分别开关。默认仍逐包登记，整合包不能与其成员重复加载。
+pi-extensions 显式维护成员依赖和 manifest 入口顺序。十个成员各有一个 TS 转发入口，默认全部启用，可由 `pi config` 分别开关。更新提示的边界见 [整合包 README](../packages/pi-extensions/README.md)。默认仍逐包登记，整合包不能与其成员重复加载。
 
 Notes 独占 Notes/History 与共享上下文，公开 `@howaboua/pi-notes-compaction/context-sharing`；conversion 改为公开 `./compaction` 和 `./agent-relationship`，不再导出旧 `./context-sharing`。Notes 使用 conversion 的压缩协议；Shepherdr 分别接入 Notes 的共享上下文和 conversion 的代理关系。依赖存在不会自动加载 Notes；旧 PCC Notes 配置在未加载新拥有者时阻止运行并提示迁移，不静默改写设置。
 
@@ -32,7 +32,7 @@ conversion 保留上游默认渲染、预览规则、工具命名和 Display 设
 
 ## 界面
 
-pi-ui 仅在交互 TUI 安装展示。Footer 使用公开 setFooter 与事件增量维护会话用量；Git 分支沿用宿主 provider。Thinking 和 fullscreen 置顶消息没有公开 renderer 注册入口，包内隔离 Pi 1.4 的最小兼容适配：只装饰原生 Thinking 子组件，以及合成置顶行与点击定位；能力缺失时单项告警、其余功能继续。退出、reload 和会话替换撤销适配。
+pi-ui 仅在交互 TUI 安装展示。Footer 使用公开 setFooter 与事件增量维护会话用量；Git 分支沿用宿主 provider。Thinking 和 fullscreen 置顶消息没有公开 renderer 注册入口，包内隔离最小兼容适配：只装饰原生 Thinking 子组件，以及合成置顶行与点击定位；能力缺失时单项告警、其余功能继续。退出、reload 和会话替换撤销适配。
 
 Thinking 以连续 reasoning run 为粒度，支持标题、尾部预览、局部点击、宿主 Ctrl+T、耗时与分支历史恢复。持久化只写非模型上下文的耗时元数据。活动完成提示使用公开 entry renderer，在 agent_settled 后追加一次非模型上下文的净工作耗时和结束时刻；不改写回复，不新增计时器或历史索引。Footer 不在 render 或动画 tick 遍历历史；历史只在启动/分支切换/压缩后重建。活动动画只请求宿主重绘，不读取会话历史或重新构建消息。
 
@@ -66,7 +66,7 @@ build 只生成产物，支持按包及其 workspace 构建依赖选择；check/
 
 安装工作区独立于开发树，保留完整仓库文件但不含 `.git`；Git 历史只保留在开发仓库。所有包共用这一工作区，包括独立登记的 pi-ui 和 pi-session-recap。依赖安装和构建通过普通 Bun workspace 命令完成，登记、资源过滤、加载与移除属于原生 Pi。生产依赖树不携带物理宿主包；准备和整仓更新命令由 development 持有。
 
-所有成员存在并可导入，不代表被启用。默认逐包 pi install；Shepherdr 的 agent-board 依赖不会自动登记 agent-board 入口。根 manifest 不注册资源。可选整合包只有被显式登记才提供全部十个扩展的入口，成员及独立 changelog 的加载由 Pi 资源开关控制。
+所有成员存在并可导入，不代表被启用。默认逐包 pi install；Shepherdr 的 agent-board 依赖不会自动登记 agent-board 入口。根 manifest 不注册资源。可选整合包只有被显式登记才提供全部十个扩展的入口，成员的加载由 Pi 资源开关控制。
 
 更新整个工作区可能同时改变多个已登记包，下次完整启动统一加载。备份与回滚以完整安装工作区和必要的 settings 为单位；安装目录不负责保存 Git 历史。
 
