@@ -1,4 +1,8 @@
-import { normalizeVoiceApiProvider, normalizeGippityVoiceModel, normalizeOpenAIRealtimeVoice } from "./config-contract.ts";
+import {
+	normalizeVoiceApiProvider,
+	normalizeGippityVoiceModel,
+	normalizeOpenAIRealtimeVoice,
+} from "./config-contract.ts";
 import {
 	type CodexConversionConfig,
 	DEFAULT_CODEX_CONVERSION_CONFIG,
@@ -151,6 +155,15 @@ export function normalizeCodexConversionConfig(
 		voice: {
 			model: normalizeGippityVoiceModel(voice["model"]) ?? "codex-live-1.1",
 			apiProvider: voice["apiProvider"] === undefined ? "openai" : normalizeVoiceApiProvider(voice["apiProvider"]) ?? "",
+			// Preserve editable strings; invalid types must not select the default route.
+			codexLiveProvider:
+				typeof voice["codexLiveProvider"] === "string"
+					? voice["codexLiveProvider"]
+					: voice["codexLiveProvider"] === undefined ? "" : " ",
+			codexLiveBaseUrl:
+				typeof voice["codexLiveBaseUrl"] === "string"
+					? voice["codexLiveBaseUrl"]
+					: voice["codexLiveBaseUrl"] === undefined ? "" : " ",
  realtimeVoice: normalizeOpenAIRealtimeVoice(voice["realtimeVoice"]) ?? "marin",
  realtimeAlternateVoice: normalizeOpenAIRealtimeVoice(voice["realtimeAlternateVoice"]) ?? "cedar",
  webSearch: voice["webSearch"] === true,

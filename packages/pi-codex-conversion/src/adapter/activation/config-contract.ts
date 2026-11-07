@@ -6,6 +6,29 @@ export function normalizeVoiceApiProvider(value: unknown): string | undefined {
 		? value : undefined;
 }
 
+export function normalizeVoiceBaseUrl(value: unknown): string | undefined {
+	if (
+		typeof value !== "string" ||
+		value.trim() !== value ||
+		value.length === 0 ||
+		Buffer.byteLength(value) > 2048 ||
+		!/^https?:\/\//i.test(value) ||
+		/[\u0000-\u001f\u007f\s\\?#]/u.test(value)
+	)
+		return undefined;
+	const url = URL.parse(value);
+	if (
+		!url ||
+		!["http:", "https:"].includes(url.protocol) ||
+		url.username ||
+		url.password ||
+		url.search ||
+		url.hash
+	)
+		return undefined;
+	return url.href.replace(/\/+$/, "");
+}
+
 export const GIPPITY_VOICE_MODELS = [
 	"codex-live-1.1",
 	"realtime-2.1",
@@ -129,6 +152,9 @@ export interface CodexConversionConfig {
 	voice: {
 		model: GippityVoiceModel;
 		apiProvider: string;
+		/** Leaving both gateway fields empty keeps the Codex login route. */
+		codexLiveProvider: string;
+		codexLiveBaseUrl: string;
 		realtimeVoice: OpenAIRealtimeVoice;
 		realtimeAlternateVoice: OpenAIRealtimeVoice;
 		webSearch: boolean;
@@ -201,6 +227,8 @@ export const DEFAULT_CODEX_CONVERSION_CONFIG: CodexConversionConfig = {
 	voice: {
 		model: "codex-live-1.1",
 		apiProvider: "openai",
+		codexLiveProvider: "",
+		codexLiveBaseUrl: "",
 		realtimeVoice: "marin",
 		realtimeAlternateVoice: "cedar",
 		webSearch: false,

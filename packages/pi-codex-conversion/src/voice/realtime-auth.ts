@@ -2,6 +2,10 @@ import type {
 	ExtensionAPI,
 	ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
+import {
+	normalizeVoiceApiProvider,
+	normalizeVoiceBaseUrl,
+} from "../adapter/activation/config.ts";
 import { type CodexVoiceAuth, resolveCodexVoiceAuth } from "./auth.ts";
 import { resolveRealtimeProvider } from "./realtime-provider.ts";
 import {
@@ -94,17 +98,60 @@ async function resolvePublicRealtimeAuth(
 	};
 }
 
+async function resolveCodexLiveProviderAuth(
+	ctx: ExtensionContext,
+	providerSetting: string,
+	baseUrlSetting: string,
+): Promise<CodexVoiceAuth> {
+	if (providerSetting && !normalizeVoiceApiProvider(providerSetting))
+		throw new Error(
+			"Enter a valid Codex Live provider name in voice settings (at most 512 bytes, no surrounding whitespace or control characters), or leave it blank.",
+		);
+	if (baseUrlSetting && !normalizeVoiceBaseUrl(baseUrlSetting))
+		throw new Error(
+			"Codex Live requires a valid HTTP or HTTPS base URL in voice settings without URL credentials, query or fragment, or leave it blank to use the provider endpoint.",
+		);
+	const access = await resolveRealtimeProvider(
+		ctx,
+		providerSetting || "openai-codex",
+		baseUrlSetting || undefined,
+	);
+	const headers = new Headers(access.headers);
+	if (!headers.has("originator")) headers.set("originator", "pi");
+	if (!headers.has("x-session-id"))
+		headers.set("x-session-id", ctx.sessionManager.getSessionId());
+	if (!headers.has("user-agent"))
+		headers.set("user-agent", "pi-codex-conversion");
+	return {
+		...access,
+		headers,
+		officialCodex: false,
+	};
+}
+
 export function resolveRealtimeVoiceAuth(
 	ctx: ExtensionContext,
-	config: { voice: { model: string; apiProvider: string; webSearch: boolean } },
+	config: {
+		voice: {
+			model: string;
+			apiProvider: string;
+			codexLiveProvider?: string;
+			codexLiveBaseUrl?: string;
+			webSearch: boolean;
+		};
+	},
 	pi?: ExtensionAPI,
 ): Promise<CodexVoiceAuth> {
-	return config.voice.model === "codex-live-1.1"
-		? resolveCodexVoiceAuth(ctx)
-		: resolvePublicRealtimeAuth(
-				ctx,
-				config.voice.apiProvider,
-				pi,
-				config.voice.webSearch,
-			);
+	if (config.voice.model !== "codex-live-1.1")
+		return resolvePublicRealtimeAuth(
+			ctx,
+			config.voice.apiProvider,
+			pi,
+			config.voice.webSearch,
+		);
+	const provider = config.voice.codexLiveProvider ?? "";
+	const baseUrl = config.voice.codexLiveBaseUrl ?? "";
+	return provider || baseUrl
+		? resolveCodexLiveProviderAuth(ctx, provider, baseUrl)
+		: resolveCodexVoiceAuth(ctx);
 }

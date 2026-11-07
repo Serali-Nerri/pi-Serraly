@@ -5,6 +5,7 @@ import { normalizeVoiceApiProvider } from "../adapter/activation/config.ts";
 export async function resolveRealtimeProvider(
 	ctx: ExtensionContext,
 	name: string,
+	baseUrlOverride?: string,
 ): Promise<{
 	headers: Headers;
 	baseUrl: string;
@@ -32,9 +33,8 @@ export async function resolveRealtimeProvider(
 		throw new Error(authError);
 	const routeError =
 		"Realtime requires a valid HTTP or HTTPS base URL for the selected API provider. Configure its endpoint in Pi without URL credentials, query or fragment, then start again.";
-	// Pi's resolved auth endpoint overrides the provider endpoint. Chat model
-	// overrides do not apply: voice selects a provider, not a chat model.
-	const route = auth.auth.baseUrl ?? provider.baseUrl;
+	// Voice selects a provider, so chat-model endpoint overrides do not apply.
+	const route = baseUrlOverride || (auth.auth.baseUrl ?? provider.baseUrl);
 	let url: URL;
 	try {
 		if (typeof route !== "string") throw new Error(routeError);

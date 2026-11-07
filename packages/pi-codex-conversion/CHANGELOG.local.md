@@ -2,6 +2,12 @@
 
 Local changes and their background, relative to upstream **4.0.9** (`5ede06bdc32da2b513f0709966af1f32908f243c`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
 
+## Codex Live gateway routing
+
+- Add `voice.codexLiveProvider` and `voice.codexLiveBaseUrl` gateway settings to the terminal, LAN interface and `host-settings`, without changing the chat or dictation route.
+- Preserve invalid gateway strings across unrelated settings saves and in the editor; reject them when starting a call rather than switching routes.
+- Distinguish configured `openai-codex` API keys from OAuth logins in authentication errors.
+
 ## Upstream 4.0.9 sync
 
 - Adopt Pi 1.5 compatibility, incremental tool-call parsing, configured keybinding hints, transport recovery diagnostics, voice updates and the public global voice settings integration. Sync bundled native binaries and voice Rust sources with upstream; the dormant cancellation path remains disabled.

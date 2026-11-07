@@ -28,7 +28,7 @@ export function buildVoiceSettings(
 				id: "voiceModel",
 				label: "Voice model",
 				description:
-					"Codex Live uses your Codex login. GPT-Realtime requires an OpenAI API key, billed separately. Applies on the next call without restarting the current call.",
+					"Codex Live uses the login or gateway settings below. GPT-Realtime uses the API provider. Changes apply on the next call.",
 				currentValue: formatVoiceModel(config.voice.model),
 				values: GIPPITY_VOICE_MODELS.map(formatVoiceModel),
 			},
@@ -50,6 +50,32 @@ export function buildVoiceSettings(
 		}, (value, current) => ({ ...current, voice: { ...current.voice, apiProvider: value } }))] : []),
 		...(config.voice.model === "codex-live-1.1"
 			? [
+						setting(
+							{
+								id: "codexLiveProvider",
+								label: "Codex Live provider",
+								description:
+									"Pi provider ID for gateway API-key credentials. Blank uses openai-codex; leave both gateway fields blank for the Codex login.",
+								currentValue: formatGatewaySetting(config.voice.codexLiveProvider),
+							},
+							(value, current) => ({
+								...current,
+								voice: { ...current.voice, codexLiveProvider: value },
+							}),
+						),
+						setting(
+							{
+								id: "codexLiveBaseUrl",
+								label: "Codex Live base URL",
+								description:
+									"HTTP(S) gateway base before /realtime/calls, including its path prefix. Blank uses the selected provider's endpoint.",
+								currentValue: formatGatewaySetting(config.voice.codexLiveBaseUrl),
+							},
+							(value, current) => ({
+								...current,
+								voice: { ...current.voice, codexLiveBaseUrl: value },
+							}),
+						),
 					setting({
 						id: "taskDelegationModel",
 						label: "Task delegation model",
@@ -273,6 +299,11 @@ export function buildVoiceSettings(
 	];
 }
 
+function formatGatewaySetting(value: string): string {
+	if (value === "") return "default";
+	return value.trim() ? value : "invalid";
+}
+
 function formatVoiceName(voice: string): string {
 	return `${voice.slice(0, 1).toUpperCase()}${voice.slice(1)}`;
 }
@@ -284,5 +315,5 @@ function formatContextModel(model: VoiceContextModel): string {
 function formatVoiceModel(model: string): string {
 	if (model === "realtime-2.1") return "GPT-Realtime-2.1 (API)";
 	if (model === "realtime-2.1-mini") return "GPT-Realtime-2.1 Mini (API)";
-	return "Codex Live (OAuth)";
+	return "Codex Live";
 }

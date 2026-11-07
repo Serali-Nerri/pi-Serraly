@@ -1,4 +1,7 @@
-import { normalizeVoiceApiProvider } from "../../adapter/activation/config.ts";
+import {
+	normalizeVoiceApiProvider,
+	normalizeVoiceBaseUrl,
+} from "../../adapter/activation/config.ts";
 import {
 	GIPPITY_VOICE_MODELS,
 	OPENAI_REALTIME_VOICES,
@@ -24,6 +27,8 @@ const BOOLEAN_SETTINGS = [
 ] as const;
 interface VoiceSettings {
 	apiProvider: string;
+	codexLiveProvider: string;
+	codexLiveBaseUrl: string;
 	model: CodexConversionConfig["voice"]["model"];
 	realtimeVoice: CodexConversionConfig["voice"]["realtimeVoice"];
 	realtimeAlternateVoice: CodexConversionConfig["voice"]["realtimeAlternateVoice"];
@@ -55,6 +60,8 @@ export function createVoiceSettings(dependencies: VoiceSettingsDependencies) {
 			config: {
 				model: voice.model,
 				apiProvider: voice.apiProvider,
+					codexLiveProvider: voice.codexLiveProvider,
+					codexLiveBaseUrl: voice.codexLiveBaseUrl,
 				realtimeVoice: voice.realtimeVoice,
 				realtimeAlternateVoice: voice.realtimeAlternateVoice,
 				v3Voice: voice.v3Voice,
@@ -93,6 +100,26 @@ export function createVoiceSettings(dependencies: VoiceSettingsDependencies) {
 							"Enter a nonempty API provider name, at most 512 bytes, without surrounding whitespace or control characters",
 						);
 					patch.apiProvider = provider;
+					} else if (key === "codexLiveProvider") {
+						if (value === "") patch.codexLiveProvider = "";
+						else {
+							const provider = normalizeVoiceApiProvider(value);
+							if (!provider)
+								throw new LanVoiceSettingsError(
+									"Enter a provider name, at most 512 bytes, without surrounding whitespace or control characters, or leave it blank",
+								);
+							patch.codexLiveProvider = provider;
+						}
+					} else if (key === "codexLiveBaseUrl") {
+						if (value === "") patch.codexLiveBaseUrl = "";
+						else {
+							const baseUrl = normalizeVoiceBaseUrl(value);
+							if (!baseUrl)
+								throw new LanVoiceSettingsError(
+									"Enter a valid HTTP or HTTPS base URL without credentials, query or fragment, or leave it blank",
+								);
+							patch.codexLiveBaseUrl = baseUrl;
+						}
 				} else if (key === "model") {
 					const model = GIPPITY_VOICE_MODELS.find((entry) => entry === value);
 					if (!model)

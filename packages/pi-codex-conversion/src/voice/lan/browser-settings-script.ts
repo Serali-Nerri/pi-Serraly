@@ -30,14 +30,16 @@ export const LAN_VOICE_BROWSER_SETTINGS_SCRIPT = String.raw`
     for (const element of form.querySelectorAll('[data-realtime-voice]')) element.hidden = !apiModel;
     document.querySelector('#setting-model-requirement').textContent = apiModel
       ? 'Uses the named Pi provider\'s API key and endpoint. API usage is billed separately; a ChatGPT login is not an API key.'
-      : 'Uses your OpenAI Codex login in Pi.';
+      : 'Uses your OpenAI Codex login in Pi, or the Codex Live provider and base URL below.';
   };
   form.elements.namedItem('model').addEventListener('change', updateProvider);
   const display = (data) => {
     const modelLabel = (model) => model === 'realtime-2.1' ? 'GPT-Realtime-2.1 (API)'
-      : model === 'realtime-2.1-mini' ? 'GPT-Realtime-2.1 Mini (API)' : 'Codex Live (OAuth)';
+      : model === 'realtime-2.1-mini' ? 'GPT-Realtime-2.1 Mini (API)' : 'Codex Live';
     fillSelect('model', data.voiceModels.map((model) => ({value:model, label:modelLabel(model)})), data.config.model);
     form.elements.namedItem('apiProvider').value = data.config.apiProvider;
+    form.elements.namedItem('codexLiveProvider').value = data.config.codexLiveProvider;
+    form.elements.namedItem('codexLiveBaseUrl').value = data.config.codexLiveBaseUrl;
     fillSelect('realtimeVoice', data.realtimeVoices.map((voice) => ({value:voice, label:voice})), data.config.realtimeVoice);
     fillSelect('realtimeAlternateVoice', data.realtimeVoices.map((voice) => ({value:voice, label:voice})), data.config.realtimeAlternateVoice);
     form.elements.namedItem('webSearch').checked = data.config.webSearch;
@@ -89,6 +91,8 @@ export const LAN_VOICE_BROWSER_SETTINGS_SCRIPT = String.raw`
       contextReasoning:form.elements.namedItem('contextReasoning').value,
     };
     if (patch.model === 'codex-live-1.1') {
+      patch.codexLiveProvider = form.elements.namedItem('codexLiveProvider').value;
+      patch.codexLiveBaseUrl = form.elements.namedItem('codexLiveBaseUrl').value;
       patch.taskDelegationReasoning = form.elements.namedItem('taskDelegationReasoning').value;
       patch.v3Voice = form.elements.namedItem('v3Voice').value;
       patch.v3AlternateVoice = form.elements.namedItem('v3AlternateVoice').value;

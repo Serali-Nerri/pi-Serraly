@@ -234,11 +234,20 @@ Choose **Voice model** in `/codex voice` or the browser interface. Voice runs in
 
 | Voice model | Credential |
 | --- | --- |
-| `codex-live-1.1`, the default | Pi's legacy `openai-codex` login |
-| `realtime-2.1` | An OpenAI API key configured in Pi |
-| `realtime-2.1-mini` | An OpenAI API key configured in Pi |
+| `codex-live-1.1`, the default | Pi's legacy `openai-codex` login, or a configured gateway provider |
+| `realtime-2.1` | An API key for the selected Realtime-compatible Pi provider |
+| `realtime-2.1-mini` | An API key for the selected Realtime-compatible Pi provider |
 
-Codex Live and dictation use OAuth through `/login openai-codex`. Selecting a Realtime voice model does not change dictation's login. For Realtime, enter the exact, case-sensitive Pi provider name in **API provider** in terminal or LAN voice settings. The default is `openai`. GipPity uses that provider's API key, headers and compatible Realtime endpoint without storing or displaying the key. Configure the provider's Realtime-compatible endpoint in Pi. Missing keys, OAuth credentials and invalid endpoints are rejected without falling back to another account. Changes apply on the next call. Realtime API calls are billed separately through the selected provider. Sign in with ChatGPT does not provide this API access or replace the legacy Codex login.
+Codex Live and dictation default to OAuth through `/login openai-codex`.
+
+**Codex Live gateways.** Set these fields in `/codex voice` or the LAN voice settings:
+
+- **Codex Live provider** (`voice.codexLiveProvider`): the exact Pi provider ID supplying the gateway API key and headers. If only a base URL is set, the provider defaults to `openai-codex`.
+- **Codex Live base URL** (`voice.codexLiveBaseUrl`): the HTTP(S) base before `/realtime/calls`. Blank uses the selected provider's endpoint. For CLIProxyAPI, use a base such as `http://127.0.0.1:8317/v1`, not the chat route's `/backend-api` base.
+
+Leave both fields blank to use the default Codex login route. Gateway access requires an API key, not a Pi OAuth login, and does not fall back to another route on failure. Invalid strings are retained for correction and rejected at call startup. Changing voice access does not change dictation's login.
+
+**Public Realtime.** Enter the exact, case-sensitive Pi provider ID in **API provider**; the default is `openai`. Realtime uses that provider's API key, headers and compatible endpoint without storing or displaying the key. Missing keys, OAuth credentials and invalid endpoints are rejected without falling back to another account. Changes apply on the next call. Official OpenAI Realtime API usage is billed separately from ChatGPT subscriptions; gateway access and billing depend on its provider. Sign in with ChatGPT does not supply public Realtime API access.
 
 Codex Live rewrites the current voice conversation interval into a self-contained task before sending it to Pi. **Task delegation model** shows the configured model without a picker. Change `voice.taskDelegationModel` in the JSON configuration to use another `provider/model` value. The default is `openai-codex/gpt-6-luna`. Choose **Task delegation reasoning** separately in terminal or LAN settings. It defaults to `low` and is independent of voice context summarisation. These settings apply only to Codex Live; GPT-Realtime still sends tasks directly through `send_task`.
 

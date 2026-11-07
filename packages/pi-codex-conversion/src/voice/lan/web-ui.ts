@@ -125,6 +125,8 @@ export function createLanVoiceWebUi(piTheme: Theme): string {
         <fieldset id="settings-fields" disabled>
           <label for="setting-model">Voice model</label><select id="setting-model" name="model" aria-describedby="setting-model-requirement"></select>
           <small id="setting-model-requirement"></small>
+          <label data-codex-voice for="setting-codex-live-provider">Codex Live provider</label><input data-codex-voice id="setting-codex-live-provider" name="codexLiveProvider" type="text" maxlength="512" placeholder="default (openai-codex)" autocomplete="off" autocapitalize="none" spellcheck="false">
+          <label data-codex-voice for="setting-codex-live-base-url">Codex Live base URL</label><input data-codex-voice id="setting-codex-live-base-url" name="codexLiveBaseUrl" type="text" maxlength="2048" placeholder="default" autocomplete="off" autocapitalize="none" spellcheck="false">
           <label data-codex-voice for="setting-voice">Primary voice</label><select data-codex-voice id="setting-voice" name="v3Voice"></select>
           <label data-codex-voice for="setting-alternate-voice">Alternate voice</label><select data-codex-voice id="setting-alternate-voice" name="v3AlternateVoice"></select>
           <label data-codex-voice for="setting-task-delegation-model">Task delegation model</label><output data-codex-voice id="setting-task-delegation-model"></output>
