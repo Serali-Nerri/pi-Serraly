@@ -32,6 +32,7 @@
 			"./extensions/pi-agent-board.ts",
 			"./extensions/pi-auto-trees.ts",
 			"./extensions/pi-shepherdr.ts",
+			"./extensions/pi-suggestions.ts",
 			"./extensions/pi-ui.ts",
 			"./extensions/pi-session-recap.ts"
 		]
@@ -51,6 +52,7 @@
 		"@howaboua/pi-codex-imagegen": "workspace:*",
 		"@howaboua/pi-notes-compaction": "workspace:*",
 		"@howaboua/pi-shepherdr": "workspace:*",
+		"@howaboua/pi-suggestions": "workspace:*",
 		"pi-session-recap": "workspace:*",
 		"pi-ui": "workspace:*"
 	},

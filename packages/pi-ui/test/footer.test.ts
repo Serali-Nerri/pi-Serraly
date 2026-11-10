@@ -1,4 +1,8 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test, { type TestContext } from "node:test";
 import {
 	Theme,
@@ -23,6 +27,8 @@ function testTheme(): Theme {
 		accent: "#00d7ff",
 		dim: "#666666",
 		muted: "#999999",
+		mdLink: "#00d7ff",
+		error: "#ff5f5f",
 		success: "#5fd75f",
 		text: "#eeeeee",
 		warning: "#ffd75f",
@@ -74,14 +80,13 @@ interface HarnessOptions {
 function harness(t: TestContext, options: HarnessOptions = {}) {
 	const theme = testTheme();
 	const handlers = new Map<string, Set<Handler>>();
-	let unsubscribed = 0;
 	const pi = {
 		on(event: string, handler: Handler) {
 			let set = handlers.get(event);
 			if (!set) handlers.set(event, (set = new Set()));
 			set.add(handler);
 			return () => {
-				if (set!.delete(handler)) unsubscribed++;
+				set!.delete(handler);
 			};
 		},
 	} as unknown as ExtensionAPI;
@@ -102,11 +107,10 @@ function harness(t: TestContext, options: HarnessOptions = {}) {
 	} as unknown as ExtensionContext["sessionManager"];
 
 	const statuses = options.statuses ?? new Map<string, string>();
-	let gitBranch: string | null = "main";
 	const branchListeners = new Set<() => void>();
 	let branchUnsubscribes = 0;
 	const footerData: ReadonlyFooterDataProvider = {
-		getGitBranch: () => gitBranch,
+		getGitBranch: () => null,
 		getExtensionStatuses: () => statuses,
 		getAvailableProviderCount: () => 1,
 		onBranchChange(listener) {
@@ -170,8 +174,7 @@ function harness(t: TestContext, options: HarnessOptions = {}) {
 	const setContextUsage = (next: ContextUsage | undefined) => {
 		contextUsage = next;
 	};
-	const setGitBranch = (next: string | null) => {
-		gitBranch = next;
+	const branchChanged = () => {
 		for (const listener of [...branchListeners]) listener();
 	};
 	const setSessionName = (next: string | undefined) => {
@@ -200,7 +203,7 @@ function harness(t: TestContext, options: HarnessOptions = {}) {
 		emit,
 		setEntries,
 		setContextUsage,
-		setGitBranch,
+		branchChanged,
 		setSessionName,
 		setOtherFooter,
 		remount,
@@ -225,9 +228,6 @@ function harness(t: TestContext, options: HarnessOptions = {}) {
 		get contextReads() {
 			return stateContextReads;
 		},
-		get unsubscribed() {
-			return unsubscribed;
-		},
 		get branchUnsubscribes() {
 			return branchUnsubscribes;
 		},
@@ -251,7 +251,6 @@ test("installs through setFooter, mounts the host TUI, and renders without scann
 	const before = h.renderRequests;
 	const text = h.plain();
 	assert.match(text, /project/);
-	assert.match(text, /main/);
 	assert.match(text, /demo/);
 	assert.match(text, /test\/model-a/);
 	assert.match(text, /thinking high/);
@@ -391,71 +390,8 @@ test("uses the event context at rebuild boundaries instead of retaining the inst
 	assert.match(text, /50\.0%/);
 });
 
-test("shows one bounded activity timer, preserves final elapsed, and clears it at the next activity", (t) => {
-	t.mock.timers.enable({ apis: ["setInterval", "Date"], now: 1_000 });
+test("remounts with the parent TUI and leaves a replacement footer alone", (t) => {
 	const h = harness(t, { entries: [] });
-
-	h.emit("before_agent_start", { prompt: "work" });
-	assert.match(h.plain(), /working/);
-	assert.match(h.plain(), /0s/);
-	const requestsBeforeTick = h.renderRequests;
-	t.mock.timers.tick(2_500);
-	assert.ok(h.renderRequests > requestsBeforeTick);
-	assert.match(h.plain(), /working/);
-	assert.match(h.plain(), /2s/);
-
-	h.emit("agent_start", {});
-	const requestsAfterStart = h.renderRequests;
-	t.mock.timers.tick(1_000);
-	assert.equal(h.renderRequests, requestsAfterStart + 1);
-	assert.match(h.plain(), /3s/);
-
-	h.emit("tool_execution_start", { toolCallId: "tool-1", toolName: "read", args: {} });
-	assert.match(h.plain(), /read/);
-	h.emit("tool_execution_end", { toolCallId: "tool-1", toolName: "read", result: {}, isError: false });
-	assert.doesNotMatch(h.plain(), /read/);
-	h.emit("agent_end", { messages: [] });
-	assert.match(h.plain(), /working/);
-
-	h.setContextUsage({ tokens: 4_000, contextWindow: 10_000, percent: 40 });
-	const requestsBeforeSettle = h.renderRequests;
-	h.emit("agent_settled", { aborted: false });
-	assert.ok(h.renderRequests > requestsBeforeSettle);
-	const settled = h.plain();
-	assert.match(settled, /done 3s/);
-	assert.doesNotMatch(settled, /working/);
-	assert.match(settled, /40\.0%/);
-	const requestsAfterSettle = h.renderRequests;
-	t.mock.timers.tick(10_000);
-	assert.equal(h.renderRequests, requestsAfterSettle);
-	assert.match(h.plain(), /done 3s/);
-
-	h.emit("agent_start", {});
-	assert.match(h.plain(), /working/);
-	assert.doesNotMatch(h.plain(), /done/);
-	h.cleanup();
-	const requestsAfterCleanup = h.renderRequests;
-	t.mock.timers.tick(5_000);
-	assert.equal(h.renderRequests, requestsAfterCleanup);
-});
-
-test("keeps elapsed time visible when a narrow footer truncates tool names", (t) => {
-	t.mock.timers.enable({ apis: ["setInterval", "Date"], now: 1_000 });
-	const h = harness(t, { entries: [] });
-	h.emit("before_agent_start", {});
-	h.emit("tool_execution_start", { toolCallId: "tool-1", toolName: "very-long-工具-name", args: {} });
-	const width = 18;
-	const rendered = h.lines(width);
-	const activity = stripTerminalSequences(rendered.at(-1) ?? "");
-	assert.match(activity, /working/);
-	assert.match(activity, /0s/);
-	for (const line of rendered) assert.ok(visibleWidth(line) <= width);
-});
-
-test("remounts with the parent TUI, restarts an active timer, and leaves a replacement footer alone", (t) => {
-	t.mock.timers.enable({ apis: ["setInterval", "Date"], now: 1_000 });
-	const h = harness(t, { entries: [] });
-	h.emit("before_agent_start", {});
 	const nextTui = {
 		requestRender() {
 			h.tui.requestRender();
@@ -466,7 +402,7 @@ test("remounts with the parent TUI, restarts an active timer, and leaves a repla
 	assert.equal(h.mounts[1], nextTui);
 
 	const requestsAfterReplacement = h.renderRequests;
-	t.mock.timers.tick(1_000);
+	h.branchChanged();
 	assert.equal(h.renderRequests, requestsAfterReplacement + 1);
 
 	const other: FooterComponent = {
@@ -485,7 +421,7 @@ test("remounts with the parent TUI, restarts an active timer, and leaves a repla
 	assert.equal(h.current, other);
 	assert.equal(h.branchUnsubscribes, 2);
 	const requestsAfterCleanup = h.renderRequests;
-	t.mock.timers.tick(1_000);
+	h.branchChanged();
 	assert.equal(h.renderRequests, requestsAfterCleanup);
 	h.cleanup();
 	assert.equal(h.setFooterCalls.length, 3);
@@ -496,7 +432,7 @@ test("cleanup restores the native footer once, releases events, and never clears
 	const component = h.current;
 	assert.ok(component);
 	assert.equal(h.mounts.length, 1);
-	h.setGitBranch("feature");
+	h.branchChanged();
 	assert.equal(h.renderRequests, 1);
 
 	h.cleanup();
@@ -504,21 +440,25 @@ test("cleanup restores the native footer once, releases events, and never clears
 	assert.equal(h.setFooterCalls[1], undefined);
 	assert.equal(h.current, undefined);
 	assert.deepEqual(component.render(80), []);
-	assert.equal(h.unsubscribed, 11);
 	assert.equal(h.branchUnsubscribes, 1);
 	const requestsAfterCleanup = h.renderRequests;
 	h.emit("message_end", { message: assistant(1, 1, 1) });
 	h.emit("agent_start", {});
-	h.setGitBranch("other");
+	h.branchChanged();
 	assert.equal(h.renderRequests, requestsAfterCleanup);
 	h.cleanup();
 	assert.equal(h.setFooterCalls.length, 2);
-	assert.equal(h.unsubscribed, 11);
 });
 
-test("updates model, thinking, session, Git, context, and extension statuses without rereading history", (t) => {
+test("updates model, thinking, session, Git, context, and extension statuses without rereading history", async (t) => {
+	const cwd = mkdtempSync(join(tmpdir(), "pi-ui-footer-"));
+	t.after(() => rmSync(cwd, { recursive: true, force: true }));
+	const git = (...args: string[]) => execFileSync("git", args, { cwd, timeout: 5_000, stdio: "ignore" });
+	git("init", "-b", "main");
+	git("-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "--allow-empty", "-m", "initial");
 	const statuses = new Map<string, string>([["alpha", "first"]]);
 	const h = harness(t, {
+		cwd,
 		entries: [],
 		statuses,
 		contextUsage: { tokens: 1_000, contextWindow: 10_000, percent: 10 },
@@ -527,21 +467,30 @@ test("updates model, thinking, session, Git, context, and extension statuses wit
 	h.emit("model_select", { model: { provider: "vendor", id: "m2" }, previousModel: undefined, source: "test" });
 	h.emit("thinking_level_select", { level: "low", previousLevel: "high" });
 	h.emit("session_info_changed", { name: "New Session" });
-	h.setGitBranch("dev");
+	git("switch", "-c", "dev");
+	h.branchChanged();
 	statuses.set("late", "late status");
+	h.setContextUsage({ tokens: 4_000, contextWindow: 10_000, percent: 40 });
+	const requestsBeforeSettle = h.renderRequests;
+	h.emit("agent_settled", { aborted: false });
+	assert.ok(h.renderRequests > requestsBeforeSettle);
+	const deadline = Date.now() + 5_000;
+	while (!h.plain().includes(" dev") && Date.now() < deadline) {
+		await new Promise((resolve) => setTimeout(resolve, 10));
+	}
 
 	const text = h.plain();
 	assert.match(text, /vendor\/m2/);
 	assert.match(text, /thinking low/);
 	assert.match(text, /New Session/);
-	assert.match(text, /git:dev/);
-	assert.match(text, /25\.0%/);
+	assert.match(text, / dev/);
+	assert.match(text, /40\.0%/);
 	assert.match(text, /first/);
 	assert.match(text, /late status/);
 	assert.doesNotMatch(text, /test\/model-a/);
 	assert.doesNotMatch(text, /thinking high/);
 	assert.equal(h.entryReads, 1);
-	assert.equal(h.contextReads, 2);
+	assert.equal(h.contextReads, 3);
 });
 
 test("tolerates missing model/context and keeps Unicode, narrow widths, and sanitized statuses intact", (t) => {
@@ -557,7 +506,6 @@ test("tolerates missing model/context and keeps Unicode, narrow widths, and sani
 		statuses,
 		sessionName: "会话-α",
 	});
-	h.setGitBranch("功能/分支");
 	const width = 18;
 	const rendered = h.lines(width);
 	assert.ok(rendered.length >= 3);

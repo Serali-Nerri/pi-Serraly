@@ -13,6 +13,7 @@ import {
 	visibleWidth,
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
+import { emptyGitStatus, readGitStatus, renderGitStatus } from "./git.js";
 
 type ContextSnapshot = { tokens: number | null; contextWindow: number; percent: number | null };
 type ModelSnapshot = { provider: string; id: string };
@@ -20,7 +21,6 @@ type UsageTotals = { input: number; output: number; cacheRead: number; cacheWrit
 type FooterFactory = NonNullable<Parameters<ExtensionContext["ui"]["setFooter"]>[0]>;
 
 const footerOwners = new WeakMap<ExtensionContext["ui"], symbol>();
-const MAX_TOOL_NAMES = 16;
 const MAX_RECENT_ASSISTANTS = 512;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -54,16 +54,6 @@ function formatTokens(value: number): string {
 	if (n < 1_000_000) return `${Math.round(n / 1_000)}k`;
 	if (n < 10_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
 	return `${Math.round(n / 1_000_000)}M`;
-}
-
-function formatDuration(ms: number): string {
-	const totalSeconds = Math.floor(Math.max(0, finiteOrZero(ms)) / 1_000);
-	if (totalSeconds < 60) return `${totalSeconds}s`;
-	const seconds = totalSeconds % 60;
-	const totalMinutes = Math.floor(totalSeconds / 60);
-	if (totalMinutes < 60) return `${totalMinutes}m ${seconds}s`;
-	const minutes = totalMinutes % 60;
-	return `${Math.floor(totalMinutes / 60)}h ${minutes}m ${seconds}s`;
 }
 
 function formatCwd(cwd: string): string {
@@ -263,9 +253,11 @@ export function installFooter(
 	let componentGeneration = 0;
 	let latestDisposed = false;
 	let branchUnsubscribe: (() => void) | undefined;
-	let interval: ReturnType<typeof setInterval> | undefined;
 
-	let cwd = sanitize(ctx.cwd);
+	const gitCwd = ctx.cwd;
+	const cwd = sanitize(gitCwd);
+	let git = emptyGitStatus();
+	let gitRequest: AbortController | undefined;
 	let model = captureModel(ctx.model);
 	let thinkingLevel = typeof ctx.thinkingLevel === "string" && ctx.thinkingLevel
 		? ctx.thinkingLevel
@@ -276,10 +268,6 @@ export function installFooter(
 	let latestCacheHitRate: number | undefined;
 	let seenMessages = new WeakSet<object>();
 	const recentAssistantSignatures = new Set<string>();
-	let activityActive = false;
-	let activityStartedAt: number | undefined;
-	let finalElapsedMs: number | undefined;
-	const activeTools = new Map<string, string>();
 
 	function addUsage(usage: UsageTotals): void {
 		totals.input += usage.input;
@@ -364,100 +352,17 @@ export function installFooter(
 		}
 	}
 
-	function stopTimer(): void {
-		if (interval === undefined) return;
-		clearInterval(interval);
-		interval = undefined;
-	}
-
-	function ensureTimer(): void {
-		if (interval !== undefined || !installed || !activityActive || !requestRender) return;
-		interval = setInterval(() => {
-			if (!installed || !activityActive) {
-				stopTimer();
-				return;
-			}
+	function refreshGit(): void {
+		if (!installed || latestDisposed) return;
+		gitRequest?.abort();
+		const request = new AbortController();
+		gitRequest = request;
+		void readGitStatus(gitCwd, request.signal).then((status) => {
+			if (request.signal.aborted) return;
+			gitRequest = undefined;
+			git = status;
 			notifyRender();
-		}, 1_000);
-		if (typeof interval === "object" && interval !== null && "unref" in interval
-			&& typeof interval.unref === "function") {
-			interval.unref();
-		}
-	}
-
-	function startActivity(): void {
-		if (!activityActive) {
-			activityActive = true;
-			activityStartedAt = Date.now();
-			finalElapsedMs = undefined;
-		}
-		ensureTimer();
-		notifyRender();
-	}
-
-	function settleActivity(): void {
-		if (!activityActive) {
-			stopTimer();
-			return;
-		}
-		const startedAt = activityStartedAt ?? Date.now();
-		finalElapsedMs = Math.max(0, Date.now() - startedAt);
-		activityActive = false;
-		activityStartedAt = undefined;
-		activeTools.clear();
-		stopTimer();
-		notifyRender();
-	}
-
-	function addTool(toolCallId: unknown, toolName: unknown): void {
-		if (typeof toolCallId !== "string" || !toolCallId) return;
-		const name = sanitize(toolName);
-		if (!name) return;
-		if (!activeTools.has(toolCallId) && activeTools.size >= MAX_TOOL_NAMES) {
-			const oldest = activeTools.keys().next().value;
-			if (oldest !== undefined) activeTools.delete(oldest);
-		}
-		activeTools.set(toolCallId, name);
-		notifyRender();
-	}
-
-	function removeTool(toolCallId: unknown): void {
-		if (typeof toolCallId !== "string") return;
-		if (activeTools.delete(toolCallId)) notifyRender();
-	}
-
-	function renderActivity(theme: Theme, width: number): string | undefined {
-		if (activityActive) {
-			const elapsed = theme.fg(
-				"dim",
-				formatDuration(activityStartedAt === undefined ? 0 : Date.now() - activityStartedAt),
-			);
-			const head = `${theme.fg("accent", "●")} ${theme.fg("accent", "working")}`;
-			const separator = theme.fg("dim", " · ");
-			const suffix = `${separator}${elapsed}`;
-			const tools = Array.from(activeTools.values()).filter((name) => name.length > 0);
-			if (tools.length === 0) {
-				const line = head + suffix;
-				if (visibleWidth(line) <= width) return line;
-				return truncateToWidth(`${theme.fg("accent", "●")} ${elapsed}`, width, "…");
-			}
-			const toolText = theme.fg("muted", tools.join(", "));
-			const full = `${head}${separator}${toolText}${suffix}`;
-			if (visibleWidth(full) <= width) return full;
-			const available = width - visibleWidth(head) - visibleWidth(separator) - visibleWidth(suffix);
-			if (available > 0) {
-				const shortened = truncateToWidth(toolText, available, theme.fg("dim", "…"));
-				return `${head}${separator}${shortened}${suffix}`;
-			}
-			return truncateToWidth(`${head}${suffix}`, width, "…");
-		}
-		if (finalElapsedMs !== undefined) {
-			const elapsed = theme.fg("text", formatDuration(finalElapsedMs));
-			const line = `${theme.fg("success", "✓")} ${theme.fg("muted", "done")} ${elapsed}`;
-			if (visibleWidth(line) <= width) return line;
-			return truncateToWidth(`${theme.fg("success", "✓")} ${elapsed}`, width, "…");
-		}
-		return undefined;
+		});
 	}
 
 	const factory: FooterFactory = (tui, theme, footerData) => {
@@ -470,14 +375,16 @@ export function installFooter(
 		let unsubscribe = () => {};
 		try {
 			unsubscribe = footerData.onBranchChange(() => {
-				if (!disposed) notifyRender();
+				if (disposed) return;
+				refreshGit();
+				notifyRender();
 			});
 		} catch {
-			// A host without branch notifications still renders cwd, model and usage.
+			// Tool completion and settlement still refresh Git without branch notifications.
 		}
 		branchUnsubscribe?.();
 		branchUnsubscribe = unsubscribe;
-		ensureTimer();
+		refreshGit();
 
 		return {
 			invalidate() {
@@ -489,25 +396,20 @@ export function installFooter(
 				unsubscribe();
 				if (generation !== componentGeneration) return;
 				latestDisposed = true;
+				gitRequest?.abort();
+				gitRequest = undefined;
 				branchUnsubscribe = undefined;
 				requestRender = undefined;
-				stopTimer();
 			},
 			render(width: number): string[] {
 				if (disposed || !installed) return [];
 				const allowed = Math.max(0, Math.floor(width));
 				if (allowed === 0) return [];
 
-				let branch: string | undefined;
-				try {
-					branch = sanitize(footerData.getGitBranch()) || undefined;
-				} catch {
-					branch = undefined;
-				}
-
 				const firstParts: string[] = [];
 				if (cwd) firstParts.push(theme.fg("accent", shortenPath(formatCwd(cwd), 44)));
-				if (branch) firstParts.push(theme.fg("muted", `git:${branch}`));
+				const gitText = renderGitStatus(theme, git);
+				if (gitText) firstParts.push(gitText);
 				if (sessionName) firstParts.push(theme.fg("dim", `session:${sessionName}`));
 				const firstLeft = firstParts.join(theme.fg("dim", " · "));
 				const first = alignRight(firstLeft, renderContext(theme, contextUsage), allowed, theme);
@@ -520,11 +422,7 @@ export function installFooter(
 				const secondLeft = leftParts.join(theme.fg("dim", " · "));
 				const second = alignRight(secondLeft, renderStats(theme, totals, latestCacheHitRate), allowed, theme);
 
-				const lines = [first, second];
-				const activity = renderActivity(theme, allowed);
-				if (activity) lines.push(truncateToWidth(activity, allowed, "…"));
-				lines.push(...extensionStatusLines(footerData, theme, allowed));
-				return lines;
+				return [first, second, ...extensionStatusLines(footerData, theme, allowed)];
 			},
 		};
 	};
@@ -535,7 +433,8 @@ export function installFooter(
 		if (cleanedUp) return;
 		cleanedUp = true;
 		installed = false;
-		stopTimer();
+		gitRequest?.abort();
+		gitRequest = undefined;
 		for (const off of unsubscribers.splice(0)) {
 			try {
 				off();
@@ -562,20 +461,17 @@ export function installFooter(
 		rebuildUsage(readEntries(ctx.sessionManager));
 		ui.setFooter(factory);
 
-		unsubscribers.push(pi.on("before_agent_start", () => startActivity()));
-		unsubscribers.push(pi.on("agent_start", () => startActivity()));
 		unsubscribers.push(pi.on("agent_settled", (_event, eventCtx) => {
-			settleActivity();
 			contextUsage = captureContext(eventCtx);
+			refreshGit();
 			notifyRender();
 		}));
+		unsubscribers.push(pi.on("tool_execution_end", refreshGit));
 		unsubscribers.push(pi.on("message_end", (event, eventCtx) => {
 			recordMessage(event.message, false);
 			contextUsage = captureContext(eventCtx);
 			notifyRender();
 		}));
-		unsubscribers.push(pi.on("tool_execution_start", (event) => addTool(event.toolCallId, event.toolName)));
-		unsubscribers.push(pi.on("tool_execution_end", (event) => removeTool(event.toolCallId)));
 		unsubscribers.push(pi.on("model_select", (event, eventCtx) => {
 			model = captureModel(event.model);
 			contextUsage = captureContext(eventCtx);

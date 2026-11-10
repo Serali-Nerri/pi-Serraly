@@ -13,6 +13,7 @@ const extensionEntries = [
 	"packages/pi-notes-compaction/src/index.ts",
 	"packages/pi-session-recap/index.ts",
 	"packages/pi-shepherdr/index.ts",
+	"packages/pi-suggestions/index.ts",
 	"packages/pi-ui/dist/index.ts",
 ].sort();
 
@@ -38,6 +39,7 @@ test("released Pi 1.5 loads every imported package and completes session cleanup
 		"packages/pi-notes-compaction",
 		"packages/pi-session-recap",
 		"packages/pi-shepherdr",
+		"packages/pi-suggestions",
 		"packages/pi-ui",
 	]);
 	assert.deepEqual(
@@ -75,6 +77,7 @@ test("released Pi 1.5 loads every imported package and completes session cleanup
 		"notes",
 		"prime",
 		"recap",
+		"suggestions",
 	]) {
 		assert.ok(
 			report.commands.includes(command),
