@@ -1,7 +1,7 @@
 # Upstream provenance
 
-- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/5ede06bdc32da2b513f0709966af1f32908f243c/packages/pi-notes-compaction
-- Baseline version: 0.0.14
+- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/672ec0437b76b075d031fdd072a4f6529303e5d6/packages/pi-notes-compaction
+- Baseline version: 0.0.15
 - Upstream history: CHANGELOG.md is retained unchanged. The upstream root MIT LICENSE is included because the upstream package has no separate license file.
 
 ## Current local differences

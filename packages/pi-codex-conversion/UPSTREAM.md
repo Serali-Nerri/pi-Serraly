@@ -1,6 +1,6 @@
 # Upstream provenance
 
-- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/5ede06bdc32da2b513f0709966af1f32908f243c/packages/pi-codex-conversion
+- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/672ec0437b76b075d031fdd072a4f6529303e5d6/packages/pi-codex-conversion
 - Baseline version: 4.0.9
 - Upstream history and license: CHANGELOG.md and LICENSE are retained. Nested provenance remains in UPSTREAM_SYNC.md, code-mode/UPSTREAM_SYNC.md, vendor UPSTREAM files and the native rust UPSTREAM files.
 - Local history: [CHANGELOG.local.md](./CHANGELOG.local.md) records recent local changes separately from upstream releases.

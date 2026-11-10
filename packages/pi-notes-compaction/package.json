@@ -1,6 +1,6 @@
 {
 	"name": "@howaboua/pi-notes-compaction",
-	"version": "0.0.14",
+	"version": "0.0.15",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/IgorWarzocha/howaboua-pi-stuff.git",
@@ -59,6 +59,8 @@
 	},
 	"exports": {
 		".": "./src/index.ts",
-		"./context-sharing": "./src/context-sharing.ts"
+		"./context-sharing": "./src/context-sharing.ts",
+		"./saved-session": "./src/saved-session.mjs",
+		"./saved-session-index": "./src/saved-session-index.mjs"
 	}
 }

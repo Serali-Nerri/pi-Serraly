@@ -1,6 +1,6 @@
 # Upstream provenance
 
-- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/5ede06bdc32da2b513f0709966af1f32908f243c/packages/pi-auto-trees
+- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/672ec0437b76b075d031fdd072a4f6529303e5d6/packages/pi-auto-trees
 - Baseline version: 0.1.19
 - Upstream history and license: CHANGELOG.md and LICENSE are retained.
 

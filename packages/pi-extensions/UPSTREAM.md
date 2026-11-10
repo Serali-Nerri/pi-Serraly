@@ -23,7 +23,7 @@ Browser forwards its public `./extension` TypeScript entry rather than the compi
 | `pi-agent-board`      | 0.0.5         | [UPSTREAM](../pi-agent-board/UPSTREAM.md)      |
 | `pi-auto-trees`       | 0.1.19        | [UPSTREAM](../pi-auto-trees/UPSTREAM.md)       |
 | `pi-shepherdr`        | 0.2.27        | [UPSTREAM](../pi-shepherdr/UPSTREAM.md)        |
-| `pi-notes-compaction` | 0.0.14        | [UPSTREAM](../pi-notes-compaction/UPSTREAM.md) |
+| `pi-notes-compaction` | 0.0.15        | [UPSTREAM](../pi-notes-compaction/UPSTREAM.md) |
 | `pi-ui`               | 0.3.0         | [UPSTREAM](../pi-ui/UPSTREAM.md)               |
 | `pi-session-recap`    | 0.1.0         | [UPSTREAM](../pi-session-recap/UPSTREAM.md)    |
 
