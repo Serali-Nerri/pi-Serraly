@@ -4,14 +4,36 @@ This is the maintainer checklist for syncing the bundled provider with Pi and Op
 
 ## Reference baseline
 
-- Pi SDK baseline: published `1.5.0`
-- Stock provider comparison: published Pi `1.5.0` (2026-11-05)
+- Pi SDK baseline: published `1.5.2`
+- Stock provider comparison: published Pi `1.5.2` (2026-11-12)
 - Codex checkout reviewed through: `1b1835f751ebdc0cfc50b3fe55d4571dbb294563` (2026-09-28)
 - WebSocket/session review: `ecc78e4cf5607ecf5f080d682eae0ecb650868ae` (2026-10-01)
 - Exact apply-patch source revision: [`src/tools/rust/UPSTREAM.apply-patch`](src/tools/rust/UPSTREAM.apply-patch)
 - Exact image utility source revision: [`src/tools/rust/crates/codex-utils-image/UPSTREAM`](src/tools/rust/crates/codex-utils-image/UPSTREAM)
 - Standalone web search: external extension outside this repository
 - Standalone image generation: [`../pi-codex-imagegen/UPSTREAM_SYNC.md`](../pi-codex-imagegen/UPSTREAM_SYNC.md)
+
+## November 11 mixed content
+
+Adapted Codex `733a1cca06` (#60665): `content()` emits one MCP content block or an iterable in order across Code, Notebook, TS and JS Notebook. Text and images use the existing output paths; resources remain JSON text. Audio and encrypted text are rejected explicitly. The official Code host remains pinned to 0.167.0. The helper is supplied by PCC's cell integration and notebook runtimes without modifying that host or invalidating existing JS snapshots.
+
+## November 11 terminal rejections
+
+Reviewed Codex `e58bf8f523` for `codex-api/src/error.rs` and `codex-api/src/api_bridge.rs` rejection handling (#60479, #60480, #60481, #60511). PCC now stops retries for statusless content-policy, inference-hook and access-program rejections, plus recognised inference-hook, access-program and workspace 403s. Workspace HTTP parsing follows `detail.code`, `error.code`, then the base64 `x-error-json` header. Other statuses retain PCC's existing retry policy, including transient 503s carrying rejection codes. Request rejection does not mark the session unavailable.
+
+Pi still classifies outer automatic retries from final error text. Ordinary denial messages remain intact and do not trigger that heuristic. Pi exposes no structured terminal-rejection override, so denial text that itself resembles a transient error remains subject to Pi's heuristic.
+
+## Pi 1.5.2 compatibility
+
+Compared released Pi `1.5.2` for request shape, transport and headers, reasoning and service tiers, retries and stream termination. PCC retains its documented developer-instruction placement, tool replay, identity headers, terminal-rejection handling and bounded recovery differences. Normal requests still match Pi's lack of implicit header or stream-idle deadlines; explicit timeoutMs does not bound SSE body streaming. HTTP serialization and compression now wait until SSE is selected.
+
+Tool declarations now use Pi's public `@earendil-works/pi-schema` API instead of TypeBox. Pi validates routed calls; adapter-owned calls still use Pi's public argument validator. The previously reviewed `v1.5.0` to `v1.5.1` retry-delay abort-listener cleanup and `session-id` spelling are already present in PCC.
+
+Pi's native cache warmer remains disabled for Codex and Responses Lite because those routes cannot honour its one-token output cap. Other providers inherit Pi's idle warming and Anthropic message threads. PCC's opt-in isolated Codex keepalive remains separate.
+
+Responses Lite proxies now honour `compat.promptCacheKeyMode: "disabled"` by omitting `prompt_cache_key` before the payload hook. Native Codex request shaping is unchanged.
+
+JS Notebook now pins Pi codemode `1.5.2`. It reuses that exact version when resolvable beside the extension, otherwise it installs on demand. A separate global Pi installation does not guarantee reuse. Pi `1.5.0` hosts remain supported but may need to download the newer runtime. PCC consumes its WASM loader, which is unchanged. The separately pinned QuickJS engine and local bridge are unchanged, so existing snapshots retain their fingerprint. Pi's declaration and one-shot prelude fixes do not alter PCC's independent tool contracts or persistent prelude.
 
 ## Pi 1.5 adoption
 

@@ -1,31 +1,33 @@
 {
 	"name": "@howaboua/pi-notes-compaction",
-	"version": "0.0.15",
+	"version": "0.0.16",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/IgorWarzocha/howaboua-pi-stuff.git",
 		"directory": "packages/pi-notes-compaction"
 	},
 	"files": [
+		"index.ts",
 		"src",
 		"README.md",
 		"UPSTREAM.md",
 		"PCC-INTEGRATION.md",
 		"CHANGELOG.md",
-		"LICENSE"
+		"LICENSE",
+		"tsconfig.json"
 	],
 	"engines": {
-		"node": ">=22.18.0"
+		"node": ">=22.19.0"
 	},
 	"type": "module",
 	"description": "Provider-neutral session notes and notes-guided context windows for Pi",
 	"license": "MIT",
 	"pi": {
 		"extensions": [
-			"./src/index.ts"
+			"./index.ts"
 		]
 	},
-	"main": "src/index.ts",
+	"main": "index.ts",
 	"scripts": {
 		"check": "bun run lint && bun run typecheck",
 		"lint": "biome check .",
@@ -33,24 +35,23 @@
 		"typecheck": "tsgo --noEmit"
 	},
 	"dependencies": {
+		"@earendil-works/pi-schema": "1.5.2",
 		"better-sqlite3": "13.0.3"
 	},
 	"devDependencies": {
-		"@earendil-works/pi-agent-core": "1.5.0",
-		"@earendil-works/pi-ai": "1.5.0",
-		"@earendil-works/pi-coding-agent": "1.5.0",
-		"@earendil-works/pi-tui": "1.5.0",
-		"@howaboua/pi-codex-conversion": "4.0.9",
-		"@types/better-sqlite3": "9.6.0",
-		"typebox": "1.3.27"
+		"@earendil-works/pi-agent-core": "1.5.2",
+		"@earendil-works/pi-ai": "1.5.2",
+		"@earendil-works/pi-coding-agent": "1.5.2",
+		"@earendil-works/pi-tui": "1.5.2",
+		"@howaboua/pi-codex-conversion": "4.0.10",
+		"@types/better-sqlite3": "9.6.0"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": ">=1.5.0",
 		"@earendil-works/pi-agent-core": ">=1.0.4",
 		"@earendil-works/pi-ai": ">=1.0.4",
 		"@earendil-works/pi-tui": ">=1.0.4",
-		"@howaboua/pi-codex-conversion": ">=4.0.9",
-		"typebox": "*"
+		"@howaboua/pi-codex-conversion": ">=4.0.10"
 	},
 	"peerDependenciesMeta": {
 		"@howaboua/pi-codex-conversion": {
@@ -58,9 +59,9 @@
 		}
 	},
 	"exports": {
-		".": "./src/index.ts",
-		"./context-sharing": "./src/context-sharing.ts",
-		"./saved-session": "./src/saved-session.mjs",
-		"./saved-session-index": "./src/saved-session-index.mjs"
+		".": "./index.ts",
+		"./context-sharing": "./src/notes/context-sharing.ts",
+		"./saved-session": "./src/notes/saved-session.mjs",
+		"./saved-session-index": "./src/notes/saved-session-index.mjs"
 	}
 }

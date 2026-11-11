@@ -87,9 +87,7 @@ function renderTrace(
 	const showResult = trace.name !== "view_image";
 	const renderedTrace = showResult ? withoutEmittedImages(trace, emittedImages) : trace;
 	const programmatic = isProgrammaticTool(tool) ? tool : undefined;
-	const renderState: NestedRenderState = programmatic?.renderCall || programmatic?.renderResult
-		? renderStore.get(trace.id)
-		: { state: {} };
+	const renderState = renderStore.get(trace.id);
 	const rendererInput = renderState.input ?? trace.input;
 	const rendererResult = renderState.result ?? renderedTrace.result;
 	const partial = trace.status === "running" || trace.status === "blocked";
@@ -144,10 +142,9 @@ function renderTrace(
 		if (!customResultRendered)
 			components.push(new Text(theme.fg("error", trace.error), 4, 0));
 	} else if (showResult && renderedTrace.result && !customResultRendered) {
-		components.push(renderGenericTraceResult(renderedTrace, theme, options.expanded || partial, context));
+		components.push(renderGenericTraceResult(renderedTrace, theme, options.expanded || partial, context, renderState));
 	}
-	if (programmatic?.renderCall || programmatic?.renderResult)
-		renderStore.rebalance(trace.id);
+	renderStore.rebalance(trace.id);
 	return components;
 }
 
@@ -182,6 +179,7 @@ function renderGenericTraceResult(
 	theme: CodeModeRenderTheme,
 	full: boolean,
 	context: CodeModeRenderContext | undefined,
+	renderState: NestedRenderState,
 ): Component {
 	const result = trace.result;
 	if (!result) return new Container();
@@ -194,7 +192,7 @@ function renderGenericTraceResult(
 			item.type === "image" && typeof item.data === "string" && typeof item.mimeType === "string",
 	);
 	const renderedText = theme.fg("dim", text);
-	return renderTextAndImages(full ? renderedText : previewText(renderedText, theme, false, context), images, theme);
+	return renderTextAndImages(full ? renderedText : previewText(renderedText, theme, false, context), images, theme, renderState.images ??= []);
 }
 
 function isProgrammaticTool(

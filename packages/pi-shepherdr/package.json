@@ -1,6 +1,6 @@
 {
 	"name": "@howaboua/pi-shepherdr",
-	"version": "0.2.27",
+	"version": "1.0.0",
 	"description": "Persistent blocking and asynchronous Pi agents through Herdr.",
 	"type": "module",
 	"license": "MIT",
@@ -25,6 +25,7 @@
 	],
 	"files": [
 		"index.ts",
+		"worker-api.ts",
 		"src",
 		"profiles",
 		"README.md",
@@ -41,33 +42,25 @@
 		"format": "biome check --write ."
 	},
 	"peerDependencies": {
-		"@howaboua/pi-notes-compaction": ">=0.0.15",
-		"@howaboua/pi-codex-conversion": ">=4.0.9",
+		"@howaboua/pi-codex-conversion": ">=4.0.10",
 		"@earendil-works/pi-ai": ">=1.1.0",
 		"@earendil-works/pi-coding-agent": ">=1.5.0",
-		"@earendil-works/pi-tui": ">=1.1.0",
-		"typebox": "*"
+		"@earendil-works/pi-tui": ">=1.1.0"
 	},
 	"peerDependenciesMeta": {
-		"@howaboua/pi-notes-compaction": {
-			"optional": true
-		},
 		"@howaboua/pi-codex-conversion": {
 			"optional": true
 		}
 	},
-	"dependencies": {
-		"@howaboua/pi-agent-board": "0.0.5"
-	},
 	"devDependencies": {
-		"@howaboua/pi-notes-compaction": "0.0.15",
-		"@howaboua/pi-codex-conversion": "4.0.9",
-		"@biomejs/biome": "^2.6.3",
-		"@earendil-works/pi-ai": "1.5.0",
-		"@earendil-works/pi-coding-agent": "1.5.0",
-		"@earendil-works/pi-tui": "1.5.0",
-		"@types/node": "^26.6.5",
-		"typebox": "1.3.27",
+		"@howaboua/pi-agent-board": "0.0.6",
+		"@howaboua/pi-notes-compaction": "0.0.16",
+		"@howaboua/pi-codex-conversion": "4.0.10",
+		"@biomejs/biome": "^2.6.6",
+		"@earendil-works/pi-ai": "1.5.2",
+		"@earendil-works/pi-coding-agent": "1.5.2",
+		"@earendil-works/pi-tui": "1.5.2",
+		"@types/node": "^26.6.6",
 		"typescript": "^7.0.2"
 	},
 	"pi": {
@@ -76,8 +69,14 @@
 		]
 	},
 	"engines": {
-		"node": ">=22.18.0"
+		"node": ">=22.19.0"
 	},
 	"main": "index.ts",
-	"exports": "./index.ts"
+	"exports": {
+		".": "./index.ts",
+		"./worker-api": "./worker-api.ts"
+	},
+	"dependencies": {
+		"@earendil-works/pi-schema": "1.5.2"
+	}
 }

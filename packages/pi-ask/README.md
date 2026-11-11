@@ -16,7 +16,7 @@ Try it for one session:
 pi --no-extensions --no-skills -e ~/.pi/pi-Serraly/packages/pi-ask
 ```
 
-Requires Pi 1.5 or newer. When Pi Codex Conversion 4.0.9 or newer is installed too, `ask` is available inside Code and Notebook Mode as `await tools.ask({ prompts, delivery?, handoff? })`.
+Requires Pi 1.5 or newer. When Pi Codex Conversion 4.0.10 or newer is installed too, `ask` is available inside Code and Notebook Mode as `await tools.ask({ prompts, delivery?, handoff? })`.
 
 ## How it behaves
 
@@ -51,6 +51,7 @@ Set either value to `false`, then run `/reload`, to hide that template. The same
 ## TUI controls
 
 The panel uses Pi's active keybindings. The defaults are:
+
 - `Up` / `Down` — move through choices, free text, and comments
 - `Enter` — choose or edit the focused item, or save an edit
 - `Left` / `Right` — move between prompts and the review tab

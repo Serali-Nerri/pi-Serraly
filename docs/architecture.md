@@ -10,7 +10,7 @@
 | pi-ask | 问卷与交互状态 | 可选接入 conversion 公共协议 |
 | pi-browser | 浏览器工具、连接与 worker 生命周期 | 可选接入 conversion 公共协议 |
 | pi-codex-imagegen | 图像请求、产物与工具 | 可选接入 conversion 公共协议 |
-| pi-shepherdr | Herdr fleet、agent 工具、profiles 与共享上下文 | 硬依赖 pi-agent-board；可选接入 conversion 与 Notes |
+| pi-shepherdr | Herdr Core fleet、agent 工具、profiles 与共享上下文 | Herdr Core；可选接入 conversion、Notes 与 Board |
 | pi-agent-board | 任务板、运行时与 Web 查看器 | 可选接入 conversion 公共协议 |
 | pi-auto-trees | marker/prime/end 会话流程 | 可选接入 conversion 公共协议 |
 | pi-notes-compaction | Notes、历史检索、上下文窗口、共享上下文与显式会话裁剪 | better-sqlite3；可选接入 conversion 公共协议 |
@@ -19,7 +19,7 @@
 | pi-session-recap | TUI 手动/空闲 recap、历史裁剪、临时卡片与请求清理 | 只依赖公开 Pi host API；模型注册表发起独立摘要请求 |
 | pi-extensions | 显式组合仓库全部十一个扩展的注册入口 | workspace 运行依赖；调用成员公开导出 |
 
-跨包依赖使用公开导出，不读取兄弟私有源码。宿主包是 peer，不随正式运行树安装；开发使用精确 Pi 1.5.0。外部运行依赖由 workspace 安装。
+跨包依赖使用公开导出，不读取兄弟私有源码。宿主包是 peer，不随正式运行树安装；开发使用精确 Pi 1.5.2。工具 schema 使用 Pi 原生 schema 包，外部运行依赖由 workspace 安装。
 
 pi-extensions 显式维护成员依赖和 manifest 入口顺序。十一个成员各有一个 TS 转发入口，默认全部启用，可由 `pi config` 分别开关。更新提示的边界见 [整合包 README](../packages/pi-extensions/README.md)。默认仍逐包登记，整合包不能与其成员重复加载。
 
@@ -68,7 +68,7 @@ build 只生成产物，支持按包及其 workspace 构建依赖选择；check/
 
 安装工作区独立于开发树，保留完整仓库文件但不含 `.git`；Git 历史只保留在开发仓库。所有包共用这一工作区，包括独立登记的 pi-ui 和 pi-session-recap。依赖安装和构建通过普通 Bun workspace 命令完成，登记、资源过滤、加载与移除属于原生 Pi。生产依赖树不携带物理宿主包；准备和整仓更新命令由 development 持有。
 
-所有成员存在并可导入，不代表被启用。默认逐包 pi install；Shepherdr 的 agent-board 依赖不会自动登记 agent-board 入口。根 manifest 不注册资源。可选整合包只有被显式登记才提供全部十一个扩展的入口，成员的加载由 Pi 资源开关控制。
+所有成员存在并可导入，不代表被启用。默认逐包 pi install；Shepherdr 不会自动登记 Notes 或 Board 入口。根 manifest 不注册资源。可选整合包只有被显式登记才提供全部十一个扩展的入口，成员的加载由 Pi 资源开关控制。
 
 更新整个工作区可能同时改变多个已登记包，下次完整启动统一加载。备份与回滚以完整安装工作区和必要的 settings 为单位；安装目录不负责保存 Git 历史。
 

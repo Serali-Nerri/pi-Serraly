@@ -1,6 +1,6 @@
 # pi-Serraly
 
-自用的 Pi 扩展源码工作区：Bun workspaces，**Pi 1.5.0 / Node ≥22.19 / Bun 1.4.2**，不发布 npm。
+自用的 Pi 扩展源码工作区：Bun workspaces，**Pi 1.5.2 / Node ≥22.19 / Bun 1.4.2**，不发布 npm。
 
 ## 扩展
 
@@ -11,7 +11,7 @@
 | [pi-browser](packages/pi-browser/README.md) | 浏览器工具与托管 worker |
 | [pi-codex-imagegen](packages/pi-codex-imagegen/README.md) | 图像生成与编辑 |
 | [pi-shepherdr](packages/pi-shepherdr/README.md) | Herdr 多代理编排 |
-| [pi-agent-board](packages/pi-agent-board/README.md) | 共享任务板与查看器；Shepherdr 的运行依赖 |
+| [pi-agent-board](packages/pi-agent-board/README.md) | 独立可选的共享任务板与查看器 |
 | [pi-auto-trees](packages/pi-auto-trees/README.md) | 会话 marker、prime 与 end |
 | [pi-notes-compaction](packages/pi-notes-compaction/README.md) | 独立可选的 Notes、历史检索与共享上下文；使用 SQLite 原生模块 |
 | [pi-suggestions](packages/pi-suggestions/README.md) | 空输入框中的下一步请求草稿；独立模型，默认关闭 |
@@ -20,7 +20,9 @@
 
 默认逐包注册，只启用需要的包。可选的 [pi-extensions](packages/pi-extensions/README.md) 一次登记上述全部十一个扩展的独立入口，可在 `pi config` 中分别开关；不要与其中成员重复登记。context-view 从其独立上游安装。
 
-conversion 4.0.5 不再内置 Notes/History，也不再导出旧的 `context-sharing`。需要这些能力时单独登记 Notes，或启用整合包中的 Notes 入口；旧 Notes 设置不会被静默关闭，缺少新扩展时会提示迁移。详见 [Notes README](packages/pi-notes-compaction/README.md)。
+Notes/History 由独立 Notes 包提供，不内置于 conversion。需要时单独登记 Notes，或启用整合包中的 Notes 入口；旧 Notes 设置不会被静默关闭，缺少新扩展时会提示迁移。详见 [Notes README](packages/pi-notes-compaction/README.md)。
+
+Shepherdr 1.0 需要 Herdr Core ≥0.1.18，不再支持旧 Herdr TUI 后端；Notes 与 Board 都是可选集成。本仓保留这两个独立包，不引入上游的 Agent Comms 合包。详见 [Shepherdr README](packages/pi-shepherdr/README.md)。
 
 ## 开发与部署
 

@@ -83,8 +83,12 @@ async function registerImagegenInCodeMode(
 		const { adaptToolForCodeMode, registerCodeModeExtensionTools } =
 			await import(CODE_MODE_MODULE);
 		return registerCodeModeExtensionTools(pi, () => {
-			const api = "size" in tool.parameters.properties;
-			const extended = "gif" in tool.parameters.properties;
+			const properties = tool.parameters["properties"];
+			const api =
+				typeof properties === "object" &&
+				properties !== null &&
+				"size" in properties;
+			const extended = api && "gif" in properties;
 			const adapted = adaptToolForCodeMode(tool, {
 				discovery: "help",
 				usage:
@@ -139,7 +143,7 @@ async function registerImagegenInCodeMode(
 			throw new Error(
 				"Update " +
 					CODE_MODE_PACKAGE +
-					" to 4.0.9 or newer to use Codex Imagegen with it",
+					" to 4.0.10 or newer to use Codex Imagegen with it",
 				{ cause: error },
 			);
 		}

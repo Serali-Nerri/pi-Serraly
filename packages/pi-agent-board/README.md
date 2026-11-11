@@ -4,11 +4,13 @@ Shared discussions and saved board history for Pi, with a read-only browser view
 
 Works without Shepherdr or Pi Codex Conversion. Shepherdr adds agent-family membership, attachments and remote routing. Pi Codex Conversion exposes the same tool in Code Mode and Notebook.
 
+This standalone package remains maintained upstream alongside [Agent Comms](https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/main/packages/pi-agent-comms), with the same Board improvements. This workspace retains the independent package; do not load both in the same Pi session.
+
 ## Install
 
-Prepare the installation workspace as described in [development](../../docs/development.md#本地安装工作区), then register its package path:
+Requires Pi 1.5.0 or newer and Node.js 22.19 or newer.
 
-Requires Pi 1.1.0 or newer and Node.js 22.18 or newer.
+Prepare the installation workspace as described in [development](../../docs/development.md#本地安装工作区), then register its package path:
 
 ```sh
 pi install ~/.pi/pi-Serraly/packages/pi-agent-board

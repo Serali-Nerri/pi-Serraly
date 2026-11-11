@@ -1,6 +1,13 @@
 # Local changelog
 
-Local changes and their background, relative to upstream **4.0.9** (`5ede06bdc32da2b513f0709966af1f32908f243c`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
+Local changes and their background, relative to upstream **4.0.10** (`096dbfca6af374ba23f6a5fe97e7c28566561a6c`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
+
+## Upstream 4.0.10 sync
+
+- Adopt mixed-content output across all four cell runtimes, idle shell-completion notices, post-compaction shell inventory, lean patch results, terminal rejection handling and lower-allocation continuation comparison.
+- Align Pi and native schema declarations with 1.5.2, Code host assets with 0.167.0, JS Notebook with Pi codemode 1.5.2 and TS Notebook with tsrs 0.23.0-ts7.1.0-beta. Preserve upstream native binaries and apply-patch provenance.
+- Give exported shell-tool factories and notebook renderers explicit public types so declarations build against released Pi 1.5.2 without restoring a direct TypeBox dependency.
+- Preserve local request timeouts, inactive tool defaults, offline startup, aborted-run guards, Codex Live gateways, maintained CDP helpers and Notes Compaction ownership. Combine upstream's stable nested-image cache with independent local card expansion and Pi-owned view_image display.
 
 ## Codex Live gateway routing
 

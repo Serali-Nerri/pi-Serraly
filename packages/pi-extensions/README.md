@@ -8,6 +8,7 @@ This private package includes the nine retained Howaboua packages, `pi-ui` and `
 
 - Pi 1.5.0 or newer.
 - Node.js 22.19 or newer.
+- Agent orchestration also needs the [Shepherdr runtime requirements](../pi-shepherdr/README.md#install).
 - A separate installation workspace prepared as described in [development](../../docs/development.md#本地安装工作区). Pi loads local packages in place without installing dependencies or building outputs.
 
 ## Included packages
@@ -44,7 +45,7 @@ Extensions
 
 ## Dependency versus activation
 
-Each member is a `workspace:*` dependency so its public exports resolve from this package. Each file listed in `pi.extensions` forwards one public member export; Pi loads only enabled entries. Dependencies alone do not register extensions, including Shepherdr's dependency on Agent Board.
+Each member is a `workspace:*` dependency so its public exports resolve from this package. Each file listed in `pi.extensions` forwards one public member export; Pi loads only enabled entries. Dependencies alone do not register extensions. Shepherdr discovers active Notes and Board integrations optionally; neither entry is required for agent orchestration.
 
 ## Install
 

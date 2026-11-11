@@ -2,7 +2,7 @@
 
 ## 工具链与命令
 
-Node ≥22.19、Bun 1.4.2、Pi 1.5.0。依赖只在安装阶段访问 registry：
+Node ≥22.19、Bun 1.4.2、Pi 1.5.2。依赖只在安装阶段访问 registry：
 
 ```sh
 bun install --frozen-lockfile --ignore-scripts
@@ -77,7 +77,7 @@ node --input-type=module -e 'import Database from "better-sqlite3"; const db = n
 
 没有匹配预构建的平台需要单独准备该依赖支持的原生构建工具并验证产物；不要盲目信任全部依赖脚本或把其他机器的原生文件复制过来。
 
-Pi 对本地包只登记并原地加载，不复制、不构建、不安装依赖；删除登记用 `pi remove <source>`。本地代码更新由开发仓库导出和 Bun 准备完成，不在安装目录执行 `git pull`，也不依赖 `pi update` 拉取。workspace 运行依赖正常安装，例如 Shepherdr 使用 agent-board，但只有显式登记其包入口才启用 agent-board；根包的 pi 资源数组为空，不通过安装根目录启用全部扩展。
+Pi 对本地包只登记并原地加载，不复制、不构建、不安装依赖；删除登记用 `pi remove <source>`。本地代码更新由开发仓库导出和 Bun 准备完成，不在安装目录执行 `git pull`，也不依赖 `pi update` 拉取。workspace 运行依赖正常安装，但只有显式登记包入口才启用扩展；根包的 pi 资源数组为空，不通过安装根目录启用全部扩展。
 
 更新前保留完整安装工作区的可恢复副本；若原目录仍带 `.git`，先核对未提交文件和未发布提交已在开发仓库保存，再移除安装目录的 Git 元数据。将已验证源码快照导出到新暂存目录，准备依赖、产物并离线验收，再整体替换安装工作区，保留本地数据。整个工作区作为一个 workspace 更新，可能影响多个已登记包；不按包冻结旧产物。路径不变时无需重写设置，下一次完整启动加载更新。回滚恢复完整安装工作区；如果改过登记路径，还需恢复 settings 备份。
 

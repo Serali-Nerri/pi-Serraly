@@ -12,7 +12,7 @@
 - Keep src/voice/rust/** and scripts/build-voice-helper.mjs paired; this repository maintains the only voice copy.
 - Tool-card renderers must not retain the host render context or `lastComponent`; see src/tools/code-mode/AGENTS.md.
 - `view_image` result-content images are Pi-owned. Its custom renderer may draw only the details-only text-model preview, respecting `showImages`; never copy those images into model-visible content for display.
-- Keep the typebox devDependency aligned with the host Pi runtime. Pi 1.5.0 resolves typebox 1.3.27; a duplicate copy breaks declaration emit for public schemas.
+- Use @earendil-works/pi-schema for tool declarations. Give exported tool factories and renderer bundles explicit public Pi types so declaration emit does not leak Pi's transitive TypeBox path; do not restore a direct TypeBox dependency.
 - Session startup is offline. Do not poll npm or any registry for version updates; local checkout or optional release updates are managed explicitly.
 - tools.customRustBinariesDir is the filename-based bundled-helper override, not a Code host override. Bundled-helper startup incompatibility errors point there, not through loader noise.
 - Vendored apply-patch engine, path-uri and absolute-path track one Codex source commit. Keep product changes in standalone_executable.rs and pi-apply-patch-fs; preserve local dependency-API adaptations recorded in src/tools/rust/VENDORED.md when syncing.

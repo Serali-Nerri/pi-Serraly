@@ -1,8 +1,14 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
-import { type Static, Type } from "typebox";
-import { Check } from "typebox/value";
+import {
+	compile,
+	obj,
+	oneOf,
+	opt,
+	type Static,
+	str,
+} from "@earendil-works/pi-schema";
 
 export const DEFAULT_API_BASE_URL = "https://api.openai.com/v1";
 export const API_MODEL_PRESETS = [
@@ -14,22 +20,27 @@ export function supportsExtendedImageControls(model: string): boolean {
 	return API_MODEL_PRESETS.some((preset) => preset === model);
 }
 
-const settingsSchema = Type.Object(
+const settingsSchema = obj(
 	{
-		access: Type.Enum(["codex", "openai"]),
-		api: Type.Object(
+		access: { ...oneOf(["codex", "openai"]), type: "string" },
+		api: obj(
 			{
-				baseUrl: Type.Optional(Type.String({ minLength: 1 })),
-				provider: Type.Optional(Type.String({ pattern: "^\\S+$" })),
-				model: Type.String({ pattern: "^\\S+$" }),
-				quality: Type.Enum(["auto", "low", "medium", "high", "xhigh", "max"]),
-				complexity: Type.Enum(["low", "medium", "high"]),
+				baseUrl: opt(str({ minLength: 1 })),
+				provider: opt(str({ pattern: "^\\S+$" })),
+				model: str({ pattern: "^\\S+$" }),
+				quality: {
+					...oneOf(["auto", "low", "medium", "high", "xhigh", "max"]),
+					type: "string",
+				},
+				complexity: { ...oneOf(["low", "medium", "high"]), type: "string" },
 			},
-			{ additionalProperties: false },
+			{ open: false },
 		),
 	},
-	{ additionalProperties: false },
+	{ open: false },
 );
+const settingsValidator = compile(settingsSchema);
+
 export type ImagegenSettings = Static<typeof settingsSchema>;
 
 function defaultImagegenSettings(): ImagegenSettings {
@@ -42,7 +53,7 @@ function defaultImagegenSettings(): ImagegenSettings {
 export function validateImagegenSettings(
 	value: unknown,
 ): asserts value is ImagegenSettings {
-	if (!Check(settingsSchema, value))
+	if (!settingsValidator.check(value))
 		throw new Error(
 			"Invalid imagegen.json. Correct or remove it in Pi's agent directory, then reopen /imagegen.",
 		);

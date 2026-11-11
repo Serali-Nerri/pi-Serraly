@@ -12,7 +12,7 @@ Requires Pi 1.5 or newer and Node.js 22.19 or newer.
 
 Run `/login openai-codex` for the normal Codex route, including when chatting with another provider. Compatible active Codex transports keep their own credentials. Pi Codex's resolver is preferred when present, but its conversation-provider scope does not select tool endpoints. Neither Pi Codex nor an install script is required.
 
-Pi Codex Conversion 4.0.9 or newer is optional. With it installed, the normal imagegen tool becomes tools.image_gen__imagegen inside Code and Notebook Mode.
+Pi Codex Conversion 4.0.10 or newer is optional. With it installed, the normal imagegen tool becomes tools.image_gen__imagegen inside Code and Notebook Mode.
 
 ## Access and preferences
 

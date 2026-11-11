@@ -20,7 +20,7 @@ const TITLES: Record<string, { active: string; complete: string }> = {
 	reset: { active: "Resetting notebook", complete: "Reset notebook" },
 };
 
-export const notebookRenderers = auxiliaryToolRenderers("Notebook operation failed", (args, result) => {
+export const notebookRenderers: ReturnType<typeof auxiliaryToolRenderers> = auxiliaryToolRenderers("Notebook operation failed", (args, result) => {
 	if (Object.keys(args).length === 0) args = { action: "help" };
 	if (typeof args["input"] === "string") {
 		if (args["input"] === "help") args = { action: "help" };

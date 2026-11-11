@@ -59,6 +59,8 @@ Execution mode is separate from provider scope. Apply the adapter to **Codex and
 
 The Codex toolset reads files through the shell and edits with `apply_patch`, rather than Pi's separate text read, edit and write tools.
 
+Background shells survive context compaction and Notes rollover. The agent receives a fresh shell inventory without changing the standing prompt. If a command finishes with an uncollected result, PCC wakes the agent only when idle. Normal monitoring remains primary; these notices are a safety net.
+
 </details>
 
 <a name="settings"></a>
@@ -195,6 +197,8 @@ Whole-notebook profiles and isolated candidates replace the live state when load
 Installed Pi tools and enabled MCP servers are available inside Code and all three notebook modes. Configure MCP servers through Pi. Existing permissions, tool restrictions and disabled servers still apply.
 
 Deferred-tool announcements group tools by their declared namespace, falling back to the registering extension when Pi provides a file source. Groups and tools are ordered by name. Calls remain flat (`tools.web_search(args)`), and full contracts remain in `ALL_TOOLS`. New announcements use this layout; earlier messages are not rewritten or re-announced just to regroup them.
+
+Use `content(result.content)` to emit mixed MCP text and images in their original order. The helper also accepts a single content block. Resource blocks remain JSON text; audio and encrypted text are not supported.
 
 `exec` and `wait` wait for their active Pi tool calls to return before yielding, even when the cell's yield timeout has elapsed.
 
