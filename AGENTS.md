@@ -7,7 +7,12 @@
 - Trace failures through supported workflows before fixing them. A synthetic reproducer or possible interleaving alone does not prove exposure. Respect product tradeoffs; optional capabilities are not defects.
 - Update documentation when behavior or usage changes. Use focused package checks while editing; run `npm run verify` for cross-package dependencies, build, installation or release tooling changes.
 - Each document owns a clear concern. Keep definitions and rules in their owning document and link to them instead of duplicating them. Usage and contract docs describe current behavior, not work logs or obsolete instructions; changelogs, ADRs and issues retain their intended history.
-- Preserve dirty files and unpublished commits. Do not switch branches, create worktrees or rewrite commits without explicit instruction.
+
+## Branch workflow
+
+- `dev` is for development and previews; `main` holds validated, stable changes.
+- Before editing, switch to `dev` or the appropriate feature branch. Never edit or commit directly on `main`.
+- Merge feature work into `dev` first. Validate the integrated result using the applicable checks and [Validation](#validation) requirements before merging into `main` at the user's request.
 
 ## Implementation principles
 
