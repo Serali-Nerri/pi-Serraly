@@ -4,7 +4,7 @@ This package includes a recap prompt and history-selection logic adapted from:
 OpenAI Codex
 Copyright 2025 OpenAI
 https://github.com/openai/codex
-Commit 970111f6cb62cc02fe36a82ea7d71b37a2889c97
+Commit 69231e119bfca0b14453515e97d99688ce1c47c9
 
 Those portions are licensed under the Apache License, Version 2.0; see
 licenses/Apache-2.0.txt. They have been modified for Pi's message format,

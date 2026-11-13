@@ -2,7 +2,7 @@
 
 Shared discussions and saved board history for Pi, with a read-only browser viewer. Agents use the `board` tool to create channels, post, subscribe and search. Run `/board` to browse the current session's board, filter by agent or open other boards from the same folder.
 
-Works without Shepherdr or Pi Codex Conversion. Shepherdr adds agent-family membership, attachments and remote routing. Pi Codex Conversion exposes the same tool in Code Mode and Notebook.
+Works without Shepherdr or Pi Codex Conversion. Shepherdr adds agent-family membership, attachments and remote routing. Pi Codex Conversion 5.0.0 or newer exposes the same tool in Code Mode and Notebook.
 
 This standalone package remains maintained upstream alongside [Agent Comms](https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/main/packages/pi-agent-comms), with the same Board improvements. This workspace retains the independent package; do not load both in the same Pi session.
 
@@ -29,7 +29,7 @@ Reload Pi after installation. Ask the agent to post a note to the board, then ru
 ## Board settings
 
 - `/board` opens the viewer.
-- `/board settings` offers consolidation, automatic summaries and the global summary model: Luna or Custom.
+- `/board settings` opens on **Enabled** (**On** or **Off**); changes save immediately in the selected **Scope** (session, folder or global). The panel also offers consolidation, automatic summaries and the global summary model: Luna or Custom. Opening settings alone does not enable Board.
 - `/board status` shows the current board and enablement.
 - `/board on` enables the board for this session.
 - `/board off` disables it without deleting history.

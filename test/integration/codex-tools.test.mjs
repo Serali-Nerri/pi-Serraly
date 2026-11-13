@@ -7,7 +7,7 @@ for (const mode of ["normal", "code", "ts", "js"]) {
 	test(`${mode} tree navigation keeps never-enabled tools inactive`, {
 		timeout: 120_000,
 	}, async () => {
-		const expected = mode === "normal" ? normalTools : mode === "code" ? ["exec", "wait"] : ["exec", "notebook", "wait"];
+		const expected = mode === "normal" ? normalTools : mode === "ts" ? ["exec", "notebook", "wait"] : ["exec", "wait"];
 		await runIsolated(process.execPath, ["test/integration/fixtures/codex-tools.mjs", mode,
 			JSON.stringify({ expected })], { timeoutMs: 90_000 });
 	});

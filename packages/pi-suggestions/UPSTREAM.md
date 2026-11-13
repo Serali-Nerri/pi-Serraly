@@ -1,6 +1,6 @@
 # Upstream provenance
 
-- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/096dbfca6af374ba23f6a5fe97e7c28566561a6c/packages/pi-suggestions
+- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/c3b422c60256907f5a4499cc44e4d055ac3cc28a/packages/pi-suggestions
 - Baseline version: 0.0.3
 - Upstream history and license: CHANGELOG.md and LICENSE are retained.
 

@@ -19,7 +19,7 @@
     },
     "packages/pi-agent-board": {
       "name": "@howaboua/pi-agent-board",
-      "version": "0.0.6",
+      "version": "0.0.7",
       "dependencies": {
         "@earendil-works/pi-schema": "1.5.2",
         "dompurify": "3.4.17",
@@ -94,7 +94,7 @@
         "@biomejs/biome": "^2.6.6",
         "@earendil-works/pi-ai": "1.5.2",
         "@earendil-works/pi-coding-agent": "1.5.2",
-        "@howaboua/pi-codex-conversion": "4.0.10",
+        "@howaboua/pi-codex-conversion": "5.0.0",
         "@types/node": "^26.6.6",
         "typescript": "^7.0.2",
       },
@@ -102,7 +102,7 @@
         "@earendil-works/pi-ai": ">=1.0.0",
         "@earendil-works/pi-coding-agent": ">=1.5.0",
         "@earendil-works/pi-tui": ">=1.0.0",
-        "@howaboua/pi-codex-conversion": ">=4.0.10",
+        "@howaboua/pi-codex-conversion": ">=5.0.0",
       },
       "optionalPeers": [
         "@howaboua/pi-codex-conversion",
@@ -110,11 +110,10 @@
     },
     "packages/pi-codex-conversion": {
       "name": "@howaboua/pi-codex-conversion",
-      "version": "4.0.10",
+      "version": "5.0.0",
       "dependencies": {
         "@earendil-works/pi-schema": "1.5.2",
         "@howaboua/pi-browser": "^0.0.13",
-        "acorn": "8.19.0",
         "openai": "7.55.0",
         "proxy-from-env": "2.1.0",
         "selfsigned": "^5.5.0",
@@ -194,7 +193,7 @@
     },
     "packages/pi-notes-compaction": {
       "name": "@howaboua/pi-notes-compaction",
-      "version": "0.0.16",
+      "version": "0.0.17",
       "dependencies": {
         "@earendil-works/pi-schema": "1.5.2",
         "better-sqlite3": "13.0.3",
@@ -229,7 +228,7 @@
     },
     "packages/pi-shepherdr": {
       "name": "@howaboua/pi-shepherdr",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "dependencies": {
         "@earendil-works/pi-schema": "1.5.2",
       },
@@ -572,8 +571,6 @@
     "@typescript/typescript-win32-arm64": ["@typescript/typescript-win32-arm64@7.0.2", "", { "os": "win32", "cpu": "arm64" }, "sha512-Gyl1Vy6OsWesLzmq+EP0Fb7b4Nid5232AvcA2SFcdYreldpNtYFFofPjnt62y9hQy7VTaZp65ICJjuAQRaVcIQ=="],
 
     "@typescript/typescript-win32-x64": ["@typescript/typescript-win32-x64@7.0.2", "", { "os": "win32", "cpu": "x64" }, "sha512-0BQ3HkAHHlKLSp1qRvf3SUhGpGsDuhB/jgFw75guyqbxJqEaS0Cw/VFO8i2nHglJUzQCRtMMR/IBAKE3ETMC4g=="],
-
-    "acorn": ["acorn@8.19.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-oJlA3XiRm7Cyk6qFD2Jn8ak9B7jSy0qy00ADO3+8dpT0LSjFihQYv4C02LFCSYJV3Q37xYwwRy5m+IpIiUzqWw=="],
 
     "agent-base": ["agent-base@9.0.0", "", {}, "sha512-TQf59BsZnytt8GdJKLPfUZ54g/iaUL2OWDSFCCvMOhsHduDQxO8xC4PNeyIkVcA5KwL2phPSv0douC0fgWzmnA=="],
 

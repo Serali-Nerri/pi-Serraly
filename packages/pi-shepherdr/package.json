@@ -1,6 +1,6 @@
 {
 	"name": "@howaboua/pi-shepherdr",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Persistent blocking and asynchronous Pi agents through Herdr.",
 	"type": "module",
 	"license": "MIT",
@@ -42,7 +42,7 @@
 		"format": "biome check --write ."
 	},
 	"peerDependencies": {
-		"@howaboua/pi-codex-conversion": ">=4.0.10",
+		"@howaboua/pi-codex-conversion": ">=5.0.0",
 		"@earendil-works/pi-ai": ">=1.1.0",
 		"@earendil-works/pi-coding-agent": ">=1.5.0",
 		"@earendil-works/pi-tui": ">=1.1.0"
@@ -53,9 +53,9 @@
 		}
 	},
 	"devDependencies": {
-		"@howaboua/pi-agent-board": "0.0.6",
-		"@howaboua/pi-notes-compaction": "0.0.16",
-		"@howaboua/pi-codex-conversion": "4.0.10",
+		"@howaboua/pi-agent-board": "0.0.7",
+		"@howaboua/pi-notes-compaction": "0.0.17",
+		"@howaboua/pi-codex-conversion": "5.0.0",
 		"@biomejs/biome": "^2.6.6",
 		"@earendil-works/pi-ai": "1.5.2",
 		"@earendil-works/pi-coding-agent": "1.5.2",

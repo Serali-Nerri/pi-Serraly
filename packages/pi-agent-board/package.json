@@ -1,6 +1,6 @@
 {
 	"name": "@howaboua/pi-agent-board",
-	"version": "0.0.6",
+	"version": "0.0.7",
 	"description": "Standalone agent message boards and a read-only browser viewer for Pi",
 	"type": "module",
 	"license": "MIT",
@@ -53,7 +53,7 @@
 		"@earendil-works/pi-ai": ">=1.1.0",
 		"@earendil-works/pi-coding-agent": ">=1.5.0",
 		"@earendil-works/pi-tui": ">=1.1.0",
-		"@howaboua/pi-codex-conversion": ">=4.0.10"
+		"@howaboua/pi-codex-conversion": ">=5.0.0"
 	},
 	"peerDependenciesMeta": {
 		"@howaboua/pi-codex-conversion": {
@@ -61,6 +61,6 @@
 		}
 	},
 	"devDependencies": {
-		"@howaboua/pi-codex-conversion": "4.0.10"
+		"@howaboua/pi-codex-conversion": "5.0.0"
 	}
 }

@@ -10,6 +10,6 @@ Thinking 的既有设计来自 MIT 的 pi-cc-extensions / pi-compact-thinking，
 
 ## Git Footer
 
-Git 状态读取、计数规则、配色、显示顺序和自动图标模式来自 [OldSuns/pi-open-tui](https://github.com/OldSuns/pi-open-tui)，版本 `0.4.4`，固定提交 `5e46398e6c6679ad5c8c334cc457edabce2b3a19` 的 `extensions/open-tui/git.ts`、`footer.ts`、`icons.ts` 和 `utils.ts`。MIT 许可保留在 [licenses/pi-open-tui-LICENSE](licenses/pi-open-tui-LICENSE)；上游注明 Git porcelain 解析借鉴 [pi-zentui](https://github.com/lmilojevicc/pi-zentui)。
+Git 状态读取、计数规则、配色、显示顺序和自动图标模式来自 [OldSuns/pi-open-tui](https://github.com/OldSuns/pi-open-tui)，版本 `0.4.5`，固定提交 `d1b0cb423e71022094d9b6628583883dc4376a01` 的 `extensions/open-tui/git.ts`、`footer.ts`、`icons.ts` 和 `utils.ts`。MIT 许可保留在 [licenses/pi-open-tui-LICENSE](licenses/pi-open-tui-LICENSE)；上游注明 Git porcelain 解析借鉴 [pi-zentui](https://github.com/lmilojevicc/pi-zentui)。
 
 只迁入 Git 段，不加载 pi-open-tui 扩展、配置、其他 Footer 段或依赖。保留上游默认的分支/状态和 detached HEAD 提交号，不启用可选标签；本地把分支截断改为终端列宽，并适配现有清理生命周期：可取消的只读异步 Git 查询、固定解析 locale、工具/回合结束刷新，render 只读快照。替换旧宿主 `getGitBranch()` 文本，仍使用公开分支通知。使用规则见 [README.md](README.md#git-状态)。

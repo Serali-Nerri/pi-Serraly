@@ -106,7 +106,7 @@ async function registerAgentsInCodeMode(
 			throw new Error(
 				"Update " +
 					CODE_MODE_PACKAGE +
-					" to 4.0.10 or newer to use Shepherdr with it",
+					" to 5.0.0 or newer to use Shepherdr with it",
 				{ cause: error },
 			);
 		}

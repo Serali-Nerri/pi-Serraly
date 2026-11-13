@@ -33,7 +33,7 @@ pi --no-extensions --no-skills -e ./packages/pi-notes-compaction
 
 Reload Pi, then ask the agent to save a checkpoint and start a new context window. It can read those notes and search earlier session history to continue.
 
-Pi Codex Conversion is optional. Compatible releases add Code Mode, Notebook and encrypted remote delivery without taking over Notes tools or policy. Run `/notes` to check activation and available capabilities. Extension authors can read the [integration contract](PCC-INTEGRATION.md).
+Pi Codex Conversion is optional. Compatible releases (5.0.0 or newer) add Code Mode, Notebook and encrypted remote delivery without taking over Notes tools or policy. Run `/notes` to check activation and available capabilities. Extension authors can read the [integration contract](PCC-INTEGRATION.md).
 
 ## Notes and windows
 
@@ -105,15 +105,31 @@ unsupported reasoning levels. Provider capabilities and context limits still
 apply, and switching does not guarantee cache reuse. Context retirement and
 recovery keep their existing Notes settings.
 
+### Session pruning
+
+Open **Session auto-pruning** in `/notes` to set this session's retention limits. Both full/tool history retention and conversation retention are off by default (`windows: 0`, `days: 0`); new and forked sessions start off. Full history can retain 5, 10 or 25 windows; conversation can independently expire after one week or one month. Settings follow the session on resume.
+
+Automatic payload pruning runs after a new window's first completed turn. **Run now** previews the change and asks for confirmation. Saved SQLite notes and current context remain intact, but older tool activity, injected instructions and exact execution replay can be permanently lost. No backup is kept. Restart Pi for memory savings; `/reload` is not sufficient.
+
+Live pruning keeps every history entry ID so Pi can still navigate its in-memory tree safely. With retention enabled, Notes automatically removes retired empty records after Pi exits, including when retention was enabled before this update. A separate helper waits for the actual process to end before changing the saved tree. Reloading, forking and switching sessions do not trigger this cleanup. There is no separate cleanup switch or additional confirmation. No backup is kept. Memory savings apply when the pruned session next opens.
+
+Physical cleanup currently requires Linux and an available `node` executable. Other platforms retain live payload pruning. Cleanup skips another registered local Notes process using the same saved session, known open-file holders and files that change during preparation. A simultaneous reopen is checked against the saved generation. If cleanup won that race, the new Pi process stops and asks you to reopen it rather than continue with a stale tree. Failures are reported when the session next opens. Tree branches, labels, compaction boundaries and supported Notes archive references are retained. Other content and saved notes are unchanged.
+
+Ranked history search reconciles the committed JSONL generation before indexing, removing terms for deleted or emptied records even if Pi's in-memory entries still contain old text. Cleanup preserves Notes identity and family/attachment records; a saved path or SQLite location alone never grants sharing access.
+
+Coordination covers local processes running this Notes release under the same OS user. Keep session storage free of concurrent writers from other machines, other OS users, older Notes versions and external JSONL editors while a Notes-enabled process is closing. Unrelated sessions do not block cleanup. References embedded in other extensions' custom metadata are not interpreted.
+
+Update Observatory before applying if you use its historical index. Older versions may block the rewritten file. Current versions reconcile removed records without discarding indexed statistics.
+
 ### Notes settings
 
 `/notes` opens the settings panel in interactive Pi. It shows continuity status, storage counts and remote capabilities. Changes save immediately.
 
-- **Active** selects **All models** (the default), **Whitelist** or **Off**. Whitelist enables the extension only for exact model IDs in the global settings file, regardless of provider. Switching models applies the choice immediately; other models keep their installed compaction behaviour. Off disables Notes without deleting saved data.
+- **Enabled** selects **Off**, **On** (all models, the default) or **Whitelist**. Whitelist enables the extension only for exact model IDs in the global settings file, regardless of provider. Switching models applies the choice immediately; other models keep their installed compaction behaviour. Off disables Notes without deleting saved data.
 - **Normal compaction** uses the installed Pi or PCC compaction flow for `/compact` and `new_context`. Off keeps notes-only rollover, the default.
 - **New window requests** controls the agent's `new_context` tool independently of the compaction method. **off** disables the tool. **pi-limits** uses Pi's eligibility check and continues in the current window when there is too little history. **unrestricted**, the default, accepts requests at any size. With normal compaction on and nothing to summarise, unrestricted requests open a new window identity without discarding the existing context. Manual `/compact` and idle rollover retain their separate policies.
 - **Idle rollover** selects the interval or disables it.
-- **Session auto-pruning** controls irreversible pruning for this session only. Both full/tool history retention and conversation retention are off by default (`windows: 0`, `days: 0`); new and forked sessions start off. If enabled, the full-history limit can retain 5, 10 or 25 windows, and conversation can independently expire after one week or one month. Pruning runs after the first completed turn of a new window, or via **Run now**, which previews the change and asks for confirmation. Current context and saved SQLite notes are protected, but older tool activity, injected instructions and exact execution replay can be permanently lost. No backup is kept. Restart Pi for memory savings; `/reload` is not sufficient.
+- **Session auto-pruning** opens this session's retention limits and manual pruning action. See [Session pruning](#session-pruning) for defaults, automatic exit cleanup and irreversible data loss.
 - **Prune missing sessions** removes notes, cached responses and history index entries for missing session files after confirmation. Unknown paths, permission errors and the active session are retained.
 
 Notes are stored as plaintext in `<Pi agent directory>/notes-compaction/notes.sqlite`, honoring `PI_CODING_AGENT_DIR`. Saved session snapshots preserve notes across forks and branch navigation, including after database pruning. Existing plaintext PCC notes remain readable without an import. On first use, saved PCC notes continuity settings migrate to Notes when no Notes settings file exists. Existing Notes settings take precedence.

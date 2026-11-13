@@ -9,7 +9,7 @@ For the argument and token numbers, read [How I gave Pi 17 tools without loading
 ## What you get
 
 - Codex-shaped shell, patch and image tools
-- tools exposed directly, composed in one-shot code, or used through persistent Deno, TypeScript and JavaScript notebooks
+- tools exposed directly, composed in one-shot code, or used through persistent Deno and TypeScript notebooks
 - foreground, background and interactive shell sessions with resumable output
 - image descriptions for blind models
 - realtime voice, push-to-dictate and a remote voice interface for your phone or browser
@@ -49,9 +49,9 @@ Choose an execution mode under `/codex` → **General**:
 | **Code** | Composes tools in one-shot JavaScript cells through `exec`, with `wait` for longer work. |
 | **Notebook** | Uses a persistent Deno notebook with JavaScript and TypeScript support. |
 | **TS** | Uses a persistent TypeScript notebook with strict checking before execution and Node APIs. |
-| **JS Notebook** | Uses a persistent JavaScript notebook that saves the full live state, including closures and class instances. |
+| **QuickJS Code** | Composes tools in fresh JavaScript environments, with up to four concurrent cells. |
 
-Code starts fresh for each cell. All three notebook modes retain state between cells and provide notebook management controls. They differ in runtime access and what can be restored after a restart. See [notebook modes](#code-mode-and-custom-tools) below.
+Code and QuickJS Code start fresh for each cell. Notebook and TS retain state between cells and provide notebook management controls. They differ in runtime access and what can be restored after a restart. See [execution modes](#code-mode-and-custom-tools) below.
 
 All PCC tools register inactive by default and are enabled by the selected mode or settings. Conversation-tree navigation does not automatically enable tools never declared on the selected branch. Pi's explicitly recorded tool state is still preserved; selecting a mode or changing settings updates the active loadout at the normal runtime boundaries.
 
@@ -156,11 +156,11 @@ Pi's footer shows cache percentage. Enable **Codex diagnostics** under `/codex o
 <a name="code-mode-and-custom-tools"></a>
 
 <details>
-<summary><strong>Notebook modes and custom tools</strong></summary>
+<summary><strong>Execution modes and custom tools</strong></summary>
 
-Code and Deno download their runtimes on first use. TS and JS Notebook reuse matching installed packages or download them with npm. First use needs registry access when packages are missing. Cached runtimes work offline, and unselected modes do not download anything.
+Code and Deno download their runtimes on first use. TS and QuickJS Code reuse matching installed packages or download them with npm. First use needs registry access when packages are missing. Cached runtimes work offline, and unselected modes do not download anything.
 
-Ask your agent to inspect, save, load or clean up notebook state. The `notebook` tool provides its own action help. **Restart and cancellation do not undo file changes or other external tool effects.**
+In Notebook and TS modes, ask your agent to inspect, save, load or clean up notebook state. The `notebook` tool provides its own action help. **Restart and cancellation do not undo file changes or other external tool effects.**
 
 ### Deno Notebook
 
@@ -180,21 +180,19 @@ Conversation-tree navigation starts a new TS notebook session rather than replay
 
 Concurrent isolated cells start from the last checkpoint and save separate candidates. Loading one replaces the live notebook rather than automatically merging changes. Releasing bindings also rebuilds the kernel and clears live-only values.
 
-### JS Notebook
+### QuickJS Code
 
-Select **JS Notebook** for JavaScript with full-state checkpoints, including closures, private class fields, aliases and cycles. The notebook is shared across conversations in the same project.
+Select **QuickJS Code** to compose tools in JavaScript. Each call starts fresh, with up to four cells running concurrently. Variables and closures do not carry between calls. Use `store` and `load` for conversation-local JSON data that does not persist to disk.
 
-Run Pi under Node. The notebook has no Node APIs, imports, direct network access or TypeScript checking. The agent uses tools for host operations.
+The store resets when the runtime is recreated, including session changes and conversation-tree navigation. Each cell reads a starting snapshot. Writes take effect immediately and are not rolled back on failure; concurrent writes to the same key are last-write-wins.
 
-Normal cells run serially and save the full state. Restart restores that checkpoint. Releasing a name makes it reusable without changing values captured by existing closures. Reset affects the shared project notebook, while preserving pinned data and named profiles.
+Run Pi under Node. The environment has no Node APIs, imports, direct network access, timers or TypeScript checking. The agent uses tools for host operations.
 
-After a normal cell yields, isolated cells can run while it is still running. Each starts from the latest committed checkpoint, not the normal cell's unfinished changes, and saves a separate candidate without changing the live notebook. External tool and file effects remain shared.
-
-Whole-notebook profiles and isolated candidates replace the live state when loaded. Selective data profiles add saved data under unused names instead. Conflicting unsaved changes are kept in recovery profiles. Snapshots require compatible runtime versions and are never silently reset.
+QuickJS Code replaces JS Notebook. Existing `js` settings select QuickJS Code. Old notebook files are left untouched but are not loaded. There are no checkpoints, profiles, project-shared variables or `notebook` controls in this mode.
 
 ### Extension tools and MCP
 
-Installed Pi tools and enabled MCP servers are available inside Code and all three notebook modes. Configure MCP servers through Pi. Existing permissions, tool restrictions and disabled servers still apply.
+Installed Pi tools and enabled MCP servers are available inside Code, QuickJS Code and both notebook modes. Configure MCP servers through Pi. Existing permissions, tool restrictions and disabled servers still apply.
 
 Deferred-tool announcements group tools by their declared namespace, falling back to the registering extension when Pi provides a file source. Groups and tools are ordered by name. Calls remain flat (`tools.web_search(args)`), and full contracts remain in `ALL_TOOLS`. New announcements use this layout; earlier messages are not rewritten or re-announced just to regroup them.
 

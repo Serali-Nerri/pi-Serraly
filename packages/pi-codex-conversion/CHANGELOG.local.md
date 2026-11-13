@@ -1,6 +1,11 @@
 # Local changelog
 
-Local changes and their background, relative to upstream **4.0.10** (`096dbfca6af374ba23f6a5fe97e7c28566561a6c`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
+Local changes and their background, relative to upstream **5.0.0** (`c3b422c60256907f5a4499cc44e4d055ac3cc28a`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
+
+## Upstream 5.0.0 sync
+
+- Replace JS Notebook with upstream QuickJS Code, including fresh per-call VMs, four-cell concurrency and conversation-local JSON storage. Preserve old snapshot files without loading them; remove the obsolete Acorn dependency.
+- Preserve local aborted-run guards, inactive tool defaults, offline startup, display behavior, Codex Live gateways and installation boundaries. Clarify QuickJS store lifetime and non-transactional writes in the README.
 
 ## Upstream 4.0.10 sync
 

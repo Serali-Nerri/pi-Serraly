@@ -16,7 +16,7 @@ Try it for one session:
 pi --no-extensions --no-skills -e ~/.pi/pi-Serraly/packages/pi-ask
 ```
 
-Requires Pi 1.5 or newer. When Pi Codex Conversion 4.0.10 or newer is installed too, `ask` is available inside Code and Notebook Mode as `await tools.ask({ prompts, delivery?, handoff? })`.
+Requires Pi 1.5 or newer. When Pi Codex Conversion 5.0.0 or newer is installed too, `ask` is available inside Code and Notebook Mode as `await tools.ask({ prompts, delivery?, handoff? })`.
 
 ## How it behaves
 

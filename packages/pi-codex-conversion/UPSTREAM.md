@@ -1,7 +1,7 @@
 # Upstream provenance
 
-- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/096dbfca6af374ba23f6a5fe97e7c28566561a6c/packages/pi-codex-conversion
-- Baseline version: 4.0.10
+- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/c3b422c60256907f5a4499cc44e4d055ac3cc28a/packages/pi-codex-conversion
+- Baseline version: 5.0.0
 - Upstream history and license: CHANGELOG.md and LICENSE are retained. Nested provenance remains in UPSTREAM_SYNC.md, code-mode/UPSTREAM_SYNC.md, vendor UPSTREAM files and the native rust UPSTREAM files.
 - Local history: [CHANGELOG.local.md](./CHANGELOG.local.md) records recent local changes separately from upstream releases.
 
@@ -21,10 +21,10 @@
 - src/voice/lan/settings-core.ts retains the boolean setting keys in the inferred public host-settings return type.
 - src/tools/exec/command-tool.ts, src/tools/exec/write-stdin-tool.ts and src/tools/code-mode/notebook-rendering.ts give exported factories and renderers explicit public types. Released Pi 1.5.2 still exposes transitive TypeBox types in ToolDefinition; these annotations keep native-schema declaration emit portable without a direct TypeBox dependency.
 - package.json uses a local static check without test execution, removes npm publish/prepack/prepare lifecycle scripts and publish metadata (including .npmignore), and ships UPSTREAM.md and CHANGELOG.local.md. The host-settings export has explicit types like the other public exports. Pi 1.5.2 and its native schema dependency now match upstream; the former local TypeBox pin is no longer needed. Build and native maintenance scripts remain.
-- tests/context-briefings.test.ts and tests/notebook-status.test.ts are the retained local consequence tests for the aborted-run guards. Upstream test files sync unchanged; no upstream test was added by this sync.
-- README.md documents native Pi registration from a prepared installation workspace, local source loading and this repository's extension set. Notes/history ownership remains with pi-notes-compaction rather than upstream's pi-agent-comms. References to unmigrated extensions and missing root API docs were removed.
+- tests/context-briefings.test.ts and tests/notebook-status.test.ts are the retained local consequence tests for the aborted-run guards. Existing upstream tests are retained; the 5.0.0 sync changes no test files.
+- README.md documents native Pi registration from a prepared installation workspace, local source loading and this repository's extension set, and clarifies QuickJS Code store lifetime and write-through behavior. Notes/history ownership remains with pi-notes-compaction rather than upstream's pi-agent-comms. References to unmigrated extensions and missing root API docs were removed.
 - example custom-tool browser docs treat the CDP helpers in this package as canonical; there is no browser-cdp sync step. The maintained browser extension remains pi-browser.
 - scripts/build-changed-native-tool-binaries.mjs detects voice changes only under this package. scripts/verify-codex-tool-binaries.mjs has neutral bundled-binary messages.
-- UPSTREAM_SYNC.md treats web search as an external extension and no longer points at the unmigrated pi-codex-web-run package.
+- UPSTREAM_SYNC.md treats web search as an external extension and no longer points at the unmigrated pi-codex-web-run package. Its Pi 1.5.2 compatibility notes point to the current QuickJS Code runtime rather than the retired snapshot runtime.
 
 Apart from the runtime differences listed above, functional sources, binaries, WASM and bundled profiles match the baseline.

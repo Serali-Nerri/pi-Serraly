@@ -100,7 +100,7 @@ Browser 单包和整合包均加载其 TS 扩展入口；整合包通过公开 `
 
 conversion 4.0.5 将 Notes、History 和共享上下文移至独立的 `pi-notes-compaction`。包进入工作区并不表示启用；需要这些能力时单独执行 `pi install ~/.pi/pi-Serraly/packages/pi-notes-compaction`，或启用整合包中的 Notes 入口。Notes、Agent Board 与 Shepherdr 使用 Pi session ID 作为共享身份；主会话与使用共享上下文的 worker 应一起更新并完整重启，不能混用旧协议。详见 [Notes README](../packages/pi-notes-compaction/README.md)。
 
-已有 PCC Notes 配置在缺少新扩展时会阻止模型回合并提示迁移，不自动修改用户配置。Notes 在自己的设置尚不存在时只读兼容旧 PCC 设置。会话裁剪默认 `windows: 0, days: 0`；启用会重写会话 JSONL 且不创建备份，只能由用户在 `/notes` 中显式决定，安装和同步不能替用户开启。
+已有 PCC Notes 配置在缺少新扩展时会阻止模型回合并提示迁移，不自动修改用户配置。Notes 在自己的设置尚不存在时只读兼容旧 PCC 设置。会话裁剪默认关闭，启用会重写会话 JSONL 且不创建备份；已启用保留策略的 Linux 会话还会在 Pi 退出后自动清理退休空记录，没有额外确认。安装和同步不能替用户开启保留策略；已有策略的影响与平台限制见 [Session pruning](../packages/pi-notes-compaction/README.md#session-pruning)。
 
 Notes 的模型角色由 `notes-compaction/model-roles.json` 定义，`/roles` 为只读状态视图；代理在 checkpoint 后通过 `new_context({role})` 选择。旧的角色启停和 accept/dismiss 流程已移除，配置格式见 [Notes README](../packages/pi-notes-compaction/README.md)。同步不创建角色、不代替用户选择账号或模型。
 

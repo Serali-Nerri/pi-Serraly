@@ -1,6 +1,6 @@
 {
 	"name": "@howaboua/pi-notes-compaction",
-	"version": "0.0.16",
+	"version": "0.0.17",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/IgorWarzocha/howaboua-pi-stuff.git",
@@ -43,7 +43,7 @@
 		"@earendil-works/pi-ai": "1.5.2",
 		"@earendil-works/pi-coding-agent": "1.5.2",
 		"@earendil-works/pi-tui": "1.5.2",
-		"@howaboua/pi-codex-conversion": "4.0.10",
+		"@howaboua/pi-codex-conversion": "5.0.0",
 		"@types/better-sqlite3": "9.6.0"
 	},
 	"peerDependencies": {
@@ -51,7 +51,7 @@
 		"@earendil-works/pi-agent-core": ">=1.0.4",
 		"@earendil-works/pi-ai": ">=1.0.4",
 		"@earendil-works/pi-tui": ">=1.0.4",
-		"@howaboua/pi-codex-conversion": ">=4.0.10"
+		"@howaboua/pi-codex-conversion": ">=5.0.0"
 	},
 	"peerDependenciesMeta": {
 		"@howaboua/pi-codex-conversion": {
