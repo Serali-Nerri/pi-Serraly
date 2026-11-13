@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const root = fileURLToPath(new URL("../../", import.meta.url));
-const networkGuard = fileURLToPath(new URL("./network-guard.mjs", import.meta.url));
+const networkGuard = new URL("./network-guard.mjs", import.meta.url).href;
 
 export function requireNode(version = process.versions.node) {
 	const parts = version.split(".").map(Number);
