@@ -39,6 +39,8 @@ Pi Codex Conversion is optional. Compatible releases (5.0.0 or newer) add Code M
 
 The agent keeps the familiar `notes`, `history`, `new_context` and `get_context_remaining` tools. Notes use virtual paths. Relative paths belong to the current agent. History searches the selected Pi session branch, including earlier windows. It does not create a second transcript archive.
 
+In fullscreen Pi, click a context-window or reminder card to expand or collapse it. The configured expand shortcut (Ctrl+O by default) still controls all expandable cards.
+
 History uses case-sensitive substring search by default. Turn on **Ranked history search** in `/notes` to search earlier context in the current session with BM25. Ranked search matches all query words, ignoring case, accents and word order. Set `recent_first: true` to put the newest matches first. Arguments and result IDs are unchanged. Notes search remains a case-sensitive substring search.
 
 Ranked search is off by default. It indexes user messages and visible assistant replies left behind by rollover or compaction. Ongoing context, tool calls, tool outputs and internal reasoning stay unindexed. Indexing runs off the UI thread and processes newly eligible entries without repeatedly hashing unchanged history. The first search may wait for indexing to finish. It does not scan other saved sessions. The SQLite index stores terms rather than another transcript. Branch and window filters still control which entries can be returned. JSONL remains the source of truth.

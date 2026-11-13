@@ -2,6 +2,7 @@
 
 ## 0.0.17
 
+- Context-window and reminder cards now expand and collapse on click in fullscreen Pi, while retaining the configured expand shortcut.
 - Notes lookup warnings now distinguish unavailable remote notes from local checkpoints.
 - Notes guidance calls for fewer, shorter updates, using task notes and/or checkpoints with History links instead of copied investigation or harness detail.
 - Notes guidance keeps no-action report updates to their ID and outcome when checkpointing is needed.

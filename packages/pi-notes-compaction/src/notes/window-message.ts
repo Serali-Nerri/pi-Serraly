@@ -3,7 +3,7 @@ import type {
 	ExtensionAPI,
 	SessionEntry,
 } from "@earendil-works/pi-coding-agent";
-import { Box, Text, TruncatedText } from "@earendil-works/pi-tui";
+import { Box, MouseRegion, Text, TruncatedText } from "@earendil-works/pi-tui";
 import type { WindowIdentity } from "./bridge.js";
 
 export const WINDOW_MESSAGE = "notes-compaction:window:v1";
@@ -31,11 +31,23 @@ Save relevant notes before handoff/immediately before new_context. Recovery→re
 </context_window_guidance>`;
 
 export function registerWindowRenderer(pi: ExtensionAPI): void {
+	// Pi recreates renderer output on invalidation; keep clicks until the global toggle changes.
+	const expansion = new WeakMap<
+		object,
+		{ globalExpanded: boolean; expanded: boolean }
+	>();
 	pi.registerMessageRenderer(
 		WINDOW_MESSAGE,
 		(message, { expanded, outputPad, keyHint }, theme) => {
 			const details = parseWindowDetails(message.details);
-			if (!details || typeof message.content !== "string") return undefined;
+			const content = message.content;
+			if (!details || typeof content !== "string") return undefined;
+			const previous = expansion.get(message);
+			const state =
+				previous && previous.globalExpanded === expanded
+					? previous
+					: { globalExpanded: expanded, expanded };
+			expansion.set(message, state);
 			const title =
 				details.kind === "task-boundary"
 					? "Task-boundary reminder"
@@ -47,23 +59,32 @@ export function registerWindowRenderer(pi: ExtensionAPI): void {
 			const box = new Box(outputPad, 1, (text) =>
 				theme.bg("customMessageBg", text),
 			);
-			box.addChild(
-				expanded
-					? new Text(theme.fg("customMessageText", message.content), 0, 0)
-					: new TruncatedText(
-							theme.fg(
-								details.kind === "urgent" ? "warning" : "customMessageLabel",
-								title,
-							) +
+			const update = () => {
+				box.clear();
+				box.addChild(
+					state.expanded
+						? new Text(theme.fg("customMessageText", content), 0, 0)
+						: new TruncatedText(
 								theme.fg(
-									"dim",
-									` (${keyHint("app.tools.expand", "to expand")})`,
-								),
-							0,
-							0,
-						),
-			);
-			return box;
+									details.kind === "urgent" ? "warning" : "customMessageLabel",
+									title,
+								) +
+									theme.fg(
+										"dim",
+										` (${keyHint("app.tools.expand", "to expand")})`,
+									),
+								0,
+								0,
+							),
+				);
+			};
+			update();
+			return new MouseRegion(box, (event) => {
+				if (event.type !== "click" || event.button !== "left") return undefined;
+				state.expanded = !state.expanded;
+				update();
+				return { handled: true };
+			});
 		},
 	);
 }
