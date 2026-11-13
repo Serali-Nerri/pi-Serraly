@@ -11,5 +11,9 @@
 - README.md uses a separately prepared installation workspace and native Pi registration for Shepherdr and Agent Board. It links upstream Agent Comms externally and omits the removed root extension API guide.
 - Specific remote attachment errors refer to Pi Notes Compaction, the owner of notes and checkpoint sharing, rather than Codex Conversion. Shared provider-unavailable errors retain upstream's optional-provider guidance.
 - The outdated Code Mode error reflects the supported 5.0.0 peer minimum.
+- Herdr Core 0.1.21 is the minimum on controllers and targets. New task submissions preserve a native turn baseline so queued idle status cannot start settlement retries; saved legacy tasks and watches remain readable.
+- Remote and voice helper wires start only after terminal attachment readiness, retaining coalesced first input and graceful close credit handling.
+- Initial cross-machine parent-read denial has a bounded retry window, with recovery notices after a real warning. Native parent/child identity checks and the final closing observation remain authoritative.
+- Package-owned behavioral regression tests cover attachment startup/cleanup, task settlement and parent supervision; the repository test runner supplies isolated configuration and offline execution.
 
 Other runtime sources, Core-native resources and bundled profiles match the baseline.

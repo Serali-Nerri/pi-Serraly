@@ -22,7 +22,7 @@
 
 Notes/History 由独立 Notes 包提供，不内置于 conversion。需要时单独登记 Notes，或启用整合包中的 Notes 入口；旧 Notes 设置不会被静默关闭，缺少新扩展时会提示迁移。详见 [Notes README](packages/pi-notes-compaction/README.md)。
 
-Shepherdr 1.0 需要 Herdr Core ≥0.1.18，不再支持旧 Herdr TUI 后端；Notes 与 Board 都是可选集成。本仓保留这两个独立包，不引入上游的 Agent Comms 合包。详见 [Shepherdr README](packages/pi-shepherdr/README.md)。
+Shepherdr 需要 Herdr Core ≥0.1.21，不再支持旧 Herdr TUI 后端；Notes 与 Board 都是可选集成。本仓保留这两个独立包，不引入上游的 Agent Comms 合包。详见 [Shepherdr README](packages/pi-shepherdr/README.md)。
 
 ## 开发与部署
 

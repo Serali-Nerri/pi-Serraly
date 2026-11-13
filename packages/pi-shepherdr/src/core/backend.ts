@@ -30,7 +30,7 @@ import { CoreRemoteReader } from "./remote-reader.js";
 import { terminalPeer } from "./terminal-peer.mjs";
 
 export const CORE_REQUIRED =
-	"Agent operations require Herdr Core 0.1.18+. Legacy Herdr TUI is unsupported. Start Pi in a fresh Core terminal. Help, current-session command discovery and /herdr settings remain available. Last legacy Shepherdr: 0.2.27, unmaintained source for forks: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/5ede06bdc32da2b513f0709966af1f32908f243c/packages/pi-shepherdr";
+	"Agent operations require Herdr Core 0.1.21+. Legacy Herdr TUI is unsupported. Start Pi in a fresh Core terminal. Help, current-session command discovery and /herdr settings remain available. Last legacy Shepherdr: 0.2.27, unmaintained source for forks: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/5ede06bdc32da2b513f0709966af1f32908f243c/packages/pi-shepherdr";
 
 export class CoreConnection {
 	private readonly peer = terminalPeer((method, params) =>
@@ -46,7 +46,7 @@ export class CoreConnection {
 	constructor(
 		socketPath = process.env["HC_TERMINAL_SOCKET"],
 		remote?: CoreMachine,
-		onNotice?: (message: string) => void,
+		onNotice?: (message: string, level: "warning" | "info") => void,
 	) {
 		if (!socketPath) throw new Error(CORE_REQUIRED);
 		this.remote = remote;
@@ -78,11 +78,11 @@ export class CoreConnection {
 			!(
 				Number(version[1]) > 0 ||
 				Number(version[2]) > 1 ||
-				(Number(version[2]) === 1 && Number(version[3]) >= 18)
+				(Number(version[2]) === 1 && Number(version[3]) >= 21)
 			)
 		)
 			throw new Error(
-				"Shepherdr requires Herdr Core 0.1.18 or newer; update Core on this machine and reconnect",
+				"Shepherdr requires Herdr Core 0.1.21 or newer; update Core on this machine and reconnect",
 			);
 		const core = object(hello["core"]);
 		if (typeof core["id"] !== "string" || !core["id"])

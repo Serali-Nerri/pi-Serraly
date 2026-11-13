@@ -33,12 +33,28 @@ export function activityAttemptId(activity: AgentActivity): string | undefined {
 
 export function activityExpectedUser(
 	activity: AgentActivity,
-): { after: string | null } | undefined {
+): { after: string | null; turnAfter?: number } | undefined {
 	return activity.phase !== "settled" &&
 		activity.expectedUserAfter !== undefined &&
 		activity.task
-		? { after: activity.expectedUserAfter }
+		? {
+				after: activity.expectedUserAfter,
+				...(activity.expectedTurnAfter !== undefined
+					? { turnAfter: activity.expectedTurnAfter }
+					: {}),
+			}
 		: undefined;
+}
+
+export function activityAwaitingTurn(
+	activity: AgentActivity,
+	panel: PaneInfo,
+): boolean {
+	return (
+		activity.phase !== "settled" &&
+		activity.expectedTurnAfter !== undefined &&
+		(panel.turn === undefined || panel.turn <= activity.expectedTurnAfter)
+	);
 }
 
 export function isSettledStatus(
@@ -69,6 +85,7 @@ export function sameAgentActivity(
 		return (
 			left.attemptId === right.attemptId &&
 			left.expectedUserAfter === right.expectedUserAfter &&
+			left.expectedTurnAfter === right.expectedTurnAfter &&
 			left.task === right.task
 		);
 	}
@@ -77,6 +94,7 @@ export function sameAgentActivity(
 		right.phase === "submitting" &&
 		left.attemptId === right.attemptId &&
 		left.expectedUserAfter === right.expectedUserAfter &&
+		left.expectedTurnAfter === right.expectedTurnAfter &&
 		left.task === right.task &&
 		sameAgentActivity(left.previous, right.previous)
 	);

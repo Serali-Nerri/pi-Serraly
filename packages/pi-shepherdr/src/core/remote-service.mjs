@@ -56,8 +56,8 @@ export async function serve(input, send, fail) {
 			throw new Error(
 				"Remote Core identity changed; refresh machines before retrying",
 			);
-		lifetime = await superviseParents(core, (message) => {
-			if (!closed) send({ notice: message });
+		lifetime = await superviseParents(core, (message, level = "warning") => {
+			if (!closed) send({ notice: message, level });
 		});
 	} catch (error) {
 		await close();

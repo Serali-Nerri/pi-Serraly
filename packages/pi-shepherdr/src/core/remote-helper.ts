@@ -267,57 +267,63 @@ export async function openRemoteHelper(
 			await cleanup();
 			throw new Error("Remote connection cancelled during startup");
 		}
-		wire = focusWire(
-			nonce,
-			(bytes) => {
-				if (!stream) throw new Error("Remote connection is not attached");
-				stream.write(bytes);
-			},
-			(value) => {
-				const message = object(value);
-				if (message["type"] === "closed") {
-					resolveClosed();
-					return;
-				}
-				if (ended) return;
-				if (message["type"] === "ready" && !admitted) {
-					admitted = true;
-					clearTimeout(timer);
-					resolveReady();
-				} else if (message["type"] === "error") {
-					throw new Error(
-						typeof message["message"] === "string"
-							? message["message"]
-							: "Remote connection failed",
-					);
-				} else if (admitted) onMessage(message);
-				else throw new Error("Remote connection sent data before admission");
-			},
-			failed,
-			() => {
-				if (started || ended) return;
-				started = true;
-				wire?.send({
-					type: "start",
-					input: {
-						coreId: machine.id,
-						session: machine.session,
-						modules: source.modules,
-					},
-				});
-			},
-			{ maxMessageBytes: 8 * 1024 * 1024, maxQueuedBytes: 24 * 1024 * 1024 },
-		);
+		const ensureWire = () => {
+			wire ??= focusWire(
+				nonce,
+				(bytes) => {
+					if (!stream) throw new Error("Remote connection is not attached");
+					stream.write(bytes);
+				},
+				(value) => {
+					const message = object(value);
+					if (message["type"] === "closed") {
+						resolveClosed();
+						return;
+					}
+					if (ended) return;
+					if (message["type"] === "ready" && !admitted) {
+						admitted = true;
+						clearTimeout(timer);
+						resolveReady();
+					} else if (message["type"] === "error") {
+						throw new Error(
+							typeof message["message"] === "string"
+								? message["message"]
+								: "Remote connection failed",
+						);
+					} else if (admitted) onMessage(message);
+					else throw new Error("Remote connection sent data before admission");
+				},
+				failed,
+				() => {
+					if (started || ended) return;
+					started = true;
+					wire?.send({
+						type: "start",
+						input: {
+							coreId: machine.id,
+							session: machine.session,
+							modules: source.modules,
+						},
+					});
+				},
+				{ maxMessageBytes: 8 * 1024 * 1024, maxQueuedBytes: 24 * 1024 * 1024 },
+			);
+		};
 		stream = attachCoreTerminal(
 			socketPath,
 			terminal,
-			(bytes) => wire?.push(bytes),
+			(bytes) => {
+				if (!ended) ensureWire();
+				wire?.push(bytes);
+			},
 			(error) => {
 				resolveClosed();
 				if (!ended) failed(error);
 			},
 		);
 		await stream.ready;
+		if (!ended) ensureWire();
 		await ready;
 		return {
 			send(message) {

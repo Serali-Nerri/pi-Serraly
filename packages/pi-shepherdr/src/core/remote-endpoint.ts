@@ -17,12 +17,15 @@ export class RemoteCoreEndpoint {
 	private readonly socketPath: string;
 	readonly machine: CoreMachine;
 	private readonly admission: CoreAdmission;
-	private readonly onNotice: (message: string) => void;
+	private readonly onNotice: (
+		message: string,
+		level: "warning" | "info",
+	) => void;
 	constructor(
 		socketPath: string,
 		machine: CoreMachine,
 		admission = new CoreAdmission(socketPath, machine.id),
-		onNotice: (message: string) => void = () => {},
+		onNotice: (message: string, level: "warning" | "info") => void = () => {},
 	) {
 		this.socketPath = socketPath;
 		this.machine = machine;

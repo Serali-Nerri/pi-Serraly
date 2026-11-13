@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { activityForPanel, activityTask, isSettledStatus } from "./activity.js";
+import {
+	activityAwaitingTurn,
+	activityForPanel,
+	activityTask,
+	isSettledStatus,
+} from "./activity.js";
 import {
 	parseMonitoredAgent,
 	recordForPanel,
@@ -143,7 +148,7 @@ export class MonitorState {
 	beginWork(
 		paneId: string,
 		task: string,
-		expectedUserAfter?: string | null,
+		expectedInput?: { after: string | null; turn: number },
 	): WorkAttempt | undefined {
 		const record = this.byPane(paneId);
 		if (!record) return undefined;
@@ -167,7 +172,12 @@ export class MonitorState {
 				phase: "submitting",
 				previous: record.activity,
 				task: activityTask(record.activity) ?? task,
-				...(expectedUserAfter !== undefined ? { expectedUserAfter } : {}),
+				...(expectedInput
+					? {
+							expectedUserAfter: expectedInput.after,
+							expectedTurnAfter: expectedInput.turn,
+						}
+					: {}),
 			},
 		});
 		return attempt;
@@ -213,6 +223,9 @@ export class MonitorState {
 				attemptId: record.activity.attemptId,
 				...(record.activity.expectedUserAfter !== undefined
 					? { expectedUserAfter: record.activity.expectedUserAfter }
+					: {}),
+				...(record.activity.expectedTurnAfter !== undefined
+					? { expectedTurnAfter: record.activity.expectedTurnAfter }
 					: {}),
 				phase: "working",
 				task: record.activity.task,
@@ -281,10 +294,13 @@ export class MonitorState {
 					activity.phase === "settled" ? undefined : activity.attemptId;
 				const expectedUserAfter =
 					activity.phase === "settled" ? undefined : activity.expectedUserAfter;
+				const expectedTurnAfter =
+					activity.phase === "settled" ? undefined : activity.expectedTurnAfter;
 				activity = {
 					phase: "working",
 					...(attemptId ? { attemptId } : {}),
 					...(expectedUserAfter !== undefined ? { expectedUserAfter } : {}),
+					...(expectedTurnAfter !== undefined ? { expectedTurnAfter } : {}),
 					...(task ? { task } : {}),
 				};
 			} else if (
@@ -302,7 +318,9 @@ export class MonitorState {
 				};
 			} else if (
 				isSettledStatus(panel.agent_status) &&
-				activity.phase !== "settled"
+				activity.phase !== "settled" &&
+				(panel.agent_status === "blocked" ||
+					!activityAwaitingTurn(activity, panel))
 			) {
 				const task = activityTask(activity);
 				completion = {

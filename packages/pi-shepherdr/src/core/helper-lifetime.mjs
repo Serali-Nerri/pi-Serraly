@@ -1,4 +1,5 @@
 const TERMINAL = /^t[1-9][0-9bcdfghjkmnpqrstvwxyz]*$/;
+const PARENT_RETRY_DELAYS = [100, 200, 400, 800];
 const ENDED = new Set([
 	"holder_lost",
 	"stopped_by_restart",
@@ -14,10 +15,11 @@ function program(record) {
 }
 
 /** Core's native parent links and lifetime flags are the only ownership source. */
-export async function superviseParents(core, warn) {
+export async function superviseParents(core, notice) {
 	const children = new Map();
 	const parents = new Map();
 	let active = true;
+	let closing = false;
 	let chain = Promise.resolve();
 	let streamWarning;
 	function enqueue(work) {
@@ -25,7 +27,7 @@ export async function superviseParents(core, warn) {
 			.then(() => active && work())
 			.catch((error) => {
 				if (active)
-					warn(
+					notice(
 						`Automatic child shutdown could not be checked: ${error.message}. Existing agents remain available. Reconnect Core or close the children explicitly.`,
 					);
 			});
@@ -36,7 +38,10 @@ export async function superviseParents(core, warn) {
 		children.delete(address);
 		const parent = parents.get(child.record.parent);
 		parent?.children.delete(address);
-		if (parent?.children.size === 0) parents.delete(child.record.parent);
+		if (parent?.children.size === 0) {
+			clearTimeout(parent.retry);
+			parents.delete(child.record.parent);
+		}
 	}
 	async function track(record, verify = true) {
 		if (!record || !TERMINAL.test(record.address)) return;
@@ -66,6 +71,11 @@ export async function superviseParents(core, warn) {
 				reference: record.parent,
 				children: new Map(),
 				warning: undefined,
+				verified: false,
+				deadline: Date.now() + 2000,
+				attempts: 0,
+				denied: undefined,
+				retry: undefined,
 			};
 			parents.set(record.parent, parent);
 		}
@@ -76,15 +86,23 @@ export async function superviseParents(core, warn) {
 		if (verify) await check(parent);
 	}
 	async function check(parent) {
+		if (parents.get(parent.reference) !== parent || parent.retry !== undefined)
+			return;
+		const initial = !closing && !parent.verified && !parent.warning;
+		let readingParent = true;
 		try {
+			const remaining = parent.deadline - Date.now();
+			if (initial && parent.denied && remaining <= 0) throw parent.denied;
+			if (initial) parent.attempts++;
 			const record = await core.request(
 				"terminal.get",
 				{
 					terminal: parent.reference,
 				},
-				2000,
+				initial ? Math.max(1, remaining) : 2000,
 			);
 			if (!active) return;
+			readingParent = false;
 			if (
 				!record ||
 				typeof record.address !== "string" ||
@@ -99,6 +117,9 @@ export async function superviseParents(core, warn) {
 					ENDED.has(record.reason));
 			if (!ended && (record.state !== "live" || !current))
 				throw new Error("Parent program state is unknown");
+			parent.verified = true;
+			clearTimeout(parent.retry);
+			parent.retry = undefined;
 			for (const child of [...parent.children.values()]) {
 				if (!active) return;
 				if (
@@ -125,11 +146,32 @@ export async function superviseParents(core, warn) {
 					await core.request("terminal.kill", { terminal: target }, 2000);
 				forget(target);
 			}
+			if (parent.warning && !streamWarning)
+				notice(
+					`Automatic shutdown for children of ${parent.reference} is available again.`,
+					"info",
+				);
 			parent.warning = undefined;
 		} catch (error) {
 			if (!active) return;
+			if (readingParent && initial && !closing && error.kind === "denied") {
+				parent.denied = error;
+				const delay = PARENT_RETRY_DELAYS[parent.attempts - 1];
+				if (delay !== undefined && Date.now() + delay < parent.deadline) {
+					// A new cross-Core parent link can precede reverse-read access.
+					// Keep the timer marked until its queued check owns the attempt.
+					parent.retry = setTimeout(() => {
+						enqueue(async () => {
+							if (closing || parents.get(parent.reference) !== parent) return;
+							parent.retry = undefined;
+							await check(parent);
+						});
+					}, delay);
+					return;
+				}
+			}
 			const message = `Automatic shutdown for children of ${parent.reference} is unavailable: ${error.message}. Existing agents remain available. Reconnect the parent Core or close these children explicitly.`;
-			if (parent.warning !== message) warn(message);
+			if (parent.warning !== message) notice(message);
 			parent.warning = message;
 		}
 	}
@@ -167,7 +209,7 @@ export async function superviseParents(core, warn) {
 		(error) => {
 			streamWarning = error;
 			if (active)
-				warn(
+				notice(
 					`Automatic child shutdown is unavailable: ${error.message}. Existing agents remain available. Reconnect Core or close the children explicitly.`,
 				);
 		},
@@ -177,11 +219,17 @@ export async function superviseParents(core, warn) {
 		if (streamWarning) throw streamWarning;
 	} catch (error) {
 		active = false;
+		for (const parent of parents.values()) clearTimeout(parent.retry);
 		subscription.close();
 		throw error;
 	}
 	return {
 		async close() {
+			closing = true;
+			for (const parent of parents.values()) {
+				clearTimeout(parent.retry);
+				parent.retry = undefined;
+			}
 			await chain;
 			// Pi releases connections during shutdown, before its program exits.
 			// Keep observing briefly, then verify once. A lost wire is not death.

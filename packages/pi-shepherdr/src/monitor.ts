@@ -192,9 +192,9 @@ export class AgentMonitor {
 	beginWork(
 		paneId: string,
 		task: string,
-		expectedUserAfter?: string | null,
+		expectedInput?: { after: string | null; turn: number },
 	): WorkAttempt | undefined {
-		const attempt = this.state.beginWork(paneId, task, expectedUserAfter);
+		const attempt = this.state.beginWork(paneId, task, expectedInput);
 		if (attempt) this.persist();
 		return attempt;
 	}

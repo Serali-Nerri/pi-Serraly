@@ -16,7 +16,7 @@ Prepare the installation workspace as described in [development](../../docs/deve
 pi install ~/.pi/pi-Serraly/packages/pi-shepherdr
 ```
 
-Requires Pi 1.5 or newer, Node.js 22.19 or newer and Herdr Core 0.1.18 or newer. Run Pi in a Core terminal, through `hc` or a Herdr app connected to that Core. Shepherdr reports Pi status to Core and discovers other Pi sessions with Shepherdr installed. No separate Pi integration is needed.
+Requires Pi 1.5 or newer, Node.js 22.19 or newer and Herdr Core 0.1.21 or newer on the controller and every target. Run Pi in a Core terminal, through `hc` or a Herdr app connected to that Core. Shepherdr reports Pi status to Core and discovers other Pi sessions with Shepherdr installed. No separate Pi integration is needed.
 
 Do not load Pi Codex's example `agents.toml` custom tool alongside Shepherdr; they own the same agent surface.
 
@@ -58,7 +58,9 @@ Machines belong to the host running Pi, not the machine displaying its terminal.
 
 Remote file watches, Notes, shared-context calls and peer messages use a private Core-owned helper, started lazily and kept alive over a flow-controlled terminal attachment. Shepherdr does not install SSH bridge files or poll through `machine.exec`. Voice focus uses a separate private helper so large Notes transfers do not block its channel. Monitoring uses each Core's own snapshot rather than treating a missing machine in an aggregate terminal list as closed agents.
 
-The same connection supervises native remote-parent lifetimes while active. A brief closing grace makes a best-effort check for Pi exiting. No separate background service is installed. A disconnected or unreachable parent is not treated as dead. Failed checks leave existing agents available and produce a warning while the connection is active. Reconnect the parent Core or close its children explicitly. Closing checks have no persistent warning report. This does not guarantee cleanup after an OS failure or a prolonged Pi shutdown.
+The same connection supervises native remote-parent lifetimes while active. An initially denied parent read gets up to five attempts within two seconds, allowing a new cross-machine parent link to become readable. Other failures and failures after a verified read warn immediately; persistent initial denial warns after this bounded retry. A later successful check reports recovery. Existing agents remain available, and a disconnected or unreachable parent is never treated as dead. If checks remain unavailable, reconnect the parent Core or close its children explicitly.
+
+A brief closing grace makes a best-effort check for Pi exiting. No separate background service is installed. Closing checks have no persistent warning report. This does not guarantee cleanup after an OS failure or a prolonged Pi shutdown.
 
 ## Agent calls
 
@@ -80,6 +82,8 @@ Call `agents` with `{}` before first use, alone, then send flat request objects 
 | `unwatch` | Stop reporting an agent                                                               |
 
 `spawn` and `assign` return once the task is submitted by default, so consecutive calls can dispatch work to several agents without waiting for the first task to finish. Task completion and blockage arrive automatically. Set `blocking: true` when the call must wait for its result. A profile's `blocking` setting still overrides the call for `spawn`.
+
+A submission receipt means the input was accepted, not that execution started. New tasks wait for Core's terminal turn counter to advance before an idle or done status can start result reconciliation; queued preparation has no eight-second startup deadline. After that native completion, the saved input and final reply must still be readable. Existing saved tasks without a turn baseline retain their earlier reconciliation behavior; subsequent submissions record the baseline. Native blocked status and replies to extension messages keep their existing semantics.
 
 Blocking calls can run in parallel. In Code or Notebook, use `await Promise.allSettled([...])` to start independent calls together and wait for every result, including failures. Keep blocking enabled when the controller must wait, such as for parallel reviews. Consecutive `await` calls still run one after another; `Promise.all` can exit early on failure.
 

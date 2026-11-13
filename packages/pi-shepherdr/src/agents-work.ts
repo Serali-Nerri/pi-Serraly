@@ -1,6 +1,6 @@
 import type { AgentToolUpdateCallback } from "@earendil-works/pi-coding-agent";
 import { activityTask } from "./activity.js";
-import { getSnapshot } from "./core/agents.js";
+import { getAgent, getSnapshot } from "./core/agents.js";
 import type { CoreConnection } from "./core/backend.js";
 import type { ConnectedMachine } from "./fleet/index.js";
 import { agentSource } from "./messages/attribution.js";
@@ -148,14 +148,21 @@ export async function dispatchAgentWork(
 	let sendStarted = false;
 	try {
 		await runtime.monitor.track(panel);
-		const baseline = options.expectUserMessage
-			? await runtime.monitor.view(panel)
-			: undefined;
-		attempt = runtime.monitor.beginWork(
-			panel.pane_id,
-			task,
-			options.expectUserMessage ? (baseline?.input?.id ?? null) : undefined,
-		);
+		let expectedInput: { after: string | null; turn: number } | undefined;
+		if (options.expectUserMessage) {
+			const baseline = await runtime.monitor.view(panel);
+			const current = await getAgent(runtime.client, panel.terminal_id);
+			if (current.terminal_id !== panel.terminal_id || current.agent !== "pi")
+				throw new Error(
+					"The target Pi session is no longer available; find the agent again",
+				);
+			if (current.turn === undefined)
+				throw new Error(
+					"The target terminal turn counter is unavailable; update Core and retry",
+				);
+			expectedInput = { after: baseline.input?.id ?? null, turn: current.turn };
+		}
+		attempt = runtime.monitor.beginWork(panel.pane_id, task, expectedInput);
 		if (!attempt) throw new Error(`${panel.pane_id} is not monitored`);
 		settlement = blocking
 			? runtime.monitor.claimWork(attempt, signal, options.replyingTo)

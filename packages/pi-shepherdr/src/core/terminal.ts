@@ -8,6 +8,11 @@ export function terminalPane(value: unknown): PaneInfo {
 	const address = terminal["address"];
 	if (typeof address !== "string" || !address || address.includes("/"))
 		throw new Error("Expected a local Core terminal address");
+	const turn = terminal["turn"];
+	if (typeof turn !== "number" || !Number.isSafeInteger(turn) || turn < 0)
+		throw new Error(
+			"Core returned an invalid terminal turn counter; update Core and retry",
+		);
 	const labels = object(terminal["labels"]);
 	const status = terminal["status"] == null ? {} : object(terminal["status"]);
 	const state = status["state"];
@@ -28,6 +33,7 @@ export function terminalPane(value: unknown): PaneInfo {
 		terminal_id: address,
 		agent: typeof session === "string" && session ? "pi" : null,
 		agent_status: agentStatus,
+		turn,
 		...(session && labels[CORE_WORKER_LABEL] === session
 			? { worker: true as const }
 			: {}),

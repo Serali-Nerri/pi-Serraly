@@ -28,6 +28,16 @@ function optionalNullableString(
 		: false;
 }
 
+function optionalTurn(
+	value: Record<string, unknown>,
+): number | undefined | false {
+	const turn = value["expectedTurnAfter"];
+	return turn === undefined ||
+		(typeof turn === "number" && Number.isSafeInteger(turn) && turn >= 0)
+		? turn
+		: false;
+}
+
 function stableActivity(value: unknown): StableAgentActivity | undefined {
 	if (typeof value !== "object" || value === null) return undefined;
 	const activity = value as Record<string, unknown>;
@@ -45,17 +55,22 @@ function stableActivity(value: unknown): StableAgentActivity | undefined {
 		activity,
 		"expectedUserAfter",
 	);
+	const expectedTurnAfter = optionalTurn(activity);
 	return task === false
 		? undefined
 		: attemptId === false
 			? undefined
 			: expectedUserAfter === false ||
+					expectedTurnAfter === false ||
+					(expectedTurnAfter !== undefined &&
+						expectedUserAfter === undefined) ||
 					(expectedUserAfter !== undefined && !task)
 				? undefined
 				: {
 						phase: "working",
 						...(attemptId ? { attemptId } : {}),
 						...(expectedUserAfter !== undefined ? { expectedUserAfter } : {}),
+						...(expectedTurnAfter !== undefined ? { expectedTurnAfter } : {}),
 						...(task ? { task } : {}),
 					};
 }
@@ -70,11 +85,14 @@ function parsedActivity(value: unknown): AgentActivity | undefined {
 		activity,
 		"expectedUserAfter",
 	);
+	const expectedTurnAfter = optionalTurn(activity);
 	if (
 		activity["phase"] !== "submitting" ||
 		typeof activity["attemptId"] !== "string" ||
 		typeof activity["task"] !== "string" ||
 		expectedUserAfter === false ||
+		expectedTurnAfter === false ||
+		(expectedTurnAfter !== undefined && expectedUserAfter === undefined) ||
 		!previous
 	) {
 		return undefined;
@@ -85,6 +103,7 @@ function parsedActivity(value: unknown): AgentActivity | undefined {
 		previous,
 		task: activity["task"],
 		...(expectedUserAfter !== undefined ? { expectedUserAfter } : {}),
+		...(expectedTurnAfter !== undefined ? { expectedTurnAfter } : {}),
 	};
 }
 

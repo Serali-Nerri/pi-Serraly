@@ -40,9 +40,9 @@ export async function connectMachine(
 		client = new CoreConnection(
 			process.env["HC_TERMINAL_SOCKET"],
 			runtime.coreMachine,
-			(message) => {
+			(message, level) => {
 				if (events.isCurrent() && runtime.client === client)
-					ctx.ui.notify(`${runtime.coreMachine?.name}: ${message}`, "warning");
+					ctx.ui.notify(`${runtime.coreMachine?.name}: ${message}`, level);
 			},
 		);
 		if (!events.isCurrent() || runtimes.get(name) !== runtime) {

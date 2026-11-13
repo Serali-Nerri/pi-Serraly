@@ -4,6 +4,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import {
 	activityAttemptId,
+	activityAwaitingTurn,
 	activityExpectedUser,
 	activityTask,
 } from "../activity.js";
@@ -27,6 +28,7 @@ export { SettlementCollector };
 interface SettlementRetry {
 	attemptId: string | undefined;
 	count: number;
+	submission: string;
 }
 
 const SETTLEMENT_RETRY_DELAYS_MS = [250, 500, 1_000, 2_000, 4_000] as const;
@@ -36,6 +38,10 @@ const SETTLEMENT_RETRY_WINDOW_SECONDS = Math.ceil(
 
 function attemptKey(terminalId: string, attemptId: string | undefined): string {
 	return JSON.stringify([terminalId, attemptId ?? null]);
+}
+
+function submissionKey(record: MonitoredAgent): string {
+	return JSON.stringify(activityExpectedUser(record.activity) ?? null);
 }
 
 export interface SettlementRequest {
@@ -67,7 +73,7 @@ export class SettlementReporter {
 	private readonly delivery: SettlementDelivery;
 	private readonly retries = new Map<
 		string,
-		{ terminalId: string; timer: NodeJS.Timeout }
+		{ terminalId: string; attemptId: string | undefined; timer: NodeJS.Timeout }
 	>();
 	private readonly state: MonitorState;
 	private readonly onClosed: (record: MonitoredAgent) => Promise<void>;
@@ -140,11 +146,12 @@ export class SettlementReporter {
 		const retryState = retry ?? {
 			attemptId: activityAttemptId(request.record.activity),
 			count: 0,
+			submission: submissionKey(request.record),
 		};
 		const key = `${lifecycle.generation}:${attemptKey(
 			request.record.terminalId,
 			retryState.attemptId,
-		)}`;
+		)}:${retryState.submission}`;
 		const activeStatus = this.reporting.get(key);
 		if (activeStatus) {
 			if (request.status === "blocked" && activeStatus !== "blocked") {
@@ -192,6 +199,14 @@ export class SettlementReporter {
 			const retryRequest = task ? { ...request, task } : request;
 			const expectedUser = activityExpectedUser(current.activity);
 			const blocked = settlement.status === "blocked";
+			// Receipts accept queued input; only a later native turn can settle it.
+			// Steering shares the attempt, but not an earlier submission's retry budget.
+			if (
+				!blocked &&
+				(submissionKey(current) !== retryState.submission ||
+					activityAwaitingTurn(current.activity, settlement.agent))
+			)
+				return;
 			// Status and session writes arrive separately. A tool call is not a reply,
 			// even if done arrives before the final message is visible on disk.
 			if (!blocked && settlement.session.assistantPending) {
@@ -312,6 +327,14 @@ export class SettlementReporter {
 				return;
 			}
 			if (this.pendingBlocked.has(key)) return;
+			const currentSubmission = this.state.byTerminal(
+				request.record.terminalId,
+			);
+			if (
+				!currentSubmission ||
+				submissionKey(currentSubmission) !== retryState.submission
+			)
+				return;
 			if (retryState.count === 0) {
 				lifecycle.context.ui.notify(
 					`Could not collect ${request.record.name ?? request.record.paneId}: ${error instanceof Error ? error.message : String(error)}`,
@@ -344,10 +367,12 @@ export class SettlementReporter {
 	}
 
 	private clearRetry(terminalId: string, attemptId: string | undefined): void {
-		const key = attemptKey(terminalId, attemptId);
-		const retry = this.retries.get(key);
-		if (retry) clearTimeout(retry.timer);
-		this.retries.delete(key);
+		for (const [key, retry] of this.retries) {
+			if (retry.terminalId !== terminalId || retry.attemptId !== attemptId)
+				continue;
+			clearTimeout(retry.timer);
+			this.retries.delete(key);
+		}
 	}
 
 	private retry(
@@ -363,11 +388,12 @@ export class SettlementReporter {
 			!current ||
 			activityTask(current.activity) !==
 				(request.task ?? activityTask(request.record.activity)) ||
-			activityAttemptId(current.activity) !== retry.attemptId
+			activityAttemptId(current.activity) !== retry.attemptId ||
+			submissionKey(current) !== retry.submission
 		) {
 			return false;
 		}
-		const key = attemptKey(request.record.terminalId, retry.attemptId);
+		const key = `${attemptKey(request.record.terminalId, retry.attemptId)}:${retry.submission}`;
 		if (this.retries.has(key)) return true;
 		const timer = setTimeout(() => {
 			this.retries.delete(key);
@@ -389,7 +415,11 @@ export class SettlementReporter {
 				{ ...retry, count: retry.count + 1 },
 			);
 		}, delay);
-		this.retries.set(key, { terminalId: request.record.terminalId, timer });
+		this.retries.set(key, {
+			terminalId: request.record.terminalId,
+			attemptId: retry.attemptId,
+			timer,
+		});
 		timer.unref();
 		return true;
 	}

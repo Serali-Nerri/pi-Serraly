@@ -50,6 +50,7 @@ export type StableAgentActivity =
 	| {
 			readonly attemptId?: string;
 			readonly expectedUserAfter?: string | null;
+			readonly expectedTurnAfter?: number;
 			readonly phase: "working";
 			readonly task?: string;
 	  };
@@ -59,6 +60,7 @@ export type AgentActivity =
 	| {
 			readonly attemptId: string;
 			readonly expectedUserAfter?: string | null;
+			readonly expectedTurnAfter?: number;
 			readonly phase: "submitting";
 			readonly previous: StableAgentActivity;
 			readonly task: string;
@@ -76,6 +78,7 @@ export interface PaneInfo {
 	worker?: true;
 	agent_session?: AgentSessionInfo | null;
 	agent_status: AgentStatus;
+	turn?: number;
 	cwd?: string | null;
 	foreground_cwd?: string | null;
 	interactive_ready?: boolean;

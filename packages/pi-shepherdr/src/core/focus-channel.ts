@@ -158,53 +158,62 @@ export async function openCoreFocusChannel(
 				.catch(() => {});
 			throw new Error("Remote focus channel cancelled during startup");
 		}
-		wire = focusWire(
-			nonce,
-			(bytes) => {
-				if (!stream) throw new Error("Remote focus stream is unavailable");
-				stream.write(bytes);
-			},
-			(value) => {
-				const frame = object(value);
-				if (frame["type"] === "admitted" && !admitted) {
-					admitted = true;
-					clearTimeout(timer);
-					resolveAdmission();
-				} else if (frame["type"] === "data" && admitted && "message" in frame)
-					state.receive(frame["message"]);
-				else if (frame["type"] === "error")
-					throw new Error(
-						typeof frame["message"] === "string"
-							? frame["message"]
-							: "Remote focus failed",
-					);
-				else
-					throw new Error("Remote focus connection sent an invalid response");
-			},
-			stop,
-			() => {
-				if (!started) {
-					started = true;
-					wire?.send({
-						type: "start",
-						input: {
-							coreId: machine.id,
-							session: machine.session,
-							expected,
-							focus,
-							modules: { channel: modules.channel, terminal: modules.terminal },
-						},
-					});
-				}
-			},
-		);
+		const ensureWire = () => {
+			wire ??= focusWire(
+				nonce,
+				(bytes) => {
+					if (!stream) throw new Error("Remote focus stream is unavailable");
+					stream.write(bytes);
+				},
+				(value) => {
+					const frame = object(value);
+					if (frame["type"] === "admitted" && !admitted) {
+						admitted = true;
+						clearTimeout(timer);
+						resolveAdmission();
+					} else if (frame["type"] === "data" && admitted && "message" in frame)
+						state.receive(frame["message"]);
+					else if (frame["type"] === "error")
+						throw new Error(
+							typeof frame["message"] === "string"
+								? frame["message"]
+								: "Remote focus failed",
+						);
+					else
+						throw new Error("Remote focus connection sent an invalid response");
+				},
+				stop,
+				() => {
+					if (!started) {
+						started = true;
+						wire?.send({
+							type: "start",
+							input: {
+								coreId: machine.id,
+								session: machine.session,
+								expected,
+								focus,
+								modules: {
+									channel: modules.channel,
+									terminal: modules.terminal,
+								},
+							},
+						});
+					}
+				},
+			);
+		};
 		stream = attachCoreTerminal(
 			socketPath,
 			terminal,
-			(bytes) => wire?.push(bytes),
+			(bytes) => {
+				if (!ended) ensureWire();
+				wire?.push(bytes);
+			},
 			stop,
 		);
 		await stream.ready;
+		if (!ended) ensureWire();
 		await admission;
 		return state.channel;
 	} catch (error) {
