@@ -14,7 +14,7 @@ test("non-TUI sessions leave native presentation untouched and settings explain 
 	const original = AssistantMessageComponent.prototype.updateContent;
 	const pi = {
 		on(name: string, handler: (event: unknown, ctx: ExtensionContext) => unknown) { handlers.set(name, handler); return () => handlers.delete(name); },
-		registerCommand(name: string, definition: typeof command) { assert.equal(name, "ui"); command = definition; },
+		registerCommand(name: string, definition: typeof command) { if (name === "ui") command = definition; },
 		registerEntryRenderer() {}, appendEntry() { entries++; },
 	} as unknown as ExtensionAPI;
 	extension(pi);

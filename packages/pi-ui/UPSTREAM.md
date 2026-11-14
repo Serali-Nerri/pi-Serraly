@@ -2,11 +2,11 @@
 
 本仓精简分支 `c3e3585232ca4b9ae709fe980d78ff345baceb0e` 的 `extensions/pi-ui` 是功能与视觉基线。当前包抽取 Thinking、Footer、活动完成提示（原 state/activity-completion.ts）、置顶消息和必要配置；适配 Pi 1.5.0，独立实现有界状态和可清理生命周期，不迁入工具 renderer、Markdown 修改、消息摘要、旧私有框架或共享库。
 
-Thinking 的既有设计来自 MIT 的 pi-cc-extensions / pi-compact-thinking，Footer 与界面契约来自 claude-style-tools。保留原声明于 licenses/，新代码 MIT。完整 howaboua 包来源由根 UPSTREAM 索引，不将此包归入它们。
+Thinking 的既有设计来自 MIT 的 pi-cc-extensions / pi-compact-thinking，Footer 与界面契约来自 claude-style-tools。保留原声明于 licenses/，本仓自有代码使用 MIT；Codex 衍生提示词的许可单独列于下文。完整 howaboua 包来源由根 UPSTREAM 索引，不将此包归入它们。
 
 包可独立登记或由本地 pi-extensions 聚合包转发。types/index.d.ts 提供公开工厂声明，运行仍使用保留 Pi loader 绑定的 dist/index.ts，不改变展示行为。
 
-自动会话命名为本仓通过 Pi 公开模型与会话接口实现的功能，不移植 Codex 的 thread/app-server 实现；使用和配置见 [README.md](README.md#自动会话命名)。
+自动会话命名和 `/rename` 通过 Pi 公开模型与会话接口实现，不移植 Codex 的 thread/app-server 实现。`src/session-title-prompt.ts` 的共享命名指令、重命名优先级指令、最近 8 条消息及 960 字节提示预算来自 [openai/codex](https://github.com/openai/codex/blob/5943d7acdf01b293c950397844dd37aa70779df4/codex-rs/tui/src/app/thread_title.rs)，固定提交 `5943d7acdf01b293c950397844dd37aa70779df4`。保留指令原文；消息选择、提示组装和交互适配 Pi，模型返回纯文本而非 Codex 的 provider JSON schema。Apache-2.0 许可及归属见 [licenses/openai-codex-LICENSE](licenses/openai-codex-LICENSE) 和 [NOTICE](licenses/openai-codex-NOTICE)。使用和配置见 [README.md](README.md#自动会话命名)。
 
 移除 Footer 的活动行，回合末尾的净工作耗时提示保持独立；当前展示契约见 [README.md](README.md#展示)。
 

@@ -1,7 +1,8 @@
 # UI constraints
 
-- Own presentation and opt-in automatic session naming. Do not register tool renderers, change main-chat model messages or add Markdown transformations.
+- Own presentation, opt-in automatic session naming and `/rename`. Do not register tool renderers, change main-chat model messages or add Markdown transformations.
 - Session naming uses public model/session APIs independently of mounted components. Keep its requests tool-free and separate from the main provider session; abort owned requests before cleanup and never replace a manual name with a late result.
+- Automatic names and rename suggestions share the pinned Codex instructions in `session-title-prompt.ts`; keep provenance in UPSTREAM.md. Suggestions never save before confirmation or overwrite an edited input. Replacements, navigation and external renames close the old dialog and cancel its request.
 - Keep private Pi compatibility localized and capability-checked. Restore owned hooks on cleanup; do not overwrite another extension's replacement.
 - The type-erased dist/index.ts is the runtime entry, not a type-checking surface. Keep types/index.d.ts aligned with src/index.ts's default factory and ship it for public package consumers.
 - No full ExtensionContext/render context or lastComponent retained by components, timers or callbacks. Destructure only the current data/callbacks needed.

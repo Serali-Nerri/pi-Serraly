@@ -1,0 +1,7 @@
+OpenAI Codex
+Copyright 2025 OpenAI
+
+The title instructions and recent-conversation framing in src/session-title-prompt.ts
+are derived from openai/codex, commit 5943d7acdf01b293c950397844dd37aa70779df4,
+codex-rs/tui/src/app/thread_title.rs. The prompt assembly and message selection
+have been adapted to Pi's public transcript interfaces.
