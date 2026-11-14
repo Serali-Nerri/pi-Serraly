@@ -113,6 +113,27 @@
         "@earendil-works/pi-tui": ">=1.0.0",
       },
     },
+    "packages/pi-codex-guardian": {
+      "name": "@howaboua/pi-codex-guardian",
+      "version": "0.0.1",
+      "devDependencies": {
+        "@biomejs/biome": "^2.6.6",
+        "@earendil-works/pi-ai": "1.5.2",
+        "@earendil-works/pi-coding-agent": "1.5.2",
+        "@howaboua/pi-codex-conversion": "5.0.0",
+        "@types/node": "^26.6.6",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@earendil-works/pi-ai": ">=1.0.0",
+        "@earendil-works/pi-coding-agent": ">=1.5.0",
+        "@earendil-works/pi-tui": ">=1.0.0",
+        "@howaboua/pi-codex-conversion": ">=5.0.0",
+      },
+      "optionalPeers": [
+        "@howaboua/pi-codex-conversion",
+      ],
+    },
     "packages/pi-codex-imagegen": {
       "name": "@howaboua/pi-codex-imagegen",
       "version": "0.0.14",
@@ -146,6 +167,7 @@
         "@howaboua/pi-ask": "workspace:*",
         "@howaboua/pi-auto-trees": "workspace:*",
         "@howaboua/pi-codex-conversion": "workspace:*",
+        "@howaboua/pi-codex-guardian": "workspace:*",
         "@howaboua/pi-codex-imagegen": "workspace:*",
         "@howaboua/pi-github-watch": "workspace:*",
         "@howaboua/pi-notes-compaction": "workspace:*",
@@ -415,6 +437,8 @@
     "@howaboua/pi-auto-trees": ["@howaboua/pi-auto-trees@workspace:packages/pi-auto-trees"],
 
     "@howaboua/pi-codex-conversion": ["@howaboua/pi-codex-conversion@workspace:packages/pi-codex-conversion"],
+
+    "@howaboua/pi-codex-guardian": ["@howaboua/pi-codex-guardian@workspace:packages/pi-codex-guardian"],
 
     "@howaboua/pi-codex-imagegen": ["@howaboua/pi-codex-imagegen@workspace:packages/pi-codex-imagegen"],
 

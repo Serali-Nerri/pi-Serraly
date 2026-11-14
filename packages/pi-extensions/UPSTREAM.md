@@ -17,6 +17,7 @@ Each member declares one Pi extension entry; the aggregate has no standalone cha
 | `pi-codex-conversion` | 5.0.0         | [UPSTREAM](../pi-codex-conversion/UPSTREAM.md) |
 | `pi-ask`              | 0.0.19        | [UPSTREAM](../pi-ask/UPSTREAM.md)              |
 | `pi-codex-imagegen`   | 0.0.14        | [UPSTREAM](../pi-codex-imagegen/UPSTREAM.md)   |
+| `pi-codex-guardian`   | 0.0.1         | [UPSTREAM](../pi-codex-guardian/UPSTREAM.md)   |
 | `pi-agent-board`      | 0.0.7         | [UPSTREAM](../pi-agent-board/UPSTREAM.md)      |
 | `pi-auto-trees`       | 0.1.19        | [UPSTREAM](../pi-auto-trees/UPSTREAM.md)       |
 | `pi-shepherdr`        | 1.0.1         | [UPSTREAM](../pi-shepherdr/UPSTREAM.md)        |
@@ -26,9 +27,9 @@ Each member declares one Pi extension entry; the aggregate has no standalone cha
 | `pi-ui`               | 0.3.0         | [UPSTREAM](../pi-ui/UPSTREAM.md)               |
 | `pi-session-recap`    | 0.1.0         | [UPSTREAM](../pi-session-recap/UPSTREAM.md)    |
 
-The nine Howaboua members come from the same pinned commit through this repository's retained packages. UI and Recap have independent provenance. Each member retains its own license and applicable changelogs and third-party notices.
+The ten Howaboua members come from the same pinned commit through this repository's retained packages. UI and Recap have independent provenance. Each member retains its own license and applicable changelogs and third-party notices.
 
-All eleven extensions are dependencies and have explicit forwarding entries. Each entry can be disabled through Pi's package resource filters. Members remain independently installable, but must not be registered alongside this aggregate.
+All twelve extensions are dependencies and have explicit forwarding entries. Each entry can be disabled through Pi's package resource filters. Members remain independently installable, but must not be registered alongside this aggregate.
 
 ## License
 
