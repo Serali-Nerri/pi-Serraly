@@ -14,10 +14,11 @@
 | [pi-auto-trees](packages/pi-auto-trees/README.md) | 会话 marker、prime 与 end |
 | [pi-notes-compaction](packages/pi-notes-compaction/README.md) | 独立可选的 Notes、历史检索与共享上下文；使用 SQLite 原生模块 |
 | [pi-suggestions](packages/pi-suggestions/README.md) | 空输入框中的下一步请求草稿；独立模型，默认关闭 |
+| [pi-github-watch](packages/pi-github-watch/README.md) | 按需监控 GitHub Issue、PR 反馈和 Actions 运行，通知当前会话 |
 | [pi-ui](packages/pi-ui/README.md) | Thinking、Footer、活动完成提示和置顶用户消息；不接管工具渲染 |
 | [pi-session-recap](packages/pi-session-recap/README.md) | TUI 的 `/recap` 与默认开启的空闲任务摘要；临时展示，不写入模型上下文 |
 
-默认逐包注册，只启用需要的包。可选的 [pi-extensions](packages/pi-extensions/README.md) 一次登记上述全部十个扩展的独立入口，可在 `pi config` 中分别开关；不要与其中成员重复登记。context-view 从其独立上游安装。
+默认逐包注册，只启用需要的包。可选的 [pi-extensions](packages/pi-extensions/README.md) 一次登记上述全部十一个扩展的独立入口，可在 `pi config` 中分别开关；不要与其中成员重复登记。context-view 从其独立上游安装。
 
 Notes/History 由独立 Notes 包提供，不内置于 conversion。需要时单独登记 Notes，或启用整合包中的 Notes 入口；旧 Notes 设置不会被静默关闭，缺少新扩展时会提示迁移。详见 [Notes README](packages/pi-notes-compaction/README.md)。
 

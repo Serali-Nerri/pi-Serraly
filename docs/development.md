@@ -85,10 +85,10 @@ Windows 的 Bun workspace 链接可能是指向暂存目录的绝对 junction。
 
 ## 可选整合包
 
-`pi-extensions` 为仓库全部十个扩展提供独立入口，包括 Notes、Suggestions、pi-ui 和 pi-session-recap。默认全部启用，`pi config` 在包的 Extensions 分组中逐项列出这十个文件，可分别开关。Notes 的会话裁剪和 Suggestions 的预测请求仍默认关闭；Recap 的空闲自动摘要默认开启，会产生模型用量，已有配置保持不变。
+`pi-extensions` 为仓库全部十一个扩展提供独立入口，包括 Notes、Suggestions、GitHub Watch、pi-ui 和 pi-session-recap。默认全部启用，`pi config` 在包的 Extensions 分组中逐项列出这十一个文件，可分别开关。Notes 的会话裁剪和 Suggestions 的预测请求仍默认关闭；Recap 的空闲自动摘要默认开启，会产生模型用量，已有配置保持不变。GitHub Watch 仅在显式订阅后开始监控，详见 [包 README](../packages/pi-github-watch/README.md)。
 
 ```sh
-# 先移除全部成员的单包登记（包括 Notes、Suggestions、pi-ui、pi-session-recap），备份并保留所需配置：
+# 先移除全部成员的单包登记（包括 Notes、Suggestions、GitHub Watch、pi-ui、pi-session-recap），备份并保留所需配置：
 pi install ~/.pi/pi-Serraly/packages/pi-extensions
 ```
 

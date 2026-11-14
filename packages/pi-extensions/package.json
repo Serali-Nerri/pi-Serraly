@@ -32,6 +32,7 @@
 			"./extensions/pi-auto-trees.ts",
 			"./extensions/pi-shepherdr.ts",
 			"./extensions/pi-suggestions.ts",
+			"./extensions/pi-github-watch.ts",
 			"./extensions/pi-ui.ts",
 			"./extensions/pi-session-recap.ts"
 		]
@@ -48,6 +49,7 @@
 		"@howaboua/pi-auto-trees": "workspace:*",
 		"@howaboua/pi-codex-conversion": "workspace:*",
 		"@howaboua/pi-codex-imagegen": "workspace:*",
+		"@howaboua/pi-github-watch": "workspace:*",
 		"@howaboua/pi-notes-compaction": "workspace:*",
 		"@howaboua/pi-shepherdr": "workspace:*",
 		"@howaboua/pi-suggestions": "workspace:*",

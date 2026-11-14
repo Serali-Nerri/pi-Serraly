@@ -9,6 +9,7 @@ const extensionEntries = [
 	"packages/pi-auto-trees/index.ts",
 	"packages/pi-codex-conversion/dist/index.js",
 	"packages/pi-codex-imagegen/index.ts",
+	"packages/pi-github-watch/index.ts",
 	"packages/pi-notes-compaction/index.ts",
 	"packages/pi-session-recap/index.ts",
 	"packages/pi-shepherdr/index.ts",
@@ -34,6 +35,7 @@ test("released Pi 1.5 loads every imported package and completes session cleanup
 		"packages/pi-auto-trees",
 		"packages/pi-codex-conversion",
 		"packages/pi-codex-imagegen",
+		"packages/pi-github-watch",
 		"packages/pi-notes-compaction",
 		"packages/pi-session-recap",
 		"packages/pi-shepherdr",
@@ -55,6 +57,7 @@ test("released Pi 1.5 loads every imported package and completes session cleanup
 		"ask",
 		"exec",
 		"exec_command",
+		"github_watch",
 		"imagegen",
 		"notes",
 		"view_image",
@@ -122,11 +125,12 @@ test("released Pi 1.5 loads every imported package and completes session cleanup
 	assert.equal(report.execution.applyPatch.fileText, "runtime-probe-ok\n");
 	assert.ok(report.resources.bashWasm.bytes > 0);
 	assert.equal(report.resources.bashWasm.valid, true);
-	assert.equal(report.optionalIntegrations.codeMode.providers, 5);
+	assert.equal(report.optionalIntegrations.codeMode.providers, 6);
 	assert.deepEqual(report.optionalIntegrations.codeMode.allToolNames, [
 		"agents",
 		"ask",
 		"board",
+		"github_watch",
 		"history",
 		"imagegen",
 		"notes",
@@ -138,6 +142,7 @@ test("released Pi 1.5 loads every imported package and completes session cleanup
 		"change_reasoning",
 		"exec",
 		"get_context_remaining",
+		"github_watch",
 		"history",
 		"imagegen",
 		"new_context",

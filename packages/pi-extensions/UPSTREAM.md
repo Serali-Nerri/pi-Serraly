@@ -22,12 +22,13 @@ Each member declares one Pi extension entry; the aggregate has no standalone cha
 | `pi-shepherdr`        | 1.0.1         | [UPSTREAM](../pi-shepherdr/UPSTREAM.md)        |
 | `pi-notes-compaction` | 0.0.17        | [UPSTREAM](../pi-notes-compaction/UPSTREAM.md) |
 | `pi-suggestions`      | 0.0.3         | [UPSTREAM](../pi-suggestions/UPSTREAM.md)      |
+| `pi-github-watch`     | 0.0.6         | [UPSTREAM](../pi-github-watch/UPSTREAM.md)     |
 | `pi-ui`               | 0.3.0         | [UPSTREAM](../pi-ui/UPSTREAM.md)               |
 | `pi-session-recap`    | 0.1.0         | [UPSTREAM](../pi-session-recap/UPSTREAM.md)    |
 
-The eight Howaboua members come from the same pinned commit through this repository's retained packages. UI and Recap have independent provenance. Each member retains its own license and applicable changelogs and third-party notices.
+The nine Howaboua members come from the same pinned commit through this repository's retained packages. UI and Recap have independent provenance. Each member retains its own license and applicable changelogs and third-party notices.
 
-All ten extensions are dependencies and have explicit forwarding entries. Each entry can be disabled through Pi's package resource filters. Members remain independently installable, but must not be registered alongside this aggregate.
+All eleven extensions are dependencies and have explicit forwarding entries. Each entry can be disabled through Pi's package resource filters. Members remain independently installable, but must not be registered alongside this aggregate.
 
 ## License
 
