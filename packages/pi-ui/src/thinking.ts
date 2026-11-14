@@ -10,11 +10,12 @@ const MAX_DURATION_ENTRIES = 2048;
 const PREVIEW_BUDGET_LIMIT = 16_000;
 const graphemeSegmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
-const fallbackConfig: UiConfig = {
+type ThinkingConfig = Pick<UiConfig, "useSummaryTitlesAsThinkingTitle" | "previewLines" | "animationIntervalMs">;
+
+const fallbackConfig: ThinkingConfig = {
 	useSummaryTitlesAsThinkingTitle: true,
 	previewLines: 3,
 	animationIntervalMs: 90,
-	stickyUserMessage: false,
 };
 
 type UpdateContent = (this: HostAssistant, message: AssistantMessage, isStreaming?: boolean) => void;
@@ -34,7 +35,7 @@ interface PatchablePrototype {
 }
 
 interface ThinkingServices {
-	getConfig: () => UiConfig;
+	getConfig: () => ThinkingConfig;
 	requestRender: () => void;
 	getTheme: () => Theme;
 }
@@ -72,7 +73,7 @@ interface ViewState {
 }
 
 interface ThinkingReader {
-	config(): UiConfig;
+	config(): ThinkingConfig;
 	theme(): Theme | undefined;
 	viewState(messageTimestamp: number, runStart: number): ViewState;
 }
@@ -424,7 +425,7 @@ class ThinkingControllerImpl implements ThinkingReader {
 		return this.disposed;
 	}
 
-	config(): UiConfig {
+	config(): ThinkingConfig {
 		return this.services?.getConfig() ?? fallbackConfig;
 	}
 
@@ -695,7 +696,7 @@ export interface ThinkingController {
 
 export function installThinking(
 	pi: ExtensionAPI,
-	options: { getConfig: () => UiConfig; requestRender: () => void; getTheme: () => Theme },
+	options: { getConfig: () => ThinkingConfig; requestRender: () => void; getTheme: () => Theme },
 ): ThinkingController {
 	const controller = new ThinkingControllerImpl(pi, {
 		getConfig: options.getConfig,

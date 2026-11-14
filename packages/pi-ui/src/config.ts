@@ -8,6 +8,8 @@ export interface UiConfig {
 	previewLines: number;
 	animationIntervalMs: number;
 	stickyUserMessage: boolean;
+	autoSessionName: boolean;
+	sessionNameModel: { provider: string; id: string } | null;
 }
 
 const defaults: UiConfig = {
@@ -15,6 +17,8 @@ const defaults: UiConfig = {
 	previewLines: 3,
 	animationIntervalMs: 90,
 	stickyUserMessage: true,
+	autoSessionName: false,
+	sessionNameModel: null,
 };
 const maxBytes = 64 * 1024;
 
@@ -23,11 +27,23 @@ function bounded(value: unknown, fallback: number, min: number, max: number): nu
 }
 
 function normalize(value: Record<string, unknown>): UiConfig {
+	const model = value["sessionNameModel"];
+	let sessionNameModel: UiConfig["sessionNameModel"] = null;
+	if (model !== undefined && model !== null) {
+		if (typeof model !== "object" || Array.isArray(model)) throw new Error("Session naming model must contain provider and id");
+		const { provider, id } = model as Record<string, unknown>;
+		if (typeof provider !== "string" || !provider.trim() || typeof id !== "string" || !id.trim()) {
+			throw new Error("Session naming model must contain provider and id");
+		}
+		sessionNameModel = { provider: provider.trim(), id: id.trim() };
+	}
 	return {
 		useSummaryTitlesAsThinkingTitle: typeof value["useSummaryTitlesAsThinkingTitle"] === "boolean" ? value["useSummaryTitlesAsThinkingTitle"] : defaults.useSummaryTitlesAsThinkingTitle,
 		previewLines: bounded(value["previewLines"], defaults.previewLines, 0, 20),
 		animationIntervalMs: bounded(value["animationIntervalMs"], defaults.animationIntervalMs, 40, 1000),
 		stickyUserMessage: typeof value["stickyUserMessage"] === "boolean" ? value["stickyUserMessage"] : defaults.stickyUserMessage,
+		autoSessionName: typeof value["autoSessionName"] === "boolean" ? value["autoSessionName"] : defaults.autoSessionName,
+		sessionNameModel,
 	};
 }
 
@@ -57,7 +73,7 @@ export function createUiConfig(path = join(getAgentDir(), "pi-ui.json")) {
 	try { current = normalize(read(path)); }
 	catch { current = { ...defaults }; }
 	return {
-		get: (): UiConfig => ({ ...current }),
+		get: (): UiConfig => ({ ...current, sessionNameModel: current.sessionNameModel ? { ...current.sessionNameModel } : null }),
 		update(patch: Partial<UiConfig>): void {
 			const stored = read(path); // Never overwrite a malformed or concurrently replaced file.
 			const next = normalize({ ...stored, ...patch });

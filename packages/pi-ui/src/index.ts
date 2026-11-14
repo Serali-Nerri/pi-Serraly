@@ -4,11 +4,13 @@ import { registerActivityCompletion } from "./activity-completion.js";
 import { createUiConfig } from "./config.js";
 import { installFooter } from "./footer.js";
 import { showSettings } from "./panel.js";
+import { registerSessionTitle } from "./session-title.js";
 import { installSticky } from "./sticky.js";
 import { installThinking } from "./thinking.js";
 
 export default function piUi(pi: ExtensionAPI): void {
 	const completion = registerActivityCompletion(pi);
+	const sessionTitle = registerSessionTitle(pi);
 	let tui: TUI | undefined;
 	let store: ReturnType<typeof createUiConfig> | undefined;
 	let thinking: ReturnType<typeof installThinking> | undefined;
@@ -17,6 +19,7 @@ export default function piUi(pi: ExtensionAPI): void {
 	const render = (): void => tui?.requestRender();
 
 	function stop(): void {
+		sessionTitle.stop();
 		completion.stop();
 		sticky?.dispose();
 		sticky = undefined;
@@ -49,6 +52,7 @@ export default function piUi(pi: ExtensionAPI): void {
 			ui.notify(`pi-ui: Sticky message disabled: ${error instanceof Error ? error.message : String(error)}`, "warning");
 		}
 		unmountFooter = installFooter(pi, ctx, (mounted) => { tui = mounted; sticky?.refresh(); });
+		sessionTitle.start(ctx, config.get);
 	});
 	pi.on("session_tree", (_event, ctx) => {
 		thinking?.restore(ctx.sessionManager.getBranch());
@@ -62,14 +66,14 @@ export default function piUi(pi: ExtensionAPI): void {
 	});
 	pi.on("session_shutdown", stop);
 	pi.registerCommand("ui", {
-		description: "Configure Thinking, footer and sticky user message presentation",
+		description: "Configure Pi UI and automatic session names",
 		handler: async (_args, ctx) => {
 			if (!ctx.hasUI || ctx.mode !== "tui") {
 				ctx.ui.notify("/ui requires TUI mode", "warning");
 				return;
 			}
 			store ??= createUiConfig();
-			await showSettings(ctx.ui, store, () => { thinking?.refresh(); sticky?.refresh(); render(); });
+			await showSettings(ctx.ui, store, () => { thinking?.refresh(); sticky?.refresh(); sessionTitle.refresh(); render(); }, ctx.modelRegistry.getAvailable());
 		},
 	});
 }

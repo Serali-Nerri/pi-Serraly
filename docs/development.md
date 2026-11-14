@@ -33,7 +33,7 @@ build 构建 conversion、agent-board、pi-ui，其余包保留 TS 入口；`--p
 
 需要完整验证时收尾运行一次 npm run verify；迭代只跑相关检查。视觉变化查看隔离 PTY，回收通过可达性验证，不断言固定堆字节数。
 
-pi-ui 的行为测试通过真实 Pi 消息/终端组件、扩展事件和隔离配置文件覆盖展示、历史、交互及清理。编译入口必须经 bundled Pi loader 验证真实宿主组件得到装饰，不能仅在直接导入源码时验收；流式回收测试确认旧帧和启动 context 可回收。动画检查不得依靠每帧读取 session 历史。界面验收包含明暗主题、窄屏、拖选和宿主快捷键，不请求真实模型。
+pi-ui 的行为测试通过真实 Pi 消息/终端组件、扩展事件和隔离配置文件覆盖展示、历史、交互及清理。编译入口必须经 bundled Pi loader 验证真实宿主组件得到装饰，不能仅在直接导入源码时验收；流式回收测试确认旧帧和启动 context 可回收。动画检查不得依靠每帧读取 session 历史。纯展示验收包含明暗主题、窄屏、拖选和宿主快捷键，不请求真实模型；[自动命名](../packages/pi-ui/README.md#自动会话命名)的真实模型验收遵循上述授权要求，在 sandbox TUI 检查模型选择、生成名称、手动改名和会话切换。
 
 pi-session-recap 不需要构建；使用 `bun run check -- --package pi-session-recap` 和 `bun run test -- --package pi-session-recap` 验证。包测试保留用户要求的大文本历史裁剪回归覆盖，通过公开历史构建 seam 检查 CPU 用时、UTF-8 头尾和字节预算。其余模型回包解析、历史裁剪与自动计费门控使用合成数据和假时钟一次性验证；真实验收须另获授权，在 Herdr sandbox 连续执行工具回合，再检查 `/recap` 和空闲摘要。缩短计时只能修改 sandbox 配置，不改变产品默认 30 分钟。配置 `auto: false` 可关闭后台模型请求。
 

@@ -3,7 +3,7 @@
 	"version": "0.3.0",
 	"private": true,
 	"type": "module",
-	"description": "Minimal Thinking, footer and sticky prompt presentation for Pi",
+	"description": "Thinking, footer, sticky prompts and automatic session names for Pi",
 	"license": "MIT",
 	"engines": { "node": ">=22.19.0" },
 	"files": ["dist", "types", "README.md", "UPSTREAM.md", "LICENSE", "licenses"],

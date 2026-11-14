@@ -26,7 +26,7 @@ This private package includes the ten retained Howaboua packages, `pi-ui` and `p
 | `pi-notes-compaction` | Persistent notes, session history search, context windows and shared context.                     |
 | `pi-suggestions`      | Next-prompt drafts in the empty editor and the `/suggestions` settings command.                   |
 | `pi-github-watch`     | The `github_watch` tool for opt-in feedback and Actions run notifications in the current session. |
-| `pi-ui`               | Thinking, footer, activity-completion hints and sticky user messages.                             |
+| `pi-ui`               | Thinking, footer, activity-completion hints, sticky user messages and opt-in session naming.      |
 | `pi-session-recap`    | Manual and idle session recap cards.                                                              |
 
 Enabling the Notes entry provides Notes/History; session auto-pruning remains off by default. Suggestions' prediction requests remain off by default; see its [README](../pi-suggestions/README.md) for setup. Recap's idle automatic mode is on by default and makes model requests; existing member settings are preserved. See each member's README for configuration. `context-view` and other extensions outside this repository remain separate installs.

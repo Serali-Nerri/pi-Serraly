@@ -6,6 +6,8 @@ Thinking 的既有设计来自 MIT 的 pi-cc-extensions / pi-compact-thinking，
 
 包可独立登记或由本地 pi-extensions 聚合包转发。types/index.d.ts 提供公开工厂声明，运行仍使用保留 Pi loader 绑定的 dist/index.ts，不改变展示行为。
 
+自动会话命名为本仓通过 Pi 公开模型与会话接口实现的功能，不移植 Codex 的 thread/app-server 实现；使用和配置见 [README.md](README.md#自动会话命名)。
+
 移除 Footer 的活动行，回合末尾的净工作耗时提示保持独立；当前展示契约见 [README.md](README.md#展示)。
 
 ## Git Footer
