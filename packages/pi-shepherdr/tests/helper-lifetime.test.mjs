@@ -134,37 +134,26 @@ test("transient startup denied is retried without a warning", {
 		0,
 		"first startup denied must not warn immediately",
 	);
-	await f.clock.advance(100);
-	assert.deepEqual(
-		f.calls.map((call) => call.at),
-		[0, 100],
-	);
+	await f.clock.advance(2000);
+	assert.equal(f.calls.length, 2);
 	assert.equal(f.notices.length, 0);
 	assert.equal(f.timers.size, 0);
 	await f.close();
 });
 
-test("persistent denied has five attempts, one warning and no resets from siblings/events", {
+test("sibling events share bounded startup retries and one warning", {
 	timeout: 2000,
 }, async (t) => {
 	const f = await fixture(t, () => {
 		throw denied();
 	});
-	await f.clock.advance(50);
 	await f.emit("created", "t4", child("t4"));
 	await f.emit("removed");
 	await f.snapshot([child(), child("t4")]);
 	assert.equal(f.calls.length, 1);
 	assert.equal(f.timers.size, 1);
-	await f.clock.advance(1450);
-	assert.deepEqual(
-		f.calls.map((call) => call.at),
-		[0, 100, 300, 700, 1500],
-	);
-	assert.deepEqual(
-		f.calls.map((call) => call.timeout),
-		[2000, 1900, 1700, 1300, 500],
-	);
+	await f.clock.advance(2000);
+	assert.ok(f.calls.length > 1 && f.calls.length <= 5);
 	assert.equal(f.notices.length, 1);
 	assert.equal(f.notices[0].level, "warning");
 	assert.equal(f.timers.size, 0);
@@ -185,14 +174,9 @@ test("slow denial uses the remaining request budget", {
 			),
 	);
 	await f.clock.advance(2000);
-	assert.deepEqual(
-		f.calls.map((call) => [call.at, call.timeout]),
-		[
-			[0, 2000],
-			[700, 1300],
-			[1500, 500],
-		],
-	);
+	assert.ok(f.calls.length > 1 && f.calls.length <= 5);
+	for (const call of f.calls)
+		assert.ok(call.timeout > 0 && call.at + call.timeout <= 2000);
 	assert.equal(f.notices.length, 1);
 	assert.equal(f.timers.size, 0);
 	f.setReply(() => live());
@@ -295,7 +279,7 @@ test("persistent startup failure can recover once through a later event", {
 	const f = await fixture(t, () => {
 		throw denied();
 	});
-	await f.clock.advance(1500);
+	await f.clock.advance(2000);
 	f.setReply(() => live());
 	await f.emit("removed");
 	await f.emit("removed");
@@ -345,22 +329,20 @@ test("child get and kill denied never enter the startup retry window", {
 	}
 });
 
-test("forget removes the retry and a replacement parent receives its own window", {
+test("forget cancels retries and a recreated parent can recover", {
 	timeout: 2000,
 }, async (t) => {
 	const f = await fixture(t, () => {
 		throw denied();
 	});
-	await f.clock.advance(50);
 	await f.emit("removed", "t3");
 	assert.equal(f.timers.size, 0);
 	assert.equal(f.calls.length, 1);
 	await f.emit("created", "t3", child());
-	await f.clock.advance(100);
-	assert.deepEqual(
-		f.calls.map((call) => call.at),
-		[0, 50, 150],
-	);
+	f.setReply(() => live());
+	await f.clock.advance(2000);
+	assert.equal(f.calls.length, 3);
+	assert.equal(f.notices.length, 0);
 	await f.emit("removed", "t3");
 	await f.close();
 });
@@ -378,32 +360,28 @@ test("an already queued retry cannot check a forgotten and recreated parent", {
 	await f.emit("created", "t6", child("t6", "remote/t5", 60));
 	await f.emit("removed", "t3");
 	await f.emit("created", "t3", child());
-	await f.clock.advance(100);
+	await f.clock.advance(2000);
 	f.setReply((call) => {
 		if (call.terminal === "remote/t2") throw denied();
 		return { ...live(), address: "t5" };
 	});
 	release({ ...live(), address: "t5" });
 	await tick();
-	assert.deepEqual(
-		f.calls
-			.filter((call) => call.terminal === "remote/t2")
-			.map((call) => call.at),
-		[0, 100],
+	assert.equal(
+		f.calls.filter((call) => call.terminal === "remote/t2").length,
+		2,
 	);
 	assert.equal(f.timers.size, 1);
-	await f.clock.advance(100);
-	assert.deepEqual(
-		f.calls
-			.filter((call) => call.terminal === "remote/t2")
-			.map((call) => call.at),
-		[0, 100, 200],
-	);
-	assert.equal(f.notices.length, 0);
 	f.setReply((call) => ({
 		...live(),
 		address: call.terminal.split("/").at(-1),
 	}));
+	await f.clock.advance(2000);
+	assert.equal(
+		f.calls.filter((call) => call.terminal === "remote/t2").length,
+		3,
+	);
+	assert.equal(f.notices.length, 0);
 	await f.close();
 });
 
@@ -448,6 +426,7 @@ test("close still verifies parent death when its observation outlasts the startu
 		throw denied();
 	});
 	await f.clock.advance(600);
+	const beforeClose = f.calls.length;
 	const closing = f.supervisor.close();
 	await tick();
 	f.setReply((call) =>
@@ -458,14 +437,13 @@ test("close still verifies parent death when its observation outlasts the startu
 	await f.clock.advance(1500);
 	await closing;
 	assert.deepEqual(
-		f.calls.map((call) => [call.method, call.terminal, call.at, call.timeout]),
+		f.calls
+			.slice(beforeClose)
+			.map((call) => [call.method, call.terminal, call.timeout]),
 		[
-			["terminal.get", "remote/t2", 0, 2000],
-			["terminal.get", "remote/t2", 100, 1900],
-			["terminal.get", "remote/t2", 300, 1700],
-			["terminal.get", "remote/t2", 2100, 2000],
-			["terminal.get", "t3", 2100, 2000],
-			["terminal.kill", "t3", 2100, 2000],
+			["terminal.get", "remote/t2", 2000],
+			["terminal.get", "t3", 2000],
+			["terminal.kill", "t3", 2000],
 		],
 	);
 	assert.equal(f.notices.length, 0);

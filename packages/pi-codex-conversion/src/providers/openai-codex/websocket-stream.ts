@@ -15,7 +15,6 @@ import { recordCanonicalSessionResponse, type CanonicalSessionToken } from "./se
 import { isResponsesLiteRequest } from "./responses-lite.ts";
 import { observeWebSocketInterruption } from "./websocket-interrupt.ts";
 
-// TODO: recheck Codex's interrupt_on_cancel default before the next PR.
 // Keep dormant until upstream enables it; no settings or request option can opt in.
 const INTERRUPT_ON_CANCEL = false;
 

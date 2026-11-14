@@ -29,7 +29,7 @@ test("settings changes save and apply, while failed writes keep the displayed ch
 			view.handleInput?.("\r");
 			assert.equal(store.get().useSummaryTitlesAsThinkingTitle, false);
 			assert.equal(applied, 1);
-			assert.ok(view.render(100).some((line) => line.includes("off")));
+			assert.ok(view.render(100).some((line) => line.includes("Reasoning summary titles") && line.includes("off")));
 		},
 		notify(message: string) { notices.push(message); },
 	} as unknown as Pick<ExtensionUIContext, "custom" | "notify">;

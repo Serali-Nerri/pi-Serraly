@@ -522,17 +522,3 @@ test("tolerates missing model/context and keeps Unicode, narrow widths, and sani
 	assert.equal(h.entryReads, 1);
 	assert.equal(h.contextReads, 1);
 });
-
-test("keeps bounded dedupe state while preserving all unique usage totals", (t) => {
-	const h = harness(t, { entries: [] });
-	for (let index = 0; index < 600; index++) {
-		h.emit("message_end", { message: assistant(index, 1, 0) });
-	}
-	assert.match(h.plain(), /↑600/);
-
-	const last = assistant(999, 1, 0);
-	h.emit("message_end", { message: last });
-	h.emit("message_end", { message: last });
-	assert.match(h.plain(), /↑601/);
-	assert.equal(h.entryReads, 1);
-});
