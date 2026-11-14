@@ -1,12 +1,11 @@
 # Browser
 
-This is the final legacy command-backed browser example. For the maintained browser in ordinary Pi, Code Mode and Notebook Mode, register its path in a prepared installation workspace:
+This retained upstream legacy command-backed CDP example is disabled by default. To enable it, copy `../browser.toml` and this `browser/` directory together as described in [custom-tool definitions](../../../src/tools/code-mode/CUSTOM-TOOLS.md).
 
-```bash
-pi install ~/.pi/pi-Serraly/packages/pi-browser
+```js
+await tools.browser("help");
+await tools.browser(JSON.stringify({ action: "tabs" }));
 ```
-
-The extension adds typed Pi schemas, persistent CDP sessions, configurable hosts and automatic remote-worker deployment. Do not load this custom tool alongside it.
 
 Use for rendered evidence or interaction in an existing CDP-enabled browser. Start with `tabs`, open one returned `ref_id`, then use the numbered element references from the page result.
 

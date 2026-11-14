@@ -31,9 +31,9 @@ import { startUsageAnalysis } from "../../codex-usage/report.ts";
 import { isStandardCodexSubscriptionModel } from "../../adapter/prompt/codex-model.ts";
 import { NONSTANDARD_CODEX_USAGE_WARNING } from "../../codex-usage/format.ts";
 
-const VOICE_ACTIONS = ["voice realtime", "voice mute", "voice dictation", "voice stop", "voice server", "voice server ensure", "voice server status", "voice server connect", "voice setup"] as const;
+const VOICE_ACTIONS = ["voice realtime", "voice mute", "voice dictation", "voice stop", "voice server", "voice server ensure", "voice server status", "voice setup"] as const;
 const CODEX_COMMAND_COMPLETIONS = [...ROUTABLE_SETTINGS_TABS.map(({ id }) => id), ...VOICE_ACTIONS, "usage analyse"];
-const CODEX_USAGE = "Usage: /codex [context|tools|openai|display|voice [realtime|mute|dictation|stop|server [ensure|status [UUIDv4]|connect <browser-route> <UUIDv4> [url]]|setup]|usage [analyse]|about]";
+const CODEX_USAGE = "Usage: /codex [context|tools|openai|display|voice [realtime|mute|dictation|stop|server [ensure|status [UUIDv4]]|setup]|usage [analyse]|about]";
 
 export function registerCodexCommand(
 	pi: ExtensionAPI,

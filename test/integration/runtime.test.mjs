@@ -7,7 +7,6 @@ const extensionEntries = [
 	"packages/pi-agent-board/index.ts",
 	"packages/pi-ask/index.ts",
 	"packages/pi-auto-trees/index.ts",
-	"packages/pi-browser/extension.ts",
 	"packages/pi-codex-conversion/dist/index.js",
 	"packages/pi-codex-imagegen/index.ts",
 	"packages/pi-notes-compaction/index.ts",
@@ -33,7 +32,6 @@ test("released Pi 1.5 loads every imported package and completes session cleanup
 		"packages/pi-agent-board",
 		"packages/pi-ask",
 		"packages/pi-auto-trees",
-		"packages/pi-browser",
 		"packages/pi-codex-conversion",
 		"packages/pi-codex-imagegen",
 		"packages/pi-notes-compaction",
@@ -55,7 +53,6 @@ test("released Pi 1.5 loads every imported package and completes session cleanup
 		"agents",
 		"apply_patch",
 		"ask",
-		"browser",
 		"exec",
 		"exec_command",
 		"imagegen",
@@ -68,7 +65,6 @@ test("released Pi 1.5 loads every imported package and completes session cleanup
 	}
 	for (const command of [
 		"board",
-		"browser",
 		"codex",
 		"ui",
 		"end",
@@ -126,12 +122,11 @@ test("released Pi 1.5 loads every imported package and completes session cleanup
 	assert.equal(report.execution.applyPatch.fileText, "runtime-probe-ok\n");
 	assert.ok(report.resources.bashWasm.bytes > 0);
 	assert.equal(report.resources.bashWasm.valid, true);
-	assert.equal(report.optionalIntegrations.codeMode.providers, 6);
+	assert.equal(report.optionalIntegrations.codeMode.providers, 5);
 	assert.deepEqual(report.optionalIntegrations.codeMode.allToolNames, [
 		"agents",
 		"ask",
 		"board",
-		"browser",
 		"history",
 		"imagegen",
 		"notes",
@@ -140,7 +135,6 @@ test("released Pi 1.5 loads every imported package and completes session cleanup
 		"agents",
 		"ask",
 		"board",
-		"browser",
 		"change_reasoning",
 		"exec",
 		"get_context_remaining",

@@ -45,7 +45,6 @@ export class CodexLanVoiceServerController {
 	}
 
 	hasActiveConversation(): boolean { return this.server?.hasActiveConversation() ?? false; }
-	hasActiveVoice(): boolean { return this.voice.active; }
 
 	async prepareTakeover(ctx: ExtensionContext) {
 		const reservation = {};

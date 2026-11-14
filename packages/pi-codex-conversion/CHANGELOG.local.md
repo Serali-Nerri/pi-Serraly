@@ -2,6 +2,11 @@
 
 Local changes and their background, relative to upstream **5.0.0** (`c3b422c60256907f5a4499cc44e4d055ac3cc28a`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
 
+## Browser extension removal
+
+- Remove the pi-browser runtime dependency and `/codex voice server connect` integration when removing that extension from this workspace.
+- Keep the LAN voice server toggle, ensure/status receipts and manual browser voice access. Remove connect-only request bookkeeping and receipt fields without adding a replacement browser dependency.
+
 ## Upstream 5.0.0 sync
 
 - Replace JS Notebook with upstream QuickJS Code, including fresh per-call VMs, four-cell concurrency and conversation-local JSON storage. Preserve old snapshot files without loading them; remove the obsolete Acorn dependency.

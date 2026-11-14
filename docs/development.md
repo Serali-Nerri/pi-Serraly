@@ -17,9 +17,7 @@ bun run test -- --package pi-codex-conversion
 bun run release -- --output /absolute/path/to/new-release
 ```
 
-build 构建 conversion、browser、agent-board、pi-ui，其余包保留 TS 入口；`--package` 只构建选定包及其 workspace 构建依赖。check 执行各包静态检查和根脚本语法检查。test:packages 只运行包测试；test 运行包和集成测试，`--package` 运行选定包测试及对应集成测试（conversion 的工具卡/工具接入、pi-ui 的宿主展示）。verify 按 build → check → test 执行一次。检查和测试不修复产物。
-
-conversion 运行依赖 Browser 的公开 `voice-start` API，Browser 的可选集成又依赖 conversion。根 build 先用 Browser 的 `build:voice-api` 严格生成独立 API 声明，再构建 conversion，最后完整构建 Browser；单包构建也保留该顺序。不要直接从缺少产物的包目录绕过 workspace build。
+build 构建 conversion、agent-board、pi-ui，其余包保留 TS 入口；`--package` 只构建选定包及其 workspace 构建依赖。check 执行各包静态检查和根脚本语法检查。test:packages 只运行包测试；test 运行包和集成测试，`--package` 运行选定包测试及对应集成测试（conversion 的工具卡/工具接入、pi-ui 的宿主展示）。verify 按 build → check → test 执行一次。检查和测试不修复产物。
 
 单包修改先运行对应 build/check/test；跨包依赖、安装或 release 工具改变时运行完整 verify。包版本跟随各自上游基线，本地差异使用 Git 提交和包内本地 changelog 记录，不要求同步抬升所有包版本；根版本仅标识可选的整仓快照。
 
@@ -87,7 +85,7 @@ Windows 的 Bun workspace 链接可能是指向暂存目录的绝对 junction。
 
 ## 可选整合包
 
-`pi-extensions` 为仓库全部十一个扩展提供独立入口，包括 Notes、Suggestions、pi-ui 和 pi-session-recap。默认全部启用，`pi config` 在包的 Extensions 分组中逐项列出这十一个文件，可分别开关。Notes 的会话裁剪和 Suggestions 的预测请求仍默认关闭；Recap 的空闲自动摘要默认开启，会产生模型用量，已有配置保持不变。
+`pi-extensions` 为仓库全部十个扩展提供独立入口，包括 Notes、Suggestions、pi-ui 和 pi-session-recap。默认全部启用，`pi config` 在包的 Extensions 分组中逐项列出这十个文件，可分别开关。Notes 的会话裁剪和 Suggestions 的预测请求仍默认关闭；Recap 的空闲自动摘要默认开启，会产生模型用量，已有配置保持不变。
 
 ```sh
 # 先移除全部成员的单包登记（包括 Notes、Suggestions、pi-ui、pi-session-recap），备份并保留所需配置：
@@ -95,8 +93,6 @@ pi install ~/.pi/pi-Serraly/packages/pi-extensions
 ```
 
 不要让整合包与成员同时登记。只想启用部分成员时，可逐包安装，也可在整合包的资源开关中禁用不需要的入口。成员更新提示的限制见 [整合包 README](../packages/pi-extensions/README.md)。整合包依赖使用 workspace 版本，整合包自己的版本独立于成员上游基线。
-
-Browser 单包和整合包均加载其 TS 扩展入口；整合包通过公开 `./extension` 导出转发，不能改回编译后的库根入口，否则延迟导入会失去 Pi 的宿主别名。
 
 ## Notes 迁移
 
@@ -126,7 +122,7 @@ release 不构建、不联网、不改真实设置。按各包 files 清单交�
 
 1. 选固定提交，阅读根和各保留包 UPSTREAM，逐包三方对比，不能直接覆盖目录。
 2. 核对 peer/运行依赖、Pi/Node 基线、原生程序、WASM、profiles、远端脚本、许可和新增跨包引用。
-3. 手动合入所需变更，上游已覆盖的修复优先采用上游；保留未覆盖的修复、局部点击展开、生命周期约束和本仓 CDP 维护源。渲染主体及 Display 默认值跟随上游，不恢复未迁入包工作流。
+3. 手动合入所需变更，上游已覆盖的修复优先采用上游；保留未覆盖的修复、局部点击展开和生命周期约束。渲染主体及 Display 默认值跟随上游，不恢复未迁入包工作流。
 4. 更新来源和当前差异，文档只说明当前契约，不累积工作日志。
 5. 显式更新 Bun 锁文件，运行相关检查、完整 verify，同步不含 `.git` 的安装工作区或创建整仓快照。
 

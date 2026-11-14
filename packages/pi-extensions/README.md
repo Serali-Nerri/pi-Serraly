@@ -1,8 +1,8 @@
 # pi-extensions
 
-Optional local aggregate that exposes all eleven extensions in this checkout as independently switchable Pi entries. It is one Pi package with explicit workspace dependencies. Installing packages individually remains the default.
+Optional local aggregate that exposes all ten extensions in this checkout as independently switchable Pi entries. It is one Pi package with explicit workspace dependencies. Installing packages individually remains the default.
 
-This private package includes the nine retained Howaboua packages, `pi-ui` and `pi-session-recap`. Its member set differs from the upstream `@howaboua/pi-extensions` npm bundle; see [UPSTREAM.md](UPSTREAM.md).
+This private package includes the eight retained Howaboua packages, `pi-ui` and `pi-session-recap`. Its member set differs from the upstream `@howaboua/pi-extensions` npm bundle; see [UPSTREAM.md](UPSTREAM.md).
 
 ## Requirements
 
@@ -17,7 +17,6 @@ This private package includes the nine retained Howaboua packages, `pi-ui` and `
 | --------------------- | ---------------------------------------------------------------------------------------------- |
 | `pi-codex-conversion` | Provider integration, tool execution, Code and Notebook integration, and tool cards.           |
 | `pi-ask`              | Interactive questions, review triage and human handoff.                                        |
-| `pi-browser`          | The logged-in browser tool and `/browser` settings.                                            |
 | `pi-codex-imagegen`   | Image generation and editing tools.                                                            |
 | `pi-agent-board`      | The board tool, `/board` command and viewer. Existing board enablement settings are preserved. |
 | `pi-auto-trees`       | The `/marker`, prime and `/end` session workflow.                                              |
@@ -31,7 +30,7 @@ Enabling the Notes entry provides Notes/History; session auto-pruning remains of
 
 The aggregate registers each member's public default extension entry, without separate changelog entries. Pi's native update notices cover the registered package, not its dependencies. This aggregate has no changelog of its own, so it does not show member update notices; individual member registrations retain those notices.
 
-The manifest lists eleven entries under `extensions/`, one per member. All are enabled by default. `pi config` lists each file separately under the package's **Extensions** group, so members can be switched independently.
+The manifest lists ten entries under `extensions/`, one per member. All are enabled by default. `pi config` lists each file separately under the package's **Extensions** group, so members can be switched independently.
 
 For example:
 
@@ -39,7 +38,7 @@ For example:
 Extensions
   [x] pi-codex-conversion.ts
   [x] pi-ask.ts
-  [x] pi-browser.ts
+  [x] pi-codex-imagegen.ts
   ...
 ```
 
@@ -67,7 +66,7 @@ pi --no-extensions --no-skills -e ./packages/pi-extensions
 
 ## Migrate from individual packages
 
-Do not register the aggregate and any of its eleven members at the same time, including Notes, Suggestions, UI and Recap. Pi loads both sources, so tools, commands and listeners would be duplicated.
+Do not register the aggregate and any of its ten members at the same time, including Notes, Suggestions, UI and Recap. Pi loads both sources, so tools, commands and listeners would be duplicated.
 
 Prepare the separate installation workspace from Requirements before changing registrations.
 
@@ -77,7 +76,7 @@ Prepare the separate installation workspace from Requirements before changing re
 4. Install the aggregate once.
 5. Restart Pi to load the aggregate.
 
-Removing a registration does not delete member configuration or data such as `pi-shepherdr.json`, board archives or browser settings.
+Removing a registration does not delete member configuration or data such as `pi-shepherdr.json` or board archives.
 
 Agent Board's command and tool load when `pi-agent-board.ts` is enabled. Existing `/board off` settings for the session, folder or global scope still apply and are not reset. Disable that entry in `pi config` to omit its command and tool.
 

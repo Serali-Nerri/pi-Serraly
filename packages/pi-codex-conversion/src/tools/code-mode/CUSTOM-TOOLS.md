@@ -49,7 +49,7 @@ Set `defer_loading = false` only for stable, frequently used tools. Promotion ad
 
 Working, disabled templates ship under the package root's `examples/custom-tools/` directory:
 
-- `browser`: final legacy command-backed CDP example; prefer the maintained `@howaboua/pi-browser` extension.
+- `browser`: retained upstream legacy command-backed CDP example for an existing logged-in browser.
 - `agents`: starts persistent explorer and reviewer Pi agents in Herdr panels; remote routing requires explicit installer configuration.
 - `skills`: lists Pi's standard global and session skill catalog, reads one exact skill or reads its references by name.
 - `port_info`: cross-platform listener and process diagnostics.

@@ -2,13 +2,12 @@
 
 ## 源码与职责
 
-`packages/*` 包含九个保留的 howaboua-pi-stuff 功能包、独立的 pi-ui 与 pi-session-recap，以及可选的 pi-extensions 整合包。九包保留上游包名、源码组织和公开导出；根目录协调开发与构建，不再次注册能力。
+`packages/*` 包含八个保留的 howaboua-pi-stuff 功能包、独立的 pi-ui 与 pi-session-recap，以及可选的 pi-extensions 整合包。八包保留上游包名、源码组织和公开导出；根目录协调开发与构建，不再次注册能力。
 
 | 包 | 拥有 | 依赖边界 |
 | --- | --- | --- |
 | pi-codex-conversion | provider、工具定义/执行、真实 trace、Notebook、默认工具卡、资源清理 | Pi host 与自身运行依赖 |
 | pi-ask | 问卷与交互状态 | 可选接入 conversion 公共协议 |
-| pi-browser | 浏览器工具、连接与 worker 生命周期 | 可选接入 conversion 公共协议 |
 | pi-codex-imagegen | 图像请求、产物与工具 | 可选接入 conversion 公共协议 |
 | pi-shepherdr | Herdr Core fleet、agent 工具、profiles 与共享上下文 | Herdr Core；可选接入 conversion、Notes 与 Board |
 | pi-agent-board | 任务板、运行时与 Web 查看器 | 可选接入 conversion 公共协议 |
@@ -17,11 +16,11 @@
 | pi-suggestions | 下一步用户请求草稿、空编辑器展示与预测请求清理 | 只依赖 Pi host；可选接入 Notes 窗口投影和 Shepherdr worker 识别 |
 | pi-ui | Thinking、Footer、活动完成提示、置顶用户消息、展示设置与清理 | 只依赖 Pi host，不接管工具或执行 |
 | pi-session-recap | TUI 手动/空闲 recap、历史裁剪、临时卡片与请求清理 | 只依赖公开 Pi host API；模型注册表发起独立摘要请求 |
-| pi-extensions | 显式组合仓库全部十一个扩展的注册入口 | workspace 运行依赖；调用成员公开导出 |
+| pi-extensions | 显式组合仓库全部十个扩展的注册入口 | workspace 运行依赖；调用成员公开导出 |
 
 跨包依赖使用公开导出，不读取兄弟私有源码。宿主包是 peer，不随正式运行树安装；开发使用精确 Pi 1.5.2。工具 schema 使用 Pi 原生 schema 包，外部运行依赖由 workspace 安装。
 
-pi-extensions 显式维护成员依赖和 manifest 入口顺序。十一个成员各有一个 TS 转发入口，默认全部启用，可由 `pi config` 分别开关。更新提示的边界见 [整合包 README](../packages/pi-extensions/README.md)。默认仍逐包登记，整合包不能与其成员重复加载。
+pi-extensions 显式维护成员依赖和 manifest 入口顺序。十个成员各有一个 TS 转发入口，默认全部启用，可由 `pi config` 分别开关。更新提示的边界见 [整合包 README](../packages/pi-extensions/README.md)。默认仍逐包登记，整合包不能与其成员重复加载。
 
 Notes 独占 Notes/History 与共享上下文，公开 `@howaboua/pi-notes-compaction/context-sharing`；conversion 改为公开 `./compaction` 和 `./agent-relationship`，不再导出旧 `./context-sharing`。Notes 使用 conversion 的压缩协议；Shepherdr 分别接入 Notes 的共享上下文和 conversion 的代理关系。依赖存在不会自动加载 Notes；旧 PCC Notes 配置在未加载新拥有者时阻止运行并提示迁移，不静默改写设置。
 
@@ -46,10 +45,10 @@ Thinking 以连续 reasoning run 为粒度，支持标题、尾部预览、局�
 - conversion 的 TS/JS Notebook 与 Deno Code 按需准备各自运行时；普通启动不要求提前下载全部可选运行时。
 - Notes 保留 TS 入口、历史检索 worker 与许可；better-sqlite3 随 npm 包提供平台预构建原生模块，开发、生产安装和离线快照均须验证数据库可加载。会话裁剪默认关闭，只由用户显式启用。
 - Suggestions 使用 TS 入口；Markdown 默认指令和原生 ESM 会话资源清理模块随包交付。预测默认关闭，配置见包 README。
-- browser 构建 dist 和远端 worker；agent-board 构建查看器及 Web 静态文件。
+- agent-board 构建查看器及 Web 静态文件。
 - ask、imagegen、Shepherdr、auto-trees 使用 Pi 支持的 TS 入口；prompts、profiles、远端脚本及包内资源跟随交付。
 - pi-ui 将包内模块合为已去除类型的 `dist/index.ts` 单入口，Pi host imports 保持 external，避免原生 JS 加载绕过实际宿主组件绑定；公开类型由 `types/index.d.ts` 提供，避免消费者检查类型已擦除的运行产物。保留包许可与来源，不导入旧 pi-ui 工具渲染及框架。
-- conversion 的 `examples/custom-tools/browser/cdp-lib` 是本仓维护源，不再同步未迁入的 skill 包。
+- conversion 保留上游 legacy command-backed CDP custom-tool 示例，默认不启用；用法见 [示例 README](../packages/pi-codex-conversion/examples/custom-tools/browser/README.md)。
 - pi-extensions 使用 TS 入口与成员公开包入口；成员自己的资源仍由成员包拥有。
 - 不迁入上游个人 AGENTS/.pi、Changesets 发布系统、整合包自动生成流程或无关跨包原生工作流。
 
@@ -68,7 +67,7 @@ build 只生成产物，支持按包及其 workspace 构建依赖选择；check/
 
 安装工作区独立于开发树，保留完整仓库文件但不含 `.git`；Git 历史只保留在开发仓库。所有包共用这一工作区，包括独立登记的 pi-ui 和 pi-session-recap。依赖安装和构建通过普通 Bun workspace 命令完成，登记、资源过滤、加载与移除属于原生 Pi。生产依赖树不携带物理宿主包；准备和整仓更新命令由 development 持有。
 
-所有成员存在并可导入，不代表被启用。默认逐包 pi install；Shepherdr 不会自动登记 Notes 或 Board 入口。根 manifest 不注册资源。可选整合包只有被显式登记才提供全部十一个扩展的入口，成员的加载由 Pi 资源开关控制。
+所有成员存在并可导入，不代表被启用。默认逐包 pi install；Shepherdr 不会自动登记 Notes 或 Board 入口。根 manifest 不注册资源。可选整合包只有被显式登记才提供全部十个扩展的入口，成员的加载由 Pi 资源开关控制。
 
 更新整个工作区可能同时改变多个已登记包，下次完整启动统一加载。备份与回滚以完整安装工作区和必要的 settings 为单位；安装目录不负责保存 Git 历史。
 

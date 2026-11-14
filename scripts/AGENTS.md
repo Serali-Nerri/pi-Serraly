@@ -1,3 +1,1 @@
-- Browser's standalone voice API declarations must build before PCC; its full extension builds after PCC. Keep the bootstrap free of PCC imports. The focused build must still include both packages and reject unrelated dependency cycles.
-- Aggregate Browser loading uses its public TypeScript extension entry, not the compiled root API; lazy optional integrations need Pi's host aliases.
 - Keep the isolation guard in NODE_OPTIONS as a file URL, not an absolute filesystem path: Node treats Windows drive letters as unsupported URL schemes, and spaces must remain encoded.

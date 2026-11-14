@@ -11,7 +11,7 @@ export function isVoiceRequestId(value: string): boolean {
 export interface LanReceipt {
 	version: 1;
 	requestId: string;
-	action: "ensure" | "status" | "connect";
+	action: "ensure" | "status";
 	sessionId: string;
 	terminalId: string | null;
 	provider: "codex";
@@ -19,11 +19,6 @@ export interface LanReceipt {
 	running: boolean;
 	urls: string[];
 	browserAttached: boolean;
-	browserRoute?: string;
-	browserStatus?: "listening" | "error" | "timeout";
-	browserError?: string;
-	browserUrl?: string;
-	browserRefId?: string;
 	error?: string;
 }
 
