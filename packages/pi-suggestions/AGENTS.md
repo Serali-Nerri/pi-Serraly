@@ -4,6 +4,8 @@ Suggest useful next steps, not imitations of the user's likely reply. A complete
 
 Use agent_settled, not agent_end. Input cancellation belongs in the editor wrapper: a raw terminal listener would clear the visible draft before Right can accept it. Leave Tab to Pi's existing bindings. Install the factory once, not on each before_agent_start.
 
+Skip settled snapshot work while disabled, after cancellation and non-human-TUI cleanup. Keep prediction sync before the aborted-turn gate when enabled; it retires stale private context even when no new draft is requested.
+
 Do not use the raw session leaf as a draft-validity token: later settled handlers can append non-model custom state. Ignore those entries, but preserve message/context-edit invalidation and Notes window checks before requesting and displaying a draft.
 
 Keep the private prediction conversation append-only within one actual provider/model and main context window. Failed primary requests must not retire a continuing fallback conversation: use provisional history and replace the active history only on a successful model switch. Preserve complete provider replies for continuation, but project only real user/final assistant text from the main chat. Notes owns window retirement; use its optional projection contract even when inactive. Discard rather than compact auxiliary history at window boundaries. Abort before public session-resource cleanup; never use the main session ID.

@@ -127,9 +127,10 @@ export default function suggestions(pi: ExtensionAPI): void {
 			reset();
 			return;
 		}
+		if (!config.enabled) return;
 		const settledContext = conversationSnapshot(pi, ctx);
 		predictions.sync(settledContext);
-		if (event.aborted || !config.enabled || !config.model || !editor) return;
+		if (event.aborted || !config.model || !editor) return;
 		const selection = config.model;
 		const epoch = generation;
 		const sessionId = ctx.sessionManager.getSessionId();

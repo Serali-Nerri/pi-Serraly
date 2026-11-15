@@ -7,6 +7,7 @@
 
 ## Current local differences
 
+- src/tools/code-mode/host-process.ts collects incomplete frame fragments and joins them once when complete, with direct views for single-fragment payloads. Frame limits and wire messages are unchanged; startup, failure and teardown reset pending fragments.
 - src/tools/ts-mode/portable-state.ts and worker.ts await local inspector validation of typed-array extra properties after synchronous graph capture, avoiding index-name allocations while preserving checkpoint identity and supported values. No inspector listener or persistent object handles are created. src/tools/code-mode/trace-values.ts stops payload traversal at either budget and clones bounded snapshots without consuming their payload budget again.
 - src/providers/openai-codex/websocket-session-cache.ts and types.ts retire closed and superseded handshake routes without interrupting busy lanes or clearing canonical history. responses-lite.ts reuses normalized images in a bounded cache with cancellation-aware request-local processing; the native and configured proxy providers pass caller cancellation into preparation. Upstream request/retry policies and provenance pins are unchanged.
 - src/tools/exec/session-manager.ts detaches completed replay tails from full-output string storage without changing immediate delivery or replay bounds. src/ui/tool-rendering/auxiliary-tool.ts captures only scalar render flags instead of retaining the host context and previous component chain.

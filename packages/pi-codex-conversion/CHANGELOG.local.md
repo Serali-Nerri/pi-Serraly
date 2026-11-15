@@ -4,6 +4,7 @@ Local changes and their background, relative to upstream **5.0.0** (`c3b422c6025
 
 ## Performance and resource retention
 
+- Assemble fragmented Code host responses once per frame instead of recopying the entire pending payload on each stdout chunk. Preserve frame limits and release pending fragments on teardown.
 - TS checkpoints avoid materialising typed-array index keys while preserving large-view checkpoints, aliases and extra-property rejection. Validation uses a temporary local Node inspector session, without opening a listener.
 - Nested trace capture stops at either serialization budget; streamed and final snapshots retain status and result metadata without expanding omitted array tails.
 - Reclaim closed and superseded Codex WebSocket routes without interrupting busy lanes or clearing native-compaction history. Reuse unchanged Responses Lite image normalization in a bounded cache; process images through cancellation-aware request-local pools.

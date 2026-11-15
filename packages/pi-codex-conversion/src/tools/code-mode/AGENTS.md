@@ -1,5 +1,6 @@
 - Conversion-specific activation and nested tool definitions stay outside this directory.
 - The only Code host is the checksummed official release in `host-assets.ts`. Cache by release and platform; never select local builds, bundled hosts or `customRustBinariesDir`. Upstream source routes live in the package AGENTS.md.
+- Stdout frames may split headers or payloads and share chunks. Check the length limit when the header completes, retain only the pending frame fragments, and join at most once per completed frame; reset them on process teardown.
 - Keep model-native `exec`/`wait`; never rename, configure, or add collision fallbacks.
 - Low-context custom tools belong to Code/Notebook: promoted tools get one standing entry; deferred contracts stay in synchronous `ALL_TOOLS`, with short appended availability updates. Never mimic this in Structured mode.
 - Only explicit `discovery: "help"` tools omit call signatures. Their empty call must return usage without executing an operation. Never infer this from optional arguments or apply it to arbitrary third-party tools.
