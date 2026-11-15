@@ -5,6 +5,11 @@ import { validatedImageMime } from "./image-validation.js";
 
 const MAX_IMAGE_BYTES = 1024 * 1024 * 1024;
 
+interface LocalImageSizeLimit {
+	maxBytes: number;
+	message: string;
+}
+
 interface ImageRequestBody extends Record<string, unknown> {
 	prompt: string;
 	model: string;
@@ -20,7 +25,11 @@ type ImageRequest =
 			body: ImageRequestBody & { images: Array<{ image_url: string }> };
 	  };
 
-async function localImageDataUrl(value: string, cwd: string): Promise<string> {
+async function localImageDataUrl(
+	value: string,
+	cwd: string,
+	sizeLimit: LocalImageSizeLimit | undefined,
+): Promise<string> {
 	const path = isAbsolute(value) ? value : resolve(cwd, value);
 	const info = await stat(path);
 	if (!info.isFile()) throw new Error("edit image is not a file: " + value);
@@ -28,6 +37,8 @@ async function localImageDataUrl(value: string, cwd: string): Promise<string> {
 		throw new Error(
 			"edit image exceeds " + MAX_IMAGE_BYTES + " bytes: " + value,
 		);
+	if (sizeLimit && info.size > sizeLimit.maxBytes)
+		throw new Error(sizeLimit.message);
 	const bytes = await readFile(path);
 	const mime = validatedImageMime(bytes);
 	if (!mime)
@@ -53,6 +64,7 @@ export async function buildImageGenerationRequest(
 	recentImages: string[] | undefined,
 	cwd: string,
 	model: string = IMAGE_MODEL,
+	localImageSizeLimit?: LocalImageSizeLimit,
 ): Promise<ImageRequest> {
 	const paths = args.referenced_image_paths ?? [];
 	const background =
@@ -83,7 +95,7 @@ export async function buildImageGenerationRequest(
 		paths.length > 0
 			? await Promise.all(
 					paths.map(async (path) => ({
-						image_url: await localImageDataUrl(path, cwd),
+						image_url: await localImageDataUrl(path, cwd, localImageSizeLimit),
 					})),
 				)
 			: (recentImages ?? []).map((image) => ({

@@ -115,16 +115,17 @@ export class Archive {
 			: null;
 	}
 
-	index(): BoardIndex {
-		const { databasePath: _path, ...context } = this.source;
-		const boards: BoardSummary[] = this.all(
+	private boards(id?: string): BoardSummary[] {
+		return this.all(
 			`SELECT b.board_id,b.root_session_id,b.created_at,
 			(SELECT created_at FROM posts WHERE board_id=b.board_id ORDER BY seq DESC LIMIT 1) AS last_activity,
 			(SELECT COUNT(*) FROM channels WHERE board_id=b.board_id) AS channels,
 			(SELECT COUNT(*) FROM posts WHERE board_id=b.board_id) AS posts,
 			(SELECT COUNT(DISTINCT author) FROM posts WHERE board_id=b.board_id) AS agents
-			FROM boards b WHERE owner_folder=? ORDER BY substr(COALESCE(last_activity,b.created_at),1,16) DESC,(SELECT MAX(seq) FROM posts WHERE board_id=b.board_id) DESC,b.board_id DESC`,
+			FROM boards b WHERE owner_folder=?${id === undefined ? "" : " AND b.board_id=?"}
+			ORDER BY substr(COALESCE(last_activity,b.created_at),1,16) DESC,(SELECT MAX(seq) FROM posts WHERE board_id=b.board_id) DESC,b.board_id DESC`,
 			this.source.folder,
+			...(id === undefined ? [] : [id]),
 		).map((row) => ({
 			id: text(row, "board_id"),
 			rootSessionId: text(row, "root_session_id"),
@@ -134,23 +135,30 @@ export class Archive {
 			posts: count(row, "posts"),
 			agents: count(row, "agents"),
 		}));
+	}
+
+	index(): BoardIndex {
+		const { databasePath: _path, ...context } = this.source;
+		const boards = this.boards();
 		if (!boards.some((board) => board.id === context.boardId))
-			boards.unshift({
-				id: context.boardId,
-				rootSessionId: context.sessionId,
-				createdAt: null,
-				lastActivity: null,
-				channels: 0,
-				posts: 0,
-				agents: 0,
-			});
+			boards.unshift(this.board(context.boardId));
 		return { context, boards };
 	}
 
 	private board(id: string): BoardSummary {
-		const board = this.index().boards.find((board) => board.id === id);
-		if (!board) throw new Error("Board not found in this folder");
-		return board;
+		const board = this.boards(id)[0];
+		if (board) return board;
+		if (id !== this.source.boardId)
+			throw new Error("Board not found in this folder");
+		return {
+			id,
+			rootSessionId: this.source.sessionId,
+			createdAt: null,
+			lastActivity: null,
+			channels: 0,
+			posts: 0,
+			agents: 0,
+		};
 	}
 
 	detail(id: string): BoardDetail {

@@ -14,7 +14,7 @@ interface Subscription {
 interface MonitorEventsOptions {
 	client: CoreConnection;
 	reconnect?: boolean;
-	onChange: () => void;
+	onChange: (terminal?: string) => void;
 	reconcile: () => Promise<void>;
 	onWarning: (issue: MonitoringIssue) => void;
 	onRecovered: () => void;
@@ -111,8 +111,8 @@ export class MonitorEvents {
 				this.pending = candidate;
 				const unsubscribe = await this.options.client.subscribe(
 					targets,
-					() => {
-						if (this.isLive(candidate)) this.options.onChange();
+					(terminal) => {
+						if (this.isLive(candidate)) this.options.onChange(terminal);
 					},
 					() => this.disconnected(candidate),
 					candidate.controller.signal,

@@ -66,7 +66,7 @@ interface PendingBlockedSettlement {
 
 export class SettlementReporter {
 	private readonly collector: SettlementCollector;
-	private readonly persist: () => void;
+	private readonly persist: (terminal: string) => void;
 	private readonly reporting = new Map<string, SettledAgentStatus>();
 	private readonly failedAttempts = new Map<string, string | undefined>();
 	private readonly pendingBlocked = new Map<string, PendingBlockedSettlement>();
@@ -82,7 +82,7 @@ export class SettlementReporter {
 		pi: ExtensionAPI,
 		client: CoreConnection,
 		state: MonitorState,
-		persist: () => void,
+		persist: (terminal: string) => void,
 		reader: AssistantReader | undefined,
 		origin: { machine: string; label: () => string; operatorPrefix: string },
 		onClosed: (record: MonitoredAgent) => Promise<void>,
@@ -289,7 +289,7 @@ export class SettlementReporter {
 			) {
 				this.clearRetry(current.terminalId, retryState.attemptId);
 				this.failedAttempts.delete(current.terminalId);
-				this.persist();
+				this.persist(current.terminalId);
 				this.delivery.deliverSettlement(
 					lifecycle,
 					current,
@@ -313,7 +313,7 @@ export class SettlementReporter {
 						currentOwnsAttempt &&
 						this.state.complete(current.terminalId, "blocked", task)
 					) {
-						this.persist();
+						this.persist(current.terminalId);
 					}
 					this.delivery.deliverSettlement(
 						lifecycle,

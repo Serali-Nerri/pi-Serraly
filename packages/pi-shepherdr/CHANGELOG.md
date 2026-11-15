@@ -1,5 +1,11 @@
 # @howaboua/pi-shepherdr
 
+## Local changes
+
+- Refresh only affected session views for steady-state monitor events and settlements, retaining full subscription reconciliation and identity checks.
+- Bound the saved-session summary cache by entry count and summary size, with least-recently-used eviction.
+- Filter discovery candidates by known status before requesting live Pi identity; session-reference searches still hydrate eligible candidates.
+
 ## 1.0.1
 
 - Reduce CPU use when monitoring long sessions.

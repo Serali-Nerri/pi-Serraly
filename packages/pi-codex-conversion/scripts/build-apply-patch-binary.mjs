@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { basename, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
+import { parseArgs } from "node:util";
 
 export const applyPatchPlatforms = {
 	"darwin-arm64": "aarch64-apple-darwin",
@@ -70,19 +71,17 @@ function commandOutput(command, args) {
 	return result.stdout.trim();
 }
 
-function buildProvenance(sourceRoot, binary, platformArch) {
+function buildProvenance(sourceRoot, binary, target) {
 	const rustc = commandOutput("rustc", ["--version", "--verbose"]);
-	const target = rustc.match(/^host: (\S+)$/m)?.[1];
-	if (!target) throw new Error("Cannot determine the Rust target from `rustc --version --verbose`");
-	if (target !== applyPatchPlatforms[platformArch]) {
-		throw new Error(`Rust target ${target} does not match bundled platform ${platformArch}`);
-	}
+	const host = rustc.match(/^host: (\S+)$/m)?.[1];
+	if (!host) throw new Error("Cannot determine the Rust host from `rustc --version --verbose`");
 	return {
 		schemaVersion: 1,
 		source: applyPatchSource(sourceRoot),
 		binary: { sha256: sha256File(binary) },
 		build: {
 			target,
+			host,
 			rustc: rustc.split(/\r?\n/, 1)[0],
 			cargo: commandOutput("cargo", ["--version"]),
 		},
@@ -90,16 +89,18 @@ function buildProvenance(sourceRoot, binary, platformArch) {
 }
 
 function main() {
-	const sourceRoot = resolve(process.env.APPLY_PATCH_SOURCE_DIR ?? process.argv[2] ?? "src/tools");
-	const platform = process.platform;
-	const arch = process.arch;
-	const platformArch = `${platform}-${arch}`;
-	if (!applyPatchPlatforms[platformArch]) throw new Error(`Unsupported apply_patch build platform: ${platformArch}`);
-	const exe = platform === "win32" ? "apply_patch.exe" : "apply_patch";
+	const { values, positionals } = parseArgs({ options: { target: { type: "string" } }, allowPositionals: true });
+	if (positionals.length > 1) throw new Error("Expected at most one apply_patch source directory");
+	const sourceRoot = resolve(process.env.APPLY_PATCH_SOURCE_DIR ?? positionals[0] ?? "src/tools");
+	const target = values.target ?? applyPatchPlatforms[`${process.platform}-${process.arch}`];
+	const platformArch = Object.keys(applyPatchPlatforms).find((platform) => applyPatchPlatforms[platform] === target);
+	if (!platformArch) throw new Error(`Unsupported apply_patch build target: ${target ?? `${process.platform}-${process.arch}`}`);
+	const exe = platformArch.startsWith("win32-") ? "apply_patch.exe" : "apply_patch";
 	const outDir = resolve("src", "tools", "apply-patch", "bin", platformArch);
-	const source = join(sourceRoot, "target", "release", exe);
+	const targetDir = resolve(sourceRoot, process.env.CARGO_TARGET_DIR ?? "target");
+	const source = join(targetDir, target, "release", exe);
 
-	const cargo = spawnSync("cargo", ["build", "--release", "--locked", "-p", "codex-apply-patch"], { cwd: sourceRoot, stdio: "inherit", env: process.env });
+	const cargo = spawnSync("cargo", ["build", "--release", "--locked", "--target", target, "--target-dir", targetDir, "-p", "codex-apply-patch"], { cwd: sourceRoot, stdio: "inherit", env: process.env });
 	if (cargo.status !== 0) process.exit(cargo.status ?? 1);
 	if (!existsSync(source)) {
 		console.error(`Expected ${source} after cargo build`);
@@ -108,9 +109,9 @@ function main() {
 	mkdirSync(outDir, { recursive: true });
 	const dest = join(outDir, basename(source));
 	copyFileSync(source, dest);
-	if (platform !== "win32") chmodSync(dest, 0o755);
+	if (!platformArch.startsWith("win32-")) chmodSync(dest, 0o755);
 	const provenance = `${dest}.provenance.json`;
-	writeFileSync(provenance, `${JSON.stringify(buildProvenance(sourceRoot, dest, platformArch), null, 2)}\n`);
+	writeFileSync(provenance, `${JSON.stringify(buildProvenance(sourceRoot, dest, target), null, 2)}\n`);
 	console.log(`Wrote ${dest} and ${provenance}`);
 }
 

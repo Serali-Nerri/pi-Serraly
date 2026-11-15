@@ -22,7 +22,7 @@ Ask the agent to watch a worthwhile thread, such as an issue awaiting an answer 
 
 The `github_watch` tool accepts a GitHub URL in its `thread` field, `owner/repo#123`, or a bare issue/PR number resolved through `gh repo view` in the current working directory. Call it without arguments for help. Its actions are `help`, `watch`, `status` and `cancel`. Omit `thread` when cancelling to stop all watches without a GitHub request.
 
-Issues are checked every minute. PRs take an initial snapshot immediately, wait seven minutes before the first check, then check every minute.
+Issues are checked every minute. PRs baseline conversation comments and standalone reviews immediately, wait seven minutes before the first check, then check every minute. Unresolved review threads are first fetched at that first check.
 
 The first PR check surfaces all unresolved review threads, including ones that existed before the watch. Later checks notify when a thread appears, reopens or receives changed feedback, showing the current unresolved list. Unchanged threads and resolution alone do not wake the session. Resolved threads are excluded, but outdated threads remain visible until resolved.
 
@@ -38,7 +38,7 @@ Runs are checked every minute. A watch follows the run's latest attempt and stop
 
 ## Lifetime and recovery
 
-Watches survive ordinary compaction but end on cancellation, session switch, reload or process shutdown. They are not restored when reopening a session. Failed checks pause the affected watch and show an error. Start the watch again after checking authentication and access to the watched URL.
+Watches survive ordinary compaction but end on cancellation, session switch, reload or process shutdown. They are not restored when reopening a session. Failed checks pause the affected watch and show an error. Start the watch again after checking authentication and access to the watched URL. Resuming checks access and the PR or run state, then reuses the last successful baseline so changes made while paused surface on the next check.
 
 Notifications arrive chronologically through the existing Codex Conversion delivery integration when available, otherwise as native Pi user messages. They queue behind an active response and start a turn when idle. No system prompt changes are used.
 

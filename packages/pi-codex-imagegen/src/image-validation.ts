@@ -1,3 +1,5 @@
+import { crc32 } from "node:zlib";
+
 const PNG_SIGNATURE = Uint8Array.of(
 	0x89,
 	0x50,
@@ -45,17 +47,6 @@ function u32le(bytes: Uint8Array, offset: number): number {
 	);
 }
 
-function crc32(bytes: Uint8Array, start: number, end: number): number {
-	let crc = 0xffff_ffff;
-	for (let index = start; index < end; index++) {
-		crc ^= bytes[index]!;
-		for (let bit = 0; bit < 8; bit++) {
-			crc = (crc >>> 1) ^ (crc & 1 ? 0xedb8_8320 : 0);
-		}
-	}
-	return (crc ^ 0xffff_ffff) >>> 0;
-}
-
 function validPng(bytes: Uint8Array): boolean {
 	if (bytes.length < 45 || !startsWith(bytes, PNG_SIGNATURE)) return false;
 	let offset = PNG_SIGNATURE.length;
@@ -69,7 +60,7 @@ function validPng(bytes: Uint8Array): boolean {
 		const dataEnd = dataStart + length;
 		const chunkEnd = dataEnd + 4;
 		if (dataEnd < dataStart || chunkEnd > bytes.length) return false;
-		if (crc32(bytes, typeStart, dataEnd) !== u32be(bytes, dataEnd))
+		if (crc32(bytes.subarray(typeStart, dataEnd)) !== u32be(bytes, dataEnd))
 			return false;
 		const type = ascii(bytes, typeStart, dataStart);
 		if (first) {

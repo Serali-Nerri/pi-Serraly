@@ -52,6 +52,7 @@ export class AgentMonitor {
 	private activationGeneration = 0;
 	private coreReconcile: Promise<void> | undefined;
 	private coreDirty = false;
+	private readonly coreTargets = new Set<string>();
 
 	constructor(pi: ExtensionAPI, options: AgentMonitorOptions) {
 		this.client = options.client;
@@ -85,9 +86,9 @@ export class AgentMonitor {
 			pi,
 			this.client,
 			this.state,
-			() => {
+			(terminal) => {
 				this.persist();
-				this.refreshAfterEvent();
+				void this.extensionMessages.refresh(undefined, new Set([terminal]));
 			},
 			reader,
 			{
@@ -103,7 +104,7 @@ export class AgentMonitor {
 		this.events = new MonitorEvents({
 			client: this.client,
 			reconnect: options.reconnect,
-			onChange: () => this.invalidate(),
+			onChange: (terminal) => this.invalidate(terminal),
 			reconcile: () => this.reconcileNow(),
 			onWarning: options.onWarning,
 			onRecovered: options.onRecovered,
@@ -136,6 +137,7 @@ export class AgentMonitor {
 	deactivate(): void {
 		this.activationGeneration += 1;
 		this.coreDirty = false;
+		this.coreTargets.clear();
 		this.coreReconcile = undefined;
 		this.context = undefined;
 		this.events.stop();
@@ -266,6 +268,7 @@ export class AgentMonitor {
 		generation: number,
 		context: ExtensionContext | undefined,
 		persistRestoration = false,
+		terminals?: ReadonlySet<string>,
 	): Promise<void> {
 		if (
 			!context ||
@@ -286,6 +289,7 @@ export class AgentMonitor {
 		const { changed, completions, removed } = this.state.reconcile(
 			snapshot,
 			this.selfPaneId,
+			terminals,
 		);
 		for (const record of removed) {
 			this.settlements.releaseAgentClaim(
@@ -295,7 +299,7 @@ export class AgentMonitor {
 		}
 		if (changed || persistRestoration) this.persist();
 		else this.onRefresh();
-		await this.extensionMessages.refresh(snapshot.agents);
+		await this.extensionMessages.refresh(snapshot.agents, terminals);
 		// Snapshot removals must also retire their subscription coverage.
 		if (removed.length) void this.events.refresh().catch(() => undefined);
 		for (const completion of completions) {
@@ -303,16 +307,24 @@ export class AgentMonitor {
 		}
 	}
 
-	private invalidate(): void {
+	private invalidate(terminal?: string): void {
 		const generation = this.activationGeneration;
 		const context = this.context;
-		this.coreDirty = true;
+		if (terminal) this.coreTargets.add(terminal);
+		else this.coreDirty = true;
 		if (this.coreReconcile) return;
 		this.coreReconcile = Promise.resolve()
 			.then(async () => {
-				while (this.coreDirty && generation === this.activationGeneration) {
+				while (
+					(this.coreDirty || this.coreTargets.size) &&
+					generation === this.activationGeneration
+				) {
+					const terminals = this.coreDirty
+						? undefined
+						: new Set(this.coreTargets);
 					this.coreDirty = false;
-					await this.reconcile(generation, context);
+					this.coreTargets.clear();
+					await this.reconcile(generation, context, false, terminals);
 				}
 			})
 			.catch(() => {
@@ -325,12 +337,6 @@ export class AgentMonitor {
 				if (generation === this.activationGeneration)
 					this.coreReconcile = undefined;
 			});
-	}
-
-	private refreshAfterEvent(): void {
-		void this.extensionMessages.refresh();
-		// MonitorEvents reports failures through onWarning before rejecting awaited updates.
-		void this.events.refresh().catch(() => undefined);
 	}
 
 	private report(request: SettlementRequest): Promise<void> {

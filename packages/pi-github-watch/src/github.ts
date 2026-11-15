@@ -106,8 +106,8 @@ export function githubClient(
 				url: `https://github.com/${repo}/${kindText === "pr" ? "pull" : "issues"}/${number}`,
 			};
 		},
-		snapshot(thread: Thread) {
-			return threadSnapshot(gh, thread);
+		snapshot(thread: Thread, scope: "conversation" | "all" = "all") {
+			return threadSnapshot(gh, thread, scope);
 		},
 		async prState(thread: Thread): Promise<"open" | "closed" | "merged"> {
 			const value: unknown = JSON.parse(

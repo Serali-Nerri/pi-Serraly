@@ -145,6 +145,8 @@ Pi's footer shows cache percentage. Enable **Codex diagnostics** under `/codex o
 
 **Prompt caching and WebSocket continuation are separate.** A full request can still hit the cache.
 
+Only the latest successfully established connection route stays cached while idle. Returning to an older endpoint or credential route reconnects without clearing the history used for native compaction.
+
 **Status + log** writes diagnostic files to `~/.pi/agent/pi-codex-logs/`. They include usage, timings, retries and safe error metadata, but exclude prompts, tool arguments, images and credentials. These logs are useful when reporting a problem.
 
 **Request timeouts follow Pi.** Normal requests have no default response-header or stream-idle deadline. A caller's positive `timeoutMs` limits SSE response headers or WebSocket idle waits; zero disables it. SSE body streaming has no idle timeout. Stalled requests can therefore wait longer and may need manual cancellation. Existing recovery budgets and WebSocket setup/prewarm deadlines still apply.

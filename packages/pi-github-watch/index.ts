@@ -193,8 +193,12 @@ export default async function (pi: ExtensionAPI) {
 				thread.kind === "run" ? await client.runSnapshot(thread) : undefined;
 			const prState =
 				thread.kind === "pr" ? await client.prState(thread) : undefined;
-			if (thread.kind !== "run" && (!prState || prState === "open"))
-				seen = await client.snapshot(thread);
+			if (
+				!previous &&
+				thread.kind !== "run" &&
+				(!prState || prState === "open")
+			)
+				seen = await client.snapshot(thread, "conversation");
 			if (generation !== epoch || signal?.aborted)
 				throw new Error(
 					"Watch setup interrupted. Retry in the current session.",

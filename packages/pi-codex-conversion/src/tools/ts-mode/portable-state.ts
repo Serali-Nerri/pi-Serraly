@@ -103,7 +103,7 @@ export class PortableGraph {
 	}
 
 	/** Live execution is unrestricted; durability captures only independently restorable roots. */
-	capture(values: Record<string, unknown>, bindings: Record<string, BindingRecipe>, pins: string[], imports: string[] = []): PortableCapture {
+	async capture(values: Record<string, unknown>, bindings: Record<string, BindingRecipe>, pins: string[], imports: string[] = []): Promise<PortableCapture> {
 		const skipped = new Map<string, string>();
 		for (const [name, binding] of Object.entries(bindings)) if (binding.kind !== "type" && !Object.hasOwn(values, name)) skipped.set(name, "runtime value unavailable for capture");
 		const hint = this.liveOnlyHint;
@@ -115,11 +115,11 @@ export class PortableGraph {
 			// A prior failure only changes probe order: nested mutations can make
 			// that root portable again, so always inspect its current graph.
 			if (hint && Object.hasOwn(values, hint)) {
-				try { this.encode({ [hint]: values[hint] }, bindings, pins, imports); }
+				try { await this.encode({ [hint]: values[hint] }, bindings, pins, imports); }
 				catch (error) { hintedFailure = { name: hint, reason: error instanceof Error ? error.message : String(error) }; }
 			}
 			if (!hintedFailure) {
-				try { return { state: this.encode(values, bindings, pins, imports), skipped: [] }; }
+				try { return { state: await this.encode(values, bindings, pins, imports), skipped: [] }; }
 				catch { /* Per-root probes report every live-only value and dependant. */ }
 			}
 		}
@@ -129,7 +129,7 @@ export class PortableGraph {
 				this.liveOnlyHint ??= name;
 				continue;
 			}
-			try { this.encode({ [name]: value }, bindings, pins, imports); }
+			try { await this.encode({ [name]: value }, bindings, pins, imports); }
 			catch (error) { skipped.set(name, error instanceof Error ? error.message : String(error)); this.liveOnlyHint ??= name; }
 		}
 		// A portable recipe cannot restore if one of its retained lexical dependencies cannot.
@@ -141,7 +141,7 @@ export class PortableGraph {
 				const dependency = bindingDependencies(binding).find(reference => skipped.has(reference));
 				if (dependency) { skipped.set(name, `requires live-only binding ${dependency}`); changed = true; continue; }
 				if (!Object.hasOwn(values, name)) continue;
-				const probe = this.encode({ [name]: values[name] }, bindings, pins, imports);
+				const probe = await this.encode({ [name]: values[name] }, bindings, pins, imports);
 				const recipe = Object.values(probe.nodes).find(node => node.kind === "recipe" && skipped.has(node.name));
 				if (recipe?.kind === "recipe") { skipped.set(name, `requires live-only recipe ${recipe.name}`); changed = true; }
 				const checkpoint = Object.values(probe.nodes).find(node => node.kind === "checkpoint" && (skipped.has(node.snapshot) || skipped.has(node.restore)));
@@ -149,7 +149,7 @@ export class PortableGraph {
 			}
 		}
 		const retained = Object.fromEntries(Object.entries(bindings).filter(([name]) => !skipped.has(name)));
-		const state = this.encode(Object.fromEntries(Object.entries(values).filter(([name]) => !skipped.has(name))), retained, pins.filter(name => !skipped.has(name)), imports);
+		const state = await this.encode(Object.fromEntries(Object.entries(values).filter(([name]) => !skipped.has(name))), retained, pins.filter(name => !skipped.has(name)), imports);
 		return { state, skipped: [...skipped].map(([name, reason]) => ({ name, reason })) };
 	}
 
@@ -163,7 +163,14 @@ export class PortableGraph {
 		if ((typeof value === "object" && value !== null) || typeof value === "function") this.modules.set(value, { kind: "module", specifier, imported, ...(attributes ? { attributes } : {}) });
 	}
 
-	encode(values: Record<string, unknown>, bindings: Record<string, BindingRecipe>, pins: string[], imports: string[] = []): PortableState {
+	async encode(values: Record<string, unknown>, bindings: Record<string, BindingRecipe>, pins: string[], imports: string[] = []): Promise<PortableState> {
+		const views = new Map<ArrayBufferView, string>();
+		const state = this.encodeGraph(values, bindings, pins, imports, views);
+		await assertViewProperties(views);
+		return state;
+	}
+
+	private encodeGraph(values: Record<string, unknown>, bindings: Record<string, BindingRecipe>, pins: string[], imports: string[], views: Map<ArrayBufferView, string>): PortableState {
 		const state = emptyState();
 		state.bindings = bindings;
 		state.pins = pins;
@@ -182,7 +189,7 @@ export class PortableGraph {
 				const registered = this.checkpoints;
 				this.checkpoints = new Map();
 				try {
-					const data = this.encode({ data: checkpoint.data }, bindings, [], []);
+					const data = this.encodeGraph({ data: checkpoint.data }, bindings, [], [], views);
 					for (const object of registered.keys()) { const liveId = this.identities.get(object); if (liveId && Object.hasOwn(data.nodes, liveId)) throw new Error(`${path}: snapshot data contains a registered live object; return its data instead`); }
 					// Snapshots are by-value payloads, not fresh live identities on every capture.
 					// Stable local IDs let unchanged captures merge across independent sessions.
@@ -231,8 +238,11 @@ export class PortableGraph {
 				if (!Constructor) throw new Error(`${path}: custom typed-array subclasses cannot transfer`);
 				const bytes: unknown = Reflect.get(Constructor, "BYTES_PER_ELEMENT");
 				const length = types.isDataView(value) ? value.byteLength : typeof bytes === "number" ? value.byteLength / bytes : 0;
-				if (Object.getOwnPropertyNames(value).length !== (types.isDataView(value) ? 0 : length)) throw new Error(`${path}: extra typed-array properties cannot transfer`);
-				if (Object.getOwnPropertySymbols(value).length) throw new Error(`${path}: symbol properties cannot transfer`);
+				if (types.isDataView(value)) {
+					// DataView has no intrinsic indices; numeric own keys are extras too.
+					if (Object.getOwnPropertyNames(value).length) throw new Error(`${path}: extra typed-array properties cannot transfer`);
+					if (Object.getOwnPropertySymbols(value).length) throw new Error(`${path}: symbol properties cannot transfer`);
+				} else views.set(value, path);
 				state.nodes[id] = { kind: "view", constructor: Constructor.name, buffer: visit(value.buffer, `${path}.buffer`), byteOffset: value.byteOffset, length };
 			}
 			else {
@@ -333,6 +343,35 @@ export class PortableGraph {
 
 export function bindingDependencies(binding: BindingRecipe): string[] {
 	return [...(binding.references ?? []), ...(binding.checkpoint ? [binding.checkpoint.snapshot, binding.checkpoint.restore] : [])];
+}
+
+/** Inspector can omit indexed properties without allocating every typed-array key. */
+async function assertViewProperties(views: ReadonlyMap<ArrayBufferView, string>): Promise<void> {
+	if (!views.size) return;
+	const { Session } = await import("node:inspector/promises");
+	const session = new Session();
+	const key = `__tsView_${randomUUID()}`;
+	session.connect();
+	try {
+		for (const [value, path] of views) {
+			Object.defineProperty(globalThis, key, { value, configurable: true });
+			const { result } = await session.post("Runtime.evaluate", {
+				expression: `globalThis[${JSON.stringify(key)}]`, objectGroup: key, silent: true,
+			});
+			if (!result.objectId) throw new Error(`${path}: typed-array properties could not be captured; retain ordinary data instead`);
+			// Node's protocol types omit this supported CDP option.
+			const parameters = {
+				objectId: result.objectId, ownProperties: true, nonIndexedPropertiesOnly: true,
+			};
+			const { result: properties } = await session.post("Runtime.getProperties", parameters as import("node:inspector").Runtime.GetPropertiesParameterType);
+			if (properties.some(property => !property.symbol)) throw new Error(`${path}: extra typed-array properties cannot transfer`);
+			if (properties.length) throw new Error(`${path}: symbol properties cannot transfer`);
+		}
+	} finally {
+		Reflect.deleteProperty(globalThis, key);
+		try { await session.post("Runtime.releaseObjectGroup", { objectGroup: key }); }
+		finally { session.disconnect(); }
+	}
 }
 
 function descriptors(value: object): Map<PropertyKey, PropertyDescriptor> { return new Map(Reflect.ownKeys(value).map(key => [key, Object.getOwnPropertyDescriptor(value, key) ?? {}])); }

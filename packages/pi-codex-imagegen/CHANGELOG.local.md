@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Use Node's native CRC32 for PNG integrity checks, retaining chunk validation without the per-bit JavaScript loop.
+- Reject local API edit inputs that cannot fit the encoded data-URL limit before reading or encoding them; Codex's larger-input policy is unchanged.
 - Rebase the gateway settings and still-image schemas onto upstream 0.0.14's Pi-native schema migration; require Pi Codex Conversion 4.0.10 for optional Code Mode integration.
 - Port the validated gateway adaptation onto upstream 0.0.13, retaining the release's Code Mode help and Pi Codex Conversion 4.0.9 minimum.
 - Add configurable Images API base URL, Pi credential provider and custom model to `/imagegen`, without changing Codex OAuth routing or introducing fallback.

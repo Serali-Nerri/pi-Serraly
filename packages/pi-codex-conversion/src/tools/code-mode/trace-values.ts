@@ -21,6 +21,9 @@ export function toolResultFromValue(value: unknown): RuntimeToolResult {
 export function cloneTrace(trace: RuntimeToolTrace): RuntimeToolTrace {
 	return sanitizeValue(trace, {
 		remaining: Number.MAX_SAFE_INTEGER,
+		// Payloads are bounded at capture; cloning must not spend their node
+		// budget again across the trace's status, result and other metadata.
+		nodesRemaining: Number.MAX_SAFE_INTEGER,
 	}) as RuntimeToolTrace;
 }
 
@@ -123,12 +126,12 @@ function sanitizeValue(value: unknown, budget: SerializationBudget): unknown {
 	const childBudget = { ...budget, seen, depth: depth + 1 };
 	if (Array.isArray(value)) {
 		const output: unknown[] = [];
-		for (const item of value) {
-			if (budget.remaining <= 0) {
+		for (let index = 0; index < value.length; index++) {
+			if (budget.remaining <= 0 || (budget.nodesRemaining ?? 0) <= 0) {
 				output.push("[values omitted]");
 				break;
 			}
-			output.push(sanitizeValue(item, childBudget));
+			output.push(sanitizeValue(value[index], childBudget));
 			budget.remaining = childBudget.remaining;
 			budget.nodesRemaining = childBudget.nodesRemaining ?? 0;
 		}
@@ -136,21 +139,19 @@ function sanitizeValue(value: unknown, budget: SerializationBudget): unknown {
 	}
 	if (value instanceof Date) return value.toISOString();
 	const output: Record<string, unknown> = {};
-	let entries: Array<[string, unknown]>;
 	try {
-		entries = Object.entries(value);
+		for (const key of Object.keys(value)) {
+			if (budget.remaining <= 0 || (budget.nodesRemaining ?? 0) <= 0) {
+				output["trace_truncated"] = true;
+				break;
+			}
+			childBudget.remaining = Math.max(0, childBudget.remaining - key.length - 1);
+			output[key] = sanitizeValue(Reflect.get(value, key), childBudget);
+			budget.remaining = childBudget.remaining;
+			budget.nodesRemaining = childBudget.nodesRemaining ?? 0;
+		}
 	} catch {
 		return "[unavailable object]";
-	}
-	for (const [key, entry] of entries) {
-		if (budget.remaining <= 0) {
-			output["trace_truncated"] = true;
-			break;
-		}
-		childBudget.remaining = Math.max(0, childBudget.remaining - key.length - 1);
-		output[key] = sanitizeValue(entry, childBudget);
-		budget.remaining = childBudget.remaining;
-		budget.nodesRemaining = childBudget.nodesRemaining ?? 0;
 	}
 	return output;
 }

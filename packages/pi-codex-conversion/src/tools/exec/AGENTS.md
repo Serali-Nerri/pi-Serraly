@@ -4,4 +4,7 @@
 - Keep wait policy host-side and model wording generic: non-TTY output extends the inactivity wait, silence yields a session, and empty polls use bounded waits with backoff.
 - Finalized sessions outlive the native helper's exited-process retention. Serve retained output without polling or writing expired native handles.
 - Completed replay retention is separate from immediate delivery; never apply its bound to the exit-observing call.
+- Copy replay-cache tails into independent storage: a bounded string slice can retain the full output buffer. Preserve UTF-16 code units.
+- Serialize foreground and background reads per process before capturing `after_seq` and decoding. Native Read waits run concurrently across processes; mutation requests stay ordered and stdout frames stay atomic. Reap/abort read tasks on shutdown.
+- Keep background reads event-driven. Fixed empty-poll sleeps can let a burst overflow the native retention buffer before draining starts; do not replace waits with host polling intervals.
 - Bounded completion notices must not drain truncated unread output. Ctrl-C input is not proof that an interactive shell exited.

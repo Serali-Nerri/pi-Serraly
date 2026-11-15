@@ -254,11 +254,13 @@ export class MonitorState {
 	reconcile(
 		snapshot: SessionSnapshot,
 		controllingPaneId?: string,
+		terminals?: ReadonlySet<string>,
 	): ReconcileResult {
 		let changed = false;
 		const completions: CompletionCandidate[] = [];
 		const removed: MonitoredAgent[] = [];
 		for (const record of this.list()) {
+			if (terminals && !terminals.has(record.terminalId)) continue;
 			const panel =
 				snapshot.agents.find(
 					(candidate) => candidate.terminal_id === record.terminalId,

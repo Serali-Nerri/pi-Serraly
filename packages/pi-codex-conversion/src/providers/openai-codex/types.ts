@@ -21,6 +21,7 @@ export interface WebSocketConstructorLike {
 export interface SessionWebSocketCacheEntry {
 	socket: WebSocketLike;
 	busy: boolean;
+	retired: boolean;
 	createdAtMs: number;
 	continuation?: CachedWebSocketContinuationState | undefined;
 }

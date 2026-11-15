@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { resizeImage } from "@earendil-works/pi-coding-agent";
 import { namespaceResponsesLiteInputTools, namespaceResponsesLiteTools } from "./responses-lite-tools.ts";
 
@@ -9,6 +10,12 @@ const IMAGE_MAX_DIMENSION = 2048;
 const IMAGE_MAX_PATCHES = 2_500;
 const IMAGE_PATCH_SIZE = 32;
 const IMAGE_MAX_BASE64_BYTES = 64 * 1024 * 1024;
+const IMAGE_CACHE_MAX_BYTES = 32 * 1024 * 1024;
+const IMAGE_CACHE_MAX_ENTRIES = 64;
+const IMAGE_NORMALIZATION_CONCURRENCY = 2;
+const IMAGE_TRANSFORM_IDENTITY = JSON.stringify([IMAGE_MAX_DIMENSION, IMAGE_MAX_PATCHES, IMAGE_PATCH_SIZE, IMAGE_MAX_BASE64_BYTES]);
+const preparedImageUrls = new Map<string, { url: string; bytes: number }>();
+let preparedImageBytes = 0;
 
 export interface ResponsesLiteCompatibleBody {
 	model: string;
@@ -62,7 +69,20 @@ function prepareLiteInput(input: readonly unknown[]): unknown[] {
 	return namespaceResponsesLiteInputTools(prepared);
 }
 
-async function prepareDataImageUrl(imageUrl: string): Promise<string | undefined> {
+function cachedDataImageUrl(key: string): string | undefined {
+	const cached = preparedImageUrls.get(key);
+	if (!cached) return undefined;
+	preparedImageUrls.delete(key);
+	preparedImageUrls.set(key, cached);
+	return cached.url;
+}
+
+async function prepareDataImageUrl(imageUrl: string, signal: AbortSignal | undefined): Promise<string | undefined> {
+	signal?.throwIfAborted();
+	// Keep only a digest of the source; retaining full data-URL keys doubles the cache.
+	const key = createHash("sha256").update(IMAGE_TRANSFORM_IDENTITY).update(imageUrl).digest("base64url");
+	const cached = cachedDataImageUrl(key);
+	if (cached) return cached;
 	const match = /^data:([^;,]+);base64,([a-z0-9+/]*={0,2})$/i.exec(imageUrl);
 	if (!match?.[1] || !match[2] || !match[1].toLowerCase().startsWith("image/")) return undefined;
 	if (Buffer.byteLength(match[2], "utf8") > IMAGE_MAX_BASE64_BYTES) return undefined;
@@ -74,6 +94,7 @@ async function prepareDataImageUrl(imageUrl: string): Promise<string | undefined
 			maxHeight: IMAGE_MAX_DIMENSION,
 			maxBytes: IMAGE_MAX_BASE64_BYTES,
 		});
+		signal?.throwIfAborted();
 		if (!resized) return undefined;
 		const patches = Math.ceil(resized.width / IMAGE_PATCH_SIZE) * Math.ceil(resized.height / IMAGE_PATCH_SIZE);
 		if (patches > IMAGE_MAX_PATCHES) {
@@ -83,45 +104,81 @@ async function prepareDataImageUrl(imageUrl: string): Promise<string | undefined
 				maxHeight: Math.max(1, Math.floor(resized.height * scale)),
 				maxBytes: IMAGE_MAX_BASE64_BYTES,
 			});
+			signal?.throwIfAborted();
 		}
-		return resized ? `data:${resized.mimeType};base64,${resized.data}` : undefined;
+		if (!resized) return undefined;
+		const completed = cachedDataImageUrl(key);
+		if (completed) return completed;
+		const url = `data:${resized.mimeType};base64,${resized.data}`;
+		const size = Buffer.byteLength(url, "utf8");
+		if (size <= IMAGE_CACHE_MAX_BYTES) {
+			while (preparedImageUrls.size >= IMAGE_CACHE_MAX_ENTRIES || preparedImageBytes + size > IMAGE_CACHE_MAX_BYTES) {
+				const oldest = preparedImageUrls.entries().next().value;
+				if (!oldest) break;
+				preparedImageUrls.delete(oldest[0]);
+				preparedImageBytes -= oldest[1].bytes;
+			}
+			preparedImageUrls.set(key, { url, bytes: size });
+			preparedImageBytes += size;
+		}
+		return url;
 	} catch {
+		signal?.throwIfAborted();
 		return undefined;
 	}
 }
 
-async function prepareLiteImageContent(content: unknown): Promise<unknown> {
-	if (!Array.isArray(content)) return content;
-	return Promise.all(content.map(async (item) => {
-		if (!isRecord(item) || item["type"] !== "input_image" || typeof item["image_url"] !== "string") return item;
-		if (!/^data:/i.test(item["image_url"])) return item;
-		const imageUrl = await prepareDataImageUrl(item["image_url"]);
-		return imageUrl ? { ...item, image_url: imageUrl } : { type: "input_text", text: IMAGE_PROCESSING_PLACEHOLDER };
-	}));
-}
-
-async function prepareResponsesLiteInputImages(input: readonly unknown[]): Promise<unknown[]> {
-	return Promise.all(input.map(async (item) => {
+async function prepareResponsesLiteInputImages(input: readonly unknown[], signal: AbortSignal | undefined): Promise<unknown[]> {
+	signal?.throwIfAborted();
+	const contents: unknown[][] = [];
+	const prepareContent = (content: unknown): unknown => {
+		if (!Array.isArray(content)) return content;
+		const prepared = [...content];
+		contents.push(prepared);
+		return prepared;
+	};
+	const prepared = input.map((item) => {
 		if (!isRecord(item)) return item;
 		if ((item["type"] === "message" || item["role"] === "user" || item["role"] === "developer" || item["role"] === "system") && "content" in item) {
-			return { ...item, content: await prepareLiteImageContent(item["content"]) };
+			return { ...item, content: prepareContent(item["content"]) };
 		}
 		if ((item["type"] === "function_call_output" || item["type"] === "custom_tool_call_output") && isRecord(item["output"])) {
-			return { ...item, output: { ...item["output"], content: await prepareLiteImageContent(item["output"]["content"]) } };
+			return { ...item, output: { ...item["output"], content: prepareContent(item["output"]["content"]) } };
 		}
 		if ((item["type"] === "function_call_output" || item["type"] === "custom_tool_call_output") && Array.isArray(item["output"])) {
-			return { ...item, output: await prepareLiteImageContent(item["output"]) };
+			return { ...item, output: prepareContent(item["output"]) };
 		}
 		return item;
+	});
+	const images = (function* () {
+		for (const content of contents) {
+			for (let index = 0; index < content.length; index++) {
+				const item = content[index];
+				if (!isRecord(item) || item["type"] !== "input_image" || typeof item["image_url"] !== "string") continue;
+				if (/^data:/i.test(item["image_url"])) yield { content, index, item, imageUrl: item["image_url"] };
+			}
+		}
+	})();
+	// Each request pulls its own next image instead of retaining a global per-image
+	// queue. Cancellation stops admission without blocking another request's pool.
+	await Promise.all(Array.from({ length: IMAGE_NORMALIZATION_CONCURRENCY }, async () => {
+		for (const image of images) {
+			signal?.throwIfAborted();
+			const imageUrl = await prepareDataImageUrl(image.imageUrl, signal);
+			signal?.throwIfAborted();
+			image.content[image.index] = imageUrl ? { ...image.item, image_url: imageUrl } : { type: "input_text", text: IMAGE_PROCESSING_PLACEHOLDER };
+		}
 	}));
+	signal?.throwIfAborted();
+	return prepared;
 }
 
-export async function prepareResponsesLiteConversationInput(input: readonly unknown[]): Promise<unknown[]> {
-	return prepareResponsesLiteInputImages(prepareLiteInput(input));
+export async function prepareResponsesLiteConversationInput(input: readonly unknown[], signal?: AbortSignal): Promise<unknown[]> {
+	return prepareResponsesLiteInputImages(prepareLiteInput(input), signal);
 }
 
-export async function prepareResponsesLiteRequestImages<TBody extends ResponsesLiteCompatibleBody>(body: TBody): Promise<TBody> {
-	return { ...body, input: await prepareResponsesLiteInputImages(body.input) };
+export async function prepareResponsesLiteRequestImages<TBody extends ResponsesLiteCompatibleBody>(body: TBody, signal?: AbortSignal): Promise<TBody> {
+	return { ...body, input: await prepareResponsesLiteInputImages(body.input, signal) };
 }
 
 export function applyResponsesLiteRequest<TBody extends ResponsesLiteCompatibleBody>(

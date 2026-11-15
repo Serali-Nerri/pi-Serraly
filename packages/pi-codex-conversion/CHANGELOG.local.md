@@ -2,6 +2,16 @@
 
 Local changes and their background, relative to upstream **5.0.0** (`c3b422c60256907f5a4499cc44e4d055ac3cc28a`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
 
+## Performance and resource retention
+
+- TS checkpoints avoid materialising typed-array index keys while preserving large-view checkpoints, aliases and extra-property rejection. Validation uses a temporary local Node inspector session, without opening a listener.
+- Nested trace capture stops at either serialization budget; streamed and final snapshots retain status and result metadata without expanding omitted array tails.
+- Reclaim closed and superseded Codex WebSocket routes without interrupting busy lanes or clearing native-compaction history. Reuse unchanged Responses Lite image normalization in a bounded cache; process images through cancellation-aware request-local pools.
+- Detach completed shell replay tails from full command output, preserving UTF-16 content and immediate-result delivery.
+- Let native shell reads wait concurrently across processes while preserving per-process sequence/decoding order and ordered mutations. Silent shells no longer block other output; no host polling sleeps are needed. Rebuild patch and exec helpers for all six bundled targets.
+- Request summary-only native patch responses rather than copying full old/new file contents into an unused payload. Detailed helper consumers retain their existing response mode; explicit cross-target builds record the actual compiler host and artifact target.
+- Auxiliary tool result cards retain only current error/image-display flags rather than the host render context, so Notebook and auto-reasoning redraws no longer retain previous components. Rendering and tool results are unchanged.
+
 ## Browser extension removal
 
 - Remove the pi-browser runtime dependency and `/codex voice server connect` integration when removing that extension from this workspace.

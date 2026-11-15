@@ -8,3 +8,10 @@ finish before Closed is emitted; ordinary EOF still closes immediately. The
 TypeScript bridge waits for Closed rather than inferring closure from silence.
 This is a local-only helper, not Codex's remote execution transport. Process
 retention, cancellation and TTY policies remain local and unchanged.
+
+Pi's standalone dispatcher runs Read waits concurrently so silent processes do
+not block other process output or mutation requests. Request IDs correlate
+responses; stdout frames remain serialized. The TypeScript bridge serializes
+reads per process before sequence capture/decoding, and the helper reaps read
+tasks and aborts/joins outstanding waits on shutdown. Exec/write/terminate/shutdown
+dispatch remains ordered. No output-buffer bound or upstream source pin changed.

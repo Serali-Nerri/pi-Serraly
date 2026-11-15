@@ -23,6 +23,8 @@ build 构建 conversion、agent-board、pi-ui，其余包保留 TS 入口；`--p
 
 不使用 Changesets、全仓发布工作流或 npm 发布命令。原生源码改变时显式运行 conversion 对应构建脚本，普通 TS 构建不重新编译跨平台原生程序。
 
+原生与交叉目标构建参数由 [Bundled native builds](../packages/pi-codex-conversion/src/tools/native/README.md) 持有；apply_patch 的响应协议与 provenance 见 [Native patch response](../packages/pi-codex-conversion/src/tools/apply-patch/README.md)。修改后须重建对应随包产物并验证 provenance，不能只更新源码或摘要。
+
 ## 测试与隔离
 
 默认删除永久测试，仅保留静态检查和一次性探针无法充分覆盖、且失败后果重要的覆盖；新增额外覆盖须由用户明确要求。不强制 TDD，不以测试数量或契约标签作为保留理由。通过公开入口或既有 seam 验证行为，不重复依赖算法，不断言源码文本或私有调用顺序。易错的编辑与顺序约束写在最近的 AGENTS.md，运行时校验留在拥有该数据的实现中。

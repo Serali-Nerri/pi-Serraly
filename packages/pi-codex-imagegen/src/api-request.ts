@@ -5,6 +5,10 @@ import {
 	supportsExtendedImageControls,
 } from "./settings.js";
 
+const MAX_EDIT_IMAGE_DATA_URL_LENGTH = 20 * 1024 * 1024;
+const EDIT_IMAGE_TOO_LARGE_MESSAGE =
+	"OpenAI API edit image is too large. Resize or compress it and retry.";
+
 function validateImageSize(size: string, format: OutputFormat): void {
 	if (size === "auto") return;
 	if (!/^[1-9][0-9]*x[1-9][0-9]*$/.test(size))
@@ -62,6 +66,16 @@ export async function buildOpenAIImageRequest(
 		recentImages,
 		cwd,
 		settings.model,
+		{
+			// Admit against the shortest supported MIME prefix; retain the exact URL check below.
+			maxBytes:
+				3 *
+				Math.floor(
+					(MAX_EDIT_IMAGE_DATA_URL_LENGTH - "data:image/png;base64,".length) /
+						4,
+				),
+			message: EDIT_IMAGE_TOO_LARGE_MESSAGE,
+		},
 	);
 	if (request.operation === "edits") {
 		for (const item of request.body.images) {
@@ -69,10 +83,8 @@ export async function buildOpenAIImageRequest(
 				throw new Error(
 					"OpenAI API edit inputs must be PNG, JPEG or WebP. Convert GIF inputs before editing.",
 				);
-			if (item.image_url.length > 20 * 1024 * 1024)
-				throw new Error(
-					"OpenAI API edit image is too large. Resize or compress it and retry.",
-				);
+			if (item.image_url.length > MAX_EDIT_IMAGE_DATA_URL_LENGTH)
+				throw new Error(EDIT_IMAGE_TOO_LARGE_MESSAGE);
 		}
 	}
 	Object.assign(request.body, {

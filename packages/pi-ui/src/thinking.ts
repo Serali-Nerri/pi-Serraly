@@ -56,7 +56,12 @@ interface ThinkingRun {
 	start: number;
 	end: number;
 	fullText: string;
-	blocks: { contentIndex: number; text: string }[];
+	blocks: { contentIndex: number; live: SummaryPart | undefined; structured: SummaryPart | undefined }[];
+}
+
+interface ReasoningMemo {
+	sources: { contentIndex: number; thinking: string; signature: string | undefined }[];
+	runs: ThinkingRun[];
 }
 
 interface RunViewData {
@@ -93,6 +98,15 @@ interface TitleMemo {
 	source: string;
 	width: number;
 	text: string;
+}
+
+interface LayoutMemo {
+	width: number;
+	theme: Theme | undefined;
+	useTitles: boolean;
+	previewLines: number;
+	durationMs: number | undefined;
+	lines: string[];
 }
 
 interface DurationData {
@@ -157,7 +171,23 @@ function getLatestOpenAiSummary(signature: string | undefined): SummaryPart | un
 	return undefined;
 }
 
-function collectThinkingRuns(content: AssistantMessage["content"]): ThinkingRun[] {
+function collectThinkingRuns(content: AssistantMessage["content"], previous: ReasoningMemo | undefined): ReasoningMemo {
+	if (previous) {
+		let sourceIndex = 0;
+		let unchanged = true;
+		for (let index = 0; index < content.length; index += 1) {
+			const block = content[index];
+			if (block?.type !== "thinking") continue;
+			const source = previous.sources[sourceIndex];
+			if (!source || source.contentIndex !== index || source.thinking !== block.thinking || source.signature !== block.thinkingSignature) {
+				unchanged = false;
+				break;
+			}
+			sourceIndex += 1;
+		}
+		if (unchanged && sourceIndex === previous.sources.length) return previous;
+	}
+	const sources: ReasoningMemo["sources"] = [];
 	const runs: ThinkingRun[] = [];
 	for (let index = 0; index < content.length;) {
 		if (content[index]?.type !== "thinking") {
@@ -166,35 +196,36 @@ function collectThinkingRuns(content: AssistantMessage["content"]): ThinkingRun[
 		}
 		const start = index;
 		const blocks: string[] = [];
-		const sanitizedBlocks: { contentIndex: number; text: string }[] = [];
+		const summaries: ThinkingRun["blocks"] = [];
 		while (index < content.length && content[index]?.type === "thinking") {
 			const block = content[index];
 			if (block?.type === "thinking") {
+				sources.push({ contentIndex: index, thinking: block.thinking, signature: block.thinkingSignature });
 				const text = sanitizeThinkingText(block.thinking).trim();
 				if (text) {
 					blocks.push(text);
-					sanitizedBlocks.push({ contentIndex: index, text });
+					summaries.push({
+						contentIndex: index,
+						live: parseLatestStreamingSummarySanitized(text),
+						structured: getLatestOpenAiSummary(block.thinkingSignature),
+					});
 				}
 			}
 			index += 1;
 		}
-		if (blocks.length > 0) runs.push({ start, end: index - 1, fullText: blocks.join("\n\n"), blocks: sanitizedBlocks });
+		if (blocks.length > 0) runs.push({ start, end: index - 1, fullText: blocks.join("\n\n"), blocks: summaries });
 	}
-	return runs;
+	return { sources, runs };
 }
 
 function summarizeRun(
-	content: AssistantMessage["content"],
 	run: ThinkingRun,
 	activeContentIndex: number | undefined,
 ): SummaryPart | undefined {
 	let summary: SummaryPart | undefined;
 	for (const block of run.blocks) {
-		const live = parseLatestStreamingSummarySanitized(block.text);
-		const source = content[block.contentIndex];
-		const structured = source?.type === "thinking" ? getLatestOpenAiSummary(source.thinkingSignature) : undefined;
-		if (block.contentIndex === activeContentIndex) summary = live ?? structured ?? summary;
-		else summary = structured ?? live ?? summary;
+		if (block.contentIndex === activeContentIndex) summary = block.live ?? block.structured ?? summary;
+		else summary = block.structured ?? block.live ?? summary;
 	}
 	return summary;
 }
@@ -300,6 +331,7 @@ class ThinkingView implements Component {
 	private readonly reader: ThinkingReader;
 	private previewMemo: PreviewMemo | undefined;
 	private titleMemo: TitleMemo | undefined;
+	private layoutMemo: LayoutMemo | undefined;
 
 	constructor(data: RunViewData, hidden: boolean, nativeBody: Component, padding: number, hiddenLabel: string, reader: ThinkingReader) {
 		this.data = data;
@@ -315,6 +347,7 @@ class ThinkingView implements Component {
 	invalidate(): void {
 		this.previewMemo = undefined;
 		this.titleMemo = undefined;
+		this.layoutMemo = undefined;
 		this.nativeBody.invalidate();
 	}
 
@@ -332,12 +365,19 @@ class ThinkingView implements Component {
 			: 3;
 		const state = this.reader.viewState(this.data.messageTimestamp, this.data.start);
 		const theme = this.reader.theme();
+		const cached = this.layoutMemo;
+		if (!state.live && cached && cached.width === safeWidth && cached.theme === theme && cached.useTitles === useTitles && cached.previewLines === previewLines && cached.durationMs === state.durationMs) {
+			return cached.lines;
+		}
+		this.layoutMemo = undefined;
 		const preview = this.hidden ? this.preview(body, available, previewLines) : undefined;
 		const heading = this.renderHeading(title, theme, state, inset, available, safeWidth, this.hidden && preview?.truncated === true);
 		const bodyLines = this.hidden
 			? (preview?.lines ?? []).map((line) => fitLine(styleThinking(line, theme, false), safeWidth, inset, available))
 			: this.nativeBody.render(safeWidth);
-		return [...heading, ...bodyLines];
+		const lines = [...heading, ...bodyLines];
+		if (!state.live) this.layoutMemo = { width: safeWidth, theme, useTitles, previewLines, durationMs: state.durationMs, lines };
+		return lines;
 	}
 
 	private renderHeading(
@@ -407,6 +447,7 @@ class ThinkingControllerImpl implements ThinkingReader {
 	private pi: ExtensionAPI | undefined;
 	private services: ThinkingServices | undefined;
 	private active: ActiveRun | undefined;
+	private reasoningMemo = new WeakMap<HostAssistant, ReasoningMemo>();
 	private readonly durations = new Map<string, number>();
 	private readonly unsubscribe: (() => void)[] = [];
 	private timer: ReturnType<typeof setInterval> | undefined;
@@ -447,6 +488,7 @@ class ThinkingControllerImpl implements ThinkingReader {
 		this.active = undefined;
 		this.clearTimer();
 		this.durations.clear();
+		this.reasoningMemo = new WeakMap();
 		for (const entry of entries) {
 			if (entry.type !== "custom" || entry.customType !== DURATION_ENTRY_TYPE) continue;
 			const data = readDurationData(entry.data);
@@ -474,6 +516,7 @@ class ThinkingControllerImpl implements ThinkingReader {
 		this.active = undefined;
 		this.frame = 0;
 		this.durations.clear();
+		this.reasoningMemo = new WeakMap();
 		for (const unsubscribe of this.unsubscribe.splice(0)) {
 			try { unsubscribe(); } catch { /* Best effort during host teardown. */ }
 		}
@@ -485,10 +528,13 @@ class ThinkingControllerImpl implements ThinkingReader {
 
 	decorate(host: HostAssistant, nativeUpdate: UpdateContent, message: AssistantMessage, isStreaming: boolean | undefined): void {
 		if (this.disposed || (host.hiddenThinkingLabel ?? "") === "") {
+			this.reasoningMemo.delete(host);
 			nativeUpdate.call(host, message, isStreaming);
 			return;
 		}
-		const runs = collectThinkingRuns(message.content);
+		const reasoning = collectThinkingRuns(message.content, this.reasoningMemo.get(host));
+		this.reasoningMemo.set(host, reasoning);
+		const runs = reasoning.runs;
 		nativeUpdate.call(host, message, isStreaming);
 		if (this.disposed) return;
 		const container = host.contentContainer;
@@ -503,7 +549,7 @@ class ThinkingControllerImpl implements ThinkingReader {
 			const run = runs[runIndex];
 			if (!run) break;
 			const hidden = overrides?.get(runIndex) ?? host.hideThinkingBlock ?? false;
-			const summary = summarizeRun(message.content, run, active?.contentIndex);
+			const summary = summarizeRun(run, active?.contentIndex);
 			const data: RunViewData = summary === undefined
 				? { messageTimestamp: message.timestamp, start: run.start, fullText: run.fullText }
 				: { messageTimestamp: message.timestamp, start: run.start, fullText: run.fullText, summary };

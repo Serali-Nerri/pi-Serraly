@@ -26,23 +26,24 @@ export function auxiliaryToolRenderers(
 		},
 		renderResult(result, { expanded, isPartial }, theme, context) {
 			if (isPartial) return new Text("", 0, 0);
+			const { isError, showImages } = context;
 			const view = present(displayRecord(context.args), result);
-			const body = context.isError ? toolResultText(result) : view.body ?? toolResultText(result);
-			const summary = context.isError ? undefined : view.summary;
-			const warning = context.isError ? undefined : view.warning;
+			const body = isError ? toolResultText(result) : view.body ?? toolResultText(result);
+			const summary = isError ? undefined : view.summary;
+			const warning = isError ? undefined : view.warning;
 			const hint = context.keyHint("app.tools.expand", "to expand");
 			return {
 				render(width) {
 					const lines: string[] = [];
 					if (summary) lines.push(theme.fg("muted", summary));
 					if (warning) lines.push(theme.fg("warning", warning));
-					if (expanded || context.isError || (!summary && !warning)) {
+					if (expanded || isError || (!summary && !warning)) {
 						const preview = expanded ? undefined : truncateToVisualLines(body, 3, Math.max(1, width - 4), 0);
-						lines.push(theme.fg(context.isError ? "error" : "dim", preview ? preview.visualLines.join("\n") : body));
+						lines.push(theme.fg(isError ? "error" : "dim", preview ? preview.visualLines.join("\n") : body));
 						if (preview && preview.skippedCount > 0) lines.push(theme.fg("muted", `… ${preview.skippedCount} more lines · ${hint}`));
 					} else if (body && body !== summary) lines.push(theme.fg("dim", hint));
 					const text = lines.filter(Boolean).join("\n");
-					return renderTextWithImages(text, context.showImages ? result.content : [], theme, { paddingX: text ? 2 : 0 }).render(width);
+					return renderTextWithImages(text, showImages ? result.content : [], theme, { paddingX: text ? 2 : 0 }).render(width);
 				},
 				invalidate() {},
 			};

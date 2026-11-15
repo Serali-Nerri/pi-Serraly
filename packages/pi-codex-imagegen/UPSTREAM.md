@@ -14,5 +14,6 @@
 - Custom models retain upstream's six quality choices while exposing only standard still-image controls. Settings UI, request construction and ordinary/Code Mode schemas agree on preset-only controls; native dialogs refresh the schema without resetting quality.
 - Settings validation is owned by file/UI input boundaries rather than repeated for typed persistence.
 - Custom result rendering is text-only; Pi owns image display without changing model-visible content.
+- PNG chunk integrity checks use Node's native CRC32. Local API edit files are admitted against the encoded data-URL limit before reading, without restricting Codex inputs.
 
 Usage is defined in README.md; local change history is in CHANGELOG.local.md.

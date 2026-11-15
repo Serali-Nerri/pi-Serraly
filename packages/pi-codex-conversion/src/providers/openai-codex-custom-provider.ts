@@ -54,7 +54,7 @@ async function prepareCodexRequestBody<TApi extends Api>(
 		body = isResponsesLiteRequest(body)
 			? namespaceExistingResponsesLiteRequest({ ...body, parallel_tool_calls: false })
 			: applyResponsesLiteRequest(body);
-		body = await prepareResponsesLiteRequestImages(body);
+		body = await prepareResponsesLiteRequestImages(body, options?.signal);
 	}
 	if (!body.previous_response_id) {
 		const input = normalizeResponsesToolHistory(body.input ?? []);

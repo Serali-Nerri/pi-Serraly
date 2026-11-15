@@ -47,6 +47,8 @@ Here `my-image-gateway` is an example provider ID, not a built-in provider. `com
 
 Provide only a prompt to generate. For edits, provide up to five local image paths, or select the smallest recent conversation-image count that covers the targets. Codex accepts PNG, JPEG, GIF and WebP inputs. OpenAI API accepts PNG, JPEG and WebP inputs.
 
+OpenAI API edit inputs are limited to 20 MiB per encoded data URL, including base64 and its header. Local files that cannot fit are rejected before reading or encoding. This limit does not apply to Codex access.
+
 The agent chooses the available output format, size, transparency and animation timing for each request. API access exposes PNG, JPEG and WebP generation and editing; Flare/Sunburst presets also expose native GIF and SVG generation. GIF and SVG edits are unsupported. Transparent output requires PNG or WebP. Codex keeps its existing PNG generation and editing behaviour; describe size and aspect ratio in the prompt there.
 
 Images are saved beneath the workspace at `.pi/openai-codex-images` with a format-specific alias such as `latest.png` or `latest.gif`. GIF files retain their animation and provide a still preview when available. SVG is saved as a file without an inline preview.

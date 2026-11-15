@@ -1,5 +1,9 @@
 # @howaboua/pi-github-watch
 
+## Local changes
+
+- Avoid fetching discarded unresolved feedback during watch setup and discarded snapshots on resume, preserving the previous baseline and access checks.
+
 ## 0.0.6
 
 - Return `OK` after cancelling all watches.

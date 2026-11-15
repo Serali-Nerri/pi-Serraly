@@ -52,6 +52,39 @@ function closeReleasedWebSocket(socket: WebSocketLike, sessionId: string | undef
 	void closeAfter.then(close, close);
 }
 
+function removeWebSocketRoute(sessionId: string, routeKey: string, entry: SessionWebSocketCacheEntry): void {
+	entry.continuation = undefined;
+	const entries = websocketSessionCache.get(sessionId);
+	if (entries?.get(routeKey) === entry) entries.delete(routeKey);
+	if (entries?.size === 0) websocketSessionCache.delete(sessionId);
+}
+
+function retireOtherWebSocketRoutes(sessionId: string, routeKey: string): void {
+	for (const [key, entry] of websocketSessionCache.get(sessionId) ?? []) {
+		if (key === routeKey) continue;
+		// A changed handshake identity must not retain earlier credentials/history,
+		// but an in-flight lane owns its socket until release.
+		entry.retired = true;
+		if (entry.busy) continue;
+		removeWebSocketRoute(sessionId, key, entry);
+		closeWebSocketSilently(entry.socket, 1000, "stale_socket");
+	}
+}
+
+function releaseWebSocketRoute(
+	sessionId: string,
+	routeKey: string,
+	entry: SessionWebSocketCacheEntry,
+	{ keep, closeAfter }: { keep?: boolean | undefined; closeAfter?: Promise<void> | undefined } = {},
+): void {
+	if (!keep || entry.retired || !isWebSocketReusable(entry.socket)) {
+		removeWebSocketRoute(sessionId, routeKey, entry);
+		closeReleasedWebSocket(entry.socket, sessionId, closeAfter);
+		return;
+	}
+	entry.busy = false;
+}
+
 function closeWebSocketSessions(sessionId: string | undefined, cause = "session_shutdown"): void {
 	for (const [socket, owner] of retiringWebSockets) {
 		if (sessionId && owner !== sessionId) continue;
@@ -65,6 +98,7 @@ function closeWebSocketSessions(sessionId: string | undefined, cause = "session_
 		for (const controller of controllers ?? []) controller.abort();
 	}
 	const closeEntry = (entry: SessionWebSocketCacheEntry) => {
+		entry.continuation = undefined;
 		closeWebSocketSilently(entry.socket, 1000, cause);
 	};
 
@@ -131,7 +165,7 @@ export function preconnectWebSocket(
 	if (combinedSignal.aborted) release(false);
 	const operation = (async () => {
 		attemptedRoute = await websocketRouteKey(url, headers, accountId, env);
-		lease = await acquireWebSocket(url, headers, sessionId, accountId, combinedSignal, connectTimeoutMs, env, diagnostics);
+		lease = await acquireWebSocket(url, headers, sessionId, accountId, combinedSignal, connectTimeoutMs, env, diagnostics, false);
 		if (combinedSignal.aborted) release(false);
 	})().catch((error: unknown) => {
 		// Only a failure on the finalized route may influence transport fallback.
@@ -144,6 +178,7 @@ export function preconnectWebSocket(
 			if (!lease && !failure) return;
 			const finalRoute = await websocketRouteKey(finalUrl, finalHeaders, finalAccountId, finalEnv);
 			const matched = keep && !combinedSignal.aborted && (lease?.routeKey ?? attemptedRoute) === finalRoute;
+			if (matched && lease?.entry && !lease.entry.retired) retireOtherWebSocketRoutes(sessionId, finalRoute);
 			release(matched);
 			return matched ? failure : undefined;
 		},
@@ -164,6 +199,7 @@ export async function acquireWebSocket(
 	connectTimeoutMs?: number,
 	env?: ProviderEnv,
 	diagnostics?: CodexDiagnosticsSink,
+	retirePreviousRoutes = true,
 ): Promise<AcquiredWebSocket> {
 	if (!sessionId) {
 		const socket = await connectWebSocket(url, headers, signal, connectTimeoutMs, env, diagnostics);
@@ -183,22 +219,14 @@ export async function acquireWebSocket(
 		if (!cached.busy && isWebSocketReusable(cached.socket)) {
 			observeWebSocketDiagnostics(cached.socket, diagnostics);
 			cached.busy = true;
+			if (retirePreviousRoutes) retireOtherWebSocketRoutes(sessionId, routeKey);
 			return {
 				socket: cached.socket,
 				routeKey,
 				entry: cached,
 				reused: true,
 				socketAgeMs: Math.max(0, Date.now() - cached.createdAtMs),
-				release: ({ keep, closeAfter } = {}) => {
-					if (!keep || !isWebSocketReusable(cached.socket)) {
-						closeReleasedWebSocket(cached.socket, sessionId, closeAfter);
-						const currentEntries = websocketSessionCache.get(sessionId);
-						if (currentEntries?.get(routeKey) === cached) currentEntries.delete(routeKey);
-						if (currentEntries?.size === 0) websocketSessionCache.delete(sessionId);
-						return;
-					}
-					cached.busy = false;
-				},
+				release: options => releaseWebSocketRoute(sessionId, routeKey, cached, options),
 			};
 		}
 
@@ -214,9 +242,8 @@ export async function acquireWebSocket(
 		}
 
 		if (!isWebSocketReusable(cached.socket)) {
+			removeWebSocketRoute(sessionId, routeKey, cached);
 			closeWebSocketSilently(cached.socket, 1000, "stale_socket");
-			routeEntries?.delete(routeKey);
-			if (routeEntries?.size === 0) websocketSessionCache.delete(sessionId);
 		}
 	}
 
@@ -225,28 +252,25 @@ export async function acquireWebSocket(
 		closeWebSocketSilently(socket, 1000, "aborted");
 		throw new Error("Request was aborted");
 	}
-	const entry: SessionWebSocketCacheEntry = { socket, busy: true, createdAtMs: Date.now() };
+	const entry: SessionWebSocketCacheEntry = { socket, busy: true, retired: false, createdAtMs: Date.now() };
+	const onClose = () => {
+		socket.removeEventListener("close", onClose);
+		removeWebSocketRoute(sessionId, routeKey, entry);
+	};
+	socket.addEventListener("close", onClose);
 	routeEntries = websocketSessionCache.get(sessionId);
 	if (!routeEntries) {
 		routeEntries = new Map();
 		websocketSessionCache.set(sessionId, routeEntries);
 	}
 	routeEntries.set(routeKey, entry);
+	if (retirePreviousRoutes) retireOtherWebSocketRoutes(sessionId, routeKey);
 	return {
 		socket,
 		routeKey,
 		entry,
 		reused: false,
 		socketAgeMs: 0,
-		release: ({ keep, closeAfter } = {}) => {
-			if (!keep || !isWebSocketReusable(entry.socket)) {
-				closeReleasedWebSocket(entry.socket, sessionId, closeAfter);
-				const currentEntries = websocketSessionCache.get(sessionId);
-				if (currentEntries?.get(routeKey) === entry) currentEntries.delete(routeKey);
-				if (currentEntries?.size === 0) websocketSessionCache.delete(sessionId);
-				return;
-			}
-			entry.busy = false;
-		},
+		release: options => releaseWebSocketRoute(sessionId, routeKey, entry, options),
 	};
 }

@@ -70,7 +70,7 @@ export class BoardAwareness {
 	}
 	seen(ctx: ExtensionContext): string[] {
 		const own = binding(ctx);
-		return ctx.sessionManager.getEntries().flatMap((entry) => {
+		const seen = ctx.sessionManager.getEntries().flatMap((entry) => {
 			if (
 				entry.type !== "custom" ||
 				entry.customType !== "shepherdr-board-seen"
@@ -88,6 +88,7 @@ export class BoardAwareness {
 				? data.ids.filter((id): id is string => typeof id === "string")
 				: [];
 		});
+		return [...new Set(seen)];
 	}
 	markSeen(ctx: ExtensionContext, ids: string[]) {
 		if (!ids.length) return;

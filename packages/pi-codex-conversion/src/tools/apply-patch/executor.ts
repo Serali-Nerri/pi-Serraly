@@ -181,7 +181,7 @@ export async function executePatchWithRust({ cwd, patchText, signal, customRustB
 		args: [],
 		stdin: patchText,
 		cwd,
-		env: { ...process.env, PI_APPLY_PATCH_JSON: "1" },
+		env: { ...process.env, PI_APPLY_PATCH_JSON: "summary" },
 		signal,
 		label: "apply_patch",
 	});

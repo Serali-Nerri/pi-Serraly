@@ -31,6 +31,9 @@ export function createSavedSessionAccess(
 	signal: AbortSignal | undefined,
 ) {
 	const locations = new WeakMap<SavedNotesSession, SavedSessionLocator>();
+	// The sequential family walk alternates a candidate and its parent. Keep that
+	// recent pair without retaining every explored transcript for the request.
+	const loaded = new Map<string, SavedNotesSession>();
 	const containingMachine = (session: SavedNotesSession) =>
 		locations.get(session)?.machine ?? "local";
 	function locator(
@@ -47,6 +50,13 @@ export function createSavedSessionAccess(
 		location: SavedSessionLocator,
 	): Promise<SavedNotesSession> {
 		signal?.throwIfAborted();
+		const key = `${location.machine}\0${location.sessionFile}`;
+		const cached = loaded.get(key);
+		if (cached) {
+			loaded.delete(key);
+			loaded.set(key, cached);
+			return cached;
+		}
 		const session =
 			location.machine === "local"
 				? await readSavedNotesSession(
@@ -67,6 +77,8 @@ export function createSavedSessionAccess(
 							);
 						})();
 		locations.set(session, location);
+		loaded.set(key, session);
+		if (loaded.size > 2) loaded.delete(loaded.keys().next().value!);
 		return session;
 	}
 

@@ -72,7 +72,8 @@ pub fn run_main() -> i32 {
             return 1;
         }
     };
-    let json_output = std::env::var_os("PI_APPLY_PATCH_JSON").is_some();
+    let json_output = std::env::var_os("PI_APPLY_PATCH_JSON");
+    let include_changes = json_output.as_deref() != Some(std::ffi::OsStr::new("summary"));
     match runtime.block_on(crate::apply_patch(
         &patch_arg,
         &cwd,
@@ -82,18 +83,18 @@ pub fn run_main() -> i32 {
         /*sandbox*/ None,
     )) {
         Ok(delta) => {
-            if json_output {
-                let _ = write_json_result(&mut stdout, "success", None, &cwd, &delta);
+            if json_output.is_some() {
+                let _ = write_json_result(&mut stdout, "success", None, &cwd, &delta, include_changes);
             }
             // Flush to ensure output ordering when used in pipelines.
             let _ = stdout.flush();
             0
         }
         Err(error) => {
-            if json_output {
+            if json_output.is_some() {
                 let message = error.to_string();
                 let (_, delta) = error.into_parts();
-                let _ = write_json_result(&mut stdout, "failure", Some(&message), &cwd, &delta);
+                let _ = write_json_result(&mut stdout, "failure", Some(&message), &cwd, &delta, include_changes);
                 let _ = stdout.flush();
             }
             1
@@ -107,9 +108,10 @@ fn write_json_result(
     error: Option<&str>,
     cwd: &PathUri,
     delta: &AppliedPatchDelta,
+    include_changes: bool,
 ) -> std::io::Result<()> {
-    let summary = summarize_delta(cwd, delta);
-    let value = json!({
+    let summary = summarize_delta(cwd, delta, include_changes);
+    let mut value = json!({
         "status": status,
         "error": error,
         "exact": delta.is_exact(),
@@ -120,8 +122,10 @@ fn write_json_result(
             "movedFiles": summary.moved_files,
             "fuzz": if delta.is_exact() { 0 } else { 1 },
         },
-        "changes": summary.changes,
     });
+    if include_changes {
+        value["changes"] = json!(summary.changes);
+    }
     writeln!(out, "{value}")
 }
 
@@ -133,7 +137,7 @@ struct DeltaSummary {
     changes: Vec<serde_json::Value>,
 }
 
-fn summarize_delta(cwd: &PathUri, delta: &AppliedPatchDelta) -> DeltaSummary {
+fn summarize_delta(cwd: &PathUri, delta: &AppliedPatchDelta, include_changes: bool) -> DeltaSummary {
     let mut changed_files = Vec::new();
     let mut created_files = Vec::new();
     let mut deleted_files = Vec::new();
@@ -151,21 +155,25 @@ fn summarize_delta(cwd: &PathUri, delta: &AppliedPatchDelta) -> DeltaSummary {
                 if overwritten_content.is_none() {
                     push_unique(&mut created_files, path.clone());
                 }
-                changes.push(json!({
-                    "path": path,
-                    "kind": "add",
-                    "content": content,
-                    "overwrittenContent": overwritten_content,
-                }));
+                if include_changes {
+                    changes.push(json!({
+                        "path": path,
+                        "kind": "add",
+                        "content": content,
+                        "overwrittenContent": overwritten_content,
+                    }));
+                }
             }
             AppliedPatchFileChange::Delete { content } => {
                 push_unique(&mut changed_files, path.clone());
                 push_unique(&mut deleted_files, path.clone());
-                changes.push(json!({
-                    "path": path,
-                    "kind": "delete",
-                    "content": content,
-                }));
+                if include_changes {
+                    changes.push(json!({
+                        "path": path,
+                        "kind": "delete",
+                        "content": content,
+                    }));
+                }
             }
             AppliedPatchFileChange::Update {
                 move_path,
@@ -185,14 +193,16 @@ fn summarize_delta(cwd: &PathUri, delta: &AppliedPatchDelta) -> DeltaSummary {
                     }
                     push_unique(&mut moved_files, format!("{path} -> {move_path}"));
                 }
-                changes.push(json!({
-                    "path": path,
-                    "kind": "update",
-                    "movePath": move_path_display,
-                    "oldContent": old_content,
-                    "overwrittenMoveContent": overwritten_move_content,
-                    "newContent": new_content,
-                }));
+                if include_changes {
+                    changes.push(json!({
+                        "path": path,
+                        "kind": "update",
+                        "movePath": move_path_display,
+                        "oldContent": old_content,
+                        "overwrittenMoveContent": overwritten_move_content,
+                        "newContent": new_content,
+                    }));
+                }
             }
         }
     }

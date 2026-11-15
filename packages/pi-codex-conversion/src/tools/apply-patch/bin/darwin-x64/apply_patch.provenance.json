@@ -3,13 +3,14 @@
   "source": {
     "repository": "openai/codex",
     "revision": "83086188ae0614bd882818ff1aa23f3194962012",
-    "inputsSha256": "ee9c9cd8f2e4de01626f32e6c5592ed3c02c307c1b23307c91cbce08b299b295"
+    "inputsSha256": "f2c61bbe22ca70a08acf2c5cc4d70d45804cdb3a87ced7478f7bca86f32ca31c"
   },
   "binary": {
-    "sha256": "5189e52430e0e129ec58862519514e1ba56eef266f15d7221839459664561140"
+    "sha256": "5433e4f7ce9e50298110274ad6e2ce61e71cf26b60050f8cdd634fad617c0757"
   },
   "build": {
     "target": "x86_64-apple-darwin",
+    "host": "aarch64-apple-darwin",
     "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
     "cargo": "cargo 1.99.1 (5f94df478 2026-08-27)"
   }

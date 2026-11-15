@@ -284,7 +284,7 @@ export class CoreConnection {
 	}
 	async subscribe(
 		targets: string[],
-		onChange: () => void,
+		onChange: (terminal?: string) => void,
 		onDisconnect: (error?: Error) => void,
 		signal?: AbortSignal,
 	): Promise<() => void> {
@@ -300,7 +300,11 @@ export class CoreConnection {
 						notification.event.terminal &&
 						watched.has(notification.event.terminal))
 				)
-					onChange();
+					onChange(
+						notification.method === "event"
+							? notification.event.terminal
+							: undefined,
+					);
 			},
 			{ ...(signal ? { signal } : {}) },
 		);

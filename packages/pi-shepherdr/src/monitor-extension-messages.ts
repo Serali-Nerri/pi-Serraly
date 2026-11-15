@@ -65,7 +65,10 @@ export class MonitorExtensionMessages {
 		this.refreshTail = Promise.resolve();
 	}
 
-	refresh(panels: PaneInfo[] = this.panels): Promise<void> {
+	refresh(
+		panels: PaneInfo[] = this.panels,
+		terminals?: ReadonlySet<string>,
+	): Promise<void> {
 		this.panels = panels.filter(
 			(panel) =>
 				this.options.state.byTerminal(panel.terminal_id) && sessionPath(panel),
@@ -77,7 +80,8 @@ export class MonitorExtensionMessages {
 				...new Set(this.panels.map((panel) => sessionPath(panel)!)),
 			].sort();
 			const key = JSON.stringify(paths);
-			if (key !== this.key) {
+			const replaced = key !== this.key;
+			if (replaced) {
 				this.controller?.abort();
 				this.unsubscribe?.();
 				this.unsubscribe = undefined;
@@ -108,7 +112,15 @@ export class MonitorExtensionMessages {
 				this.key = key;
 			}
 			// Subscribe before reading to cover changes during setup and restoration.
-			for (const path of paths) this.check(path);
+			const changedPaths =
+				replaced || !terminals
+					? paths
+					: new Set(
+							this.panels
+								.filter((panel) => terminals.has(panel.terminal_id))
+								.map((panel) => sessionPath(panel)!),
+						);
+			for (const path of changedPaths) this.check(path);
 		};
 		this.refreshTail = this.refreshTail.then(update, update).catch((error) => {
 			if (generation === this.generation) this.warning(error);

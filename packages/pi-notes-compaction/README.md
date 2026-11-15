@@ -49,6 +49,8 @@ Explicit searches of tool history, a window containing live context or another a
 
 Previously shared local notes and history remain readable from accessible saved sessions after the other agent closes or Shepherdr is removed. Notes follows saved family relationships and attachment aliases without requiring PCC or a live parent. Reads use the other session's selected branch and preserve its history IDs. When only a retained attachment snapshot is available, notes identify it as detached or potentially stale. Snapshots do not contain history. Cross-agent writes still require live routing.
 
+Repeated checkpoint replacements load only the selected revisions from SQLite, not superseded bodies. Saved-family lookups reuse the two most recent successful machine/session reads within one request, rather than retaining every explored transcript. The next request reads saved sessions anew.
+
 Shepherdr 0.2.27 remains supported for live sharing, including across connected machines. Reading a closed agent's saved session on another machine requires a saved-session transport that this Shepherdr version does not provide. Resume the shared agent and reconnect its machine, or make its saved Pi JSONL session available locally. Saved reads do not replace hybrid lookup or its encrypted cache with local-only results. History uses Pi JSONL, never remote notes or cached responses.
 
 In Code Mode and Notebook, plaintext notes and history return ordinary JavaScript values. Encrypted notes return delivery receipts instead of exposing their contents to JavaScript.

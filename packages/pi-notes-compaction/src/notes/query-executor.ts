@@ -106,6 +106,7 @@ export function createQueryExecutor(
 			normalizeNoteParams(localRaw, lifecycle.agent(ctx)),
 		);
 		if (signal?.aborted) throw new Error("Note operation cancelled");
+		const notes = collectNotes(store, ctx.sessionManager.getBranch());
 		const local = useNotes(
 			pi,
 			store,
@@ -115,6 +116,7 @@ export function createQueryExecutor(
 			lifecycle.windows.current?.currentWindowId ?? "",
 			lifecycle.runId,
 			shared,
+			notes,
 		);
 		if (
 			params["action"] === "write_file" ||
@@ -134,7 +136,6 @@ export function createQueryExecutor(
 							}),
 				},
 			};
-		const notes = collectNotes(store, ctx.sessionManager.getBranch());
 		if (
 			params["action"] === "read_file" &&
 			notes.get(params["path"] as string)?.mode === "replace"

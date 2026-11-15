@@ -17,8 +17,8 @@ export async function readSubscribedUpdates(
 		const identities = JSON.stringify(store.agentIdentities(caller.agentName));
 		return store.all<{ message_id: string; thread_id: string }>(
 			`SELECT p.id AS message_id,p.root AS thread_id FROM posts p
-			WHERE p.board_id=? AND p.author NOT IN (SELECT value FROM json_each(?)) AND NOT EXISTS
-			(SELECT 1 FROM json_each(?) WHERE value=p.id) AND EXISTS
+			WHERE p.board_id=? AND p.author NOT IN (SELECT value FROM json_each(?))
+			AND p.id NOT IN (SELECT value FROM json_each(?)) AND EXISTS
 			(SELECT 1 FROM subscriptions s WHERE s.board_id=p.board_id
 			AND s.agent IN (SELECT value FROM json_each(?)) AND s.enabled=1
 			AND (s.agent=? OR NOT EXISTS (SELECT 1 FROM subscriptions n WHERE n.board_id=s.board_id AND n.target=s.target AND n.agent=?))

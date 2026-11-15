@@ -3,7 +3,7 @@ import type { AgentsParams, READ_SOURCES } from "./agents-contract.js";
 import { readTerminal } from "./core/agents.js";
 import type { AgentFleet, ConnectedMachine } from "./fleet/index.js";
 import { type AgentProfile, loadAgentProfiles } from "./profiles.js";
-import type { AgentStatus, PaneInfo, SessionSnapshot } from "./types.js";
+import type { PaneInfo, SessionSnapshot } from "./types.js";
 
 const MAX_LIST_ITEMS = 30;
 const MAX_TERMINAL_READ_CHARS = 36_000;
@@ -176,9 +176,7 @@ function compactAgent(
 function matchesAgent(
 	agent: Record<string, unknown>,
 	query: string | undefined,
-	status: AgentStatus | undefined,
 ): boolean {
-	if (status && agent["status"] !== status) return false;
 	if (!query) return true;
 	const normalize = (value: string) =>
 		value
@@ -210,6 +208,7 @@ export async function listFleetAgents(
 							.filter(
 								(agent) =>
 									agent.agent === "pi" &&
+									(!params.status || agent.agent_status === params.status) &&
 									(!machine.local ||
 										agent.terminal_id !== process.env["HC_TERMINAL_ID"]),
 							)
@@ -232,7 +231,7 @@ export async function listFleetAgents(
 								return result;
 							}),
 					)
-				).filter((agent) => matchesAgent(agent, params.query, params.status));
+				).filter((agent) => matchesAgent(agent, params.query));
 			}),
 		)
 	).flat();

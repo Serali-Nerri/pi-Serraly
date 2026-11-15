@@ -273,7 +273,7 @@ async function run(input: TsWorkerInput): Promise<void> {
 		if (Object.keys(storeValues).length) values["__tsStore"] = storeValues;
 		try {
 			await graph.prepareCheckpoints(values, captureBindings);
-			const capture = graph.capture(values, captureBindings, input.state.pins, input.state.imports);
+			const capture = await graph.capture(values, captureBindings, input.state.pins, input.state.imports);
 			if (serialize(capture.state).byteLength > input.maxStateBytes) throw new Error("TS checkpoint exceeds the storage budget; retain less data or increase the heap budget");
 			send({ kind: "live-done", ...capture, sourceStarted, skipped: [...unreadable, ...capture.skipped], ...(error ? { error } : {}) });
 		} catch (cause) {
@@ -312,7 +312,7 @@ async function run(input: TsWorkerInput): Promise<void> {
 	// An unused fresh store is not a write: overlapping cells must not invent competing roots.
 	if (Object.hasOwn(input.state.roots, "__tsStore") || Object.keys(storeValues).length) values["__tsStore"] = storeValues;
 	await graph.prepareCheckpoints(values, input.bindings);
-	const candidate = graph.encode(values, input.bindings, input.state.pins, input.state.imports);
+	const candidate = await graph.encode(values, input.bindings, input.state.pins, input.state.imports);
 	if (serialize(candidate).byteLength > input.maxStateBytes) throw new Error("TS retained state exceeds the session storage budget; retain less data or increase the heap budget");
 	send({ kind: "done", state: candidate });
 }

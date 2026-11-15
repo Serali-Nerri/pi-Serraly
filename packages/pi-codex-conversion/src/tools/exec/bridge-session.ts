@@ -26,6 +26,7 @@ export interface BridgeExecSession {
 	interactive: boolean;
 	nextEmptyPollYieldMs?: number | undefined;
 	lastSeq: number;
+	pollQueue: Promise<void>;
 	startedAt: number;
 	updatedAt: number;
 	finalized: boolean;
@@ -59,7 +60,6 @@ export interface BridgeSessionRuntime {
 
 export function createBridgeSessionRuntime(binaryPath?: () => string | undefined): BridgeSessionRuntime {
 	const bridge = createExecBridgeClient(binaryPath);
-	let pollQueue = Promise.resolve();
 
 	function setClosedExitCode(session: BridgeExecSession, code: number | null | undefined, signal?: string | null): void {
 		if (session.exitCode !== undefined && session.exitCode !== null) return;
@@ -71,36 +71,32 @@ export function createBridgeSessionRuntime(binaryPath?: () => string | undefined
 	}
 
 	async function poll(session: BridgeExecSession, hooks: BridgeSessionHooks, waitMs = 0, maxBytes?: number): Promise<void> {
-		if (!hooks.isOwned(session) || session.finalized) return;
-		const response = await bridge.request<BridgeReadResponse>({
-			op: "read",
-			process_id: session.processId,
-			after_seq: session.lastSeq,
-			max_bytes: maxBytes,
-			wait_ms: waitMs,
-		});
-		for (const chunk of response.chunks ?? []) {
-			hooks.onOutput(session, session.outputDecoders[chunk.stream].write(chunkToBytes(chunk.chunk)));
-			session.lastSeq = Math.max(session.lastSeq, chunk.seq);
-		}
-		session.lastSeq = Math.max(session.lastSeq, response.nextSeq - 1);
-		if (response.closed) {
-			if (!session.outputDecodersFlushed) {
-				session.outputDecodersFlushed = true;
-				for (const decoder of Object.values(session.outputDecoders)) hooks.onOutput(session, decoder.end());
-			}
-			setClosedExitCode(session, response.exitCode);
-			hooks.onExit(session);
-		}
-	}
-
-	async function pollBackground(session: BridgeExecSession, hooks: BridgeSessionHooks): Promise<void> {
-		const previous = pollQueue;
+		const previous = session.pollQueue;
 		let release!: () => void;
-		pollQueue = new Promise<void>((resolve) => { release = resolve; });
+		session.pollQueue = new Promise<void>((resolve) => { release = resolve; });
 		await previous;
 		try {
-			await poll(session, hooks, 250);
+			if (!hooks.isOwned(session) || session.finalized) return;
+			const response = await bridge.request<BridgeReadResponse>({
+				op: "read",
+				process_id: session.processId,
+				after_seq: session.lastSeq,
+				max_bytes: maxBytes,
+				wait_ms: waitMs,
+			});
+			for (const chunk of response.chunks ?? []) {
+				hooks.onOutput(session, session.outputDecoders[chunk.stream].write(chunkToBytes(chunk.chunk)));
+				session.lastSeq = Math.max(session.lastSeq, chunk.seq);
+			}
+			session.lastSeq = Math.max(session.lastSeq, response.nextSeq - 1);
+			if (response.closed) {
+				if (!session.outputDecodersFlushed) {
+					session.outputDecodersFlushed = true;
+					for (const decoder of Object.values(session.outputDecoders)) hooks.onOutput(session, decoder.end());
+				}
+				setClosedExitCode(session, response.exitCode);
+				hooks.onExit(session);
+			}
 		} finally {
 			release();
 		}
@@ -109,7 +105,7 @@ export function createBridgeSessionRuntime(binaryPath?: () => string | undefined
 	async function pollLoop(session: BridgeExecSession, hooks: BridgeSessionHooks): Promise<void> {
 		while (hooks.isOwned(session) && (session.exitCode === undefined || session.exitCode === null)) {
 			try {
-				await pollBackground(session, hooks);
+				await poll(session, hooks, 250);
 			} catch (error) {
 				hooks.onOutput(session, `${error instanceof Error ? error.message : String(error)}\n`);
 				session.exitCode = 1;
@@ -136,6 +132,7 @@ export function createBridgeSessionRuntime(binaryPath?: () => string | undefined
 			listeners: new Set(),
 			interactive: Boolean(input.tty),
 			lastSeq: 0,
+			pollQueue: Promise.resolve(),
 			startedAt: Date.now(),
 			updatedAt: Date.now(),
 			finalized: false,

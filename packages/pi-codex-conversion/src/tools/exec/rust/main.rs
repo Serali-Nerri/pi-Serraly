@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::io::BufRead;
+use std::io::Write;
 use std::path::PathBuf;
 
 use codex_exec_shim::local_process::LocalProcess;
@@ -31,14 +32,17 @@ fn print_response<T: Serialize>(request_id: u64, result: Result<T, String>) {
         Ok(result) => Response { request_id, ok: true, result: Some(serde_json::to_value(result).unwrap()), error: None },
         Err(error) => Response { request_id, ok: false, result: None, error: Some(error) },
     };
-    println!("{}", serde_json::to_string(&response).unwrap());
+    let frame = serde_json::to_string(&response).unwrap();
+    writeln!(std::io::stdout().lock(), "{frame}").unwrap();
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let backend = LocalProcess::default();
+    let mut reads = tokio::task::JoinSet::new();
     for line in std::io::stdin().lock().lines() {
         let line = line?;
+        while reads.try_join_next().is_some() {}
         if line.trim().is_empty() { continue; }
         let request: Request = match serde_json::from_str(&line) {
             Ok(request) => request,
@@ -53,8 +57,11 @@ async fn main() -> anyhow::Result<()> {
                 print_response(request_id, result);
             }
             Request::Read { request_id, process_id, after_seq, max_bytes, wait_ms } => {
-                let result = backend.exec_read(ReadParams { process_id: ProcessId::from(process_id), after_seq, max_bytes, wait_ms }).await.map_err(|e| e.to_string());
-                print_response(request_id, result);
+                let backend = backend.clone();
+                reads.spawn(async move {
+                    let result = backend.exec_read(ReadParams { process_id: ProcessId::from(process_id), after_seq, max_bytes, wait_ms }).await.map_err(|e| e.to_string());
+                    print_response(request_id, result);
+                });
             }
             Request::Write { request_id, process_id, chunk } => {
                 let result = backend.exec_write(WriteParams { process_id: ProcessId::from(process_id), chunk: chunk.into() }).await.map_err(|e| e.to_string());
@@ -66,11 +73,13 @@ async fn main() -> anyhow::Result<()> {
             }
             Request::Shutdown { request_id } => {
                 backend.shutdown().await;
+                reads.shutdown().await;
                 print_response(request_id, Ok(json!({ "shutdown": true })));
                 break;
             }
         }
     }
+    reads.shutdown().await;
     backend.shutdown().await;
     Ok(())
 }

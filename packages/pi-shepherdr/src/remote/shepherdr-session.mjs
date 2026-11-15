@@ -13,9 +13,19 @@ function record(value) {
 }
 
 const READ_CHUNK_BYTES = 64 * 1024;
+const SESSION_CACHE_MAX_ENTRIES = 32;
+const SESSION_CACHE_MAX_BYTES = 8 * 1024 * 1024;
 /** @typedef {{leaf:string|undefined,entries:Record<string,unknown>[],result:import("../types.js").SessionView}} ViewSummary */
-/** @type {Map<string,{mtimeMs:number,ctimeMs:number,ino:number,dev:number,size:number,digest:string,terminated:boolean,summary:ViewSummary}>} */
+/** @type {Map<string,{mtimeMs:number,ctimeMs:number,ino:number,dev:number,size:number,digest:string,terminated:boolean,summary:ViewSummary,bytes:number}>} */
 const sessionCache = new Map();
+let sessionCacheBytes = 0;
+
+/** @param {string} path */
+function deleteCachedSession(path) {
+	const cached = sessionCache.get(path);
+	if (cached) sessionCacheBytes -= cached.bytes;
+	sessionCache.delete(path);
+}
 
 /** @param {string} path */
 function expandHome(path) {
@@ -325,7 +335,7 @@ export async function readSessionView(path) {
 		metadata = await stat(expanded);
 	} catch (error) {
 		if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-			sessionCache.delete(expanded);
+			deleteCachedSession(expanded);
 			return {};
 		}
 		throw error;
@@ -337,8 +347,11 @@ export async function readSessionView(path) {
 		cached.size === metadata.size &&
 		cached.mtimeMs === metadata.mtimeMs &&
 		cached.ctimeMs === metadata.ctimeMs
-	)
+	) {
+		sessionCache.delete(expanded);
+		sessionCache.set(expanded, cached);
 		return cached.summary.result;
+	}
 	const file = await open(expanded, "r");
 	try {
 		metadata = await file.stat();
@@ -360,17 +373,32 @@ export async function readSessionView(path) {
 			after.mtimeMs === metadata.mtimeMs &&
 			after.ctimeMs === metadata.ctimeMs
 		) {
-			sessionCache.set(expanded, {
-				size: metadata.size,
-				mtimeMs: metadata.mtimeMs,
-				ctimeMs: metadata.ctimeMs,
-				ino: metadata.ino,
-				dev: metadata.dev,
-				digest: fingerprinted.digest,
-				terminated: fingerprinted.terminated,
-				summary,
-			});
-		} else sessionCache.delete(expanded);
+			// Serialized UTF-16 size conservatively counts shared semantic strings twice.
+			const bytes = JSON.stringify(summary).length * 2;
+			deleteCachedSession(expanded);
+			if (bytes <= SESSION_CACHE_MAX_BYTES) {
+				sessionCache.set(expanded, {
+					size: metadata.size,
+					mtimeMs: metadata.mtimeMs,
+					ctimeMs: metadata.ctimeMs,
+					ino: metadata.ino,
+					dev: metadata.dev,
+					digest: fingerprinted.digest,
+					terminated: fingerprinted.terminated,
+					summary,
+					bytes,
+				});
+				sessionCacheBytes += bytes;
+				for (const path of sessionCache.keys()) {
+					if (
+						sessionCache.size <= SESSION_CACHE_MAX_ENTRIES &&
+						sessionCacheBytes <= SESSION_CACHE_MAX_BYTES
+					)
+						break;
+					deleteCachedSession(path);
+				}
+			}
+		} else deleteCachedSession(expanded);
 		return summary.result;
 	} finally {
 		await file.close();

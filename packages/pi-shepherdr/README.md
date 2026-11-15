@@ -58,6 +58,8 @@ Machines belong to the host running Pi, not the machine displaying its terminal.
 
 Remote file watches, Notes, shared-context calls and peer messages use a private Core-owned helper, started lazily and kept alive over a flow-controlled terminal attachment. Shepherdr does not install SSH bridge files or poll through `machine.exec`. Voice focus uses a separate private helper so large Notes transfers do not block its channel. Monitoring uses each Core's own snapshot rather than treating a missing machine in an aggregate terminal list as closed agents.
 
+Status events refresh only the affected watched sessions. Subscription changes and lost-event recovery reconcile all watches. Saved-session summaries use a process-local least-recently-used cache capped at 32 sessions and 8 MiB of serialized UTF-16 summary size. Evicted or oversized summaries are reread when needed; replies and notices are never truncated to fit the cache.
+
 The same connection supervises native remote-parent lifetimes while active. An initially denied parent read gets up to five attempts within two seconds, allowing a new cross-machine parent link to become readable. Other failures and failures after a verified read warn immediately; persistent initial denial warns after this bounded retry. A later successful check reports recovery. Existing agents remain available, and a disconnected or unreachable parent is never treated as dead. If checks remain unavailable, reconnect the parent Core or close its children explicitly.
 
 A brief closing grace makes a best-effort check for Pi exiting. No separate background service is installed. Closing checks have no persistent warning report. This does not guarantee cleanup after an OS failure or a prolonged Pi shutdown.

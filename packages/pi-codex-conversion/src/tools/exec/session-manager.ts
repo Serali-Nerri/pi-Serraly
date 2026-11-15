@@ -127,9 +127,11 @@ export function createExecSessionManager(options: ExecSessionManagerOptions = {}
 
 	function rememberCompletedResult(sessionId: number, result: UnifiedExecResult): void {
 		const bounded = truncateToTail(result.output, MAX_COMPLETED_SESSION_OUTPUT_CHARS);
+		// A sliced tail can retain the entire process buffer in V8. Copy its UTF-16 storage for the replay cache.
+		const output = Buffer.from(bounded.output, "utf16le").toString("utf16le");
 		completedResults.set(sessionId, {
 			...result,
-			output: bounded.removed > 0 ? `[Earlier completed output omitted]\n${bounded.output}` : bounded.output,
+			output: bounded.removed > 0 ? `[Earlier completed output omitted]\n${output}` : output,
 			...(bounded.removed > 0 ? { truncated: true } : {}),
 		});
 		if (completedResults.size <= MAX_COMPLETED_SESSION_HISTORY) return;

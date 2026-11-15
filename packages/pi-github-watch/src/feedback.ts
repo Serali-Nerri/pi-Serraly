@@ -86,6 +86,7 @@ export interface ThreadSnapshot {
 export async function threadSnapshot(
 	gh: (args: string[]) => Promise<string>,
 	thread: Thread,
+	scope: "conversation" | "all" = "all",
 ): Promise<ThreadSnapshot> {
 	const [owner, name] = thread.repo.split("/");
 	const variables = [
@@ -174,6 +175,7 @@ export async function threadSnapshot(
 			snapshot.conversation.set(item.id, `${item.updatedAt}:${item.state}`);
 		}
 	}
+	if (scope === "conversation") return snapshot;
 	for await (const nodes of pages(
 		connection(
 			`reviewThreads(first:100,after:$cursor) { nodes { id isResolved comments(first:100) { nodes { ${reviewCommentFields} } ${paging} } } ${paging} }`,
