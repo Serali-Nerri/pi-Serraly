@@ -2,6 +2,7 @@
 
 ## Local changes
 
+- Add repository watches that notify the session of newly created issues and PRs, including the authenticated account's, as metadata awaiting evaluation.
 - Avoid fetching discarded unresolved feedback during watch setup and discarded snapshots on resume, preserving the previous baseline and access checks.
 
 ## 0.0.6

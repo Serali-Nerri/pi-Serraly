@@ -14,20 +14,20 @@ This private package includes the ten retained Howaboua packages, `pi-ui` and `p
 
 ## Included packages
 
-| Package               | What the aggregate activates                                                                      |
-| --------------------- | ------------------------------------------------------------------------------------------------- |
-| `pi-codex-conversion` | Provider integration, tool execution, Code and Notebook integration, and tool cards.              |
-| `pi-ask`              | Interactive questions, review triage and human handoff.                                           |
-| `pi-codex-imagegen`   | Image generation and editing tools.                                                               |
-| `pi-codex-guardian`   | Automatic tool review with Codex's bundled policy and optional local block rules.                 |
-| `pi-agent-board`      | The board tool, `/board` command and viewer. Existing board enablement settings are preserved.    |
-| `pi-auto-trees`       | The `/marker`, prime and `/end` session workflow.                                                 |
-| `pi-shepherdr`        | Herdr multi-agent orchestration, including its Agent Board integration.                           |
-| `pi-notes-compaction` | Persistent notes, session history search, context windows and shared context.                     |
-| `pi-suggestions`      | Next-prompt drafts in the empty editor and the `/suggestions` settings command.                   |
-| `pi-github-watch`     | The `github_watch` tool for opt-in feedback and Actions run notifications in the current session. |
-| `pi-ui`               | Thinking, footer, activity-completion hints, sticky user messages and opt-in session naming.      |
-| `pi-session-recap`    | Manual and idle session recap cards.                                                              |
+| Package               | What the aggregate activates                                                                                    |
+| --------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `pi-codex-conversion` | Provider integration, tool execution, Code and Notebook integration, and tool cards.                            |
+| `pi-ask`              | Interactive questions, review triage and human handoff.                                                         |
+| `pi-codex-imagegen`   | Image generation and editing tools.                                                                             |
+| `pi-codex-guardian`   | Automatic tool review with Codex's bundled policy and optional local block rules.                               |
+| `pi-agent-board`      | The board tool, `/board` command and viewer. Existing board enablement settings are preserved.                  |
+| `pi-auto-trees`       | The `/marker`, prime and `/end` session workflow.                                                               |
+| `pi-shepherdr`        | Herdr multi-agent orchestration, including its Agent Board integration.                                         |
+| `pi-notes-compaction` | Persistent notes, session history search, context windows and shared context.                                   |
+| `pi-suggestions`      | Next-prompt drafts in the empty editor and the `/suggestions` settings command.                                 |
+| `pi-github-watch`     | The `github_watch` tool for opt-in feedback, new issue/PR and Actions run notifications in the current session. |
+| `pi-ui`               | Thinking, footer, activity-completion hints, sticky user messages and opt-in session naming.                    |
+| `pi-session-recap`    | Manual and idle session recap cards.                                                                            |
 
 Enabling the Notes entry provides Notes/History; session auto-pruning remains off by default. Suggestions' prediction requests remain off by default; see its [README](../pi-suggestions/README.md) for setup. Recap's idle automatic mode is on by default and makes model requests; existing member settings are preserved. See each member's README for configuration. `context-view` and other extensions outside this repository remain separate installs.
 

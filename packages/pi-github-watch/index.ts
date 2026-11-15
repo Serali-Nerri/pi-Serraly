@@ -4,7 +4,7 @@ import {
 	type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 import { compile, obj, oneOf, opt, str } from "@earendil-works/pi-schema";
-import { deliver, feedbackMessage } from "./src/delivery.js";
+import { deliver, feedbackMessage, newThreadsMessage } from "./src/delivery.js";
 import type { ThreadSnapshot } from "./src/feedback.js";
 import {
 	githubClient,
@@ -24,6 +24,8 @@ const checkParameters = compile(WatchParameters).check;
 interface Watch {
 	thread: WatchTarget;
 	seen: ThreadSnapshot;
+	/** Highest issue/PR number seen by a repository watch. */
+	latest: number;
 	controller: AbortController;
 	timer?: ReturnType<typeof setTimeout>;
 	state: "watching" | "paused";
@@ -33,10 +35,10 @@ const MINUTE = 60000;
 const AUTOMATIC_UPDATES =
 	"Updates arrive automatically; no polling or gh run watch needed";
 const HELP =
-	"watch:{action:'watch', thread:issue/PR URL | Actions run URL | owner/repo#123 | issue/PR number}. status:{action:'status'}. cancel:{action:'cancel', thread:reference}; omit thread to cancel all offline. Issues/runs check each minute; PRs after 7 minutes, then each minute. PRs surface unresolved review threads, including existing ones; unchanged lists stay quiet. Conversation comments and standalone reviews notify on changes, excluding the authenticated gh user. PR watches stop on closure or merge; closed PRs return immediately. Issue watches continue. Runs follow the latest attempt, notify on completion and stop; completed runs return immediately. Metadata only, no comment bodies/logs. Cancellation/session switch/reload/shutdown ends watches. Failed checks pause; watch again to retry";
+	"watch:{action:'watch', thread:issue/PR URL | Actions run URL | owner/repo#123 | issue/PR number | owner/repo | repository URL}. status:{action:'status'}. cancel:{action:'cancel', thread:reference}; omit thread to cancel all offline. Issues/runs/repositories check each minute; PRs after 7 minutes, then each minute. PRs surface unresolved review threads, including existing ones; unchanged lists stay quiet. Conversation comments and standalone reviews notify on changes, excluding the authenticated gh user. Repositories notify on issues/PRs created after the watch starts, including the authenticated gh user's; existing ones are not reported. PR watches stop on closure or merge; closed PRs return immediately. Issue and repository watches continue. Runs follow the latest attempt, notify on completion and stop; completed runs return immediately. Metadata only, no comment bodies/logs. Cancellation/session switch/reload/shutdown ends watches. Failed checks pause; watch again to retry";
 
 const GPT_HELP =
-	"watch:{action:'watch',thread:issue/PR URL|Actions run URL|owner/repo#123|issue/PR number}; status:{action:'status'}; cancel:{action:'cancel',thread:reference}, omit thread=cancel all offline. Issues/runs:1min; PRs:7min then1min. PR unresolved review threads INCLUDING existing; unchanged=quiet. Conversation comments/standalone reviews notify changes EXCEPT authenticated gh user. PR closed/merged→stop; already closed→return. Issues continue. Runs latest attempt; completed→notify+stop; already completed→return. Metadata ONLY; NO comment bodies/logs. Cancel/session switch/reload/shutdown→end watches. Check failure→pause; retry→watch again";
+	"watch:{action:'watch',thread:issue/PR URL|Actions run URL|owner/repo#123|issue/PR number|owner/repo|repository URL}; status:{action:'status'}; cancel:{action:'cancel',thread:reference}, omit thread=cancel all offline. Issues/runs/repos:1min; PRs:7min then1min. PR unresolved review threads INCLUDING existing; unchanged=quiet. Conversation comments/standalone reviews notify changes EXCEPT authenticated gh user. Repos notify issues/PRs created after watch start INCLUDING authenticated gh user's; existing NOT reported. PR closed/merged→stop; already closed→return. Issues/repos continue. Runs latest attempt; completed→notify+stop; already completed→return. Metadata ONLY; NO comment bodies/logs. Cancel/session switch/reload/shutdown→end watches. Check failure→pause; retry→watch again";
 
 function runResult(
 	run: WorkflowRun,
@@ -86,6 +88,17 @@ export default async function (pi: ExtensionAPI) {
 					schedule(watch, ctx, MINUTE);
 					return;
 				}
+				if (watch.thread.kind === "repo") {
+					const { latest, items } = await client.newThreads(
+						watch.thread.repo,
+						watch.latest,
+					);
+					if (watch.controller.signal.aborted) return;
+					if (items.length) deliver(pi, newThreadsMessage(watch.thread, items));
+					watch.latest = latest;
+					schedule(watch, ctx, MINUTE);
+					return;
+				}
 				if (watch.thread.kind === "pr") {
 					const state = await client.prState(watch.thread);
 					if (watch.controller.signal.aborted) return;
@@ -132,7 +145,7 @@ export default async function (pi: ExtensionAPI) {
 		name: "github_watch",
 		label: "GitHub watch",
 		description:
-			"Watch selected GitHub threads for comments or Actions runs for completion in this session",
+			"Watch selected GitHub threads for comments, repositories for new issues/PRs, or Actions runs for completion in this session",
 		parameters: WatchParameters,
 		async execute(_id, args, signal, _update, ctx) {
 			if (!checkParameters(args))
@@ -151,7 +164,7 @@ export default async function (pi: ExtensionAPI) {
 				const current = [...watches.values()];
 				const lines = current.map(
 					(w) =>
-						`${w.thread.url} ${w.state}${w.state === "watching" ? `; next check ${new Date(w.nextCheck).toISOString().slice(0, 16)}Z` : "; watch again to resume"}`,
+						`${w.thread.url} ${w.state}${w.thread.kind === "repo" ? `; new issues/PRs after #${w.latest}` : ""}${w.state === "watching" ? `; next check ${new Date(w.nextCheck).toISOString().slice(0, 16)}Z` : "; watch again to resume"}`,
 				);
 				if (current.some((w) => w.state === "watching"))
 					lines.push(AUTOMATIC_UPDATES);
@@ -163,7 +176,7 @@ export default async function (pi: ExtensionAPI) {
 			}
 			if (!args.thread?.trim())
 				throw new Error(
-					"Supply thread: an issue/PR or Actions run URL, owner/repo#123, or an issue/PR number.",
+					"Supply thread: an issue/PR or Actions run URL, owner/repo#123, an issue/PR number, or owner/repo for new issues/PRs.",
 				);
 			const epoch = generation;
 			const client = githubClient(pi, ctx.cwd, signal);
@@ -193,9 +206,13 @@ export default async function (pi: ExtensionAPI) {
 				thread.kind === "run" ? await client.runSnapshot(thread) : undefined;
 			const prState =
 				thread.kind === "pr" ? await client.prState(thread) : undefined;
+			const baseline =
+				thread.kind === "repo"
+					? (await client.newThreads(thread.repo)).latest
+					: 0;
 			if (
 				!previous &&
-				thread.kind !== "run" &&
+				(thread.kind === "issue" || thread.kind === "pr") &&
 				(!prState || prState === "open")
 			)
 				seen = await client.snapshot(thread, "conversation");
@@ -221,6 +238,7 @@ export default async function (pi: ExtensionAPI) {
 					conversation: seen.conversation,
 					unresolved: new Map(),
 				},
+				latest: previous?.latest ?? baseline,
 				controller: new AbortController(),
 				state: "watching",
 				nextCheck: 0,
@@ -228,7 +246,7 @@ export default async function (pi: ExtensionAPI) {
 			watches.set(thread.url, watch);
 			schedule(watch, ctx, thread.kind === "pr" ? 7 * MINUTE : MINUTE);
 			return result(
-				`${thread.url}: watching; first check ${new Date(watch.nextCheck).toISOString().slice(0, 16)}Z. ${AUTOMATIC_UPDATES}`,
+				`${thread.url}: watching${thread.kind === "repo" ? ` new issues/PRs after #${watch.latest}` : ""}; first check ${new Date(watch.nextCheck).toISOString().slice(0, 16)}Z. ${AUTOMATIC_UPDATES}`,
 			);
 		},
 	});

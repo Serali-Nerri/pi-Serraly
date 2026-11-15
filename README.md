@@ -15,7 +15,7 @@
 | [pi-auto-trees](packages/pi-auto-trees/README.md) | 会话 marker、prime 与 end |
 | [pi-notes-compaction](packages/pi-notes-compaction/README.md) | 独立可选的 Notes、历史检索与共享上下文；使用 SQLite 原生模块 |
 | [pi-suggestions](packages/pi-suggestions/README.md) | 空输入框中的下一步请求草稿；独立模型，默认关闭 |
-| [pi-github-watch](packages/pi-github-watch/README.md) | 按需监控 GitHub Issue、PR 反馈和 Actions 运行，通知当前会话 |
+| [pi-github-watch](packages/pi-github-watch/README.md) | 按需监控 GitHub Issue、PR 反馈、仓库新 Issue/PR 和 Actions 运行，通知当前会话 |
 | [pi-ui](packages/pi-ui/README.md) | Thinking、Footer、活动完成提示、置顶用户消息和可配置模型的自动会话命名 |
 | [pi-session-recap](packages/pi-session-recap/README.md) | TUI 的 `/recap` 与默认开启的空闲任务摘要；临时展示，不写入模型上下文 |
 

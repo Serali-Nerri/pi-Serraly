@@ -15,7 +15,7 @@
 | pi-auto-trees | marker/prime/end 会话流程 | 可选接入 conversion 公共协议 |
 | pi-notes-compaction | Notes、历史检索、上下文窗口、共享上下文与显式会话裁剪 | better-sqlite3；可选接入 conversion 公共协议 |
 | pi-suggestions | 下一步用户请求草稿、空编辑器展示与预测请求清理 | 只依赖 Pi host；可选接入 Notes 窗口投影和 Shepherdr worker 识别 |
-| pi-github-watch | 当前会话的 GitHub 反馈与 Actions 运行监控、通知和清理 | 已认证的 gh CLI；可选接入 conversion 公共协议 |
+| pi-github-watch | 当前会话的 GitHub 反馈、仓库新 Issue/PR 与 Actions 运行监控、通知和清理 | 已认证的 gh CLI；可选接入 conversion 公共协议 |
 | pi-ui | Thinking、Footer、活动完成提示、置顶用户消息、展示设置与清理 | 只依赖 Pi host，不接管工具或执行 |
 | pi-session-recap | TUI 手动/空闲 recap、历史裁剪、临时卡片与请求清理 | 只依赖公开 Pi host API；模型注册表发起独立摘要请求 |
 | pi-extensions | 显式组合仓库全部十二个扩展的注册入口 | workspace 运行依赖；调用成员公开导出 |

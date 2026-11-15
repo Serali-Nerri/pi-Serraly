@@ -1,4 +1,13 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import {
+	arr,
+	bool,
+	compile,
+	int,
+	obj,
+	type Static,
+	str,
+} from "@earendil-works/pi-schema";
 import { threadSnapshot } from "./feedback.js";
 
 export interface Thread {
@@ -15,7 +24,24 @@ export interface WorkflowRun {
 	url: string;
 }
 
-export type WatchTarget = Thread | WorkflowRun;
+export interface Repository {
+	repo: string;
+	kind: "repo";
+	url: string;
+}
+
+export type WatchTarget = Thread | WorkflowRun | Repository;
+
+const newThread = obj({
+	number: int({ minimum: 1 }),
+	title: str(),
+	url: str(),
+	author: str(),
+	pr: bool(),
+	draft: bool(),
+});
+export type NewThread = Static<typeof newThread>;
+const newThreadPage = compile(arr(newThread));
 
 export type RunSnapshot =
 	| { completed: false }
@@ -56,6 +82,14 @@ export function githubClient(
 					kind: "run",
 					url: `https://github.com/${repo}/actions/runs/${number}`,
 				};
+			}
+			const repository =
+				/^(?:https:\/\/github\.com\/)?([\w.-]+\/[\w.-]+?)(?:\.git)?\/?$/.exec(
+					value,
+				);
+			if (repository) {
+				const repo = repository[1]!.toLowerCase();
+				return { repo, kind: "repo", url: `https://github.com/${repo}` };
 			}
 			const url =
 				/^https:\/\/github\.com\/([^/]+\/[^/]+)\/(issues|pull)\/(\d+)(?:[/?#].*)?$/.exec(
@@ -108,6 +142,35 @@ export function githubClient(
 		},
 		snapshot(thread: Thread, scope: "conversation" | "all" = "all") {
 			return threadSnapshot(gh, thread, scope);
+		},
+		/** Without `after`, returns only the latest number as a baseline. */
+		async newThreads(
+			repo: string,
+			after?: number,
+		): Promise<{ latest: number; items: NewThread[] }> {
+			const items: NewThread[] = [];
+			const perPage = after === undefined ? 1 : 100;
+			let latest = after ?? 0;
+			for (let page = 1; ; page++) {
+				const value: unknown = JSON.parse(
+					await gh([
+						"api",
+						`repos/${repo}/issues?state=all&sort=created&direction=desc&per_page=${perPage}&page=${page}`,
+						"--jq",
+						'[.[] | {number, title, url: .html_url, author: (.user.login // "ghost"), pr: has("pull_request"), draft: (.draft == true)}]',
+					]),
+				);
+				if (!newThreadPage.check(value))
+					throw new Error(
+						"GitHub returned invalid issue metadata. Retry the watch.",
+					);
+				if (page === 1) latest = Math.max(latest, value[0]?.number ?? 0);
+				if (after === undefined) return { latest, items };
+				const fresh = value.filter((item) => item.number > after);
+				items.push(...fresh);
+				if (fresh.length < value.length || value.length < perPage)
+					return { latest, items: items.reverse() };
+			}
 		},
 		async prState(thread: Thread): Promise<"open" | "closed" | "merged"> {
 			const value: unknown = JSON.parse(
