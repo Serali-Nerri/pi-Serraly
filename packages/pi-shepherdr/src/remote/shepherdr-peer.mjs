@@ -307,8 +307,12 @@ function deliverPeerFrame(
 		const timer = setTimeout(failed, focus || extensionReply ? 55_000 : 10_000);
 		timer.unref();
 		socket.setEncoding("utf8");
-		socket.on("error", failed);
-		socket.on("end", () => {
+		socket.on("error", (error) => {
+			// Windows may reset the retained quit socket when Pi exits.
+			if (closing && "code" in error && error.code === "ECONNRESET") return;
+			failed();
+		});
+		socket.once("close", () => {
 			if (settled) return;
 			if (!closing) return failed();
 			clearTimeout(timer);
@@ -322,9 +326,6 @@ function deliverPeerFrame(
 						),
 					),
 			);
-		});
-		socket.on("close", () => {
-			if (!closing) failed();
 		});
 		socket.on("connect", () => {
 			attempted = true;
@@ -346,8 +347,8 @@ function deliverPeerFrame(
 						message.text.trim() === "/quit"
 					) {
 						closing = true;
-						// The receiver retains this socket through session_shutdown.
-						// Only process exit ends it; never close a pane on a timeout.
+						// The receiver retains this socket through session_shutdown until
+						// process exit. Never close a pane on a timeout.
 						clearTimeout(timer);
 					} else
 						finish(undefined, {

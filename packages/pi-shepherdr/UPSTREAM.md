@@ -14,6 +14,7 @@
 - Herdr Core 0.1.21 is the minimum on controllers and targets. New task submissions preserve a native turn baseline so queued idle status cannot start settlement retries; saved legacy tasks and watches remain readable.
 - Remote and voice helper wires start only after terminal attachment readiness, retaining coalesced first input and graceful close credit handling.
 - Initial cross-machine parent-read denial has a bounded retry window, with recovery notices after a real warning. Native parent/child identity checks and the final closing observation remain authoritative.
+- Accepted peer quit and close-idle requests handle Windows ECONNRESET through the same once-only close finalizer as EOF, preserving receiver lifetime and terminal/session identity checks.
 - Monitor events and settlements refresh only affected session views; subscription changes and missed events retain full reconciliation. Saved-session summaries use a size- and count-bounded LRU cache, and discovery filters known status before hydrating live identity.
 - Package-owned behavioral regression tests cover attachment startup/cleanup, task settlement and parent supervision; the repository test runner supplies isolated configuration and offline execution.
 
