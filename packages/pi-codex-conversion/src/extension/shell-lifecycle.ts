@@ -5,7 +5,7 @@ import { registerContextWindowPreparation } from "../compaction.ts";
 import { CODEX_CONTEXT_BRIEFING_TYPE, type CodexContextBriefing } from "../context-briefings.ts";
 import { admitCustomTurn } from "../custom-turn-admission.ts";
 import { withCodexDeveloperMessageDetails } from "../developer-messages.ts";
-import type { ExecSessionManager } from "../tools/exec/session-manager.ts";
+import type { ExecSessionCompletion, ExecSessionManager } from "../tools/exec/session-manager.ts";
 
 export interface CodexShellLifecycle {
 	recordBriefing(ctx: ExtensionContext, messages: readonly AgentMessage[]): boolean;
@@ -21,6 +21,22 @@ interface ShellContext {
 
 function shortCommand(command: string): string {
 	return command.length > 512 ? `${command.slice(0, 512)}…` : command;
+}
+
+function completionMessage(completions: readonly ExecSessionCompletion[]) {
+	const results = completions.map(({ id, command, result }) => ({
+		session_id: id,
+		command: shortCommand(command),
+		exit_code: result.exit_code,
+		output: result.output,
+		...(result.truncated ? { truncated: true, more: `write_stdin session_id=${id}` } : {}),
+	}));
+	return withCodexDeveloperMessageDetails({
+		customType: "codex-shell-completion",
+		content: `Background shell completion:\n${JSON.stringify(results)}`,
+		display: true,
+		details: {},
+	});
 }
 
 export function registerCodexShellLifecycle(
@@ -61,19 +77,7 @@ export function registerCodexShellLifecycle(
 			// A user turn or normal result collection can win while admission is awaited.
 			if (!idle(owner) || !hasCompletions(owner)) return;
 			const completions = sessions.collectCompletions(owner.sessionId);
-			const results = completions.map(({ id, command, result }) => ({
-				session_id: id,
-				command: shortCommand(command),
-				exit_code: result.exit_code,
-				output: result.output,
-				...(result.truncated ? { truncated: true, more: `write_stdin session_id=${id}` } : {}),
-			}));
-			pi.sendMessage(withCodexDeveloperMessageDetails({
-				customType: "codex-shell-completion",
-				content: `Background shell completion:\n${JSON.stringify(results)}`,
-				display: true,
-				details: {},
-			}), { triggerTurn: true });
+			pi.sendMessage(completionMessage(completions), { triggerTurn: true });
 		} catch {
 			if (active === owner && !disposed)
 				owner.ctx.ui.notify("Background shell results could not start a turn. Collect them with write_stdin; if rollover failed, retry it first.", "error");
@@ -111,6 +115,15 @@ export function registerCodexShellLifecycle(
 	});
 	pi.on("session_compact", invalidate);
 	pi.on("agent_start", (_event, ctx) => { activate(ctx).paused = false; });
+	pi.on("turn_end", (event, ctx) => {
+		if (!enabled() || event.outcome !== "completed" || ctx.signal?.aborted) return;
+		const completions = sessions.collectCompletions(activate(ctx).sessionId);
+		if (!completions.length) return;
+		return {
+			entries: [...event.entries, { type: "custom_message", ...completionMessage(completions) }],
+			continue: true,
+		};
+	});
 	pi.on("agent_settled", (event, ctx) => {
 		activate(ctx).paused = event.aborted;
 		schedule();
@@ -141,7 +154,7 @@ export function registerCodexShellLifecycle(
 				id,
 				owner: "shells",
 				key: owner.sessionId,
-				content: `Background shells in this Pi session:\n${lines.join("\n")}\nCollect results with write_stdin. Keep normal monitoring; idle completion notices are a safety net.`,
+				content: `Background shells in this Pi session:\n${lines.join("\n")}\nCollect results with write_stdin. Keep normal monitoring; completion notices are a safety net.`,
 			});
 			owner.briefingId = id;
 			return true;

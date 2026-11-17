@@ -7,6 +7,7 @@
 
 ## Current local differences
 
+- src/extension/shell-lifecycle.ts delivers uncollected completions at completed turn boundaries as well as through the unchanged idle wake path. Both paths share the existing bounded payload and developer-message metadata. See [background shell behavior](./README.md#modes).
 - src/tools/code-mode/host-process.ts collects incomplete frame fragments and joins them once when complete, with direct views for single-fragment payloads. Frame limits and wire messages are unchanged; startup, failure and teardown reset pending fragments.
 - src/tools/ts-mode/portable-state.ts and worker.ts await local inspector validation of typed-array extra properties after synchronous graph capture, avoiding index-name allocations while preserving checkpoint identity and supported values. No inspector listener or persistent object handles are created. src/tools/code-mode/trace-values.ts stops payload traversal at either budget and clones bounded snapshots without consuming their payload budget again.
 - src/providers/openai-codex/websocket-session-cache.ts and types.ts retire closed and superseded handshake routes without interrupting busy lanes or clearing canonical history. responses-lite.ts reuses normalized images in a bounded cache with cancellation-aware request-local processing; the native and configured proxy providers pass caller cancellation into preparation. Upstream request/retry policies and provenance pins are unchanged.

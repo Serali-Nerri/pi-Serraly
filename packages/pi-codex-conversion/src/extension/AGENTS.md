@@ -1,5 +1,6 @@
 - `register.ts` is the composition root; `runtime.ts` owns process/session state and transport lifecycle; `events.ts` visibly maps Pi events to feature owners.
 - Preserve lazy cold-feature boundaries, especially compaction; do not trade startup cost for pass-through wrappers or hidden dispatch.
+- Collect active-run shell completions at completed `turn_end`, after normal tool results. A completed outcome can still carry an aborted `ctx.signal` after tool cancellation; do not collect then. Preserve prior boundary entries and developer-message metadata; keep idle admission separate.
 - Prewarm must match real-turn tools; Pi `ToolInfo` omits constrained sampling, so restore the owned `exec` contract explicitly.
 - Register the GPT prompt-mode broker before Code registration. Refresh at applied settings, before Code host setup and turn capture. Pi has already cloned prompt metadata, so adopters return owned native definitions for snippet/guideline refresh. Never rebuild them from `ToolInfo`, which omits `promptSnippet`.
 - Native compaction presentation is a custom entry: never route it through `sendMessage`, which can queue an empty continuation during auto-compaction.

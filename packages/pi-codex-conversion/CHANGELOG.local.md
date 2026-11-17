@@ -2,6 +2,10 @@
 
 Local changes and their background, relative to upstream **5.0.0** (`c3b422c60256907f5a4499cc44e4d055ac3cc28a`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
 
+## Background shell completion delivery
+
+- Deliver uncollected completions after normal tool results at completed turn boundaries, so the current run can use them instead of waiting for an idle wake. Keep the existing idle fallback, abort handling, batching and truncation behavior.
+
 ## Performance and resource retention
 
 - Assemble fragmented Code host responses once per frame instead of recopying the entire pending payload on each stdout chunk. Preserve frame limits and release pending fragments on teardown.
