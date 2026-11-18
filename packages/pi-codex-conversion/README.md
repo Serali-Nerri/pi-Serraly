@@ -43,15 +43,16 @@ Open `/codex` after installation. Codex-like GPT models use **Structured** mode 
 
 Choose an execution mode under `/codex` → **General**:
 
-| Mode | How the model uses tools |
-| --- | --- |
-| **Structured** | Calls tools directly through top-level JSON schemas. |
-| **Code** | Composes tools in one-shot JavaScript cells through `exec`, with `wait` for longer work. |
-| **Notebook** | Uses a persistent Deno notebook with JavaScript and TypeScript support. |
-| **TS** | Uses a persistent TypeScript notebook with strict checking before execution and Node APIs. |
-| **QuickJS Code** | Composes tools in fresh JavaScript environments, with up to four concurrent cells. |
+| Mode             | How the model uses tools                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------ |
+| **Structured**   | Calls tools directly through top-level JSON schemas.                                       |
+| **Code**         | Composes tools in one-shot JavaScript cells through `exec`, with `wait` for longer work.   |
+| **Notebook**     | Uses a persistent Deno notebook with JavaScript and TypeScript support.                    |
+| **TS**           | Uses a persistent TypeScript notebook with strict checking before execution and Node APIs. |
+| **QuickJS Code** | Composes tools in fresh JavaScript environments, with up to four concurrent cells.         |
+| **VM Code**      | Composes tools in one JavaScript context kept for the conversation.                        |
 
-Code and QuickJS Code start fresh for each cell. Notebook and TS retain state between cells and provide notebook management controls. They differ in runtime access and what can be restored after a restart. See [execution modes](#code-mode-and-custom-tools) below.
+Code and QuickJS Code start fresh for each cell. VM Code keeps `let`, `const`, `function` and `class` bindings for the conversation, without notebook controls or a saved heap. Notebook and TS retain state between cells and provide notebook management controls. They differ in runtime access and what can be restored after a restart. See [execution modes](#code-mode-and-custom-tools) below.
 
 All PCC tools register inactive by default and are enabled by the selected mode or settings. Conversation-tree navigation does not automatically enable tools never declared on the selected branch. Pi's explicitly recorded tool state is still preserved; selecting a mode or changing settings updates the active loadout at the normal runtime boundaries.
 
@@ -70,16 +71,16 @@ Background shells survive context compaction and Notes rollover. The agent recei
 
 `/codex` saves changes immediately. Changes made during a run apply after it settles. Voice stop, mute and server controls remain immediate.
 
-| Tab | Covers |
-| --- | --- |
-| General | Settings scope, execution mode, providers, prompt overwrite, time reminders |
-| Context | Compaction method and retained user messages |
-| Tools | Auto reasoning, image descriptions, standalone tools |
-| OpenAI | Fast and Ultrafast modes, Daybreak, verbosity, transport, diagnostics, Responses Lite |
-| Display | Statusline, tool rendering, note save markers, background shells |
-| Voice | Realtime voice, remote access, summarisation, dictation, shortcuts, prompt paths |
-| Usage | Spend by model and reset window, Codex limits, reset credits |
-| About | GitHub, changelog, Discord, issues |
+| Tab     | Covers                                                                                |
+| ------- | ------------------------------------------------------------------------------------- |
+| General | Settings scope, execution mode, providers, prompt overwrite, time reminders           |
+| Context | Compaction method and retained user messages                                          |
+| Tools   | Auto reasoning, image descriptions, standalone tools                                  |
+| OpenAI  | Fast and Ultrafast modes, Daybreak, verbosity, transport, diagnostics, Responses Lite |
+| Display | Statusline, tool rendering, note save markers, background shells                      |
+| Voice   | Realtime voice, remote access, summarisation, dictation, shortcuts, prompt paths      |
+| Usage   | Spend by model and reset window, Codex limits, reset credits                          |
+| About   | GitHub, changelog, Discord, issues                                                    |
 
 Open a tab directly with commands such as `/codex tools`, `/codex openai` or `/codex voice`.
 
@@ -114,11 +115,11 @@ When ordinary quota runs out, eligible accounts may receive **Luna Reserve**. PC
 
 Choose under `/codex context`:
 
-| Method | What survives compaction |
-| --- | --- |
-| **Pi summary** | A readable summary. Default. |
-| **Codex V2** | An encrypted OpenAI checkpoint and recent user messages. |
-| **Both** | The checkpoint plus a readable summary, at extra summarisation cost. |
+| Method         | What survives compaction                                             |
+| -------------- | -------------------------------------------------------------------- |
+| **Pi summary** | A readable summary. Default.                                         |
+| **Codex V2**   | An encrypted OpenAI checkpoint and recent user messages.             |
+| **Both**       | The checkpoint plus a readable summary, at extra summarisation cost. |
 
 V2 can preserve 16k, 32k or 64k of recent user messages verbatim. The default is 64k. This is not the total context limit.
 
@@ -135,13 +136,13 @@ For notes, history, context-window rollover and shared agent context, install [N
 
 Pi's footer shows cache percentage. Enable **Codex diagnostics** under `/codex openai` for connection status:
 
-| Status | Meaning |
-| --- | --- |
-| `HIT • WS delta` | Cached input reported and only continuation input sent |
-| `HIT • WS full` | A full request was needed, but the prompt cache still hit |
-| `MISS` | No cached input reported |
-| `WS retry` | Retrying the WebSocket connection |
-| `WS → SSE` | Switched to SSE after WebSocket recovery |
+| Status           | Meaning                                                   |
+| ---------------- | --------------------------------------------------------- |
+| `HIT • WS delta` | Cached input reported and only continuation input sent    |
+| `HIT • WS full`  | A full request was needed, but the prompt cache still hit |
+| `MISS`           | No cached input reported                                  |
+| `WS retry`       | Retrying the WebSocket connection                         |
+| `WS → SSE`       | Switched to SSE after WebSocket recovery                  |
 
 **Prompt caching and WebSocket continuation are separate.** A full request can still hit the cache.
 
@@ -192,9 +193,19 @@ Run Pi under Node. The environment has no Node APIs, imports, direct network acc
 
 QuickJS Code replaces JS Notebook. Existing `js` settings select QuickJS Code. Old notebook files are left untouched but are not loaded. There are no checkpoints, profiles, project-shared variables or `notebook` controls in this mode.
 
+### VM Code
+
+Select **VM Code** to compose tools in JavaScript while keeping `let`, `const`, `function` and `class` bindings across `exec` calls in the conversation. `exec` and `wait` stay the same, and tools stay `tools.name`.
+
+Run Pi under Node. One context belongs to the conversation. There is no shared heap, project lock, checkpoint or disk image. The context is capped at 256 MiB. `store` and `load` keep conversation-local JSON, with the same size limits as QuickJS Code.
+
+Top-level `await` works, and `const`, `var` and function hoisting stay the same as a cell without `await`. The environment has no Node APIs, imports, direct network access or timers. The agent uses tools for host operations.
+
+A script error keeps the bindings. A stall, cancellation, memory limit, `terminate` or conversation change drops them, and the next `exec` starts fresh.
+
 ### Extension tools and MCP
 
-Installed Pi tools and enabled MCP servers are available inside Code, QuickJS Code and both notebook modes. Configure MCP servers through Pi. Existing permissions, tool restrictions and disabled servers still apply.
+Installed Pi tools and enabled MCP servers are available inside Code, QuickJS Code, VM Code and both notebook modes. Configure MCP servers through Pi. Existing permissions, tool restrictions and disabled servers still apply.
 
 Deferred-tool announcements group tools by their declared namespace, falling back to the registering extension when Pi provides a file source. Groups and tools are ordered by name. Calls remain flat (`tools.web_search(args)`), and full contracts remain in `ALL_TOOLS`. New announcements use this layout; earlier messages are not rewritten or re-announced just to regroup them.
 
@@ -236,11 +247,11 @@ See the [working examples](./examples/custom-tools/) and [definition contract](.
 
 Choose **Voice model** in `/codex voice` or the browser interface. Voice runs independently of the active text model.
 
-| Voice model | Credential |
-| --- | --- |
+| Voice model                   | Credential                                                         |
+| ----------------------------- | ------------------------------------------------------------------ |
 | `codex-live-1.1`, the default | Pi's legacy `openai-codex` login, or a configured gateway provider |
-| `realtime-2.1` | An API key for the selected Realtime-compatible Pi provider |
-| `realtime-2.1-mini` | An API key for the selected Realtime-compatible Pi provider |
+| `realtime-2.1`                | An API key for the selected Realtime-compatible Pi provider        |
+| `realtime-2.1-mini`           | An API key for the selected Realtime-compatible Pi provider        |
 
 Codex Live and dictation default to OAuth through `/login openai-codex`.
 
@@ -257,12 +268,12 @@ Codex Live rewrites the current voice conversation interval into a self-containe
 
 Realtime models use `send_task` to send Pi a self-contained task with relevant voice-discussion decisions and constraints. Busy Pi sessions receive it as steering, with existing tools and confirmations preserved. Realtime models can also use developer-registered voice tools. For optional search, load `@howaboua/pi-codex-web-run`, configure its access and enable **Realtime web search**. Search uses Web Run's configured provider and credentials.
 
-| Shortcut | Action |
-| --- | --- |
-| `Ctrl+Alt+Space` | Toggle realtime voice |
-| `Ctrl+Alt+M` | Mute or unmute |
-| `Ctrl+Alt+D` | Push-to-dictate. Toggle behaviour is available in the Voice tab |
-| `Ctrl+Alt+G` | Toggle the remote voice server |
+| Shortcut         | Action                                                          |
+| ---------------- | --------------------------------------------------------------- |
+| `Ctrl+Alt+Space` | Toggle realtime voice                                           |
+| `Ctrl+Alt+M`     | Mute or unmute                                                  |
+| `Ctrl+Alt+D`     | Push-to-dictate. Toggle behaviour is available in the Voice tab |
+| `Ctrl+Alt+G`     | Toggle the remote voice server                                  |
 
 Audio follows system defaults. Select devices under Voice if needed. Dictation puts an editable transcript in Pi's input.
 
@@ -289,7 +300,7 @@ Use `/codex voice stop` to stop voice. The remote server stops when its owning P
 <details>
 <summary><strong>Models and providers</strong></summary>
 
-PCC supports GPT-6 Astra, Sol and Luna, plus GPT-6.1 Sol and Terra, with Responses Lite and live reasoning adjustments on Codex transport. Available context sizes and reasoning levels depend on the selected model. Cost estimates use [published API rates](https://developers.openai.com/api/docs/pricing).
+PCC supports GPT-6 Astra, Sol and Luna, GPT-6.1 Sol and Terra, and GPT-6.2 Sol and Astra, with Responses Lite and live reasoning adjustments on Codex transport. Available context sizes and reasoning levels depend on the selected model. Cost estimates use [published API rates](https://developers.openai.com/api/docs/pricing).
 
 Default scope covers Codex-like GPT routes and Responses providers listed under **Additional providers**. Switching to an unrelated model restores Pi's ordinary tools.
 

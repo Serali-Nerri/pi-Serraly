@@ -95,7 +95,7 @@ Nonblocking extension messages notify the controller once; blocking messages arr
 
 Use `send` for messages and work updates without adding supervision. Use `assign` to delegate work and receive its monitored result, automatically or through an explicit blocking call. It also accepts updates to running work, sharing that work's pending result rather than replacing it. If another call is already waiting, the update returns after submission and leaves that waiter intact. Close finished workers silently instead of waking them with completion acknowledgements or shutdown notices.
 
-When a parent sends or assigns work to one of its closed workers, Shepherdr reopens that worker's saved Pi session before delivering the message. Use its session reference, previous terminal target or saved routing name. The result reports `resumed: true` and the current target. This applies only to children recorded in the parent's selected session branch, not arbitrary peers or attachments. The saved session and its original machine must remain accessible. `/quit` never reopens a closed worker.
+When a parent sends or assigns work to one of its closed workers, Shepherdr reopens that worker's saved Pi session before delivering the message. Use its session reference, previous terminal target or saved routing name. The result reports `resumed: true` and the current target. Resumed workers keep automatic completion reporting unless explicitly unwatched. A later `watch` clears that saved opt-out. `assign` restores live reporting for the task but does not clear the saved opt-out for future resumptions. This applies only to children recorded in the parent's selected session branch, not arbitrary peers or attachments. The saved session and its original machine must remain accessible. `/quit` never reopens a closed worker.
 
 Delegation and explicit `watch` keep reporting subsequent work until `unwatch` or the agent's terminal closes. Finishing or failing a task clears that task, not its watch. Follow-up messages through `send` retain completion reporting without replacing the task.
 
@@ -105,7 +105,7 @@ Cancelling a blocking call does not kill its worker. The waiter detaches and the
 
 After Pi compaction or Notes context rollover, the controller receives its supervised agents' exact machine and target, submitted tasks and follow-up instructions, and last observed status, including settled and blocked workers. Read a target for its reply or pending extension messages. This reminder does not start a turn or bypass normal turn preparation.
 
-Prompts sent through `agents` identify peer messages versus delegated tasks and include the sender's host and session identity. Core reports use terminal addresses and include app location IDs when available. These are runtime locations, not the desktop window showing a terminal.
+Prompts sent through `agents` identify peer messages versus delegated tasks and include the sender's machine, full Pi session reference and terminal. Core reports use terminal addresses and include app location IDs when available. These are runtime locations, not the desktop window showing a terminal.
 
 Messages sent through `agents` bypass the receiving Pi editor, preserving unsent drafts. Update and restart Shepherdr on receiving agents as well as controllers. If a receiver is unavailable, delivery fails without pasting into its terminal.
 
@@ -239,7 +239,7 @@ Shepherdr works without Notes or PCC. A target without active Notes sharing stil
 
 On first load, Shepherdr installs three editable profiles:
 
-- `general` uses `openai-codex/gpt-6-sol` with `high` thinking for implementation
+- `general` uses `openai-codex/gpt-6.2-sol` with `high` thinking for implementation
 - `explorer` uses `openai-codex/gpt-6-luna` with `high` thinking for read-only discovery
 - `reviewer` uses `openai-codex/gpt-6-luna` with `xhigh` thinking for generic read-only review
 

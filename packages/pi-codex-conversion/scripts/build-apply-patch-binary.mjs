@@ -1,7 +1,16 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import {
+	chmodSync,
+	copyFileSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	readdirSync,
+	statSync,
+	writeFileSync,
+} from "node:fs";
 import { basename, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
@@ -34,11 +43,19 @@ function inputFiles(sourceRoot) {
 			files.push(path);
 			return;
 		}
-		if (!stat.isDirectory()) throw new Error(`Unsupported apply_patch source input: ${path}`);
-		for (const entry of readdirSync(path, { withFileTypes: true })) visit(join(path, entry.name));
+		if (!stat.isDirectory())
+			throw new Error(`Unsupported apply_patch source input: ${path}`);
+		for (const entry of readdirSync(path, { withFileTypes: true }))
+			visit(join(path, entry.name));
 	}
 	for (const input of sourceInputs) visit(join(sourceRoot, input));
-	return files.sort((left, right) => inputName(left) < inputName(right) ? -1 : inputName(left) > inputName(right) ? 1 : 0);
+	return files.sort((left, right) =>
+		inputName(left) < inputName(right)
+			? -1
+			: inputName(left) > inputName(right)
+				? 1
+				: 0,
+	);
 }
 
 export function sha256File(path) {
@@ -46,13 +63,23 @@ export function sha256File(path) {
 }
 
 export function applyPatchSource(sourceRoot) {
-	const upstream = readFileSync(join(sourceRoot, "rust", "UPSTREAM.apply-patch"), "utf8").trim().match(/^(\S+) ([0-9a-f]{40})$/);
-	if (!upstream) throw new Error("Invalid rust/UPSTREAM.apply-patch; expected '<repository> <40-character commit>'");
+	const upstream = readFileSync(
+		join(sourceRoot, "rust", "UPSTREAM.apply-patch"),
+		"utf8",
+	)
+		.trim()
+		.match(/^(\S+) ([0-9a-f]{40})$/);
+	if (!upstream)
+		throw new Error(
+			"Invalid rust/UPSTREAM.apply-patch; expected '<repository> <40-character commit>'",
+		);
 
 	const hash = createHash("sha256");
 	for (const path of inputFiles(sourceRoot)) {
 		// Keep one source digest across native checkouts with different Git line-ending settings.
-		const content = Buffer.from(readFileSync(path, "utf8").replaceAll("\r\n", "\n"));
+		const content = Buffer.from(
+			readFileSync(path, "utf8").replaceAll("\r\n", "\n"),
+		);
 		const name = relative(sourceRoot, path).split(sep).join("/");
 		hash.update(`${name}\0${content.length}\0`);
 		hash.update(content);
@@ -66,15 +93,24 @@ export function applyPatchSource(sourceRoot) {
 }
 
 function commandOutput(command, args) {
-	const result = spawnSync(command, args, { encoding: "utf8", env: process.env });
-	if (result.status !== 0) throw new Error(`Cannot record ${command} provenance: ${result.stderr?.trim() || `exit ${result.status ?? 1}`}`);
+	const result = spawnSync(command, args, {
+		encoding: "utf8",
+		env: process.env,
+	});
+	if (result.status !== 0)
+		throw new Error(
+			`Cannot record ${command} provenance: ${result.stderr?.trim() || `exit ${result.status ?? 1}`}`,
+		);
 	return result.stdout.trim();
 }
 
 function buildProvenance(sourceRoot, binary, target) {
 	const rustc = commandOutput("rustc", ["--version", "--verbose"]);
 	const host = rustc.match(/^host: (\S+)$/m)?.[1];
-	if (!host) throw new Error("Cannot determine the Rust host from `rustc --version --verbose`");
+	if (!host)
+		throw new Error(
+			"Cannot determine the Rust host from `rustc --version --verbose`",
+		);
 	return {
 		schemaVersion: 1,
 		source: applyPatchSource(sourceRoot),
@@ -89,18 +125,49 @@ function buildProvenance(sourceRoot, binary, target) {
 }
 
 function main() {
-	const { values, positionals } = parseArgs({ options: { target: { type: "string" } }, allowPositionals: true });
-	if (positionals.length > 1) throw new Error("Expected at most one apply_patch source directory");
-	const sourceRoot = resolve(process.env.APPLY_PATCH_SOURCE_DIR ?? positionals[0] ?? "src/tools");
-	const target = values.target ?? applyPatchPlatforms[`${process.platform}-${process.arch}`];
-	const platformArch = Object.keys(applyPatchPlatforms).find((platform) => applyPatchPlatforms[platform] === target);
-	if (!platformArch) throw new Error(`Unsupported apply_patch build target: ${target ?? `${process.platform}-${process.arch}`}`);
-	const exe = platformArch.startsWith("win32-") ? "apply_patch.exe" : "apply_patch";
+	const { values, positionals } = parseArgs({
+		options: { target: { type: "string" } },
+		allowPositionals: true,
+	});
+	if (positionals.length > 1)
+		throw new Error("Expected at most one apply_patch source directory");
+	const sourceRoot = resolve(
+		process.env.APPLY_PATCH_SOURCE_DIR ?? positionals[0] ?? "src/tools",
+	);
+	const target =
+		values.target ?? applyPatchPlatforms[`${process.platform}-${process.arch}`];
+	const platformArch = Object.keys(applyPatchPlatforms).find(
+		(platform) => applyPatchPlatforms[platform] === target,
+	);
+	if (!platformArch)
+		throw new Error(
+			`Unsupported apply_patch build target: ${target ?? `${process.platform}-${process.arch}`}`,
+		);
+	const exe = platformArch.startsWith("win32-")
+		? "apply_patch.exe"
+		: "apply_patch";
 	const outDir = resolve("src", "tools", "apply-patch", "bin", platformArch);
-	const targetDir = resolve(sourceRoot, process.env.CARGO_TARGET_DIR ?? "target");
+	const targetDir = resolve(
+		sourceRoot,
+		process.env.CARGO_TARGET_DIR ?? "target",
+	);
 	const source = join(targetDir, target, "release", exe);
 
-	const cargo = spawnSync("cargo", ["build", "--release", "--locked", "--target", target, "--target-dir", targetDir, "-p", "codex-apply-patch"], { cwd: sourceRoot, stdio: "inherit", env: process.env });
+	const cargo = spawnSync(
+		"cargo",
+		[
+			"build",
+			"--release",
+			"--locked",
+			"--target",
+			target,
+			"--target-dir",
+			targetDir,
+			"-p",
+			"codex-apply-patch",
+		],
+		{ cwd: sourceRoot, stdio: "inherit", env: process.env },
+	);
 	if (cargo.status !== 0) process.exit(cargo.status ?? 1);
 	if (!existsSync(source)) {
 		console.error(`Expected ${source} after cargo build`);
@@ -111,8 +178,15 @@ function main() {
 	copyFileSync(source, dest);
 	if (!platformArch.startsWith("win32-")) chmodSync(dest, 0o755);
 	const provenance = `${dest}.provenance.json`;
-	writeFileSync(provenance, `${JSON.stringify(buildProvenance(sourceRoot, dest, target), null, 2)}\n`);
+	writeFileSync(
+		provenance,
+		`${JSON.stringify(buildProvenance(sourceRoot, dest, target), null, 2)}\n`,
+	);
 	console.log(`Wrote ${dest} and ${provenance}`);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) main();
+if (
+	process.argv[1] &&
+	import.meta.url === pathToFileURL(resolve(process.argv[1])).href
+)
+	main();

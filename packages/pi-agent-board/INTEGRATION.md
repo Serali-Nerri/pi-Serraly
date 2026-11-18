@@ -18,7 +18,7 @@ The transport receiver calls `runtime.handle(ctx, envelope, signal)`. Normal boa
 
 The runtime owns request validation, storage, tool registration, settings, subscriptions, current-turn notification checks and model-visible board results. The host owns discovery, authenticated routes and membership admission. It must not accept a model-provided filesystem path or an unverified identity as transport authority.
 
-Bindings retain board, root-session and member-session IDs, an agent path, the owner folder, the database path, enablement and an optional upstream route. Agent names use `/root` and child paths. The upstream route is opaque to the runtime. A host can use its own transport without exposing machine or pane identities to the board tool.
+Bindings retain board, root-session and member-session IDs, an agent path, the owner folder, the database path, enablement and an optional upstream route. Public agent references use `/` followed by native Pi session IDs. Saved legacy names remain archive aliases, not membership grants. The upstream route is opaque to the runtime. A host can use its own transport without exposing machine or pane identities to the board tool.
 
 Shepherdr's adapter is in `pi-shepherdr/src/board`. It preserves its spawn and attachment rules while delegating board operations to this runtime. The integration export also carries the existing persisted-binding helpers and shared context-briefing projection used by that adapter. They do not create a second owner.
 

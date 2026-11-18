@@ -102,7 +102,12 @@ export class CodeModeHostProcess {
 		while (offset < chunk.length) {
 			if (this.headerBytes < 4) {
 				const end = Math.min(chunk.length, offset + 4 - this.headerBytes);
-				this.headerBytes += chunk.copy(this.header, this.headerBytes, offset, end);
+				this.headerBytes += chunk.copy(
+					this.header,
+					this.headerBytes,
+					offset,
+					end,
+				);
 				offset = end;
 				if (this.headerBytes < 4) return;
 			}
@@ -121,9 +126,10 @@ export class CodeModeHostProcess {
 				offset = end;
 			}
 			if (this.payloadBytes < length) return;
-			const payload = this.payloadChunks.length === 1
-				? this.payloadChunks[0]!
-				: Buffer.concat(this.payloadChunks, length);
+			const payload =
+				this.payloadChunks.length === 1
+					? this.payloadChunks[0]!
+					: Buffer.concat(this.payloadChunks, length);
 			this.resetFrame();
 			try {
 				this.onMessage(JSON.parse(payload.toString("utf8")));

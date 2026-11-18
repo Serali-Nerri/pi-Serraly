@@ -2,15 +2,15 @@
 
 Read when a user asks to configure one of these disabled examples. Do not enable an example merely because it exists.
 
-| Example | Use when |
-| --- | --- |
-| `agents` | The user wants persistent explorer or reviewer agents in Herdr panels |
-| `browser` | Legacy command-backed access to an existing CDP-enabled browser |
-| `skills` | Pi was launched with `--no-skills` and the agent needs on-demand global or project skills |
-| `port_info` | A process or listener needs identifying |
-| `spawn_agent` | The user wants an isolated one-shot explorer or reviewer |
-| `vent` | Repeated workflow friction belongs in `VENT.md` |
-| `workflows_create` | The user confirms a repeatable repository procedure |
+| Example            | Use when                                                                                  |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| `agents`           | The user wants persistent explorer or reviewer agents in Herdr panels                     |
+| `browser`          | Legacy command-backed access to an existing CDP-enabled browser                           |
+| `skills`           | Pi was launched with `--no-skills` and the agent needs on-demand global or project skills |
+| `port_info`        | A process or listener needs identifying                                                   |
+| `spawn_agent`      | The user wants an isolated one-shot explorer or reviewer                                  |
+| `vent`             | Repeated workflow friction belongs in `VENT.md`                                           |
+| `workflows_create` | The user confirms a repeatable repository procedure                                       |
 
 An example consists of its top-level TOML definition and any companion directory. Keep that layout together when configuring it.
 

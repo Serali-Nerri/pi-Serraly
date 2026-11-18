@@ -33,7 +33,7 @@ pi --no-extensions --no-skills -e ./packages/pi-notes-compaction
 
 Reload Pi, then ask the agent to save a checkpoint and start a new context window. It can read those notes and search earlier session history to continue.
 
-Pi Codex Conversion is optional. Compatible releases (5.0.0 or newer) add Code Mode, Notebook and encrypted remote delivery without taking over Notes tools or policy. Run `/notes` to check activation and available capabilities. Extension authors can read the [integration contract](PCC-INTEGRATION.md).
+Pi Codex Conversion is optional. Compatible releases (5.0.1 or newer) add Code Mode, Notebook and encrypted remote delivery without taking over Notes tools or policy. Run `/notes` to check activation and available capabilities. Extension authors can read the [integration contract](PCC-INTEGRATION.md).
 
 ## Notes and windows
 
@@ -49,9 +49,11 @@ Explicit searches of tool history, a window containing live context or another a
 
 Previously shared local notes and history remain readable from accessible saved sessions after the other agent closes or Shepherdr is removed. Notes follows saved family relationships and attachment aliases without requiring PCC or a live parent. Reads use the other session's selected branch and preserve its history IDs. When only a retained attachment snapshot is available, notes identify it as detached or potentially stale. Snapshots do not contain history. Cross-agent writes still require live routing.
 
+Use the complete agent address supplied by its owner. Unknown shortened UUIDs report how to retry instead of scanning every saved conversation. Explicit saved routes, member records and exact native-session discovery remain available.
+
 Repeated checkpoint replacements load only the selected revisions from SQLite, not superseded bodies. Saved-family lookups reuse the two most recent successful machine/session reads within one request, rather than retaining every explored transcript. The next request reads saved sessions anew.
 
-Shepherdr 0.2.27 remains supported for live sharing, including across connected machines. Reading a closed agent's saved session on another machine requires a saved-session transport that this Shepherdr version does not provide. Resume the shared agent and reconnect its machine, or make its saved Pi JSONL session available locally. Saved reads do not replace hybrid lookup or its encrypted cache with local-only results. History uses Pi JSONL, never remote notes or cached responses.
+Shepherdr supports live sharing, including across connected machines. Reading a closed agent's saved session on another machine requires a saved-session transport that this Shepherdr version does not provide. Resume the shared agent and reconnect its machine, or make its saved Pi JSONL session available locally. Saved reads do not replace hybrid lookup or its encrypted cache with local-only results. History uses Pi JSONL, never remote notes or cached responses.
 
 In Code Mode and Notebook, plaintext notes and history return ordinary JavaScript values. Encrypted notes return delivery receipts instead of exposing their contents to JavaScript.
 
@@ -59,7 +61,11 @@ By default, `new_context` starts a fresh window without generating a summary. Th
 
 With **New window requests** set to **off**, conversation-tree navigation does not automatically enable `new_context` on a branch that never enabled it. Explicit historical tool activation remains part of the selected branch.
 
+Turn on **Task-completion rollover** in `/notes` to let the agent call `new_context({resume: false})` when its task is complete. It finishes its reply, then opens a fresh window without starting another turn. The next input starts work in that window. This option is off by default. Omitting `resume`, or setting it to `true`, continues immediately as before.
+
 The tool requires a successful checkpoint write immediately before the request. Direct `notes` writes and writes completed through `exec` or `wait` count. A missing, pending or failed write keeps the current run active and asks the agent to save a note first.
+
+Code and Notebook also accept `await tools.new_context(...)` after an awaited note save in the same cell. The native tool remains the advertised entry point. The nested callable does not add prompt guidance or a discovery listing.
 
 Reminders arrive at 85% and 90% context use. With normal compaction off, `/compact` opens a fresh window immediately if the latest completed turn saved fresh notes. Otherwise it requests a checkpoint first. The new window waits for your next prompt; it does not start a continuation turn. Abort, errors and failed writes retain the old context. Overflow recovery still uses Pi's normal compaction.
 
@@ -99,8 +105,9 @@ are available to the agent. The old `enabled` property is ignored.
 
 Only role IDs and descriptions are shared with the agent. After saving its
 checkpoint, it can call `new_context` with an optional `role` when a sustained
-scope shift warrants a different role. The next context window uses that role's
-model and reasoning in the same session. Without a role, `new_context` keeps the
+phase change warrants a different preset. Each agent chooses its own role,
+including workers, rather than delegating just to access one. The next context
+window uses that role's model and reasoning in the same session. Without a role, `new_context` keeps the
 current model. There is no manual role switching or recommendation acceptance
 workflow.
 
@@ -132,6 +139,7 @@ Update Observatory before applying if you use its historical index. Older versio
 - **Enabled** selects **Off**, **On** (all models, the default) or **Whitelist**. Whitelist enables the extension only for exact model IDs in the global settings file, regardless of provider. Switching models applies the choice immediately; other models keep their installed compaction behaviour. Off disables Notes without deleting saved data.
 - **Normal compaction** uses the installed Pi or PCC compaction flow for `/compact` and `new_context`. Off keeps notes-only rollover, the default.
 - **New window requests** controls the agent's `new_context` tool independently of the compaction method. **off** disables the tool. **pi-limits** uses Pi's eligibility check and continues in the current window when there is too little history. **unrestricted**, the default, accepts requests at any size. With normal compaction on and nothing to summarise, unrestricted requests open a new window identity without discarding the existing context. Manual `/compact` and idle rollover retain their separate policies.
+- **Task-completion rollover** permits `resume: false` in `new_context`. Off by default. Checkpoint and new-window eligibility rules still apply. Aborting or failing the run cancels its pending task-completion rollover.
 - **Idle rollover** selects the interval or disables it.
 - **Session auto-pruning** opens this session's retention limits and manual pruning action. See [Session pruning](#session-pruning) for defaults, automatic exit cleanup and irreversible data loss.
 - **Prune missing sessions** removes notes, cached responses and history index entries for missing session files after confirmation. Unknown paths, permission errors and the active session are retained.
@@ -143,10 +151,11 @@ The whitelist is preseeded in `<Pi agent directory>/notes-compaction/settings.js
 ```json
 {
 	"active": "whitelist",
-	"modelWhitelist": ["gpt-6-astra", "gpt-6-sol", "gpt-6-luna", "gpt-6.1-sol"],
+	"modelWhitelist": ["gpt-6.2-astra", "gpt-6.2-sol", "gpt-6-luna"],
 	"normalCompaction": false,
 	"rankedHistorySearch": false,
 	"newWindowRequests": "unrestricted",
+	"taskCompletionRollover": false,
 	"idleMinutes": 0,
 	"taskBoundaryReminder": 0
 }

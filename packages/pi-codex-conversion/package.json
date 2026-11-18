@@ -1,6 +1,6 @@
 {
   "name": "@howaboua/pi-codex-conversion",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "description": "Codex-oriented tool and prompt adapter for pi coding agent",
   "type": "module",
   "repository": {
@@ -105,9 +105,10 @@
   ],
   "scripts": {
     "build": "node -e \"const fs=require('node:fs'); fs.rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json && bun run build:host-settings",
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "tsrs --noEmit -p tsconfig.json",
     "test": "tsx --test tests/*.test.ts",
-    "check": "bun run typecheck",
+    "bench:code-modes": "tsx scripts/bench-code-modes.ts",
+    "check": "bun run lint && bun run typecheck",
     "build:apply-patch": "node scripts/build-apply-patch-binary.mjs",
     "sync:apply-patch-source": "node scripts/sync-apply-patch-source.mjs",
     "verify:codex-tool-binaries": "node scripts/verify-codex-tool-binaries.mjs",
@@ -115,7 +116,9 @@
     "build:native-tool": "node scripts/build-native-tool-binary.mjs",
     "build:voice-helper": "node scripts/build-voice-helper.mjs",
     "verify:code-mode-host-assets": "node scripts/code-mode/verify-host-assets.mjs",
-    "build:host-settings": "bun build ./src/host-settings.ts --target=node --outfile=./dist/host-settings.js"
+    "build:host-settings": "bun build ./src/host-settings.ts --target=node --outfile=./dist/host-settings.js",
+    "format:check": "oxfmt --check '**/*.{js,cjs,mjs,jsx,ts,cts,mts,tsx,json,jsonc,json5,css}'",
+    "lint": "bun run format:check && oxlint --type-aware"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": ">=1.5.0",
@@ -131,12 +134,13 @@
     "@types/node": "26.6.6",
     "@types/ws": "^8.18.2",
     "quickjs-wasi": "3.6.3",
-    "tsrs": "0.23.0-ts7.1.0-beta",
+    "tsrs": "0.25.0-ts7.1.0-beta",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   },
   "dependencies": {
     "@earendil-works/pi-schema": "1.5.2",
+    "acorn": "8.15.0",
     "openai": "7.55.0",
     "proxy-from-env": "2.1.0",
     "selfsigned": "^5.5.0",

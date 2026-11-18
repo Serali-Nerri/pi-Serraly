@@ -13,6 +13,14 @@ This is the maintainer checklist for syncing the bundled provider with Pi and Op
 - Standalone web search: external extension outside this repository
 - Standalone image generation: [`../pi-codex-imagegen/UPSTREAM_SYNC.md`](../pi-codex-imagegen/UPSTREAM_SYNC.md)
 
+## November 17 GPT-6.2
+
+The authenticated Codex catalogue advertises GPT-6.2 Sol with a 500K context and Astra with a 272K context, both supporting Responses Lite and live reasoning updates. Supplemental registrations fill the released Pi 1.5.2 catalogue gap without replacing future upstream entries. Pi's supported reasoning selectors map to `low` through `max`; backend-only `ultra` is not exposed.
+
+API-equivalent pricing follows the published [Sol](https://developers.openai.com/api/docs/models/gpt-6.2-sol) and [Astra](https://developers.openai.com/api/docs/models/gpt-6.2-astra) specifications, including the tier above 272K input tokens. Their Ultrafast multiplier is 3 through February 28, 2027, then 6 from March 1 at midnight Pacific. This does not change the older models' multiplier.
+
+Reviewed Codex `c08843a5bd` and stable `rust-v0.169.0`. The Code host remains pinned to `0.167.0`: the native `content()` helper does not replace Pi's content adaptation, and the lazy catalogue, catalogue reuse and WebSocket size preflight changes are not in that stable release. `interrupt_on_cancel` remains disabled upstream, matching PCC.
+
 ## November 12 QuickJS Code
 
 QuickJS Code replaces JS Notebook. It uses the released Pi codemode 1.5.2 WASM loader and QuickJS WASI 3.6.3, with a fresh VM per call in reusable Node workers. Pi's public sandbox interface does not expose PCC's synchronous output bridge, so PCC keeps its own bridge and existing tool delegation. No upstream runtime is patched. Old snapshot files are neither loaded nor deleted.
@@ -132,7 +140,7 @@ Deterministic protocol checks establish handshake overlap, final prompt/tool cap
 - Standard Responses request, retry, error, usage, and terminal-stream handling
 - Chronological system sections and tool declarations, collapsed for models without mid-conversation system messages
 - Prompt/tool checkpoints across Pi compaction and context-window cuts
-- GPT-6.1 Sol, GPT-6 Astra, Sol and Luna, plus GPT-5.6 Luna, Terra and Sol model support
+- GPT-6.2 Sol/Astra, GPT-6.1 Sol/Terra, GPT-6 Astra/Sol/Luna and GPT-5.6 Luna/Terra/Sol model support
 - Code and Notebook modes backed by Responses Lite on eligible models
 - Lite instructions and tools represented as input items
 - Lite all-turn reasoning context and standalone tools
@@ -161,11 +169,11 @@ The official Code Mode runtime pin and bridge boundary are recorded in [`code-mo
 
 ### Responses Lite model scope
 
-The explicit Lite allowlist covers GPT-6 Astra, Sol and Luna, GPT-5.6 Luna, Terra and Sol, and Daybreak Blue/Red aliases. Pi model metadata does not expose `use_responses_lite`; do not add startup catalogue fetches solely for this gate.
+The explicit Lite allowlist covers GPT-6.2 Sol/Astra, GPT-6.1 Sol/Terra, GPT-6 Astra/Sol/Luna, GPT-5.6 Luna/Terra/Sol and Daybreak Blue/Red aliases. Pi model metadata does not expose `use_responses_lite`; do not add startup catalogue fetches solely for this gate.
 
 The live Codex catalogue verified GPT-6 Sol and Luna with `use_responses_lite` and `supports_reasoning_effort_updates` enabled, 272K default context and 872K maximum context. Both completed live Lite requests and native reasoning updates through this adapter. Cost metadata follows [published Standard API rates](https://developers.openai.com/api/docs/pricing), including cache writes and the long-context tier above 272K input tokens. Reserve and generated keepalive retain their existing GPT-5.6 contracts.
 
-Built-in Lite follows the `openai-codex-responses` transport, including renamed providers. Explicitly configured `openai-responses` proxies may opt into Lite for GPT-6 Astra/Sol/Luna, GPT-5.6 Luna/Terra/Sol and the `gpt-5.6` alias; those routes own backend compatibility and use this package's provider overlay.
+Built-in Lite follows the `openai-codex-responses` transport, including renamed providers. Explicitly configured `openai-responses` proxies may opt into Lite for those GPT models and the `gpt-5.6` alias; those routes own backend compatibility and use this package's provider overlay.
 
 Check:
 

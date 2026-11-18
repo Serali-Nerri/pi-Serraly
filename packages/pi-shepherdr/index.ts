@@ -39,6 +39,7 @@ export default async function shepherdrExtension(
 		acceptFocus(pi, ctx, fleet, pane, request),
 	);
 	const board = AgentBoard.create(pi, fleet);
+	const sharedContext = await registerSharedAgentContext(pi, fleet, board);
 	registerPeerInbox(
 		pi,
 		peerCommands,
@@ -46,7 +47,6 @@ export default async function shepherdrExtension(
 		(ctx) => board.promptCatchup(ctx),
 		(ctx) => workerRole.isWorker(ctx.sessionManager),
 	);
-	const sharedContext = await registerSharedAgentContext(pi, fleet, board);
 	registerWorkerService(pi, fleet, sharedContext, board, workerRole);
 	let promptMode: { readonly active: boolean } | undefined;
 	const tool = createAgentsTool(
@@ -61,9 +61,8 @@ export default async function shepherdrExtension(
 	registerAgentEventRenderer(pi);
 	pi.registerTool(tool);
 	try {
-		const { registerGptPromptMode } = await import(
-			"@howaboua/pi-codex-conversion/prompt-mode"
-		);
+		const { registerGptPromptMode } =
+			await import("@howaboua/pi-codex-conversion/prompt-mode");
 		promptMode = registerGptPromptMode(pi, () => [tool]);
 	} catch (error) {
 		if (
@@ -106,7 +105,7 @@ async function registerAgentsInCodeMode(
 			throw new Error(
 				"Update " +
 					CODE_MODE_PACKAGE +
-					" to 5.0.0 or newer to use Shepherdr with it",
+					" to 5.0.1 or newer to use Shepherdr with it",
 				{ cause: error },
 			);
 		}

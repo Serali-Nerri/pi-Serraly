@@ -32,9 +32,19 @@ export function locallyExpanded(view: LocalExpansion, region: string): boolean {
 	return view.choices.get(region) ?? view.global;
 }
 
-export function clickToExpand(child: Component, view: LocalExpansion, region: string): Component {
+export function clickToExpand(
+	child: Component,
+	view: LocalExpansion,
+	region: string,
+): Component {
 	return new MouseRegion(child, (event) => {
-		if (event.type !== "click" || event.button !== "left" || event.shift || event.alt || event.ctrl)
+		if (
+			event.type !== "click" ||
+			event.button !== "left" ||
+			event.shift ||
+			event.alt ||
+			event.ctrl
+		)
 			return undefined;
 		view.choices.set(region, !locallyExpanded(view, region));
 		view.invalidate?.();

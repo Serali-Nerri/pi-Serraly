@@ -16,7 +16,7 @@
 		"@earendil-works/pi-tui": "*"
 	},
 	"scripts": {
-		"check": "tsgo -p tsconfig.json",
+		"check": "tsrs --noEmit -p tsconfig.json",
 		"test": "node --import tsx --test test/*.test.ts"
 	}
 }

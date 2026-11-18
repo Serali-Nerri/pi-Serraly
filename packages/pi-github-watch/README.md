@@ -1,10 +1,10 @@
 # GitHub Watch
 
-Opt-in GitHub watches that wake the same Pi session for unresolved PR feedback, conversation changes, new issues and PRs in a repository, and completed Actions runs. Notifications contain links, counts, titles or run conclusions, never comment bodies or job logs. The agent reads the details with `gh`.
+Opt-in GitHub watches that wake the same Pi session for PR commit changes, unresolved feedback, conversation changes, new issues and PRs in a repository, and completed Actions runs. Notifications contain commit hashes, links, counts, titles or run conclusions, never comment bodies or job logs. The agent reads the details with `gh`.
 
 ## Install
 
-Requires Pi 1.5 or later, Node.js 22.19 or later, and an authenticated `gh` CLI. Optional Codex Conversion integration requires version 5.0.0 or later. Works with structured tools, Pi native Code mode and Codex Conversion Code mode.
+Requires Pi 1.5 or later, Node.js 22.19 or later, and an authenticated `gh` CLI. Optional Codex Conversion integration requires version 5.0.1 or later. Works with structured tools, Pi native Code mode and Codex Conversion Code mode.
 
 Prepare a separate installation workspace as described in [development](../../docs/development.md#本地安装工作区), then register this package with native Pi:
 
@@ -23,6 +23,8 @@ Ask the agent to watch a worthwhile thread, such as an issue awaiting an answer 
 The `github_watch` tool accepts a GitHub URL in its `thread` field, `owner/repo#123`, a bare issue/PR number resolved through `gh repo view` in the current working directory, or a repository as described in [Watch a repository](#watch-a-repository). Call it without arguments for help. Its actions are `help`, `watch`, `status` and `cancel`. Omit `thread` when cancelling to stop all watches without a GitHub request.
 
 Issues are checked every minute. PRs baseline conversation comments and standalone reviews immediately, wait seven minutes before the first check, then check every minute. Unresolved review threads are first fetched at that first check.
+
+PR watches notify when the head commit changes, even without a new comment or review. The initial commit is baselined; unchanged commits stay quiet.
 
 The first PR check surfaces all unresolved review threads, including ones that existed before the watch. Later checks notify when a thread appears, reopens or receives changed feedback, showing the current unresolved list. Unchanged threads and resolution alone do not wake the session. Resolved threads are excluded, but outdated threads remain visible until resolved.
 
@@ -56,4 +58,4 @@ No build step is required. From the repository root, run `bun run check -- --pac
 pi -e ./packages/pi-github-watch
 ```
 
-See [UPSTREAM.md](UPSTREAM.md) for the pinned source and local differences. The upstream [LICENSE](LICENSE) and [CHANGELOG.md](CHANGELOG.md) are retained.
+See [UPSTREAM.md](UPSTREAM.md) for the pinned source and local differences, and [CHANGELOG.local.md](CHANGELOG.local.md) for local history. The upstream [LICENSE](LICENSE) and [CHANGELOG.md](CHANGELOG.md) are retained.

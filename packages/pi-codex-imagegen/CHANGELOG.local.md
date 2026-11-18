@@ -1,5 +1,9 @@
 # Local changes
 
+## Upstream 0.0.15 alignment
+
+- The upstream text-only renderer now covers the earlier local duplicate-preview fix. Retain the settings-aware schema call for gateway and custom-model controls.
+
 ## Unreleased
 
 - Use Node's native CRC32 for PNG integrity checks, retaining chunk validation without the per-bit JavaScript loop.

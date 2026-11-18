@@ -1,69 +1,69 @@
 {
-	"name": "pi-extensions",
-	"version": "0.2.0",
-	"private": true,
-	"description": "Optional aggregate for every Pi extension in this workspace",
-	"type": "module",
-	"license": "MIT",
-	"keywords": [
-		"pi-package",
-		"pi-extension",
-		"pi",
-		"howaboua"
-	],
-	"engines": {
-		"node": ">=22.19.0"
-	},
-	"files": [
-		"extensions/",
-		"README.md",
-		"UPSTREAM.md",
-		"LICENSE",
-		"tsconfig.json",
-		"biome.json"
-	],
-	"pi": {
-		"extensions": [
-			"./extensions/pi-codex-conversion.ts",
-			"./extensions/pi-notes-compaction.ts",
-			"./extensions/pi-ask.ts",
-			"./extensions/pi-codex-imagegen.ts",
-			"./extensions/pi-agent-board.ts",
-			"./extensions/pi-auto-trees.ts",
-			"./extensions/pi-shepherdr.ts",
-			"./extensions/pi-suggestions.ts",
-			"./extensions/pi-github-watch.ts",
-			"./extensions/pi-ui.ts",
-			"./extensions/pi-session-recap.ts",
-			"./extensions/pi-codex-guardian.ts"
-		]
-	},
-	"scripts": {
-		"check": "bun run lint && bun run typecheck",
-		"typecheck": "tsgo --noEmit",
-		"lint": "biome check .",
-		"format": "biome check --write ."
-	},
-	"dependencies": {
-		"@howaboua/pi-agent-board": "workspace:*",
-		"@howaboua/pi-ask": "workspace:*",
-		"@howaboua/pi-auto-trees": "workspace:*",
-		"@howaboua/pi-codex-conversion": "workspace:*",
-		"@howaboua/pi-codex-guardian": "workspace:*",
-		"@howaboua/pi-codex-imagegen": "workspace:*",
-		"@howaboua/pi-github-watch": "workspace:*",
-		"@howaboua/pi-notes-compaction": "workspace:*",
-		"@howaboua/pi-shepherdr": "workspace:*",
-		"@howaboua/pi-suggestions": "workspace:*",
-		"pi-session-recap": "workspace:*",
-		"pi-ui": "workspace:*"
-	},
-	"peerDependencies": {
-		"@earendil-works/pi-ai": "*",
-		"@earendil-works/pi-coding-agent": "*",
-		"@earendil-works/pi-tui": "*"
-	},
-	"devDependencies": {
-		"@earendil-works/pi-coding-agent": "1.5.2"
-	}
+  "name": "pi-extensions",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Optional aggregate for every Pi extension in this workspace",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "pi",
+    "howaboua"
+  ],
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "files": [
+    "extensions/",
+    "README.md",
+    "UPSTREAM.md",
+    "LICENSE",
+    "tsconfig.json"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions/pi-codex-conversion.ts",
+      "./extensions/pi-notes-compaction.ts",
+      "./extensions/pi-ask.ts",
+      "./extensions/pi-codex-imagegen.ts",
+      "./extensions/pi-agent-board.ts",
+      "./extensions/pi-auto-trees.ts",
+      "./extensions/pi-shepherdr.ts",
+      "./extensions/pi-suggestions.ts",
+      "./extensions/pi-github-watch.ts",
+      "./extensions/pi-ui.ts",
+      "./extensions/pi-session-recap.ts",
+      "./extensions/pi-codex-guardian.ts"
+    ]
+  },
+  "scripts": {
+    "check": "bun run lint && bun run typecheck",
+    "typecheck": "tsrs --noEmit",
+    "format:check": "oxfmt --check '**/*.{js,cjs,mjs,jsx,ts,cts,mts,tsx,json,jsonc,json5,css}'",
+    "lint": "bun run format:check && oxlint --type-aware",
+    "format": "oxfmt --write '**/*.{js,cjs,mjs,jsx,ts,cts,mts,tsx,json,jsonc,json5,css}'"
+  },
+  "dependencies": {
+    "@howaboua/pi-agent-board": "workspace:*",
+    "@howaboua/pi-ask": "workspace:*",
+    "@howaboua/pi-auto-trees": "workspace:*",
+    "@howaboua/pi-codex-conversion": "workspace:*",
+    "@howaboua/pi-codex-guardian": "workspace:*",
+    "@howaboua/pi-codex-imagegen": "workspace:*",
+    "@howaboua/pi-github-watch": "workspace:*",
+    "@howaboua/pi-notes-compaction": "workspace:*",
+    "@howaboua/pi-shepherdr": "workspace:*",
+    "@howaboua/pi-suggestions": "workspace:*",
+    "pi-session-recap": "workspace:*",
+    "pi-ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "1.5.2"
+  }
 }

@@ -1,6 +1,6 @@
 # Upstream provenance
 
-- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/c3b422c60256907f5a4499cc44e4d055ac3cc28a/packages/pi-codex-guardian
+- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/4006488d10e01b7da55c3ebac5b0a7913005ba00/packages/pi-codex-guardian
 - Baseline version: 0.0.1
 - Upstream history and license: CHANGELOG.md and LICENSE are retained unchanged.
 - The Codex protocol reference and CPA compatibility baseline are pinned in [PROTOCOL.md](PROTOCOL.md).

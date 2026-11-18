@@ -1,10 +1,14 @@
 # @howaboua/pi-shepherdr
 
-## Local changes
+## 1.0.2
 
-- Refresh only affected session views for steady-state monitor events and settlements, retaining full subscription reconciliation and identity checks.
-- Bound the saved-session summary cache by entry count and summary size, with least-recently-used eviction.
-- Filter discovery candidates by known status before requesting live Pi identity; session-reference searches still hydrate eligible candidates.
+- Fixed resumed workers failing to start or losing completion reports after crashes or restarts.
+- Fixed agent launches and window focus in standalone Bun builds of Pi.
+- Sender labels now show machine, full agent address and terminal without repeated labels.
+- Empty turns from unassigned workers no longer trigger completion notices.
+- Agent guidance now favours outcome-focused delegation, actionable handoffs and fewer duplicate completion messages.
+- Tool examples no longer prescribe `await`.
+- New general profiles use GPT-6.2 Sol.
 
 ## 1.0.1
 

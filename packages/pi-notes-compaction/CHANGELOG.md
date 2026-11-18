@@ -1,8 +1,22 @@
 # @howaboua/pi-notes-compaction
 
+## Local changes
+
+- Context-window and reminder cards expand and collapse on click in fullscreen Pi, while retaining the configured expand shortcut.
+- `new_context` starts inactive until Notes permits window requests, including during tree replay.
+- Replaced note bodies are materialized only for surviving branch revisions and reused within a query. Saved-family reads reuse at most two successful session loads per request.
+
+## 0.0.18
+
+- Added `new_context({resume: false})` to finish a reply and open fresh context without continuing automatically.
+- Added same-cell rollover after an awaited note save in Code and Notebook.
+- Role guidance now directs agents to choose presets for sustained phase changes.
+- Unknown shortened UUIDs now report how to retry without scanning saved conversations. Full addresses and live routing remain available.
+- Notes and History examples no longer prescribe `await`.
+- New Notes whitelists use GPT-6.2 Sol and Astra alongside GPT-6 Luna.
+
 ## 0.0.17
 
-- Context-window and reminder cards now expand and collapse on click in fullscreen Pi, while retaining the configured expand shortcut.
 - Notes lookup warnings now distinguish unavailable remote notes from local checkpoints.
 - Notes guidance calls for fewer, shorter updates, using task notes and/or checkpoints with History links instead of copied investigation or harness detail.
 - Notes guidance keeps no-action report updates to their ID and outcome when checkpointing is needed.

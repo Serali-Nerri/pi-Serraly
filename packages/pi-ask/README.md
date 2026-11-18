@@ -16,7 +16,7 @@ Try it for one session:
 pi --no-extensions --no-skills -e ~/.pi/pi-Serraly/packages/pi-ask
 ```
 
-Requires Pi 1.5 or newer. When Pi Codex Conversion 5.0.0 or newer is installed too, `ask` is available inside Code and Notebook Mode as `await tools.ask({ prompts, delivery?, handoff? })`.
+Requires Pi 1.5 or newer. When Pi Codex Conversion 5.0.1 or newer is installed too, `ask` is available inside Code and Notebook Mode as `await tools.ask({ prompts, delivery?, handoff? })`.
 
 ## How it behaves
 
@@ -24,7 +24,7 @@ The agent can present several independently decidable prompts in one tabbed pane
 
 Questions wait for your response by default. When the agent can continue useful reversible work, it can use `delivery: "steer"` instead. The tool then returns immediately, keeps the same panel open, and delivers your eventual response as steering at the next safe boundary. An active Pi Codex Responses adapter sends the answer with the developer role; other setups receive an ordinary user steering message. Pending steering questions survive session reloads.
 
-For work only you can complete—sign-in, authorization, hardware access, or another manual step—the agent can open a handoff and wait until you mark it done or unable to complete.
+For work only you can complete—sign-in, authorization, hardware access, or another manual step—the agent can set `handoff: true` and wait until you mark it done or unable to complete.
 
 Waiting questions report Pi as blocked in terminals that support program status. A steering ask remains pending while the agent continues.
 

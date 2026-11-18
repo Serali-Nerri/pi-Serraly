@@ -136,6 +136,7 @@ test("released Pi 1.5 loads every imported package and completes session cleanup
 		"github_watch",
 		"history",
 		"imagegen",
+		"new_context",
 		"notes",
 	]);
 	assert.deepEqual(report.optionalIntegrations.promptMode.tools, [

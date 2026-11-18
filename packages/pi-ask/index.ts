@@ -58,9 +58,8 @@ export default async function humanInTheLoop(pi: ExtensionAPI): Promise<void> {
 	};
 	pi.registerTool(ask);
 	try {
-		const { registerGptPromptMode } = await import(
-			"@howaboua/pi-codex-conversion/prompt-mode"
-		);
+		const { registerGptPromptMode } =
+			await import("@howaboua/pi-codex-conversion/prompt-mode");
 		registerGptPromptMode(pi, (active) => {
 			gpt = active;
 			return [ask];
@@ -98,9 +97,8 @@ async function loadCodexDeveloperMessageSender(): Promise<
 	TryCodexDeveloperMessage | undefined
 > {
 	try {
-		const { trySendCodexDeveloperMessage } = await import(
-			"@howaboua/pi-codex-conversion/developer-messages"
-		);
+		const { trySendCodexDeveloperMessage } =
+			await import("@howaboua/pi-codex-conversion/developer-messages");
 		return trySendCodexDeveloperMessage;
 	} catch (error) {
 		if (
@@ -133,7 +131,7 @@ async function registerAskInCodeMode(
 			throw new Error(
 				"Update " +
 					CODE_MODE_PACKAGE +
-					" to 5.0.0 or newer to use Pi Ask with it",
+					" to 5.0.1 or newer to use Pi Ask with it",
 				{ cause: error },
 			);
 		}

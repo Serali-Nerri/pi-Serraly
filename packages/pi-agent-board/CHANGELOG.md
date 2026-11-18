@@ -5,6 +5,10 @@
 - Empty unread catch-up no longer rescans the seen-ID list for every post; repeated reads do not enlarge the transmitted list.
 - Viewer detail and thread reads aggregate only the selected board, without recounting unrelated saved boards.
 
+## 0.0.8
+
+- Board catch-up examples no longer prescribe `await`.
+
 ## 0.0.7
 
 - Board settings now open on Enabled with On and Off choices.

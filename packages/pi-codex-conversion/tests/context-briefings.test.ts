@@ -1,31 +1,55 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { registerCodexContextBriefing, recordCodexContextBriefings } from "../src/context-briefings.ts";
+import type {
+	ExtensionAPI,
+	ExtensionContext,
+} from "@earendil-works/pi-coding-agent";
+import {
+	registerCodexContextBriefing,
+	recordCodexContextBriefings,
+} from "../src/context-briefings.ts";
 
 test("an aborted run discards briefing failures", async () => {
 	const abort = new AbortController();
 	abort.abort();
 	const pi = eventBus();
-	registerCodexContextBriefing(pi, async () => { abort.signal.throwIfAborted(); });
+	registerCodexContextBriefing(pi, async () => {
+		abort.signal.throwIfAborted();
+	});
 
-	await assert.doesNotReject(recordCodexContextBriefings(pi, context(abort.signal), undefined, []));
+	await assert.doesNotReject(
+		recordCodexContextBriefings(pi, context(abort.signal), undefined, []),
+	);
 });
 
 test("a briefing failure from an aborted run stays silent", async () => {
 	const abort = new AbortController();
 	abort.abort();
 	const pi = eventBus();
-	registerCodexContextBriefing(pi, async () => { throw new Error("stale context"); });
+	registerCodexContextBriefing(pi, async () => {
+		throw new Error("stale context");
+	});
 
-	await assert.doesNotReject(recordCodexContextBriefings(pi, context(abort.signal), undefined, []));
+	await assert.doesNotReject(
+		recordCodexContextBriefings(pi, context(abort.signal), undefined, []),
+	);
 });
 
 test("briefing failures surface while the run is live", async () => {
 	const pi = eventBus();
-	registerCodexContextBriefing(pi, async () => { throw new Error("briefing failed"); });
+	registerCodexContextBriefing(pi, async () => {
+		throw new Error("briefing failed");
+	});
 
-	await assert.rejects(recordCodexContextBriefings(pi, context(new AbortController().signal), undefined, []), /briefing failed/);
+	await assert.rejects(
+		recordCodexContextBriefings(
+			pi,
+			context(new AbortController().signal),
+			undefined,
+			[],
+		),
+		/briefing failed/,
+	);
 });
 
 function eventBus(): ExtensionAPI {
@@ -37,7 +61,13 @@ function eventBus(): ExtensionAPI {
 			},
 			on(channel: string, handler: (value: unknown) => void) {
 				handlers.set(channel, [...(handlers.get(channel) ?? []), handler]);
-				return () => handlers.set(channel, (handlers.get(channel) ?? []).filter(candidate => candidate !== handler));
+				return () =>
+					handlers.set(
+						channel,
+						(handlers.get(channel) ?? []).filter(
+							(candidate) => candidate !== handler,
+						),
+					);
 			},
 		},
 	} as unknown as ExtensionAPI;

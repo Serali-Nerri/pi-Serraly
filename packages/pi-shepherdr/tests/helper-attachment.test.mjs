@@ -202,69 +202,85 @@ async function fixture(t, { holdLaunch = false } = {}) {
 	};
 }
 
-test("delayed attachment preserves the first data frame and graceful close under credit pressure", {
-	timeout: 5000,
-}, async (t) => {
-	const core = await fixture(t);
-	const opening = core.open();
-	void opening.catch(() => {});
-	await core.attached;
-	t.mock.timers.tick(1500);
-	core.admit();
-	const helper = await opening;
-	assert.equal(core.received[0].type, "start");
-	assert.equal(typeof core.received[0].input.modules.helper, "string");
-	helper.send({ type: "bulk", payload: "x".repeat(70_000) });
-	await helper.close();
-	assert.deepEqual(
-		core.received.map((message) => message.type),
-		["start", "bulk", "close"],
-	);
-	assert.equal(await core.killed, "peer-id/t1");
-	assert.deepEqual(core.failures, []);
-});
+test(
+	"delayed attachment preserves the first data frame and graceful close under credit pressure",
+	{
+		timeout: 5000,
+	},
+	async (t) => {
+		const core = await fixture(t);
+		const opening = core.open();
+		void opening.catch(() => {});
+		await core.attached;
+		t.mock.timers.tick(1500);
+		core.admit();
+		const helper = await opening;
+		assert.equal(core.received[0].type, "start");
+		assert.equal(typeof core.received[0].input.modules.helper, "string");
+		helper.send({ type: "bulk", payload: "x".repeat(70_000) });
+		await helper.close();
+		assert.deepEqual(
+			core.received.map((message) => message.type),
+			["start", "bulk", "close"],
+		);
+		assert.equal(await core.killed, "peer-id/t1");
+		assert.deepEqual(core.failures, []);
+	},
+);
 
-test("voice focus also waits for attachment before starting its heartbeat", {
-	timeout: 5000,
-}, async (t) => {
-	const core = await fixture(t);
-	const opening = core.focus();
-	void opening.catch(() => {});
-	await core.attached;
-	t.mock.timers.tick(1500);
-	core.admit();
-	const channel = await opening;
-	const reply = Promise.withResolvers();
-	channel.onMessage(reply.resolve);
-	channel.send({ sample: "voice" });
-	assert.deepEqual(await reply.promise, { sample: "voice" });
-	channel.close();
-	assert.equal(await core.killed, "peer-id/t1");
-});
+test(
+	"voice focus also waits for attachment before starting its heartbeat",
+	{
+		timeout: 5000,
+	},
+	async (t) => {
+		const core = await fixture(t);
+		const opening = core.focus();
+		void opening.catch(() => {});
+		await core.attached;
+		t.mock.timers.tick(1500);
+		core.admit();
+		const channel = await opening;
+		const reply = Promise.withResolvers();
+		channel.onMessage(reply.resolve);
+		channel.send({ sample: "voice" });
+		assert.deepEqual(await reply.promise, { sample: "voice" });
+		channel.close();
+		assert.equal(await core.killed, "peer-id/t1");
+	},
+);
 
-test("an exit coalesced with attachment fails startup without leaking the helper", {
-	timeout: 5000,
-}, async (t) => {
-	const core = await fixture(t);
-	const opening = core.open();
-	void opening.catch(() => {});
-	await core.attached;
-	core.admit({ exit: true });
-	await assert.rejects(opening, /Remote focus process ended/);
-	assert.equal(await core.killed, "peer-id/t1");
-	assert.deepEqual(core.received, []);
-});
+test(
+	"an exit coalesced with attachment fails startup without leaking the helper",
+	{
+		timeout: 5000,
+	},
+	async (t) => {
+		const core = await fixture(t);
+		const opening = core.open();
+		void opening.catch(() => {});
+		await core.attached;
+		core.admit({ exit: true });
+		await assert.rejects(opening, /Remote focus process ended/);
+		assert.equal(await core.killed, "peer-id/t1");
+		assert.deepEqual(core.received, []);
+	},
+);
 
-test("cancellation before a late launch reply still kills the accepted helper", {
-	timeout: 5000,
-}, async (t) => {
-	const core = await fixture(t, { holdLaunch: true });
-	const opening = core.open();
-	void opening.catch(() => {});
-	await core.launched;
-	core.controller.abort();
-	core.releaseLaunch();
-	await assert.rejects(opening, /cancelled/);
-	assert.equal(await core.killed, "peer-id/t1");
-	assert.equal(core.attachmentCount(), 0);
-});
+test(
+	"cancellation before a late launch reply still kills the accepted helper",
+	{
+		timeout: 5000,
+	},
+	async (t) => {
+		const core = await fixture(t, { holdLaunch: true });
+		const opening = core.open();
+		void opening.catch(() => {});
+		await core.launched;
+		core.controller.abort();
+		core.releaseLaunch();
+		await assert.rejects(opening, /cancelled/);
+		assert.equal(await core.killed, "peer-id/t1");
+		assert.equal(core.attachmentCount(), 0);
+	},
+);

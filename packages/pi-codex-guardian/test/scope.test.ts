@@ -242,63 +242,71 @@ test("blocks run before reviews and the first matching review stops evaluation",
 	);
 });
 
-test("necessary pathological regexes time out in isolation and leave the matcher usable", {
-	timeout: 5000,
-}, async () => {
-	const matcher = new RuleMatcher();
-	await assert.rejects(
-		Promise.resolve(
-			matcher.decide(
+test(
+	"necessary pathological regexes time out in isolation and leave the matcher usable",
+	{
+		timeout: 5000,
+	},
+	async () => {
+		const matcher = new RuleMatcher();
+		await assert.rejects(
+			Promise.resolve(
+				matcher.decide(
+					"run",
+					{ command: `${"a".repeat(64)}!` },
+					{
+						defaultAction: "review",
+						rules: [
+							{ tool: "run", args: { command: "(a+)+$" }, action: "block" },
+						],
+					},
+					new AbortController().signal,
+				),
+			),
+			/Argument matching timed out/,
+		);
+		assert.equal(
+			await matcher.decide(
 				"run",
-				{ command: `${"a".repeat(64)}!` },
-				{
-					defaultAction: "review",
-					rules: [
-						{ tool: "run", args: { command: "(a+)+$" }, action: "block" },
-					],
-				},
+				{ command: "ok" },
+				CONDITIONAL_REVIEW,
 				new AbortController().signal,
 			),
-		),
-		/Argument matching timed out/,
-	);
-	assert.equal(
-		await matcher.decide(
-			"run",
-			{ command: "ok" },
-			CONDITIONAL_REVIEW,
-			new AbortController().signal,
-		),
-		"review",
-	);
-});
+			"review",
+		);
+	},
+);
 
-test("64 concurrent requests use at most two processes and start in FIFO order", {
-	timeout: 5000,
-}, async (t) => {
-	const processes = mockProcesses(t);
-	const matcher = new RuleMatcher();
-	const requests = Array.from({ length: 64 }, (_, index) =>
-		processes.call(matcher, `request-${index}`),
-	);
-	assert.equal(processes.children.length, 2);
-	for (let index = 0; index < requests.length; index++) {
-		const child = processes.children[index];
-		assert(child);
-		const payload = JSON.parse(child.input) as {
-			rules: { args: [string, string][] }[];
-		};
-		assert.equal(payload.rules[0]?.args[0]?.[1], `request-${index}`);
-		child.close();
-		await flush();
-	}
-	assert.deepEqual(
-		await Promise.all(requests),
-		Array<Decision>(64).fill("review"),
-	);
-	assert.equal(processes.state.peak, 2);
-	assert.equal(processes.state.active, 0);
-});
+test(
+	"64 concurrent requests use at most two processes and start in FIFO order",
+	{
+		timeout: 5000,
+	},
+	async (t) => {
+		const processes = mockProcesses(t);
+		const matcher = new RuleMatcher();
+		const requests = Array.from({ length: 64 }, (_, index) =>
+			processes.call(matcher, `request-${index}`),
+		);
+		assert.equal(processes.children.length, 2);
+		for (let index = 0; index < requests.length; index++) {
+			const child = processes.children[index];
+			assert(child);
+			const payload = JSON.parse(child.input) as {
+				rules: { args: [string, string][] }[];
+			};
+			assert.equal(payload.rules[0]?.args[0]?.[1], `request-${index}`);
+			child.close();
+			await flush();
+		}
+		assert.deepEqual(
+			await Promise.all(requests),
+			Array<Decision>(64).fill("review"),
+		);
+		assert.equal(processes.state.peak, 2);
+		assert.equal(processes.state.active, 0);
+	},
+);
 
 test("the two-process limit belongs to each matcher instance", async (t) => {
 	const processes = mockProcesses(t);

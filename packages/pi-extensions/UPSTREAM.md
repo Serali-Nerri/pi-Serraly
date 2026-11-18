@@ -14,16 +14,16 @@ Each member declares one Pi extension entry; the aggregate has no standalone cha
 
 | Package               | Local version | Provenance                                     |
 | --------------------- | ------------- | ---------------------------------------------- |
-| `pi-codex-conversion` | 5.0.0         | [UPSTREAM](../pi-codex-conversion/UPSTREAM.md) |
-| `pi-ask`              | 0.0.19        | [UPSTREAM](../pi-ask/UPSTREAM.md)              |
-| `pi-codex-imagegen`   | 0.0.14        | [UPSTREAM](../pi-codex-imagegen/UPSTREAM.md)   |
+| `pi-codex-conversion` | 5.0.1         | [UPSTREAM](../pi-codex-conversion/UPSTREAM.md) |
+| `pi-ask`              | 0.0.20        | [UPSTREAM](../pi-ask/UPSTREAM.md)              |
+| `pi-codex-imagegen`   | 0.0.15        | [UPSTREAM](../pi-codex-imagegen/UPSTREAM.md)   |
 | `pi-codex-guardian`   | 0.0.1         | [UPSTREAM](../pi-codex-guardian/UPSTREAM.md)   |
-| `pi-agent-board`      | 0.0.7         | [UPSTREAM](../pi-agent-board/UPSTREAM.md)      |
+| `pi-agent-board`      | 0.0.8         | [UPSTREAM](../pi-agent-board/UPSTREAM.md)      |
 | `pi-auto-trees`       | 0.1.19        | [UPSTREAM](../pi-auto-trees/UPSTREAM.md)       |
-| `pi-shepherdr`        | 1.0.1         | [UPSTREAM](../pi-shepherdr/UPSTREAM.md)        |
-| `pi-notes-compaction` | 0.0.17        | [UPSTREAM](../pi-notes-compaction/UPSTREAM.md) |
+| `pi-shepherdr`        | 1.0.2         | [UPSTREAM](../pi-shepherdr/UPSTREAM.md)        |
+| `pi-notes-compaction` | 0.0.18        | [UPSTREAM](../pi-notes-compaction/UPSTREAM.md) |
 | `pi-suggestions`      | 0.0.3         | [UPSTREAM](../pi-suggestions/UPSTREAM.md)      |
-| `pi-github-watch`     | 0.0.6         | [UPSTREAM](../pi-github-watch/UPSTREAM.md)     |
+| `pi-github-watch`     | 0.0.7         | [UPSTREAM](../pi-github-watch/UPSTREAM.md)     |
 | `pi-ui`               | 0.3.0         | [UPSTREAM](../pi-ui/UPSTREAM.md)               |
 | `pi-session-recap`    | 0.1.0         | [UPSTREAM](../pi-session-recap/UPSTREAM.md)    |
 

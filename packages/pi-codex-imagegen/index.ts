@@ -42,9 +42,8 @@ export default async function imagegenExtension(
 		description: tool.description,
 	};
 	try {
-		const { registerGptPromptMode } = await import(
-			"@howaboua/pi-codex-conversion/prompt-mode"
-		);
+		const { registerGptPromptMode } =
+			await import("@howaboua/pi-codex-conversion/prompt-mode");
 		registerGptPromptMode(pi, (active) => {
 			if (gpt !== active) {
 				gpt = active;
@@ -92,7 +91,7 @@ async function registerImagegenInCodeMode(
 			const adapted = adaptToolForCodeMode(tool, {
 				discovery: "help",
 				usage:
-					"await tools.image_gen__imagegen({prompt:string,transparent_background?:boolean,referenced_image_paths?:string[],num_last_images_to_include?:number" +
+					"tools.image_gen__imagegen({prompt:string,transparent_background?:boolean,referenced_image_paths?:string[],num_last_images_to_include?:number" +
 					(api
 						? ',output_format?:"png"|"jpeg"|"webp"' +
 							(extended ? '|"gif"|"svg"' : "") +
@@ -101,7 +100,7 @@ async function registerImagegenInCodeMode(
 								? ",gif?:{frame_count?:number,frame_duration_ms?:number}"
 								: "")
 						: "") +
-					'}).then(r=>typeof r==="string"?text(r):generatedImage(r)) // ' +
+					"}) // String result: text(result); image result: generatedImage(result). " +
 					(gpt()
 						? "prompt: aspect ratio+quality; cutouts=transparent; edits retain transparency; no selectors=generate; paths/recent count=edit; " +
 							(extended ? "GIF/SVG=generate; " : "") +
@@ -143,7 +142,7 @@ async function registerImagegenInCodeMode(
 			throw new Error(
 				"Update " +
 					CODE_MODE_PACKAGE +
-					" to 5.0.0 or newer to use Codex Imagegen with it",
+					" to 5.0.1 or newer to use Codex Imagegen with it",
 				{ cause: error },
 			);
 		}

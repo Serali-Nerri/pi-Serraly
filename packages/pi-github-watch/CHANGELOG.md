@@ -1,9 +1,8 @@
 # @howaboua/pi-github-watch
 
-## Local changes
+## 0.0.7
 
-- Add repository watches that notify the session of newly created issues and PRs, including the authenticated account's, as metadata awaiting evaluation.
-- Avoid fetching discarded unresolved feedback during watch setup and discarded snapshots on resume, preserving the previous baseline and access checks.
+- PR watches now notify when the head commit changes, even without a new comment or review.
 
 ## 0.0.6
 

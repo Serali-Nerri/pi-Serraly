@@ -2,7 +2,7 @@
 
 Review pending Pi tool calls with Codex's bundled approval policy. Guardian reviews all calls by default; no rule file is required. Optional rules can block specific calls locally, or select calls for review when using rules-only mode. Native Pi and nested Code Mode and Notebook Mode calls share the same admission policy.
 
-Guardian turns on when loaded. It requires Pi 1.5.0 or later and Node.js 22.19 or later. Reviews use the selected Codex Responses provider, endpoint, and Pi model-registry authentication, including gateway connections such as CPA. A current, intact parent response must have issued the action. Matching block calls never contact the reviewer and need no model or credentials. Code Mode and Notebook Mode additionally require Pi Codex Conversion 5.0.0 or later while guarding calls.
+Guardian turns on when loaded. It requires Pi 1.5.0 or later and Node.js 22.19 or later. Reviews use the selected Codex Responses provider, endpoint, and Pi model-registry authentication, including gateway connections such as CPA. A current, intact parent response must have issued the action. Matching block calls never contact the reviewer and need no model or credentials. Code Mode and Notebook Mode additionally require Pi Codex Conversion 5.0.1 or later while guarding calls.
 
 ## Install
 

@@ -43,58 +43,75 @@ export function buildVoiceSettings(
 				},
 			}),
 		),
-		...(config.voice.model !== "codex-live-1.1" ? [setting({
-			id: "apiProvider", label: "API provider",
-			description: "Exact Pi provider name. Uses its API key and endpoint on the next Realtime call. Default: openai.",
-			currentValue: config.voice.apiProvider,
-		}, (value, current) => ({ ...current, voice: { ...current.voice, apiProvider: value } }))] : []),
+		...(config.voice.model !== "codex-live-1.1"
+			? [
+					setting(
+						{
+							id: "apiProvider",
+							label: "API provider",
+							description:
+								"Exact Pi provider name. Uses its API key and endpoint on the next Realtime call. Default: openai.",
+							currentValue: config.voice.apiProvider,
+						},
+						(value, current) => ({
+							...current,
+							voice: { ...current.voice, apiProvider: value },
+						}),
+					),
+				]
+			: []),
 		...(config.voice.model === "codex-live-1.1"
 			? [
-						setting(
-							{
-								id: "codexLiveProvider",
-								label: "Codex Live provider",
-								description:
-									"Pi provider ID for gateway API-key credentials. Blank uses openai-codex; leave both gateway fields blank for the Codex login.",
-								currentValue: formatGatewaySetting(config.voice.codexLiveProvider),
-							},
-							(value, current) => ({
-								...current,
-								voice: { ...current.voice, codexLiveProvider: value },
-							}),
-						),
-						setting(
-							{
-								id: "codexLiveBaseUrl",
-								label: "Codex Live base URL",
-								description:
-									"HTTP(S) gateway base before /realtime/calls, including its path prefix. Blank uses the selected provider's endpoint.",
-								currentValue: formatGatewaySetting(config.voice.codexLiveBaseUrl),
-							},
-							(value, current) => ({
-								...current,
-								voice: { ...current.voice, codexLiveBaseUrl: value },
-							}),
-						),
+					setting(
+						{
+							id: "codexLiveProvider",
+							label: "Codex Live provider",
+							description:
+								"Pi provider ID for gateway API-key credentials. Blank uses openai-codex; leave both gateway fields blank for the Codex login.",
+							currentValue: formatGatewaySetting(
+								config.voice.codexLiveProvider,
+							),
+						},
+						(value, current) => ({
+							...current,
+							voice: { ...current.voice, codexLiveProvider: value },
+						}),
+					),
+					setting(
+						{
+							id: "codexLiveBaseUrl",
+							label: "Codex Live base URL",
+							description:
+								"HTTP(S) gateway base before /realtime/calls, including its path prefix. Blank uses the selected provider's endpoint.",
+							currentValue: formatGatewaySetting(config.voice.codexLiveBaseUrl),
+						},
+						(value, current) => ({
+							...current,
+							voice: { ...current.voice, codexLiveBaseUrl: value },
+						}),
+					),
 					setting({
 						id: "taskDelegationModel",
 						label: "Task delegation model",
 						description: "",
 						currentValue: config.voice.taskDelegationModel,
 					}),
-					setting({
-						id: "taskDelegationReasoning",
-						label: "Task delegation reasoning",
-						description: "",
-						currentValue: config.voice.taskDelegationReasoning,
-						values: [...VOICE_CONTEXT_REASONING_LEVELS],
-					}, (value, current) => ({
-						...current,
-						voice: {
-							...current.voice,
-							taskDelegationReasoning: normalizeVoiceContextReasoning(value),
+					setting(
+						{
+							id: "taskDelegationReasoning",
+							label: "Task delegation reasoning",
+							description: "",
+							currentValue: config.voice.taskDelegationReasoning,
+							values: [...VOICE_CONTEXT_REASONING_LEVELS],
 						},
-					})),
+						(value, current) => ({
+							...current,
+							voice: {
+								...current.voice,
+								taskDelegationReasoning: normalizeVoiceContextReasoning(value),
+							},
+						}),
+					),
 				]
 			: []),
 		...(["primary", "alternate"] as const).map((role) => {

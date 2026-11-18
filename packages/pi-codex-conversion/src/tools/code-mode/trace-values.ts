@@ -145,7 +145,10 @@ function sanitizeValue(value: unknown, budget: SerializationBudget): unknown {
 				output["trace_truncated"] = true;
 				break;
 			}
-			childBudget.remaining = Math.max(0, childBudget.remaining - key.length - 1);
+			childBudget.remaining = Math.max(
+				0,
+				childBudget.remaining - key.length - 1,
+			);
 			output[key] = sanitizeValue(Reflect.get(value, key), childBudget);
 			budget.remaining = childBudget.remaining;
 			budget.nodesRemaining = childBudget.nodesRemaining ?? 0;

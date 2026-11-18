@@ -117,145 +117,177 @@ function unavailable(error: unknown): boolean {
 }
 
 for (const type of ["response.completed", "response.done"]) {
-	test(`Reviewer accepts ${type} only with a matching successful final result`, {
-		timeout: 5000,
-	}, async (t) => {
-		const fixture = reviewerFixture([{ event: terminal(type) }]);
-		t.after(() => fixture.reviewer.clear());
-		assert.deepEqual(await fixture.reviewer.review(fixture.request), {
-			outcome: "allow",
-			inputTokens: 14,
-			outputTokens: 3,
-		});
-	});
+	test(
+		`Reviewer accepts ${type} only with a matching successful final result`,
+		{
+			timeout: 5000,
+		},
+		async (t) => {
+			const fixture = reviewerFixture([{ event: terminal(type) }]);
+			t.after(() => fixture.reviewer.clear());
+			assert.deepEqual(await fixture.reviewer.review(fixture.request), {
+				outcome: "allow",
+				inputTokens: 14,
+				outputTokens: 3,
+			});
+		},
+	);
 
-	test(`Reviewer rejects invalid ${type} output`, {
+	test(
+		`Reviewer rejects invalid ${type} output`,
+		{
+			timeout: 5000,
+		},
+		async (t) => {
+			for (const output of [
+				undefined,
+				null,
+				{},
+				[null],
+				[{}],
+				[{ type: "function_call" }],
+				[{ type: "message" }, { type: "custom_tool_call" }],
+			]) {
+				const fixture = reviewerFixture([
+					{ event: terminal(type, { output }) },
+				]);
+				t.after(() => fixture.reviewer.clear());
+				await assert.rejects(
+					fixture.reviewer.review(fixture.request),
+					unavailable,
+					JSON.stringify(output),
+				);
+			}
+		},
+	);
+}
+
+test(
+	"Reviewer does not trust a successful final result without validated raw success",
+	{
 		timeout: 5000,
-	}, async (t) => {
-		for (const output of [
-			undefined,
-			null,
-			{},
-			[null],
-			[{}],
-			[{ type: "function_call" }],
-			[{ type: "message" }, { type: "custom_tool_call" }],
-		]) {
-			const fixture = reviewerFixture([{ event: terminal(type, { output }) }]);
+	},
+	async (t) => {
+		const invalid: Reply[] = [
+			{ event: terminal("response.done", { status: undefined }) },
+			{ event: terminal("response.done", { status: "incomplete" }) },
+			{
+				event: terminal("response.done", { id: "resp_bad_id" }),
+				result: { responseId: "resp_bad_id" },
+			},
+			{ event: terminal("response.incomplete") },
+		];
+		for (const reply of invalid) {
+			const fixture = reviewerFixture([reply]);
 			t.after(() => fixture.reviewer.clear());
 			await assert.rejects(
 				fixture.reviewer.review(fixture.request),
 				unavailable,
-				JSON.stringify(output),
 			);
 		}
-	});
-}
+	},
+);
 
-test("Reviewer does not trust a successful final result without validated raw success", {
-	timeout: 5000,
-}, async (t) => {
-	const invalid: Reply[] = [
-		{ event: terminal("response.done", { status: undefined }) },
-		{ event: terminal("response.done", { status: "incomplete" }) },
-		{
-			event: terminal("response.done", { id: "resp_bad_id" }),
-			result: { responseId: "resp_bad_id" },
-		},
-		{ event: terminal("response.incomplete") },
-	];
-	for (const reply of invalid) {
-		const fixture = reviewerFixture([reply]);
-		t.after(() => fixture.reviewer.clear());
-		await assert.rejects(fixture.reviewer.review(fixture.request), unavailable);
-	}
-});
+test(
+	"Reviewer still rejects inconsistent final IDs, model, stop reason and tool output",
+	{
+		timeout: 5000,
+	},
+	async (t) => {
+		const invalid: Partial<AssistantMessage>[] = [
+			{ responseId: "resp_Other" },
+			{ model: "ordinary-model" },
+			{ stopReason: "length" },
+			{ stopReason: "aborted" },
+			{
+				content: [
+					{ type: "toolCall", id: "call_1", name: "read", arguments: {} },
+				],
+			},
+		];
+		for (const result of invalid) {
+			const fixture = reviewerFixture([
+				{ event: terminal("response.done"), result },
+			]);
+			t.after(() => fixture.reviewer.clear());
+			await assert.rejects(
+				fixture.reviewer.review(fixture.request),
+				unavailable,
+			);
+		}
+	},
+);
 
-test("Reviewer still rejects inconsistent final IDs, model, stop reason and tool output", {
-	timeout: 5000,
-}, async (t) => {
-	const invalid: Partial<AssistantMessage>[] = [
-		{ responseId: "resp_Other" },
-		{ model: "ordinary-model" },
-		{ stopReason: "length" },
-		{ stopReason: "aborted" },
-		{
+test(
+	"Reviewer cancellation and lane invalidation cannot admit a completed reply",
+	{
+		timeout: 5000,
+	},
+	async (t) => {
+		const cancelled = reviewerFixture([
+			{
+				event: terminal("response.done"),
+				beforeResult: () => cancelled.controller.abort(),
+			},
+		]);
+		t.after(() => cancelled.reviewer.clear());
+		await assert.rejects(
+			cancelled.reviewer.review(cancelled.request),
+			(error: unknown) =>
+				error instanceof ReviewFailure && error.kind === "cancelled",
+		);
+		const stale = reviewerFixture([
+			{
+				event: terminal("response.done"),
+				beforeResult: () => stale.reviewer.clear(),
+			},
+		]);
+		t.after(() => stale.reviewer.clear());
+		await assert.rejects(stale.reviewer.review(stale.request), unavailable);
+	},
+);
+
+test(
+	"Reviewer replays cloned raw reasoning and message items across terminal aliases",
+	{
+		timeout: 5000,
+	},
+	async (t) => {
+		const reasoning = {
+			type: "reasoning",
+			id: "rs_1",
+			encrypted_content: "opaque",
+			summary: [{ type: "summary_text", text: "reasoning" }],
+		};
+		const message = {
+			type: "message",
+			id: "msg_1",
+			role: "assistant",
 			content: [
-				{ type: "toolCall", id: "call_1", name: "read", arguments: {} },
+				{ type: "output_text", text: '{"outcome":"allow"}', annotations: [] },
 			],
-		},
-	];
-	for (const result of invalid) {
+		};
+		const output = [reasoning, message];
+		const expected = structuredClone(output);
 		const fixture = reviewerFixture([
-			{ event: terminal("response.done"), result },
+			{ event: terminal("response.done", { output }) },
+			{
+				event: terminal("response.completed", { id: "resp_Review2" }),
+				result: { responseId: "resp_Review2" },
+			},
 		]);
 		t.after(() => fixture.reviewer.clear());
-		await assert.rejects(fixture.reviewer.review(fixture.request), unavailable);
-	}
-});
-
-test("Reviewer cancellation and lane invalidation cannot admit a completed reply", {
-	timeout: 5000,
-}, async (t) => {
-	const cancelled = reviewerFixture([
-		{
-			event: terminal("response.done"),
-			beforeResult: () => cancelled.controller.abort(),
-		},
-	]);
-	t.after(() => cancelled.reviewer.clear());
-	await assert.rejects(
-		cancelled.reviewer.review(cancelled.request),
-		(error: unknown) =>
-			error instanceof ReviewFailure && error.kind === "cancelled",
-	);
-	const stale = reviewerFixture([
-		{
-			event: terminal("response.done"),
-			beforeResult: () => stale.reviewer.clear(),
-		},
-	]);
-	t.after(() => stale.reviewer.clear());
-	await assert.rejects(stale.reviewer.review(stale.request), unavailable);
-});
-
-test("Reviewer replays cloned raw reasoning and message items across terminal aliases", {
-	timeout: 5000,
-}, async (t) => {
-	const reasoning = {
-		type: "reasoning",
-		id: "rs_1",
-		encrypted_content: "opaque",
-		summary: [{ type: "summary_text", text: "reasoning" }],
-	};
-	const message = {
-		type: "message",
-		id: "msg_1",
-		role: "assistant",
-		content: [
-			{ type: "output_text", text: '{"outcome":"allow"}', annotations: [] },
-		],
-	};
-	const output = [reasoning, message];
-	const expected = structuredClone(output);
-	const fixture = reviewerFixture([
-		{ event: terminal("response.done", { output }) },
-		{
-			event: terminal("response.completed", { id: "resp_Review2" }),
-			result: { responseId: "resp_Review2" },
-		},
-	]);
-	t.after(() => fixture.reviewer.clear());
-	await fixture.reviewer.review(fixture.request);
-	reasoning.encrypted_content = "changed";
-	message.content.push({
-		type: "output_text",
-		text: "changed",
-		annotations: [],
-	});
-	await fixture.reviewer.review(fixture.request);
-	const replay = fixture.bodies[1];
-	assert.ok(isRecord(replay));
-	assert.ok(Array.isArray(replay["input"]));
-	assert.deepEqual(replay["input"].slice(1, 3), expected);
-});
+		await fixture.reviewer.review(fixture.request);
+		reasoning.encrypted_content = "changed";
+		message.content.push({
+			type: "output_text",
+			text: "changed",
+			annotations: [],
+		});
+		await fixture.reviewer.review(fixture.request);
+		const replay = fixture.bodies[1];
+		assert.ok(isRecord(replay));
+		assert.ok(Array.isArray(replay["input"]));
+		assert.deepEqual(replay["input"].slice(1, 3), expected);
+	},
+);

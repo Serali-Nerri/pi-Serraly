@@ -1,6 +1,14 @@
 # Local changelog
 
-Local changes and their background, relative to upstream **5.0.0** (`c3b422c60256907f5a4499cc44e4d055ac3cc28a`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
+Local changes and their background, relative to upstream **5.0.1** (`4006488d10e01b7da55c3ebac5b0a7913005ba00`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
+
+## Upstream 5.0.1 sync
+
+- Add conversation-local VM Code alongside the existing runtimes, GPT-6.2 Sol/Astra and pricing, instruction-change diagnostics and shorter tool guidance. Restore Acorn for VM parsing; keep the official Code host and nested Codex source pins unchanged.
+- Adopt tsrs 0.25 and upstream Oxfmt/Oxlint static checks through the existing isolated workspace runners. Keep tests separate from static checks and omit upstream publication and browser-CDP sync hooks.
+- Replace duplicated image rendering with upstream's shared media renderer, occurrence-count deduplication and row-owned UI caches. Retain independent click expansion, nested image-view title/error-only cards and scalar-only auxiliary render state. Updates lacking a trace snapshot retain current row caches.
+- Keep local frame/checkpoint/image/transport/shell performance adaptations and native patch-summary/concurrent-read behavior. Preserve all six locally rebuilt patch and exec helpers with their original provenance; adopt upstream view-image binaries. Keep offline startup, inactive defaults, aborted-run guards, voice gateways, standalone Notes ownership and installation boundaries.
+- Use the new upstream VM tests as disposable offline probes; do not add permanent coverage. Omit the image benchmark's absent-package/private-source coupling rather than expanding the workspace or public interfaces.
 
 ## Background shell completion delivery
 

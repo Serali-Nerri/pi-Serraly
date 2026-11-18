@@ -1,5 +1,5 @@
 - Compare generation/edit contracts with the OpenAI Codex checkout's `codex-rs/ext/image-generation/`, `codex-rs/codex-api/src/endpoint/images.rs` and `codex-rs/codex-api/src/images.rs`. `UPSTREAM_SYNC.md` pins the reference and reviewed deltas. Inspect changes since that pin when touching the adapter; do not restore inert Rust snapshots. Pi-facing auth, artifacts, rendering and Code Mode projection remain TypeScript.
 - Codex edit targets accept validated PNG, JPEG, GIF, or WebP bytes; OpenAI API targets accept PNG, JPEG, or WebP. Recent targets come only from Pi's active compaction-aware context.
-- Pi owns result-content image display. Custom tool renderers draw only text; preserve image content for the model and Code/Notebook output.
+- Native Pi and nested Code wrappers own result-content images. Keep custom result renderers text-only; never mutate model-visible results to fix display.
 - API endpoint and credential-provider settings are independent of the chat model and Codex resolver. Quality choices follow upstream for all API models; keep 2.6-only complexity and GIF/SVG controls aligned across settings UI, request construction and ordinary/Code Mode tool schemas.
 - The settings heading adds a row; translate mouse coordinates before forwarding to SettingsList.

@@ -17,7 +17,7 @@
 	},
 	"scripts": {
 		"build": "bun build.mjs",
-		"check": "tsgo -p tsconfig.json",
+		"check": "tsrs --noEmit -p tsconfig.json",
 		"test": "node --import tsx --test test/*.test.ts"
 	}
 }

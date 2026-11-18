@@ -35,7 +35,8 @@ function streamFrames() {
 }
 const { call, output, callRefs, resultRefs } = streamFrames();
 for (let attempt = 0; attempt < 3; attempt++) { await nextTurn(); globalThis.gc(); }
-assert.equal(callRefs.filter((ref) => ref.deref()).length, 1, "obsolete script components must be collectable");
-assert.equal(resultRefs.filter((ref) => ref.deref()).length, 1, "obsolete output components must be collectable");
+// A row may reuse its component across frames; count live instances, not weak handles.
+assert.equal(new Set(callRefs.map((ref) => ref.deref()).filter(Boolean)).size, 1, "obsolete script components must be collectable");
+assert.equal(new Set(resultRefs.map((ref) => ref.deref()).filter(Boolean)).size, 1, "obsolete output components must be collectable");
 assert.match(call.render(80).join("\n"), /frame_399_line_0/);
 assert.match(output.render(80).join("\n"), /399:/);
