@@ -20,7 +20,7 @@
 - Use strict TypeScript/ESM and preserve each package's formatting/import style. Use public package exports, not sibling private source. Host packages are runtime peers.
 - Validate unknown values once at the boundary that owns them. Pass typed values inward instead of repeating `typeof value === "object"` and property-existence checks. Do not defensively revalidate values already guaranteed by a schema, constructor, or internal type.
 - Do not extract single-use helpers preemptively. Inline the logic at the call site unless the helper is reused, hides a genuinely complex boundary, or has a clear independent name that improves the caller.
-- Before adding complexity for a speculative or vanishingly unlikely race or security edge case, explain the concrete failure mode, likelihood, and complexity cost to the user and get their buy-in. Do not silently expand scope for theoretical robustness.
+- Avoid adding complexity for speculative races or security edge cases. If addressing one would materially expand scope or require a product decision from the user, explain the failure mode, likelihood and cost, and get agreement before taking on that work.
 - Avoid `try` / `catch` where possible.
 - Avoid using the `any` type.
 - Comments explain non-obvious intent, constraints, or external API behavior. Do not restate the code, repeat repository policies, or narrate hypothetical failure scenarios. Keep shared rules in their owning document.
@@ -34,12 +34,13 @@
 
 ## Validation
 
-- Delete permanent tests by default. Retain only consequential failure coverage that static checks and disposable probes cannot adequately provide. Contract labels do not justify retention. Add permanent tests only when the user explicitly requests more coverage.
+- Prefer static checks or disposable probes unless the user requests a permanent test, the repository requires one, or one is needed to catch a specific regression existing tests would miss.
+- Do not delete existing tests by default. When pruning, judge a test by the failure it catches and what coverage would remain, not by a contract label.
 - If agents misuse tools or ignore prompts, fix the model-facing contract from real-use evidence, not programmatic tests. Tests may cover deterministic parser, executor, result and routing boundaries.
 - Put editing hazards and fragile ownership/order constraints in the nearest `AGENTS.md`, not regression suites. Keep runtime validation in owning code. Test behavior, not source text, private call sequences or duplicated dependency algorithms.
 - Automated checks and probes use isolated HOME/config/session and an environment allowlist. Keep them offline unless network use is explicitly authorized; registry access requires explicit dependency-installation authorization. Time/process checks need deadlines and cleanup.
 - Live sandbox acceptance using real login or models requires explicit user authorization, which may be agreed during planning. Use the authorized login and models only within that scope; never expose credentials in output or evidence.
-- Sandbox validation means interacting with Pi's TUI through Herdr: normal consecutive turns that execute tools and use the guest environment. Programmatic probes do not substitute for this interaction. Refresh the guest candidate after source changes; host edits alone do not update it.
+- For end-to-end sandbox acceptance, use Herdr to interact with Pi's TUI over consecutive turns that execute tools and use the guest environment. Programmatic probes do not substitute for this interaction. Refresh the guest candidate after source changes; host edits alone do not update it.
 - Validate the candidate's packaged resources and bundled native helpers against released Pi without helper overrides. Report blocked or unperformed acceptance honestly.
 
 ## Installation and upstream sync
