@@ -82,7 +82,15 @@ export function buildStatusText(
 	);
 }
 
-export const DEFAULT_TOOL_NAMES = ["read", "bash", "edit", "write"];
+export const DEFAULT_TOOL_NAMES = [
+	"read",
+	"bash",
+	"edit",
+	"write",
+	"find",
+	"grep",
+	"ls",
+];
 
 export const SHELL_ADAPTER_TOOL_NAMES = ["exec_command", "write_stdin"];
 export const APPLY_PATCH_TOOL_NAME = "apply_patch";
