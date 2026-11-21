@@ -69,7 +69,7 @@ const BUNDLED_TOOLS_HEADING = "Tools available in exec:";
 const CUSTOM_TOOLS_HEADING = "Configured custom tools:";
 const TOOL_GUIDANCE_HEADING = "Tool guidance:";
 const DEFERRED_TOOLS_GUIDANCE =
-	"For additional tools and their contracts, prefer filtering ALL_TOOLS by name or keyword and printing only matching entries; use the full catalogue only when necessary";
+	"For tools and contracts listed in ALL_TOOLS, including MCP tools, prefer filtering by name or keyword and printing only matching entries; use the full catalogue only when necessary.";
 const CUSTOM_TOOLS_GUIDANCE =
 	"Prefer custom tools for command-backed capabilities";
 export const CODE_MODE_TOOLS_SECTION = "exec_tools";
@@ -231,7 +231,7 @@ export function buildCodeModeToolsPrompt(
 				? "Whole-cell strictcheck INCL toolargs; typeerror→NO execution"
 				: "Strict typechecking covers the whole cell, including tool arguments. Any type error prevents cell execution"
 			: undefined,
-		executionKind === "ts"
+		executionKind === "ts" || executionKind === "notebook"
 			? gpt
 				? 'Markdown/multiline text→ordinary quoted line arrays joined with "\\n"; template literals require escaping backticks and ${...}'
 				: 'For Markdown or multiline text, use ordinary quoted line arrays joined with "\\n". Template literals require escaping backticks and ${...} to keep them literal'
@@ -250,9 +250,7 @@ export function buildCodeModeToolsPrompt(
 		buildUsageSection(CUSTOM_TOOLS_HEADING, promotedCustom),
 		buildGuidanceSection(tools),
 		// The catalogue is always available, even when its first or last tool is unlisted.
-		gpt
-			? "More tools→prefer filtering ALL_TOOLS by name/keyword; use the full catalogue only when necessary"
-			: DEFERRED_TOOLS_GUIDANCE,
+		DEFERRED_TOOLS_GUIDANCE,
 		custom.length > 0 ? CUSTOM_TOOLS_GUIDANCE : undefined,
 	].filter(Boolean);
 	return sections.join("\n");

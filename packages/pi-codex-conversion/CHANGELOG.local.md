@@ -2,9 +2,13 @@
 
 Local changes and their background, relative to upstream **5.0.1** (`4006488d10e01b7da55c3ebac5b0a7913005ba00`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
 
+## Notebook Markdown quoting
+
+- Reuse TS mode's Markdown quoting guidance in Deno Notebook. Unescaped backticks in note text could otherwise end a template literal before the call to `tools.notes` runs.
+
 ## Code Mode tool discovery and MCP output guidance
 
-- Prefer filtering deferred `ALL_TOOLS` entries by name or keyword instead of printing the full catalogue by default, while retaining the full catalogue as a fallback; this keeps large tool contracts out of context unless they are needed.
+- Prompt the model to filter `ALL_TOOLS` by name or keyword when looking up a tool contract. An empty `web_search` call does not return help, and the model sometimes printed the whole catalogue to read one entry. The guidance applies to listed tools, including MCP tools, to avoid searches for `notes`, `ask`, `agents`, and `board`, which appear in the system prompt but not in the catalogue.
 - Add generic MCP output guidance after five observed MCP calls completed successfully but generated Code Mode cells passed the full result envelope to `content()`, which accepts only verified blocks or block arrays. Serialize other values with `text(...)` rather than treating the issue as an MCP server failure.
 - Treat Pi's `find`, `grep` and `ls` like the existing default file tools when assembling a full Conversion loadout, so Code/Notebook use the documented `exec_command` and `rg` path without adding another discovery surface. Preserve the user's original tool selection for restoration when Conversion ends.
 
