@@ -1,4 +1,7 @@
-import { UserMessageComponent, type Theme } from "@earendil-works/pi-coding-agent";
+import {
+	UserMessageComponent,
+	type Theme,
+} from "@earendil-works/pi-coding-agent";
 import {
 	Container,
 	TuiAltScreen,
@@ -30,7 +33,7 @@ interface Rect {
 	height: number;
 }
 
-// Pi 1.4 layout internals are imported as private shapes here. The methods below are
+// Pi layout internals are imported as private shapes here. The methods below are
 // the only host hooks this presentation depends on.
 interface LayoutBox {
 	component: Component;
@@ -53,6 +56,12 @@ interface LayoutFrame {
 interface NativeContainerLayout {
 	width: number;
 	children: Array<{ component: Component; height: number }>;
+}
+
+interface ContainerChildLines {
+	width: number;
+	children: readonly Component[];
+	parts: readonly (readonly string[])[];
 }
 
 interface PrivateTui {
@@ -99,7 +108,9 @@ interface InstructionCache {
 	instruction: Instruction | undefined;
 }
 
-type MethodDescriptor = PropertyDescriptor & { value: (...args: never[]) => unknown };
+type MethodDescriptor = PropertyDescriptor & {
+	value: (...args: never[]) => unknown;
+};
 
 const METHOD_SIGNATURES = [
 	["compositeScrollToEndIndicator", 3],
@@ -114,8 +125,14 @@ function requireMethods(proto: object): Map<string, MethodDescriptor> {
 	const descriptors = new Map<string, MethodDescriptor>();
 	for (const [name, arity] of METHOD_SIGNATURES) {
 		const descriptor = Object.getOwnPropertyDescriptor(proto, name);
-		if (!descriptor || typeof descriptor.value !== "function" || !descriptor.writable) {
-			throw new Error(`Sticky user message requires a writable TuiAltScreen.${name} method`);
+		if (
+			!descriptor ||
+			typeof descriptor.value !== "function" ||
+			!descriptor.writable
+		) {
+			throw new Error(
+				`Sticky user message requires a writable TuiAltScreen.${name} method`,
+			);
 		}
 		if (descriptor.value.length !== arity) {
 			throw new Error(
@@ -127,7 +144,10 @@ function requireMethods(proto: object): Map<string, MethodDescriptor> {
 	return descriptors;
 }
 
-function scrollViewBox(box: LayoutBox, scrollView: ScrollView): LayoutBox | undefined {
+function scrollViewBox(
+	box: LayoutBox,
+	scrollView: ScrollView,
+): LayoutBox | undefined {
 	if (box.scrollView === scrollView) return box;
 	for (const child of box.children) {
 		const found = scrollViewBox(child, scrollView);
@@ -138,7 +158,7 @@ function scrollViewBox(box: LayoutBox, scrollView: ScrollView): LayoutBox | unde
 
 /**
  * Finds the newest user body line above the viewport. Transcript Containers are opaque
- * layout leaves, so their cached native child heights supply provenance without a
+ * layout leaves, so their cached child line partitions supply provenance without a
  * second render or a scan over stored messages.
  */
 function instructionAbove(
@@ -153,9 +173,17 @@ function instructionAbove(
 	function visitBox(child: LayoutBox) {
 		if (blocked || child.scrollView) return;
 		const sourceRow = child.rect.y - box.rect.y + scrollView.scrollTop;
-		if (sourceRow >= top || (selected && sourceRow + child.rect.height <= selected.sourceRow)) return;
+		if (
+			sourceRow >= top ||
+			(selected && sourceRow + child.rect.height <= selected.sourceRow)
+		)
+			return;
 		if (child.children.length > 0) {
-			for (let index = child.children.length - 1; index >= 0 && !blocked; index--) {
+			for (
+				let index = child.children.length - 1;
+				index >= 0 && !blocked;
+				index--
+			) {
 				visitBox(child.children[index]!);
 			}
 			return;
@@ -190,17 +218,46 @@ function instructionAbove(
 				blocked = true;
 				return;
 			}
-			const container = component === privateTui.implicitDocument ? tui : component;
+			const container =
+				component === privateTui.implicitDocument ? tui : component;
 			if (
 				!(container instanceof Container) ||
 				(container !== tui && container.render !== Container.prototype.render)
 			)
 				return;
-			const native = (container as unknown as { mouseLayout?: NativeContainerLayout }).mouseLayout;
+			const childLines = (
+				container as unknown as { childLines?: ContainerChildLines }
+			).childLines;
+			if (childLines?.width === child.rect.width) {
+				let childEnd = end;
+				for (
+					let index = childLines.children.length - 1;
+					index >= 0 && !blocked;
+					index--
+				) {
+					if (selected && sourceRow + childEnd - offset <= selected.sourceRow)
+						break;
+					const componentLines = childLines.parts[index];
+					const component = childLines.children[index];
+					if (!componentLines || !component) continue;
+					const childStart = childEnd - componentLines.length;
+					visitComponent(component, childStart, childEnd);
+					childEnd = childStart;
+				}
+				return;
+			}
+			const native = (
+				container as unknown as { mouseLayout?: NativeContainerLayout }
+			).mouseLayout;
 			if (native?.width !== child.rect.width) return;
 			let childEnd = end;
-			for (let index = native.children.length - 1; index >= 0 && !blocked; index--) {
-				if (selected && sourceRow + childEnd - offset <= selected.sourceRow) break;
+			for (
+				let index = native.children.length - 1;
+				index >= 0 && !blocked;
+				index--
+			) {
+				if (selected && sourceRow + childEnd - offset <= selected.sourceRow)
+					break;
 				const entry = native.children[index]!;
 				const childStart = childEnd - entry.height;
 				visitComponent(entry.component, childStart, childEnd);
@@ -209,7 +266,8 @@ function instructionAbove(
 		}
 		visitComponent(child.component, 0, lines.length);
 	}
-	for (let index = box.children.length - 1; index >= 0 && !blocked; index--) visitBox(box.children[index]!);
+	for (let index = box.children.length - 1; index >= 0 && !blocked; index--)
+		visitBox(box.children[index]!);
 	return selected;
 }
 
@@ -223,7 +281,11 @@ function cacheKey(
 	if (!content) return undefined;
 	const native =
 		content.component instanceof Container
-			? (content.component as unknown as { mouseLayout?: NativeContainerLayout }).mouseLayout
+			? (
+					content.component as unknown as {
+						mouseLayout?: NativeContainerLayout;
+					}
+				).mouseLayout
 			: undefined;
 	return {
 		tui,
@@ -237,7 +299,10 @@ function cacheKey(
 	};
 }
 
-function sameCache(cache: InstructionCache, key: Omit<InstructionCache, "instruction">): boolean {
+function sameCache(
+	cache: InstructionCache,
+	key: Omit<InstructionCache, "instruction">,
+): boolean {
 	return (
 		cache.tui === key.tui &&
 		cache.scrollView === key.scrollView &&
@@ -250,14 +315,21 @@ function sameCache(cache: InstructionCache, key: Omit<InstructionCache, "instruc
 	);
 }
 
-function cachedLineStillMatches(cache: InstructionCache, box: LayoutBox): boolean {
+function cachedLineStillMatches(
+	cache: InstructionCache,
+	box: LayoutBox,
+): boolean {
 	if (!cache.instruction) return true;
 	const line = box.scrollContentLines?.[cache.instruction.bodyRow];
-	return line !== undefined && stripTerminalSequences(line).trim() === cache.instruction.text;
+	return (
+		line !== undefined &&
+		stripTerminalSequences(line).trim() === cache.instruction.text
+	);
 }
 
 export function installSticky(options: StickyOptions): StickyHandle {
-	if (activeInstallation) throw new Error("Sticky user message is already installed");
+	if (activeInstallation)
+		throw new Error("Sticky user message is already installed");
 	const proto = TuiAltScreen.prototype;
 	const descriptors = requireMethods(proto);
 	const compositeDescriptor = descriptors.get("compositeScrollToEndIndicator")!;
@@ -284,7 +356,10 @@ export function installSticky(options: StickyOptions): StickyHandle {
 		if ((forwarded as unknown) === tui) return true;
 		const current = forwarded as unknown as PrivateTui;
 		const renderer = tui as unknown as PrivateTui;
-		if (typeof current.getPrimaryScrollView !== "function" || typeof renderer.getPrimaryScrollView !== "function") {
+		if (
+			typeof current.getPrimaryScrollView !== "function" ||
+			typeof renderer.getPrimaryScrollView !== "function"
+		) {
 			return false;
 		}
 		return (
@@ -323,9 +398,9 @@ export function installSticky(options: StickyOptions): StickyHandle {
 			hit.scrollView.scrollTop === hit.top &&
 			hit.layout.width === privateTui.terminal.columns &&
 			hit.layout.height === privateTui.terminal.rows &&
-				!event.shift &&
-				!event.alt &&
-				!event.ctrl &&
+			!event.shift &&
+			!event.alt &&
+			!event.ctrl &&
 			event.screenY === hit.row &&
 			event.screenX >= hit.x &&
 			event.screenX < hit.right
@@ -338,7 +413,11 @@ export function installSticky(options: StickyOptions): StickyHandle {
 		handleMouse(event) {
 			if (event.type === "press") gesture = frame;
 			const hit = event.type === "move" ? frame : gesture;
-			if (!valid(hit, event) || (event.button !== "left" && event.type !== "move")) return undefined;
+			if (
+				!valid(hit, event) ||
+				(event.button !== "left" && event.type !== "move")
+			)
+				return undefined;
 			if (event.type === "click") {
 				hit.scrollView.scrollTo(hit.sourceRow, { disableFollow: true });
 				return { handled: true, render: true };
@@ -361,7 +440,8 @@ export function installSticky(options: StickyOptions): StickyHandle {
 				) {
 					privateTui.clearComponentMouseGesture();
 				}
-				if (privateTui.lastComponentClick?.component === target) privateTui.lastComponentClick = undefined;
+				if (privateTui.lastComponentClick?.component === target)
+					privateTui.lastComponentClick = undefined;
 			}
 			frame = undefined;
 			gesture = undefined;
@@ -371,11 +451,25 @@ export function installSticky(options: StickyOptions): StickyHandle {
 			if (!active) return;
 			owner.refresh();
 			active = false;
-			if (Object.getOwnPropertyDescriptor(proto, "dispatchMouseToLayout")?.value === dispatchWrapper) {
-				Object.defineProperty(proto, "dispatchMouseToLayout", dispatchDescriptor);
+			if (
+				Object.getOwnPropertyDescriptor(proto, "dispatchMouseToLayout")
+					?.value === dispatchWrapper
+			) {
+				Object.defineProperty(
+					proto,
+					"dispatchMouseToLayout",
+					dispatchDescriptor,
+				);
 			}
-			if (Object.getOwnPropertyDescriptor(proto, "compositeScrollToEndIndicator")?.value === compositeWrapper) {
-				Object.defineProperty(proto, "compositeScrollToEndIndicator", compositeDescriptor);
+			if (
+				Object.getOwnPropertyDescriptor(proto, "compositeScrollToEndIndicator")
+					?.value === compositeWrapper
+			) {
+				Object.defineProperty(
+					proto,
+					"compositeScrollToEndIndicator",
+					compositeDescriptor,
+				);
 			}
 			if (activeInstallation === owner) activeInstallation = undefined;
 		},
@@ -401,14 +495,16 @@ export function installSticky(options: StickyOptions): StickyHandle {
 		const box = scrollViewBox(layout.root, scrollView);
 		if (!box?.scrollContentLines || box.clip.height < 1) return result;
 		const row = Math.max(0, box.clip.y);
-		if ((this as unknown as PrivateTui).scrollToEndIndicatorRect?.row === row) return result;
+		if ((this as unknown as PrivateTui).scrollToEndIndicatorRect?.row === row)
+			return result;
 		const top = scrollView.scrollTop + row - box.rect.y;
 		const key = cacheKey(box, scrollView, top, this);
 		let instruction: Instruction | undefined;
 		let cacheHit = false;
 		if (key && instructionCache && sameCache(instructionCache, key)) {
 			cacheHit = true;
-			if (cachedLineStillMatches(instructionCache, box)) instruction = instructionCache.instruction;
+			if (cachedLineStillMatches(instructionCache, box))
+				instruction = instructionCache.instruction;
 			else cacheHit = false;
 		}
 		if (!cacheHit) instruction = instructionAbove(box, scrollView, top, this);
@@ -416,12 +512,14 @@ export function installSticky(options: StickyOptions): StickyHandle {
 		if (!instruction) return result;
 		const x = Math.max(0, box.clip.x);
 		let right = Math.min(width, box.clip.x + box.clip.width);
-		const contentHeight = box.children[0]?.rect.height ?? box.scrollContentLines.length;
+		const contentHeight =
+			box.children[0]?.rect.height ?? box.scrollContentLines.length;
 		const hasScrollbar =
 			scrollView.isScrollbarVisible ||
 			(scrollView.scrollbar === "auto" && contentHeight > box.rect.height);
 		const scrollbarColumn = box.rect.x + box.rect.width - 1;
-		if (hasScrollbar && scrollbarColumn >= x && scrollbarColumn < right) right = scrollbarColumn;
+		if (hasScrollbar && scrollbarColumn >= x && scrollbarColumn < right)
+			right = scrollbarColumn;
 		const available = right - x;
 		if (available < 1 || row >= result.length) return result;
 		const padding = available > 1 ? 1 : 0;
@@ -436,7 +534,13 @@ export function installSticky(options: StickyOptions): StickyHandle {
 			),
 		);
 		const painted = result.slice();
-		painted[row] = compositeTuiLine(result[row] ?? "", styled, x, available, width);
+		painted[row] = compositeTuiLine(
+			result[row] ?? "",
+			styled,
+			x,
+			available,
+			width,
+		);
 		frame = {
 			tui: this,
 			layout,
@@ -452,9 +556,16 @@ export function installSticky(options: StickyOptions): StickyHandle {
 		return painted;
 	};
 
-	const dispatchWrapper = function (this: TuiAltScreen, event: TuiMouseEvent): unknown {
+	const dispatchWrapper = function (
+		this: TuiAltScreen,
+		event: TuiMouseEvent,
+	): unknown {
 		const hit = frame;
-		if (this !== hit?.tui || !valid(hit, event) || !["press", "click", "move"].includes(event.type)) {
+		if (
+			this !== hit?.tui ||
+			!valid(hit, event) ||
+			!["press", "click", "move"].includes(event.type)
+		) {
 			return originalDispatch.call(this, event);
 		}
 		const result = target.handleMouse?.(event);
@@ -462,13 +573,25 @@ export function installSticky(options: StickyOptions): StickyHandle {
 		return {
 			...result,
 			handled: true,
-			target: { component: target, originX: hit.x, originY: hit.row, width: hit.right - hit.x, height: 1 },
+			target: {
+				component: target,
+				originX: hit.x,
+				originY: hit.row,
+				width: hit.right - hit.x,
+				height: 1,
+			},
 		};
 	};
 
 	try {
-		Object.defineProperty(proto, "compositeScrollToEndIndicator", { ...compositeDescriptor, value: compositeWrapper });
-		Object.defineProperty(proto, "dispatchMouseToLayout", { ...dispatchDescriptor, value: dispatchWrapper });
+		Object.defineProperty(proto, "compositeScrollToEndIndicator", {
+			...compositeDescriptor,
+			value: compositeWrapper,
+		});
+		Object.defineProperty(proto, "dispatchMouseToLayout", {
+			...dispatchDescriptor,
+			value: dispatchWrapper,
+		});
 		activeInstallation = owner;
 		return owner;
 	} catch (error) {

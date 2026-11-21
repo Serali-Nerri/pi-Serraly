@@ -131,7 +131,7 @@ async function registerAskInCodeMode(
 			throw new Error(
 				"Update " +
 					CODE_MODE_PACKAGE +
-					" to 5.0.1 or newer to use Pi Ask with it",
+					" to 5.0.2 or newer to use Pi Ask with it",
 				{ cause: error },
 			);
 		}

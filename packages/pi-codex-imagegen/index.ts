@@ -142,7 +142,7 @@ async function registerImagegenInCodeMode(
 			throw new Error(
 				"Update " +
 					CODE_MODE_PACKAGE +
-					" to 5.0.1 or newer to use Codex Imagegen with it",
+					" to 5.0.2 or newer to use Codex Imagegen with it",
 				{ cause: error },
 			);
 		}

@@ -16,7 +16,7 @@ Try it for one session:
 pi --no-extensions --no-skills -e ~/.pi/pi-Serraly/packages/pi-auto-trees
 ```
 
-Requires Pi 1.5 or newer. Pi Codex Conversion 5.0.1 or newer is optional.
+Requires Pi 1.6.0 or newer. Pi Codex Conversion 5.0.2 or newer is optional.
 
 ## Usage
 

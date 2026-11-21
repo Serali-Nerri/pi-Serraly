@@ -2,7 +2,7 @@
 
 Notes owns its four tools, local storage, family sharing, checkpoint policy and context windows. PCC is optional. Without Notes, PCC provides ordinary Pi and native provider compaction without notes tools.
 
-Notes uses PCC 5.0.1 or newer through its public `code-mode`, `prompt-mode` and `developer-messages` exports. Code and Notebook promote Notes' compact discovery entry and routing guidance. History remains deferred. Notes' own on-demand help describes its result fields.
+Notes uses PCC 5.0.2 or newer through its public `code-mode`, `prompt-mode` and `developer-messages` exports. Code and Notebook promote Notes' compact discovery entry and routing guidance. History remains deferred. Notes' own on-demand help describes its result fields.
 
 Native `new_context` remains sequential and model-only, with `defaultActive: false`; Notes activates it when requests are permitted. Code and Notebook also expose an unadvertised sequential callable after an awaited own-note save in the same cell. It uses the original exec ID and Notes-owned completed-write evidence, not the unfinished parent-cell result. It contributes no prompt guidance or discovery listing. Other freshness checks continue to use persisted Notes receipts and completed tool outcomes, including exec and wait.
 

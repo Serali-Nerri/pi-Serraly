@@ -16,7 +16,10 @@ import { JsCodeClient } from "../src/tools/js-mode/client.ts";
 import { NotebookCodeModeClient } from "../src/tools/notebook-mode/client.ts";
 import { TsCodeModeClient } from "../src/tools/ts-mode/client.ts";
 import { VmCodeClient } from "../src/tools/vm-mode/client.ts";
-import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import {
+	getPackageDir,
+	type ExtensionContext,
+} from "@earendil-works/pi-coding-agent";
 
 const CALLS = Number(process.env["BENCH_CALLS"] ?? 500);
 const WARMUP = 3;
@@ -189,6 +192,7 @@ async function openMode(
 	const options = {
 		maxHeapMiB: 256,
 		agentDir,
+		piPackageDir: getPackageDir(),
 		prepareToolInput: prepareCodeModeToolInput,
 	};
 	if (mode === "Code")

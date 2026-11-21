@@ -18,7 +18,7 @@ const extensionEntries = [
 	"packages/pi-ui/dist/index.ts",
 ].sort();
 
-test("released Pi 1.5 loads every imported package and completes session cleanup", {
+test("released Pi 1.6 loads every imported package and completes session cleanup", {
 	timeout: 120_000,
 }, async () => {
 	const report = await runRuntimeAcceptance();

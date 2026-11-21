@@ -58,7 +58,7 @@ The assessment format is `json_schema`, named `codex_output_schema`, with `stric
 
 Transport comes from `pi.getSettings().transport`, defaulting to `auto`. Guardian supplies a bounded full replay through public `onPayload` and header options. The selected provider owns sockets, delta selection, `previous_response_id`, and transport recovery; Guardian implements no custom socket or byte-level WebSocket interception.
 
-Native Pi 1.5.2 compares non-input body fields including `client_metadata` when deciding continuation. Changing per-action metadata can therefore cause full replay even on a reused socket. Conversion currently excludes `client_metadata` from that comparison and can continue from the reviewer's own previous response ID. Reuse does not promise delta transmission for every provider, fewer billed tokens, or zero cost.
+Native Pi 1.6.0 compares non-input body fields including `client_metadata` when deciding continuation. Changing per-action metadata can therefore cause full replay even on a reused socket. Conversion currently excludes `client_metadata` from that comparison and can continue from the reviewer's own previous response ID. Reuse does not promise delta transmission for every provider, fewer billed tokens, or zero cost.
 
 | Field family                  | Guardian-supplied state                                                                                                                                                                                                        |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

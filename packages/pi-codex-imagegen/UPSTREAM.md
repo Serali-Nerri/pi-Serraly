@@ -1,18 +1,21 @@
 # Upstream provenance
 
-- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/4006488d10e01b7da55c3ebac5b0a7913005ba00/packages/pi-codex-imagegen
-- Baseline version: 0.0.15
+- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/19ec6357fa3c4eb0126f8b0d4b6569de1a655ef9/packages/pi-codex-imagegen
+- Baseline version: 0.0.16
 - Upstream history and license: CHANGELOG.md and LICENSE are retained. UPSTREAM_SYNC.md and the nested upstream license remain in place.
+- Local history: [CHANGELOG.local.md](./CHANGELOG.local.md) records the gateway and validation adaptations.
+
+## Selected upstream changes adopted
+
+- 0.0.16's image artifact path is adopted: generated images are displayed from the already-produced artifact instead of being reread from disk, and help describes the active access mode and explicit edit selectors.
+- Upstream text-only result ownership and Pi 1.6-compatible tool contracts are retained in the ordinary and Code Mode paths.
 
 ## Current local differences
 
-- package.json removes npm publish/prepack/pack lifecycle configuration, ships UPSTREAM.md and CHANGELOG.local.md.
-- README.md uses a separately prepared installation workspace and native Pi registration, states the supported optional Pi Codex Conversion version, and clarifies that GIF previews may be unavailable.
-- AGENTS.md describes the OpenAI Codex reference relative to a checkout's codex-rs directory instead of a local absolute path, distinguishes the supported edit formats by access route, and records settings-input and route-ownership constraints. UPSTREAM_SYNC.md retains the local reference and review history.
-- The outdated Code Mode error reflects the supported 5.0.1 peer minimum.
-- API settings add an explicit base URL, Pi credential-provider ID and custom image model. Official defaults and the Codex resolver are unchanged.
-- Custom models retain upstream's six quality choices while exposing only standard still-image controls. Settings UI, request construction and ordinary/Code Mode schemas agree on preset-only controls; native dialogs refresh the schema without resetting quality.
-- Settings validation is owned by file/UI input boundaries rather than repeated for typed persistence.
-- PNG chunk integrity checks use Node's native CRC32. Local API edit files are admitted against the encoded data-URL limit before reading, without restricting Codex inputs.
+- The package uses this repository's prepared installation workspace, provenance files and local changelog instead of the upstream npm publication workflow.
+- API settings retain the local explicit base URL, Pi credential-provider ID and custom image model. Official defaults and Codex OAuth routing remain separate; gateway credentials are never written into the imagegen settings file.
+- Custom models retain the upstream quality choices but expose only still-image controls. Preset-only complexity, GIF and SVG controls stay aligned across settings, request validation and Code Mode schemas.
+- Local input boundaries retain PNG chunk integrity validation, encoded data-URL size admission before reading local files, and the distinction between Codex's larger edit inputs and OpenAI API limits.
+- The local Code Mode description keeps the detailed, settings-aware selector and result guidance needed by this workspace. The package continues to use Pi's result-image display rather than drawing a duplicate preview in the tool card.
 
-Usage is defined in README.md; local change history is in CHANGELOG.local.md.
+Usage is defined in [README.md](README.md); the Codex reference and review history remain in [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md).

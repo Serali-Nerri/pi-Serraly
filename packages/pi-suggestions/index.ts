@@ -133,7 +133,8 @@ export default function suggestions(pi: ExtensionAPI): void {
 		if (event.aborted || !config.model || !editor) return;
 		const selection = config.model;
 		const epoch = generation;
-		const sessionId = ctx.sessionManager.getSessionId();
+		const manager = ctx.sessionManager;
+		const sessionId = manager.getSessionId();
 		// appendEntry stores non-model state; custom messages and context edits still invalidate drafts.
 		const contextLeaf = () =>
 			ctx.sessionManager
@@ -148,7 +149,8 @@ export default function suggestions(pi: ExtensionAPI): void {
 			ctx.isIdle() &&
 			!ctx.hasPendingMessages() &&
 			ctx.ui.getEditorText() === "" &&
-			ctx.sessionManager.getSessionId() === sessionId &&
+			ctx.sessionManager === manager &&
+			manager.getSessionId() === sessionId &&
 			contextLeaf() === leaf;
 		timer = setTimeout(() => {
 			timer = undefined;

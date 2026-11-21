@@ -58,7 +58,7 @@ test("TUI session replacement restores owned presentation and does not accumulat
 		appendEntry(_customType: string, data: unknown) { completionEntries.push(data); },
 	} as unknown as ExtensionAPI;
 	extension(pi);
-	let footer: { render(width: number): string[]; dispose?: () => void } | undefined;
+	let footer: { render(width: number): readonly string[]; dispose?(): void } | undefined;
 	const notices: string[] = [];
 	const ui = {
 		theme,

@@ -40,12 +40,10 @@ export function createSharedSessionReader(
 		native: string,
 	): Promise<Record<string, unknown> | undefined> {
 		let result: Record<string, unknown>;
-		if (namespace === "notes") {
+		if (access.namespace === "notes") {
 			const normalized = normalizeNoteParams(query, native);
-			const notes =
-				normalized["action"] === "read_file"
-					? collectNotes(store, session.branch)
-					: undefined;
+			const isRead = normalized["action"] === "read_file";
+			const notes = isRead ? collectNotes(store, session.branch) : undefined;
 			const replacement =
 				notes?.get(String(normalized["path"]))?.mode === "replace";
 			// Never replace a merged hybrid read with a local-only saved branch.
@@ -64,7 +62,7 @@ export function createSharedSessionReader(
 				normalized,
 				outputAgent,
 			);
-		} else {
+		} else
 			result = await useHistory(
 				session.branch,
 				query,
@@ -73,7 +71,6 @@ export function createSharedSessionReader(
 				session.entries,
 				signal,
 			);
-		}
 		return {
 			...result,
 			...(session.savedAt === undefined

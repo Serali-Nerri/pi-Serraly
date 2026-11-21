@@ -2,6 +2,10 @@
 
 Local changes and their background, relative to upstream **5.0.1** (`4006488d10e01b7da55c3ebac5b0a7913005ba00`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
 
+## Upstream 5.0.2 sync
+
+- Move the host dependency line to Pi 1.6.0 and adopt the upstream Responses Lite image limits/cache, retry-after handling, transport/session continuity, tool-discovery guidance and bundled QuickJS runtime resolution. Retain local Notes ownership, voice/controller integration, native helper provenance and Code/Notebook rendering expansion.
+
 ## Upstream 5.0.1 sync
 
 - Add conversation-local VM Code alongside the existing runtimes, GPT-6.2 Sol/Astra and pricing, instruction-change diagnostics and shorter tool guidance. Restore Acorn for VM parsing; keep the official Code host and nested Codex source pins unchanged.

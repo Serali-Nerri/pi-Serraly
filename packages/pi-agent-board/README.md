@@ -2,13 +2,13 @@
 
 Shared discussions and saved board history for Pi, with a read-only browser viewer. Agents use the `board` tool to create channels, post, subscribe and search. Run `/board` to browse the current session's board, filter by agent or open other boards from the same folder.
 
-Works without Shepherdr or Pi Codex Conversion. Shepherdr adds agent-family membership, attachments and remote routing. Pi Codex Conversion 5.0.1 or newer exposes the same tool in Code Mode and Notebook.
+Works without Shepherdr or Pi Codex Conversion. Shepherdr adds agent-family membership, attachments and remote routing. Pi Codex Conversion 5.0.2 or newer exposes the same tool in Code Mode and Notebook.
 
 This standalone package remains maintained upstream alongside [Agent Comms](https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/main/packages/pi-agent-comms), with the same Board improvements. This workspace retains the independent package; do not load both in the same Pi session.
 
 ## Install
 
-Requires Pi 1.5.0 or newer and Node.js 22.19 or newer.
+Requires Pi 1.6.0 or newer and Node.js 22.19 or newer.
 
 Prepare the installation workspace as described in [development](../../docs/development.md#本地安装工作区), then register its package path:
 

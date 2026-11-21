@@ -20,7 +20,7 @@
 | pi-session-recap | TUI 手动/空闲 recap、历史裁剪、临时卡片与请求清理 | 只依赖公开 Pi host API；模型注册表发起独立摘要请求 |
 | pi-extensions | 显式组合仓库全部十二个扩展的注册入口 | workspace 运行依赖；调用成员公开导出 |
 
-跨包依赖使用公开导出，不读取兄弟私有源码。宿主包是 peer，不随正式运行树安装；开发使用精确 Pi 1.5.2。工具 schema 使用 Pi 原生 schema 包，外部运行依赖由 workspace 安装。
+跨包依赖使用公开导出，不读取兄弟私有源码。宿主包是 peer，不随正式运行树安装；开发使用精确 Pi 1.6.0。工具 schema 使用 Pi 原生 schema 包，外部运行依赖由 workspace 安装。
 
 pi-extensions 显式维护成员依赖和 manifest 入口顺序。十二个成员各有一个 TS 转发入口，默认全部启用，可由 `pi config` 分别开关。更新提示的边界见 [整合包 README](../packages/pi-extensions/README.md)。默认仍逐包登记，整合包不能与其成员重复加载。
 

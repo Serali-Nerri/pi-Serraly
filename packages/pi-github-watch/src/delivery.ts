@@ -4,7 +4,7 @@ import type {
 	CodexDeveloperMessageOptions,
 } from "@howaboua/pi-codex-conversion/developer-messages";
 import type { ThreadSnapshot } from "./feedback.js";
-import type { NewThread, Repository, Thread } from "./github.js";
+import type { Thread } from "./github.js";
 
 export function feedbackMessage(
 	thread: Thread,
@@ -45,26 +45,6 @@ export function feedbackMessage(
 			"When addressing reviews, resolve threads only after the work is complete. Skip unchanged resolved threads.",
 		);
 	return parts.join(" ");
-}
-
-export function newThreadsMessage(
-	repository: Repository,
-	items: NewThread[],
-): string {
-	const lines = [
-		`GitHub watch: ${items.length} new issue/PR(s) in ${repository.repo}.`,
-		...items.slice(0, 8).map((item) => {
-			const title =
-				item.title.length > 120 ? `${item.title.slice(0, 120)}…` : item.title;
-			return `- ${item.pr ? `PR #${item.number}${item.draft ? " (draft)" : ""}` : `Issue #${item.number}`} ${JSON.stringify(title)} by ${item.author}: ${item.url}`;
-		}),
-	];
-	if (items.length > 8)
-		lines.push(`(${items.length - 8} more, up to #${items.at(-1)?.number}.)`);
-	lines.push(
-		`New input awaiting evaluation, not approved work. Read details with gh issue view <number> --repo ${repository.repo} or gh pr view <number> --repo ${repository.repo}, then decide in the project's context whether to act, clarify or defer.`,
-	);
-	return lines.join("\n");
 }
 
 interface DeliveryRequest {

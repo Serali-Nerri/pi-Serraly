@@ -1,6 +1,10 @@
 # Local changes
 
-Local changes relative to upstream 0.0.7. [UPSTREAM.md](UPSTREAM.md) owns provenance; [CHANGELOG.md](CHANGELOG.md) retains upstream release history.
+Local historical changes relative to upstream 0.0.7. [UPSTREAM.md](UPSTREAM.md) owns the current provenance; [CHANGELOG.md](CHANGELOG.md) retains upstream release history.
+
+## 0.0.8 sync decision
+
+The repository-watch implementation and its baseline-request optimizations were intentionally removed from the runtime. The package now uses upstream 0.0.8 exactly; the entries below are historical records of the discarded local behavior.
 
 ## Repository watches and baseline requests
 

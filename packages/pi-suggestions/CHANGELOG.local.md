@@ -1,6 +1,8 @@
 # Local changelog
 
-Local changes relative to upstream 0.0.3. [UPSTREAM.md](UPSTREAM.md) owns provenance; [CHANGELOG.md](CHANGELOG.md) retains upstream release history.
+Local changes relative to upstream 0.0.4. [UPSTREAM.md](UPSTREAM.md) owns current provenance; [CHANGELOG.md](CHANGELOG.md) retains upstream release history.
+
+The upstream 0.0.4 prediction/editor update is now part of the package baseline; the entries below remain local behavior.
 
 ## Disabled-session overhead
 

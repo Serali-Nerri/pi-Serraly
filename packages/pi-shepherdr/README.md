@@ -16,11 +16,11 @@ Prepare the installation workspace as described in [development](../../docs/deve
 pi install ~/.pi/pi-Serraly/packages/pi-shepherdr
 ```
 
-Requires Pi 1.5 or newer, Node.js 22.19 or newer and Herdr Core 0.1.21 or newer on the controller and every target. Run Pi in a Core terminal, through `hc` or a Herdr app connected to that Core. Shepherdr reports Pi status to Core and discovers other Pi sessions with Shepherdr installed. No separate Pi integration is needed.
+Requires Pi 1.6.0 or newer, Node.js 22.19 or newer and Herdr Core 0.1.21 or newer on the controller and every target. Run Pi in a Core terminal, through `hc` or a Herdr app connected to that Core. Shepherdr reports Pi status to Core and discovers other Pi sessions with Shepherdr installed. No separate Pi integration is needed.
 
 Do not load Pi Codex's example `agents.toml` custom tool alongside Shepherdr; they own the same agent surface.
 
-Shepherdr installs and runs on its own. Pi Codex, shared Notes and boards are optional. Delegation, supervision, messages, focus and orchestration work without them. Shared Notes require Notes Compaction 0.0.15 or newer; boards require Agent Board 0.0.5 or newer. Upstream [Agent Comms](https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/main/packages/pi-agent-comms) also provides both integrations when loaded. Enable each shared feature in every participating session.
+Shepherdr installs and runs on its own. Pi Codex, shared Notes and boards are optional. Delegation, supervision, messages, focus and orchestration work without them. Shared Notes require Notes Compaction 0.0.19 or newer; boards require Agent Board 0.0.9 or newer. Upstream [Agent Comms](https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/main/packages/pi-agent-comms) also provides both integrations when loaded. Enable each shared feature in every participating session.
 
 Workers start as background Core terminals by default. Use `placement: "new_workspace"` for a new app workspace, or `placement: "new_tab"` with a `workspace` ID advertised by a live terminal on the target Core. A connected Herdr app adopts these terminals. Pane placement is no longer supported. Focus requires a Herdr app window running on the target Core's machine and connected to that Core.
 

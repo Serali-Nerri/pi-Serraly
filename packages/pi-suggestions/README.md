@@ -4,7 +4,7 @@ Suggested next steps in Pi's terminal editor, phrased as requests you can send. 
 
 ## Install
 
-Requires Pi 1.5.0 or later. Prepare the separate installation workspace as described in [development](../../docs/development.md#本地安装工作区), then register this package:
+Requires Pi 1.6.0 or later. Prepare the separate installation workspace as described in [development](../../docs/development.md#本地安装工作区), then register this package:
 
 ```sh
 pi install ~/.pi/pi-Serraly/packages/pi-suggestions

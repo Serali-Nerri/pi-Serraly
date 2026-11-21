@@ -6,7 +6,7 @@ This private package includes the ten retained Howaboua packages, `pi-ui` and `p
 
 ## Requirements
 
-- Pi 1.5.0 or newer.
+- Pi 1.6.0 or newer.
 - Node.js 22.19 or newer.
 - Agent orchestration also needs the [Shepherdr runtime requirements](../pi-shepherdr/README.md#install).
 - GitHub watches need the [GitHub Watch requirements](../pi-github-watch/README.md#install).

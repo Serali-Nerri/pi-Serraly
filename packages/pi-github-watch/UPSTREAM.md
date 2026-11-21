@@ -1,14 +1,13 @@
 # Upstream provenance
 
-- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/4006488d10e01b7da55c3ebac5b0a7913005ba00/packages/pi-github-watch
-- Baseline version: 0.0.7
+- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/19ec6357fa3c4eb0126f8b0d4b6569de1a655ef9/packages/pi-github-watch
+- Baseline version: 0.0.8
+- Runtime source: `index.ts` and all files under `src/` match the upstream 0.0.8 implementation.
 - Upstream history and license: CHANGELOG.md and LICENSE are retained.
 
 ## Current local differences
 
-- package.json removes npm packing lifecycle commands, ships provenance and local history, and declares the workspace Node.js minimum.
-- README.md uses a separately prepared installation workspace and native Pi registration, links to the optional local aggregate, and corrects the supported Pi minimum to match the manifest.
-- Watch setup fetches only its conversation baseline; paused watches reuse their previous snapshot after access and state checks instead of fetching feedback that would be discarded.
-- Repository watches accept `owner/repo` or a repository URL and notify the session of issues and PRs created after the watch starts.
+- package.json retains this workspace's provenance/local-history file list, removes npm publication lifecycle hooks, and records the Pi 1.6/PCC 5.0.2 development line.
+- No local repository-watch implementation remains. The `Repository` target, issue/PR discovery, new-thread delivery and related setup behavior were deliberately discarded in favor of upstream 0.0.8, per the sync decision.
 
-Static checks use the shared upstream Oxfmt/Oxlint/tsrs configuration. Watches remain opt-in and session-scoped; loading the package does not contact GitHub. Local history is in [CHANGELOG.local.md](CHANGELOG.local.md).
+The extension remains opt-in and session-scoped; loading it does not contact GitHub. The local historical record is in [CHANGELOG.local.md](CHANGELOG.local.md), while current usage is defined by the upstream [README.md](README.md).

@@ -1,9 +1,9 @@
 # @howaboua/pi-agent-board
 
-## Local changes
+## 0.0.9
 
-- Empty unread catch-up no longer rescans the seen-ID list for every post; repeated reads do not enlarge the transmitted list.
-- Viewer detail and thread reads aggregate only the selected board, without recounting unrelated saved boards.
+- Shorter board guidance clarifies how to copy a full thread ID and recover from closed threads.
+- Accepts `reply` as an alias for posting to a thread.
 
 ## 0.0.8
 

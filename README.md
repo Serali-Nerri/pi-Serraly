@@ -1,6 +1,6 @@
 # pi-Serraly
 
-自用的 Pi 扩展源码工作区：Bun workspaces，**Pi 1.5.2 / Node ≥22.19 / Bun 1.4.2**，不发布 npm。
+自用的 Pi 扩展源码工作区：Bun workspaces，**Pi 1.6.0 / Node ≥22.19 / Bun 1.4.2**，不发布 npm。
 
 ## 扩展
 

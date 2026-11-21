@@ -1,9 +1,10 @@
 # Upstream provenance
 
-- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/4006488d10e01b7da55c3ebac5b0a7913005ba00/packages/pi-codex-guardian
+- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/19ec6357fa3c4eb0126f8b0d4b6569de1a655ef9/packages/pi-codex-guardian
 - Baseline version: 0.0.1
 - Upstream history and license: CHANGELOG.md and LICENSE are retained unchanged.
 - The Codex protocol reference and CPA compatibility baseline are pinned in [PROTOCOL.md](PROTOCOL.md).
+- The upstream runtime version remains 0.0.1; this sync only moves its Pi/PCC development host references to Pi 1.6.0 and PCC 5.0.2.
 - The earlier Codex reference `822e58cc3d` resolves to [`822e58cc3d666166c7446c5b1ea2e52f5d09594c`](https://github.com/openai/codex/commit/822e58cc3d666166c7446c5b1ea2e52f5d09594c); the current alignment uses the researched official revision `5943d7acdf01b293c950397844dd37aa70779df4`.
 
 ## Bundled Codex policy

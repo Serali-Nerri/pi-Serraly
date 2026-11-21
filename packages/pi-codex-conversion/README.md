@@ -28,7 +28,7 @@ Prepare the installation workspace as described in [development](../../docs/deve
 pi install ~/.pi/pi-Serraly/packages/pi-codex-conversion
 ```
 
-Requires Pi 1.5.0 or newer and Node.js 22.19 or newer. Native helpers for macOS, Linux and Windows are bundled for x64 and arm64. TS Notebook has [narrower platform support](#code-mode-and-custom-tools).
+Requires Pi 1.6.0 or newer and Node.js 22.19 or newer. Native helpers for macOS, Linux and Windows are bundled for x64 and arm64. TS Notebook has [narrower platform support](#code-mode-and-custom-tools).
 
 Open `/codex` after installation. Codex-like GPT models use **Structured** mode by default.
 
@@ -161,7 +161,7 @@ Only the latest successfully established connection route stays cached while idl
 <details>
 <summary><strong>Execution modes and custom tools</strong></summary>
 
-Code and Deno download their runtimes on first use. TS and QuickJS Code reuse matching installed packages or download them with npm. First use needs registry access when packages are missing. Cached runtimes work offline, and unselected modes do not download anything.
+Code and Deno download their runtimes on first use. TS reuses matching installed packages or downloads them with npm. QuickJS Code uses the runtime bundled by Pi 1.6.0 and does not download another runtime. First use needs registry access only when a selected mode is missing a runtime package. Cached runtimes work offline, and unselected modes do not download anything.
 
 In Notebook and TS modes, ask your agent to inspect, save, load or clean up notebook state. The `notebook` tool provides its own action help. **Restart and cancellation do not undo file changes or other external tool effects.**
 

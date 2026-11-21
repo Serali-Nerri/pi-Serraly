@@ -19,6 +19,8 @@ import {
 export const IMAGE_GENERATION_TOOL_NAME = "imagegen";
 export const IMAGE_CONTEXT_GUIDANCE =
 	"Stateless: supply prior/reference images via paths or recent count; earlier calls are not remembered";
+const SELECTOR_GUIDANCE =
+	"Stateless: omit selectors to generate. For edits, supply either local paths or a recent image count";
 export const IMAGE_GENERATION_UNSUPPORTED_MESSAGE =
 	"imagegen requires an image-capable OpenAI Codex-compatible Responses provider";
 export const IMAGE_MODEL = "gpt-image-2.5";
@@ -82,14 +84,19 @@ const IMAGE_GENERATION_PROPERTIES = {
 	),
 };
 
-const IMAGE_GENERATION_PARAMETERS = obj(IMAGE_GENERATION_PROPERTIES);
-const CODEX_IMAGE_GENERATION_PARAMETERS = obj({
-	prompt: IMAGE_GENERATION_PROPERTIES.prompt,
-	transparent_background: IMAGE_GENERATION_PROPERTIES.transparent_background,
-	referenced_image_paths: IMAGE_GENERATION_PROPERTIES.referenced_image_paths,
-	num_last_images_to_include:
-		IMAGE_GENERATION_PROPERTIES.num_last_images_to_include,
+const IMAGE_GENERATION_PARAMETERS = obj(IMAGE_GENERATION_PROPERTIES, {
+	description: SELECTOR_GUIDANCE,
 });
+const CODEX_IMAGE_GENERATION_PARAMETERS = obj(
+	{
+		prompt: IMAGE_GENERATION_PROPERTIES.prompt,
+		transparent_background: IMAGE_GENERATION_PROPERTIES.transparent_background,
+		referenced_image_paths: IMAGE_GENERATION_PROPERTIES.referenced_image_paths,
+		num_last_images_to_include:
+			IMAGE_GENERATION_PROPERTIES.num_last_images_to_include,
+	},
+	{ description: SELECTOR_GUIDANCE },
+);
 
 const COMPATIBLE_IMAGE_GENERATION_PARAMETERS = obj({
 	prompt: IMAGE_GENERATION_PROPERTIES.prompt,

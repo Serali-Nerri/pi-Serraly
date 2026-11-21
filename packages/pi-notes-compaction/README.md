@@ -6,7 +6,7 @@ This standalone package remains maintained upstream alongside [Agent Comms](http
 
 ## Install
 
-Requires Pi 1.5.0 or newer and Node.js 22.19 or newer.
+Requires Pi 1.6.0 or newer and Node.js 22.19 or newer.
 
 Prepare the separate installation workspace described in [development](../../docs/development.md#本地安装工作区), including the native SQLite dependency, then register this package explicitly:
 
@@ -33,7 +33,7 @@ pi --no-extensions --no-skills -e ./packages/pi-notes-compaction
 
 Reload Pi, then ask the agent to save a checkpoint and start a new context window. It can read those notes and search earlier session history to continue.
 
-Pi Codex Conversion is optional. Compatible releases (5.0.1 or newer) add Code Mode, Notebook and encrypted remote delivery without taking over Notes tools or policy. Run `/notes` to check activation and available capabilities. Extension authors can read the [integration contract](PCC-INTEGRATION.md).
+Pi Codex Conversion is optional. Compatible releases (5.0.2 or newer) add Code Mode, Notebook and encrypted remote delivery without taking over Notes tools or policy. Run `/notes` to check activation and available capabilities. Extension authors can read the [integration contract](PCC-INTEGRATION.md).
 
 ## Notes and windows
 

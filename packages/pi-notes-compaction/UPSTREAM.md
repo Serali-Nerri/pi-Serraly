@@ -1,17 +1,19 @@
 # Upstream provenance
 
-- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/4006488d10e01b7da55c3ebac5b0a7913005ba00/packages/pi-notes-compaction
-- Baseline version: 0.0.18
-- Upstream release history and MIT LICENSE are retained; workspace changes have a separate CHANGELOG.md section.
+- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/19ec6357fa3c4eb0126f8b0d4b6569de1a655ef9/packages/pi-notes-compaction
+- Baseline version: 0.0.19
+- Upstream release history and MIT LICENSE are retained. Workspace history has a separate [CHANGELOG.local.md](./CHANGELOG.local.md) section.
+
+## Selected upstream changes adopted
+
+- Explicit model-role IDs now survive rollover metadata; role descriptions and the read-only `/roles` screen follow upstream 0.0.19 behavior.
+- Notes reads/lists/searches reuse loaded notes; shared remote-backed parent reads are fixed; History paging is bounded and ranked searches reuse their scope.
+- The standalone package remains on Pi 1.6.0 and its public Notes/context-sharing contracts remain compatible with the local Shepherdr and PCC integrations.
 
 ## Current local differences
 
-- package.json removes npm publishing configuration, ships UPSTREAM.md and aligns development Pi versions with this workspace. The standalone Pi entry, public import keys and native SQLite dependency are retained; schema validation uses Pi's native schema package.
-- README.md describes individual or aggregate installation, the native SQLite dependency, optional PCC compatibility and session-pruning defaults and consequences, including automatic Linux exit cleanup for already-enabled retention. Agent Comms remains an upstream alternative, not an installed dependency.
-- AGENTS.md points maintenance at this package's source instead of an absent Agent Comms workspace. Existing history and resource rules live in src/notes/AGENTS.md.
-- src/notes/tools.ts registers new_context with defaultActive:false. Notes still explicitly enables it when window requests are allowed; Pi no longer automatically activates this never-enabled tool after tree navigation with requests off. Explicit historical activation is unchanged.
-- src/notes/notes.ts selects surviving branch revisions before reading SQLite bodies and preserves ordered legacy edits and recovery fallbacks. Local and saved queries reuse the materialized notes within one query.
-- src/notes/saved-session-access.ts reuses the two most recent successful loads by resolved machine/session path within a saved-family request, bounding additional transcript retention. Identity, family membership and attachment ownership checks remain at each consuming edge; failures are not cached.
-- src/notes/window-message.ts retains per-card click expansion in fullscreen Pi alongside the configured global expansion shortcut.
+- package.json, README.md and AGENTS.md retain the standalone Notes Compaction installation/workspace policy instead of upstream Agent Comms packaging. Agent Comms remains an upstream alternative, not a new dependency here.
+- Local notes reads still select surviving branch revisions before reading SQLite bodies and preserve ordered legacy edits/recovery fallbacks. Saved-session access keeps the local bounded reuse policy and validates identity/attachment ownership at each consuming edge.
+- `new_context` remains inactive by default until Notes explicitly enables it, and the local fullscreen window keeps per-card click expansion alongside the global expansion shortcut.
 
-Apart from the changes above and shared formatter output, runtime sources, migration and history safeguards match the baseline. PCC-INTEGRATION.md describes the current optional same-cell rollover contract.
+Apart from the selected local boundaries above and shared formatter output, runtime sources, migration and history safeguards match the 0.0.19 baseline. [PCC-INTEGRATION.md](PCC-INTEGRATION.md) owns the optional same-cell rollover contract.
