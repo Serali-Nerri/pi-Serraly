@@ -2,6 +2,11 @@
 
 Local changes and their background, relative to upstream **5.0.1** (`4006488d10e01b7da55c3ebac5b0a7913005ba00`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
 
+## Code Mode tool discovery and MCP output guidance
+
+- Prefer filtering deferred `ALL_TOOLS` entries by name or keyword instead of printing the full catalogue by default, while retaining the full catalogue as a fallback; this keeps large tool contracts out of context unless they are needed.
+- Add generic MCP output guidance after five observed MCP calls completed successfully but generated Code Mode cells passed the full result envelope to `content()`, which accepts only verified blocks or block arrays. Serialize other values with `text(...)` rather than treating the issue as an MCP server failure.
+
 ## Upstream 5.0.2 sync
 
 - Move the host dependency line to Pi 1.6.0 and adopt the upstream Responses Lite image limits/cache, retry-after handling, transport/session continuity, tool-discovery guidance and bundled QuickJS runtime resolution. Retain local Notes ownership, voice/controller integration, native helper provenance and Code/Notebook rendering expansion.

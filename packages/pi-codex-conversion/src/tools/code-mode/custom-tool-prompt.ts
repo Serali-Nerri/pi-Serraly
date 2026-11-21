@@ -11,14 +11,20 @@ const JS_CELL_DESCRIPTION =
 	"Run JavaScript to process data or call tools; source only, no JSON or fences";
 const GPT_JS_CELL_DESCRIPTION =
 	"JavaScript computation/tool calls; source ONLY, NO JSON/fences";
+const MCP_OUTPUT_GUIDANCE =
+	"MCP results may be envelopes: pass only verified blocks or block arrays (often result.content) to content(...); serialize other values with text(...)";
+const GPT_MCP_OUTPUT_GUIDANCE =
+	"MCP may return envelopes→content(...) only verified blocks/arrays (often result.content); serialize other values with text(...)";
 
 export const EXEC_DESCRIPTION = `${JS_CELL_DESCRIPTION}
 Optional // @exec: {"yield_time_ms": 10000, "max_output_tokens": 1000}; defaults 30000 ms/10000 tokens
-Bare values are discarded; globals: tools, image, generatedImage, store, load, exit, setTimeout, clearTimeout, ALL_TOOLS; content(value) emits MCP text/images in order; text(value) prints serialized output; notify(value) emits; both return undefined; yield_control() yields`;
+Bare values are discarded; globals: tools, image, generatedImage, store, load, exit, setTimeout, clearTimeout, ALL_TOOLS; content(value) emits MCP text/images in order; text(value) prints serialized output; notify(value) emits; both return undefined; yield_control() yields
+${MCP_OUTPUT_GUIDANCE}`;
 
 export const GPT_EXEC_DESCRIPTION = `${GPT_JS_CELL_DESCRIPTION}
 Optional // @exec: {"yield_time_ms": 10000, "max_output_tokens": 1000}; defaults=30000ms/10000tokens
-Bare values discarded; globals: tools, image, generatedImage, store, load, exit, setTimeout, clearTimeout, ALL_TOOLS; content(value)→emit MCP text/images in order; text(value)→print serialized output; notify(value)→emit; both→undefined; yield_control()→yield`;
+Bare values discarded; globals: tools, image, generatedImage, store, load, exit, setTimeout, clearTimeout, ALL_TOOLS; content(value)→emit MCP text/images in order; text(value)→print serialized output; notify(value)→emit; both→undefined; yield_control()→yield
+${GPT_MCP_OUTPUT_GUIDANCE}`;
 
 export const ISOLATED_EXEC_GUIDANCE =
 	'For independent work while another cell runs, add "isolated":true to // @exec. Starts from last saved state; leaves shared variables unchanged';
@@ -30,6 +36,7 @@ Optional // @exec: {"yield_time_ms": 10000, "max_output_tokens": 1000}; defaults
 Put one-off const and let declarations inside { ... }. Top-level bindings persist
 Bare values discarded; globals: tools, text, image, notify, generatedImage, store, load, yield_control, exit, console, ALL_TOOLS
 content(value) emits MCP text/images in order
+${MCP_OUTPUT_GUIDANCE}
 No Node, imports, fetch or timers
 A stall, cancellation, memory limit or terminate drops conversation bindings`;
 
@@ -38,6 +45,7 @@ Optional // @exec: {"yield_time_ms": 10000, "max_output_tokens": 1000}; defaults
 One-off const/let→{ ... }; top-level→persists
 Bare values discarded; globals: tools, text, image, notify, generatedImage, store, load, yield_control, exit, console, ALL_TOOLS
 content(value)→emit MCP text/images in order
+${GPT_MCP_OUTPUT_GUIDANCE}
 NO Node/imports/fetch/timers
 Stall/cancel/memory limit/terminate→bindings dropped; next exec fresh`;
 
@@ -45,12 +53,14 @@ export const JS_EXEC_DESCRIPTION = `${JS_CELL_DESCRIPTION}
 Optional // @exec: {"yield_time_ms": 10000, "max_output_tokens": 1000}; defaults 30000 ms/10000 tokens
 Bare values discarded; globals: tools, text, image, notify, generatedImage, store, load, yield_control, exit, ALL_TOOLS
 content(value) emits MCP text/images in order
+${MCP_OUTPUT_GUIDANCE}
 No Node, imports, fetch, timers or TypeScript checking`;
 
 export const GPT_JS_EXEC_DESCRIPTION = `${GPT_JS_CELL_DESCRIPTION}
 Optional // @exec: {"yield_time_ms": 10000, "max_output_tokens": 1000}; defaults=30000ms/10000tokens
 Bare values discarded; globals: tools, text, image, notify, generatedImage, store, load, yield_control, exit, ALL_TOOLS
 content(value)→emit MCP text/images in order
+${GPT_MCP_OUTPUT_GUIDANCE}
 NO Node/imports/fetch/timers/TSchecking`;
 
 export const WAIT_DESCRIPTION = "Resume or terminate a yielded exec cell";
@@ -59,7 +69,7 @@ const BUNDLED_TOOLS_HEADING = "Tools available in exec:";
 const CUSTOM_TOOLS_HEADING = "Configured custom tools:";
 const TOOL_GUIDANCE_HEADING = "Tool guidance:";
 const DEFERRED_TOOLS_GUIDANCE =
-	"For additional tools and their contracts, run text(ALL_TOOLS) in exec";
+	"For additional tools and their contracts, prefer filtering ALL_TOOLS by name or keyword and printing only matching entries; use the full catalogue only when necessary";
 const CUSTOM_TOOLS_GUIDANCE =
 	"Prefer custom tools for command-backed capabilities";
 export const CODE_MODE_TOOLS_SECTION = "exec_tools";
@@ -240,7 +250,9 @@ export function buildCodeModeToolsPrompt(
 		buildUsageSection(CUSTOM_TOOLS_HEADING, promotedCustom),
 		buildGuidanceSection(tools),
 		// The catalogue is always available, even when its first or last tool is unlisted.
-		gpt ? "More tools/contracts→text(ALL_TOOLS)" : DEFERRED_TOOLS_GUIDANCE,
+		gpt
+			? "More tools→prefer filtering ALL_TOOLS by name/keyword; use the full catalogue only when necessary"
+			: DEFERRED_TOOLS_GUIDANCE,
 		custom.length > 0 ? CUSTOM_TOOLS_GUIDANCE : undefined,
 	].filter(Boolean);
 	return sections.join("\n");

@@ -6,6 +6,7 @@
 - Edit owning source, never installed tooling. Validate and report changes. Source edits do not update running packages.
 - Trace failures through supported workflows before fixing them. A synthetic reproducer or possible interleaving alone does not prove exposure. Respect product tradeoffs; optional capabilities are not defects.
 - Update documentation when behavior or usage changes. Use focused package checks while editing; run `npm run verify` for cross-package dependencies, build, installation or release tooling changes.
+- For each intentional local behavior, prompt, contract or integration change relative to upstream, add a concise entry to the owning package's `CHANGELOG.local.md` explaining what changed and why; keep upstream release history in `CHANGELOG.md`.
 - Each document owns a clear concern. Keep definitions and rules in their owning document and link to them instead of duplicating them. Usage and contract docs describe current behavior, not work logs or obsolete instructions; changelogs, ADRs and issues retain their intended history.
 
 ## Branch workflow
