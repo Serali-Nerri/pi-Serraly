@@ -1,0 +1,52 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { DEFAULT_CODEX_CONVERSION_CONFIG } from "../src/adapter/activation/config.ts";
+import { resolveCodexRuntimePlan } from "../src/adapter/activation/runtime-plan.ts";
+
+test("Codex and configured keeps eligible models on the full adapter", () => {
+	const config = structuredClone(DEFAULT_CODEX_CONVERSION_CONFIG);
+	config.executionMode = "notebook";
+	config.scope.allProviders = "off";
+	config.scope.additionalProviders = ["configured-proxy"];
+	config.tools.applyPatchOnly = true;
+
+	for (const model of [
+		modelDescriptor("openai-codex", "openai-codex-responses", "gpt-6.2-sol"),
+		modelDescriptor("configured-proxy", "openai-responses", "gpt-4.1"),
+	]) {
+		const plan = resolveCodexRuntimePlan({ model }, config);
+		assert.deepEqual(
+			{ kind: plan.kind, toolNames: plan.toolNames },
+			{ kind: "notebook", toolNames: ["exec", "wait", "notebook"] },
+		);
+	}
+
+	const ordinaryPlan = resolveCodexRuntimePlan(
+		{
+			model: modelDescriptor(
+				"anthropic",
+				"anthropic-messages",
+				"claude-sonnet",
+			),
+		},
+		config,
+	);
+	assert.deepEqual(
+		{ kind: ordinaryPlan.kind, toolNames: ordinaryPlan.toolNames },
+		{ kind: "extras", toolNames: ["apply_patch"] },
+	);
+});
+
+function modelDescriptor(
+	provider: string,
+	api: string,
+	id: string,
+): ExtensionContext["model"] {
+	return {
+		provider,
+		api,
+		id,
+		baseUrl: "https://example.test",
+	} as unknown as ExtensionContext["model"];
+}

@@ -235,12 +235,13 @@ export function resolveCodexRuntimePlan(
 		nativeReplay: false,
 		autoReasoning: false,
 	};
+	const adapterEligible = isConfigured || isCodexLikeModel(ctx.model);
 	const extras =
 		hasExtras(config) &&
 		(config.scope.allProviders === "extras" ||
 			(config.voiceFeaturesOnly && config.scope.allProviders === "on") ||
 			(config.scope.allProviders === "off" &&
-				(isConfigured || isCodexLikeModel(ctx.model))));
+				(config.voiceFeaturesOnly ? adapterEligible : !adapterEligible)));
 	if (extras) {
 		return {
 			...base,
@@ -259,10 +260,7 @@ export function resolveCodexRuntimePlan(
 			transport: undefined,
 		};
 
-	const active =
-		config.scope.allProviders === "on" ||
-		isConfigured ||
-		isCodexLikeModel(ctx.model);
+	const active = config.scope.allProviders === "on" || adapterEligible;
 	if (!active)
 		return {
 			...base,

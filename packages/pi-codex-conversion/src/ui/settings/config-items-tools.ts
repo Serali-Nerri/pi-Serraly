@@ -75,7 +75,7 @@ export function buildToolsSettings(
 				...current,
 				tools: { ...current.tools, applyPatchOnly: enabled },
 			}),
-			"Expose apply_patch without the full adapter.",
+			"Expose apply_patch without the full adapter. With Codex and configured scope, Codex/configured models keep full conversion; other models get standalone apply_patch.",
 		),
 		toggle(
 			"viewImageOnly",
