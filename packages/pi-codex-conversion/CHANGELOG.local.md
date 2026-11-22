@@ -2,6 +2,10 @@
 
 Local changes and their background, relative to upstream **5.0.1** (`4006488d10e01b7da55c3ebac5b0a7913005ba00`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
 
+## Native `apply_patch` guidance
+
+- In a native Pi `codemode.only` trial, Gemini made eight patch errors, four on the same mistyped context line, and resent a large patch to correct one `@@` anchor. On the same task it made only one patch error in Conversion’s Notebook. The native `apply_patch` declaration now explains exact context, `@@` anchors and per-file batching to both standalone and Structured callers. The Notebook keeps its existing guidance.
+
 ## Notebook Markdown quoting
 
 - Reuse TS mode's Markdown quoting guidance in Deno Notebook. Unescaped backticks in note text could otherwise end a template literal before the call to `tools.notes` runs.

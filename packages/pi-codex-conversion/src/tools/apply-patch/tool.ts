@@ -35,7 +35,7 @@ const APPLY_PATCH_PARAMETERS = obj(
 	{
 		input: str({
 			description:
-				"*** Begin Patch / *** End Patch; Add/Update/Delete File sections. *** Move to: path immediately follows its Update File header; requires a nonempty @@ hunk (one unchanged context line for pure moves). Hunks follow file order; indentation is literal",
+				"*** Begin Patch / *** End Patch; actions: *** Add File: path | *** Update File: path | *** Delete File: path; *** Move to: path MUST immediately follow its Update File header and still needs a nonempty @@ hunk (use one unchanged context line for a pure move); Update hunks MUST follow file order; copy exact context; @@ text is context, not a line range; reread a file before patching if it changed since your last read",
 		}),
 	},
 	{ open: true },
@@ -315,6 +315,9 @@ export function createApplyPatchTool(
 		...(options.promptSnippet === false
 			? {}
 			: { promptSnippet: "Edit files with patch" }),
+		promptGuidelines: [
+			"Patch each file in one apply_patch call, splitting oversized patches sequentially; in codemode, batch independent files with Promise.allSettled; reserve shell/Python for formatting and bulk rewrites",
+		],
 		parameters: APPLY_PATCH_PARAMETERS,
 		...(constrainedSampling ? { constrainedSampling } : {}),
 		executionMode: "sequential",
