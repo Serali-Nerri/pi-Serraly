@@ -3,7 +3,7 @@ import type {
 	ExtensionAPI,
 	ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
-import type { BoardEnvelope } from "@howaboua/pi-agent-board/integration";
+import type { BoardEnvelope } from "@howaboua/pi-agent-comms/integration";
 import {
 	type BoardBinding,
 	children,

@@ -1,10 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { imagegenCodeModeResult } from "./src/code-mode.js";
 import { resolveHostedCodexToolProvider } from "./src/codex-runtime/policy.js";
-import {
-	IMAGE_CONTEXT_GUIDANCE,
-	imageGenerationParameters,
-} from "./src/contract.js";
+import { imageGenerationParameters } from "./src/contract.js";
 import { readImagegenSettings } from "./src/settings.js";
 import { registerImagegenSettings } from "./src/settings-ui.js";
 import { createImageGenerationTool } from "./src/tool.js";
@@ -26,7 +23,6 @@ export default async function imagegenExtension(
 		promptSnippet: false,
 	});
 	pi.registerTool(tool);
-	let gpt = false;
 	let registration: Awaited<ReturnType<typeof registerImagegenInCodeMode>>;
 	const refresh = () => {
 		const parameters = imageGenerationParameters(readImagegenSettings());
@@ -38,76 +34,22 @@ export default async function imagegenExtension(
 	registerImagegenSettings(pi, refresh);
 	pi.on("session_start", refresh);
 	pi.on("before_agent_start", refresh);
-	const ordinary = {
-		description: tool.description,
-	};
-	try {
-		const { registerGptPromptMode } =
-			await import("@howaboua/pi-codex-conversion/prompt-mode");
-		registerGptPromptMode(pi, (active) => {
-			if (gpt !== active) {
-				gpt = active;
-				tool.description = active
-					? "Generate/edit images; no selectors=generate. " +
-						IMAGE_CONTEXT_GUIDANCE
-					: ordinary.description;
-				pi.registerTool(tool);
-				registration?.refresh();
-			}
-			return [tool];
-		});
-	} catch (error) {
-		if (
-			!(error instanceof Error) ||
-			!("code" in error) ||
-			![
-				"ERR_MODULE_NOT_FOUND",
-				"MODULE_NOT_FOUND",
-				"ERR_PACKAGE_PATH_NOT_EXPORTED",
-			].includes(String(error.code)) ||
-			!error.message.includes(CODE_MODE_PACKAGE)
-		)
-			throw error;
-	}
-	registration = await registerImagegenInCodeMode(pi, tool, () => gpt);
+	registration = await registerImagegenInCodeMode(pi, tool);
 	pi.on("session_shutdown", () => registration?.unregister());
 }
 
 async function registerImagegenInCodeMode(
 	pi: ExtensionAPI,
 	tool: ReturnType<typeof createImageGenerationTool>,
-	gpt: () => boolean,
 ) {
 	try {
 		const { adaptToolForCodeMode, registerCodeModeExtensionTools } =
-			await import(CODE_MODE_MODULE);
+			await import("@howaboua/pi-codex-conversion/code-mode");
 		return registerCodeModeExtensionTools(pi, () => {
-			const properties = tool.parameters["properties"];
-			const api =
-				typeof properties === "object" &&
-				properties !== null &&
-				"size" in properties;
-			const extended = api && "gif" in properties;
 			const adapted = adaptToolForCodeMode(tool, {
 				discovery: "help",
 				usage:
-					"tools.image_gen__imagegen({prompt:string,transparent_background?:boolean,referenced_image_paths?:string[],num_last_images_to_include?:number" +
-					(api
-						? ',output_format?:"png"|"jpeg"|"webp"' +
-							(extended ? '|"gif"|"svg"' : "") +
-							",size?:string" +
-							(extended
-								? ",gif?:{frame_count?:number,frame_duration_ms?:number}"
-								: "")
-						: "") +
-					"}) // String result: text(result); image result: generatedImage(result). " +
-					(gpt()
-						? "prompt: aspect ratio+quality; cutouts=transparent; edits retain transparency; no selectors=generate; paths/recent count=edit; " +
-							(extended ? "GIF/SVG=generate; " : "") +
-							"NEVER text/serialize base64"
-						: "prompt: include target aspect ratio and quality; transparency for cutouts, preserve existing transparency in edits; no selectors=generate; paths/recent count=edit; " +
-							(extended ? "GIF/SVG generation only; " : "") +
-							"never text/serialize base64 result"),
+					"tools.image_gen__imagegen(args) // string→text(result); image→generatedImage(result); MUST NOT print/serialize base64",
 				promptMetadata: false,
 				deferLoading: true,
 				toolName: { namespace: "image_gen", name: "imagegen" },
@@ -116,8 +58,6 @@ async function registerImagegenInCodeMode(
 			return [
 				{
 					...adapted,
-					description: "Generate/edit images",
-					promptGuidelines: [IMAGE_CONTEXT_GUIDANCE],
 					async invoke(...args: Parameters<typeof adapted.invoke>) {
 						const [input] = args;
 						if (
@@ -128,7 +68,6 @@ async function registerImagegenInCodeMode(
 						)
 							return [
 								"Usage: " + adapted.usage,
-								IMAGE_CONTEXT_GUIDANCE,
 								"Schema: " + JSON.stringify(adapted.inputSchema),
 							].join("\n");
 						return adapted.invoke(...args);
@@ -142,7 +81,7 @@ async function registerImagegenInCodeMode(
 			throw new Error(
 				"Update " +
 					CODE_MODE_PACKAGE +
-					" to 5.0.2 or newer to use Codex Imagegen with it",
+					" to 5.1.0 or newer to use Codex Imagegen with it",
 				{ cause: error },
 			);
 		}

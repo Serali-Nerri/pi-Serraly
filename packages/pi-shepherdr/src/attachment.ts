@@ -4,7 +4,7 @@ import type {
 	ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 import type { Static } from "@earendil-works/pi-schema";
-import type { ContextSharingService } from "@howaboua/pi-notes-compaction/context-sharing";
+import type { ContextSharingService } from "@howaboua/pi-agent-comms/context-sharing";
 import type { AgentsParams } from "./agents-contract.js";
 import { AttachmentNotes } from "./attachment-notes.js";
 import {

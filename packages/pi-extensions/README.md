@@ -1,8 +1,8 @@
 # pi-extensions
 
-Optional local aggregate that exposes all twelve extensions in this checkout as independently switchable Pi entries. It is one Pi package with explicit workspace dependencies. Installing packages individually remains the default.
+Optional local aggregate that exposes all ten extensions in this checkout as independently switchable Pi entries. It is one Pi package with explicit workspace dependencies. Installing packages individually remains the default.
 
-This private package includes the ten retained Howaboua packages, `pi-ui` and `pi-session-recap`. Its member set differs from the upstream `@howaboua/pi-extensions` npm bundle; see [UPSTREAM.md](UPSTREAM.md).
+This private package includes the retained Howaboua packages, Agent Comms, `pi-ui` and `pi-session-recap`. Its member set differs from the upstream `@howaboua/pi-extensions` npm bundle; see [UPSTREAM.md](UPSTREAM.md).
 
 ## Requirements
 
@@ -19,23 +19,19 @@ This private package includes the ten retained Howaboua packages, `pi-ui` and `p
 | `pi-codex-conversion` | Provider integration, tool execution, Code and Notebook integration, and tool cards.                            |
 | `pi-ask`              | Interactive questions, review triage and human handoff.                                                         |
 | `pi-codex-imagegen`   | Image generation and editing tools.                                                                             |
-| `pi-codex-guardian`   | Automatic tool review with Codex's bundled policy and optional local block rules.                               |
-| `pi-agent-board`      | The board tool, `/board` command and viewer. Existing board enablement settings are preserved.                  |
+| `pi-agent-comms`      | Agent Notes, History, Board, context windows and the read-only Board viewer.                                     |
 | `pi-auto-trees`       | The `/marker`, prime and `/end` session workflow.                                                               |
-| `pi-shepherdr`        | Herdr multi-agent orchestration, including its Agent Board integration.                                         |
-| `pi-notes-compaction` | Persistent notes, session history search, context windows and shared context.                                   |
+| `pi-shepherdr`        | Herdr multi-agent orchestration, including its Agent Comms Board integration.                                  |
 | `pi-suggestions`      | Next-prompt drafts in the empty editor and the `/suggestions` settings command.                                 |
 | `pi-github-watch`     | The `github_watch` tool for opt-in feedback, new issue/PR and Actions run notifications in the current session. |
 | `pi-ui`               | Thinking, footer, activity-completion hints, sticky user messages and opt-in session naming.                    |
 | `pi-session-recap`    | Manual and idle session recap cards.                                                                            |
 
-Enabling the Notes entry provides Notes/History; session auto-pruning remains off by default. Suggestions' prediction requests remain off by default; see its [README](../pi-suggestions/README.md) for setup. Recap's idle automatic mode is on by default and makes model requests; existing member settings are preserved. See each member's README for configuration. `context-view` and other extensions outside this repository remain separate installs.
-
-Guardian reviews tool calls by default and requires a supported Codex connection. Its [README](../pi-codex-guardian/README.md#connection-support) defines native Codex and CPA support, usage, and rules-only mode; enabling the entry does not change model connections or authentication.
+Enabling Agent Comms and its Notes feature provides Notes/History; session auto-pruning remains off by default. Suggestions' prediction requests remain off by default; see its [README](../pi-suggestions/README.md) for setup. Recap's idle automatic mode is on by default and makes model requests; existing member settings are preserved. See each member's README for configuration. `context-view` and other extensions outside this repository remain separate installs.
 
 The aggregate registers each member's public default extension entry, without separate changelog entries. Pi's native update notices cover the registered package, not its dependencies. This aggregate has no changelog of its own, so it does not show member update notices; individual member registrations retain those notices.
 
-The manifest lists twelve entries under `extensions/`, one per member. All are enabled by default. `pi config` lists each file separately under the package's **Extensions** group, so members can be switched independently.
+The manifest lists ten entries under `extensions/`, one per member. All are enabled by default. `pi config` lists each file separately under the package's **Extensions** group, so members can be switched independently.
 
 For example:
 
@@ -71,7 +67,7 @@ pi --no-extensions --no-skills -e ./packages/pi-extensions
 
 ## Migrate from individual packages
 
-Do not register the aggregate and any of its twelve members at the same time, including Notes, Suggestions, GitHub Watch, Guardian, UI and Recap. Pi loads both sources, so tools, commands and listeners would be duplicated.
+Do not register the aggregate and any of its ten members at the same time, including Agent Comms, Suggestions, GitHub Watch, UI and Recap. Pi loads both sources, so tools, commands and listeners would be duplicated.
 
 Prepare the separate installation workspace from Requirements before changing registrations.
 
@@ -83,7 +79,7 @@ Prepare the separate installation workspace from Requirements before changing re
 
 Removing a registration does not delete member configuration or data such as `pi-shepherdr.json` or board archives.
 
-Agent Board's command and tool load when `pi-agent-board.ts` is enabled. Existing `/board off` settings for the session, folder or global scope still apply and are not reset. Disable that entry in `pi config` to omit its command and tool.
+Agent Comms owns Notes, History and Board. Its feature settings remain independent, so disabling Notes does not disable Board and vice versa. Disable `pi-agent-comms.ts` in `pi config` to omit both features.
 
 To roll back, remove the aggregate and reinstall the desired member packages. Restore the backed-up settings if source paths changed.
 

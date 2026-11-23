@@ -4,7 +4,7 @@ import type {
 	ContextSharingService,
 	SharedContextRequest,
 	SharedContextResult,
-} from "@howaboua/pi-notes-compaction/context-sharing";
+} from "@howaboua/pi-agent-comms/context-sharing";
 import { NOTES_UNAVAILABLE } from "./notes-discovery.js";
 
 /** Read-only continuity when a live owner disappears. Notes owns parsing. */
@@ -38,7 +38,7 @@ export class AttachmentNotes {
 		if (service.validate) return service.validate(snapshot, identity);
 		if (identity.storage === "remote")
 			throw new Error(
-				"Remote checkpoints cannot be retained. Update Pi Notes Compaction and /reload.",
+				"Remote checkpoints cannot be retained. Update Agent Comms and /reload.",
 			);
 		this.service().read(snapshot, {
 			action: "list_files_by_prefix",
@@ -56,7 +56,7 @@ export class AttachmentNotes {
 			const verify = this.service().verify;
 			if (!verify)
 				throw new Error(
-					"Remote attachments cannot be authenticated. Update Pi Notes Compaction and /reload.",
+					"Remote attachments cannot be authenticated. Update Agent Comms and /reload.",
 				);
 			try {
 				await verify(ctx, snapshot);
@@ -83,7 +83,7 @@ export class AttachmentNotes {
 		const execute = this.service().remote;
 		if (!execute)
 			throw new Error(
-				"Attached Remote context is unavailable. Update Pi Notes Compaction and /reload.",
+				"Attached Remote context is unavailable. Update Agent Comms and /reload.",
 			);
 		return execute(ctx, reference, request, signal);
 	}

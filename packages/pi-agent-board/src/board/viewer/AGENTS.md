@@ -1,2 +1,0 @@
-- The viewer compiles independently under `tsconfig.viewer.json`. Keep runtime imports inside this subtree or packaged dependencies, not extension modules outside its build root.
-- Point reads must constrain both folder and board ID before aggregating posts; never authorize them through the full folder index. Preserve the selected current board's empty fallback when no row exists.

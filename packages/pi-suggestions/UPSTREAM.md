@@ -1,6 +1,6 @@
 # Upstream provenance
 
-- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/19ec6357fa3c4eb0126f8b0d4b6569de1a655ef9/packages/pi-suggestions
+- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/c4f48525475f278d41dc311f2707926216bfa35b/packages/pi-suggestions
 - Baseline version: 0.0.4
 - Upstream history and license: CHANGELOG.md and LICENSE are retained.
 - Local history: [CHANGELOG.local.md](./CHANGELOG.local.md) records the local invalidation and disabled-session decisions.

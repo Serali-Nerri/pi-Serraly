@@ -2,7 +2,7 @@ import type {
 	ExtensionAPI,
 	ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
-import type { BoardRuntime } from "@howaboua/pi-agent-board/runtime";
+import type { BoardRuntime } from "@howaboua/pi-agent-comms/runtime";
 import { sessionPath } from "../core/agents.js";
 import type { AgentFleet, ConnectedMachine } from "../fleet/index.js";
 import { boardMigrationWarning } from "../messages/guidance.js";
@@ -115,7 +115,7 @@ export class AgentBoard {
 		if (this.failure) throw this.failure;
 		if (!this.runtime)
 			throw new Error(
-				"Shared boards are unavailable. Load Agent Comms or Agent Board and reload Pi. Other agent operations remain available.",
+				"Shared boards are unavailable. Load Agent Comms and reload Pi. Other agent operations remain available.",
 			);
 		return this.runtime;
 	}
@@ -197,7 +197,7 @@ export class AgentBoard {
 				if (result === null)
 					return {
 						warning:
-							"Spawned without shared Board: the target needs Agent Board or Agent Comms",
+							"Spawned without shared Board: enable Board in Agent Comms on the target",
 					};
 				const adopted = parseBinding(result);
 				if (

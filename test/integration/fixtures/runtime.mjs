@@ -1,4 +1,12 @@
-import { mkdir, mkdtemp, readdir, readFile, rm, stat } from "node:fs/promises";
+import {
+	mkdir,
+	mkdtemp,
+	readdir,
+	readFile,
+	rm,
+	stat,
+	writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative, sep } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -59,6 +67,14 @@ export async function runRuntimeAcceptance({ directory = root } = {}) {
 		mkdir(cwd, { recursive: true }),
 		mkdir(agentDir, { recursive: true }),
 	]);
+	// Exercise both opt-in Agent Comms surfaces without changing real user settings.
+	await writeFile(
+		join(agentDir, "pi-agent-comms.json"),
+		JSON.stringify({
+			notes: { active: "all", normalCompaction: false },
+			board: { enabledGlobally: true },
+		}),
+	);
 
 	const savedEnv = {
 		PI_CODING_AGENT_DIR: process.env.PI_CODING_AGENT_DIR,
@@ -262,7 +278,7 @@ export async function runRuntimeAcceptance({ directory = root } = {}) {
 			.catch(() => []);
 
 		const boardDir = packageEntries.find(
-			(entry) => entry.name === "pi-agent-board",
+			(entry) => entry.name === "pi-agent-comms",
 		)?.directory;
 		const viewerDir = join(boardDir, "dist", "viewer");
 		const viewerModule = await import(

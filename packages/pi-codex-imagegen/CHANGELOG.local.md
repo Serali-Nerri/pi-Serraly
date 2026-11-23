@@ -1,4 +1,4 @@
-# Local changes relative to upstream 0.0.16
+# Local changes relative to upstream 0.0.17
 
 The current upstream artifact/help refresh is in [CHANGELOG.md](CHANGELOG.md). [UPSTREAM.md](UPSTREAM.md) owns the current split.
 

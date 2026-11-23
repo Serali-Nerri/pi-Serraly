@@ -5,7 +5,7 @@ import type {
 import type {
 	SharedContextRequest,
 	SharedContextResult,
-} from "@howaboua/pi-notes-compaction/context-sharing";
+} from "@howaboua/pi-agent-comms/context-sharing";
 import { attachmentOwner, attachmentRoutes } from "./attachment-protocol.js";
 import type { AgentBoard } from "./board/host.js";
 import type { AgentFleet } from "./fleet/index.js";

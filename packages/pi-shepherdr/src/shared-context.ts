@@ -8,7 +8,7 @@ import type {
 	ContextSharingService,
 	SharedContextRequest,
 	SharedContextResult,
-} from "@howaboua/pi-notes-compaction/context-sharing";
+} from "@howaboua/pi-agent-comms/context-sharing";
 import { AgentAttachment } from "./attachment.js";
 import {
 	attachmentRoutes,

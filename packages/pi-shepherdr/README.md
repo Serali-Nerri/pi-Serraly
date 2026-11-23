@@ -20,7 +20,7 @@ Requires Pi 1.6.0 or newer, Node.js 22.19 or newer and Herdr Core 0.1.21 or newe
 
 Do not load Pi Codex's example `agents.toml` custom tool alongside Shepherdr; they own the same agent surface.
 
-Shepherdr installs and runs on its own. Pi Codex, shared Notes and boards are optional. Delegation, supervision, messages, focus and orchestration work without them. Shared Notes require Notes Compaction 0.0.19 or newer; boards require Agent Board 0.0.9 or newer. Upstream [Agent Comms](https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/main/packages/pi-agent-comms) also provides both integrations when loaded. Enable each shared feature in every participating session.
+Shepherdr installs and runs on its own. Pi Codex, shared Notes and boards are optional. Delegation, supervision, messages, focus and orchestration work without them. For shared Notes or Board, install [Agent Comms](../pi-agent-comms) and enable that feature in every participating session.
 
 Workers start as background Core terminals by default. Use `placement: "new_workspace"` for a new app workspace, or `placement: "new_tab"` with a `workspace` ID advertised by a live terminal on the target Core. A connected Herdr app adopts these terminals. Pane placement is no longer supported. Focus requires a Herdr app window running on the target Core's machine and connected to that Core.
 
@@ -54,15 +54,11 @@ Under **Connections**, enter an SSH target or alias, a machine name and an optio
 
 **Status** refreshes the Core catalogue and retries failed connections or incomplete monitoring without dropping working connections. Removing a machine stops its watches without stopping its agents.
 
-Machines belong to the host running Pi, not the machine displaying its terminal. Omit `machine` for local agent calls. `list` and `find` search all machines unless filtered. The reserved selector `local` always means the host running Pi. Remote calls accept an exact current machine name or a stable Core ID returned by `list`. Duplicate names require an ID. Hostnames and old aliases are not inferred. Refresh **Status** after renaming a machine. Watches and saved routes retain its stable ID across name changes.
+Omit `machine` or use `local` for this host. Omit it from `list` and `find` to search all machines. Use the `id` or exact `label` from `list` to select a machine. If a label is ambiguous, use its ID. SSH targets and aliases are not selectors. Refresh **Status** after renaming a remote machine. Watches and saved routes retain its stable ID.
 
 Remote file watches, Notes, shared-context calls and peer messages use a private Core-owned helper, started lazily and kept alive over a flow-controlled terminal attachment. Shepherdr does not install SSH bridge files or poll through `machine.exec`. Voice focus uses a separate private helper so large Notes transfers do not block its channel. Monitoring uses each Core's own snapshot rather than treating a missing machine in an aggregate terminal list as closed agents.
 
-Status events refresh only the affected watched sessions. Subscription changes and lost-event recovery reconcile all watches. Saved-session summaries use a process-local least-recently-used cache capped at 32 sessions and 8 MiB of serialized UTF-16 summary size. Evicted or oversized summaries are reread when needed; replies and notices are never truncated to fit the cache.
-
-The same connection supervises native remote-parent lifetimes while active. An initially denied parent read gets up to five attempts within two seconds, allowing a new cross-machine parent link to become readable. Other failures and failures after a verified read warn immediately; persistent initial denial warns after this bounded retry. A later successful check reports recovery. Existing agents remain available, and a disconnected or unreachable parent is never treated as dead. If checks remain unavailable, reconnect the parent Core or close its children explicitly.
-
-A brief closing grace makes a best-effort check for Pi exiting. No separate background service is installed. Closing checks have no persistent warning report. This does not guarantee cleanup after an OS failure or a prolonged Pi shutdown.
+The same connection supervises native remote-parent lifetimes while active. A brief closing grace makes a best-effort check for Pi exiting. No separate background service is installed. A disconnected or unreachable parent is not treated as dead. Failed checks leave existing agents available and produce a warning while the connection is active. Reconnect the parent Core or close its children explicitly. Closing checks have no persistent warning report. This does not guarantee cleanup after an OS failure or a prolonged Pi shutdown.
 
 ## Agent calls
 
@@ -85,8 +81,6 @@ Call `agents` with `{}` before first use, alone, then send flat request objects 
 
 `spawn` and `assign` return once the task is submitted by default, so consecutive calls can dispatch work to several agents without waiting for the first task to finish. Task completion and blockage arrive automatically. Set `blocking: true` when the call must wait for its result. A profile's `blocking` setting still overrides the call for `spawn`.
 
-A submission receipt means the input was accepted, not that execution started. New tasks wait for Core's terminal turn counter to advance before an idle or done status can start result reconciliation; queued preparation has no eight-second startup deadline. After that native completion, the saved input and final reply must still be readable. Existing saved tasks without a turn baseline retain their earlier reconciliation behavior; subsequent submissions record the baseline. Native blocked status and replies to extension messages keep their existing semantics.
-
 Blocking calls can run in parallel. In Code or Notebook, use `await Promise.allSettled([...])` to start independent calls together and wait for every result, including failures. Keep blocking enabled when the controller must wait, such as for parallel reviews. Consecutive `await` calls still run one after another; `Promise.all` can exit early on failure.
 
 Nonblocking extension messages notify the controller once; blocking messages arrive with the worker's blocked result. Both remain visible in `read` and later task reports until the producer closes them. Each replyable message includes a ready `reply` call with its machine, target, extension and message ID. Fill in the extension's reply template. `send` does not resolve an extension message.
@@ -95,7 +89,7 @@ Nonblocking extension messages notify the controller once; blocking messages arr
 
 Use `send` for messages and work updates without adding supervision. Use `assign` to delegate work and receive its monitored result, automatically or through an explicit blocking call. It also accepts updates to running work, sharing that work's pending result rather than replacing it. If another call is already waiting, the update returns after submission and leaves that waiter intact. Close finished workers silently instead of waking them with completion acknowledgements or shutdown notices.
 
-When a parent sends or assigns work to one of its closed workers, Shepherdr reopens that worker's saved Pi session before delivering the message. Use its session reference, previous terminal target or saved routing name. The result reports `resumed: true` and the current target. Resumed workers keep automatic completion reporting unless explicitly unwatched. A later `watch` clears that saved opt-out. `assign` restores live reporting for the task but does not clear the saved opt-out for future resumptions. This applies only to children recorded in the parent's selected session branch, not arbitrary peers or attachments. The saved session and its original machine must remain accessible. `/quit` never reopens a closed worker.
+When a parent sends or assigns work to one of its closed workers, Shepherdr reopens that worker's saved Pi session before delivering the message. Use its session reference, previous terminal target or saved routing name. The result reports `resumed: true` and the current target. Resumed workers keep automatic completion reporting unless explicitly unwatched. A later `watch` or `assign` restores reporting. This applies only to children recorded in the parent's selected session branch, not arbitrary peers or attachments. The saved session and its original machine must remain accessible. `/quit` never reopens a closed worker.
 
 Delegation and explicit `watch` keep reporting subsequent work until `unwatch` or the agent's terminal closes. Finishing or failing a task clears that task, not its watch. Follow-up messages through `send` retain completion reporting without replacing the task.
 
@@ -105,7 +99,7 @@ Cancelling a blocking call does not kill its worker. The waiter detaches and the
 
 After Pi compaction or Notes context rollover, the controller receives its supervised agents' exact machine and target, submitted tasks and follow-up instructions, and last observed status, including settled and blocked workers. Read a target for its reply or pending extension messages. This reminder does not start a turn or bypass normal turn preparation.
 
-Prompts sent through `agents` identify peer messages versus delegated tasks and include the sender's machine, full Pi session reference and terminal. Core reports use terminal addresses and include app location IDs when available. These are runtime locations, not the desktop window showing a terminal.
+Prompts sent through `agents` identify peer messages versus delegated tasks and include the sender's host and session identity. Core reports use terminal addresses and include app location IDs when available. These are runtime locations, not the desktop window showing a terminal.
 
 Messages sent through `agents` bypass the receiving Pi editor, preserving unsent drafts. Update and restart Shepherdr on receiving agents as well as controllers. If a receiver is unavailable, delivery fails without pasting into its terminal.
 
@@ -191,9 +185,9 @@ await tools.agents({
 
 Enable one or both choices. Omitted choices are false. `context` shares notes and history through aliases without changing either session's original context identity or moving its notes. The returned `agent` is the target's Pi session reference. Use it as `history`'s `agent_name` or as `<agent>/notes/<path>` for notes. Each agent's relative note paths remain its own. The target receives its controller reference without starting a turn.
 
-Context attachment requires active Notes in both sessions, through Notes Compaction or Agent Comms. Each owner keeps its original identity and local notes. Optional encrypted historical reads require compatible PCC transport and the original account and backend. The explicit `context: true` choice does not depend on the controller's spawn-sharing setting. If attachment changes context access during an exec cell, start a new cell before using notes or history.
+Context attachment requires active Notes in both sessions through Agent Comms. Each owner keeps its original identity and local notes. Optional encrypted historical reads require compatible PCC transport and the original account and backend. The explicit `context: true` choice does not depend on the controller's spawn-sharing setting. If attachment changes context access during an exec cell, start a new cell before using notes or history.
 
-`board: true` requires Agent Board or Agent Comms loaded in both sessions. It joins the controller's enabled board. Use the returned `agent` for subscriptions and notifications. The target's previous board archive stays untouched. If the folders differ, that archive remains in its original folder rather than becoming part of the controller's archive. Board-only attachment works without Notes or Codex Conversion.
+`board: true` requires Agent Comms loaded in both sessions. It joins the controller's enabled board. Use the returned `agent` for subscriptions and notifications. The target's previous board archive stays untouched. If the folders differ, that archive remains in its original folder rather than becoming part of the controller's archive. Board-only attachment works without Notes or Codex Conversion.
 
 The target must be idle and both Pi sessions must be saved. Existing shared-context members and controllers with context children cannot be context targets. Existing board members and roots with board children cannot switch boards. A target supports one controller and one fixed set of attachment choices. Attachment starts no task or watch; `assign` and `send` never attach implicitly.
 
@@ -205,13 +199,13 @@ If an attached owner closes, local note reads use its latest saved checkpoints w
 
 ## Message board
 
-Install Agent Board in every participating Pi session, then reload:
+Install Agent Comms in every participating Pi session, then reload and enable Board:
 
 ```sh
-pi install ~/.pi/pi-Serraly/packages/pi-agent-board
+pi install ~/.pi/pi-Serraly/packages/pi-agent-comms
 ```
 
-The loaded Board extension owns the `board` tool, `/board` settings and read-only browser viewer. Agent Comms can provide the same integration instead of Agent Board, retaining discussions, subscriptions and saved history. Do not load both Board providers together. Shepherdr has no fallback board or board controls under `/herdr`. If a saved session board setting is on but its provider is missing, Shepherdr displays a warning once per session. Saved settings and archives remain untouched. Pi Codex Conversion is optional.
+Agent Comms owns the `board` tool, settings and read-only browser viewer. Shepherdr has no fallback board or board controls under `/herdr`. If a saved session board setting is on but its provider is missing, Shepherdr displays a warning once per session. Saved settings and archives remain untouched. Pi Codex Conversion is optional.
 
 Shepherdr supplies family membership, attachments and remote routing. Children spawned while the board is enabled inherit its location and board ID even with another working directory. The spawn result's `agent` is their Pi session reference for subscriptions, notifications and shared notes. The `sharing` flags report which memberships are active. Independently started agents, existing `assign` targets and children spawned while it is off do not join automatically. Use explicit `attach` to join an existing agent. Board identity is independent of orchestration mode, shared notes and `share_context`.
 
@@ -219,13 +213,9 @@ Child board calls use the owning Pi sessions and Core connections, not a separat
 
 ## Shared notes and history
 
-With compatible Pi Codex Conversion on both ends, Shepherdr marks fresh spawned workers before their first task with their immediate parent's native Pi session ID and `subagentKind: "collab_spawn"`. Workers also inherit the parent's effective cache routing identity, including nested and remote spawns. Each worker keeps its own native session, sockets and history. Cache routing works with shared notes disabled and does not grant notes access or copy the parent's transcript. Only matching prompt prefixes can benefit. Resume preserves the relationship; forks and profiles selecting existing sessions do not acquire it. Older PCC versions retain ordinary delegation and any supported parent linkage. Shepherdr owns transport, not a separate public relationship RPC API.
+With compatible Pi Codex Conversion on both ends, Shepherdr marks fresh spawned workers before their first task with their immediate parent's native Pi session ID and `subagentKind: "collab_spawn"`. Workers also inherit the parent's effective cache routing identity, including nested and remote spawns. Each worker keeps its own native session, sockets and history. Cache routing works with shared notes disabled and does not grant notes access or copy the parent's transcript. Only matching prompt prefixes can benefit. Resume preserves the relationship; forks and profiles selecting existing sessions do not acquire it. Older PCC versions retain ordinary delegation and any supported parent linkage. The [extension API guide](../../docs/extension-apis.md#parent-and-worker-relationships) documents PCC's service contract for other orchestrators. Shepherdr owns transport, not a separate public relationship RPC API.
 
-Install Notes Compaction in every participating session and reload, or use Agent Comms' Notes feature. Do not load both Notes providers together. With Notes active on both ends, enable **Share subagent context** under `/notes` in the controller. It is off by default. Shared `spawn` gives each child a unique context identity before its first turn; the returned `agent` identifies its notes and history. Nested spawns stay in the same family. Turning sharing off affects new spawns only. Existing identity survives resume. `assign` and independently started agents remain unchanged.
-
-```sh
-pi install npm:@howaboua/pi-notes-compaction
-```
+Enable Agent Comms Notes in every participating session. Then enable **Share subagent context** under `/notes` in the controller. It is off by default. Shared `spawn` gives each child a unique context identity before its first turn; the returned `agent` identifies its notes and history. Nested spawns stay in the same family. Turning sharing off affects new spawns only. Existing identity survives resume. `assign` and independently started agents remain unchanged.
 
 Set `"share_context": false` in a profile to keep its new workers' notes and history independent even when controller sharing is enabled. Omission or `true` follows the controller setting, never turns sharing on itself. This separates context, not filesystem permissions or information included in the task.
 

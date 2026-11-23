@@ -1,2 +1,0 @@
-- This workspace maintains the standalone package source directly; there is no local Agent Comms source owner or sync step. Feature maintenance rules live in `src/board/AGENTS.md`; shared helpers remain package-local.
-- Preserve `/board` opening the viewer, `/board settings`, and the runtime-value `BoardRuntime` export. Do not require Agent Comms at runtime or load it alongside this package.

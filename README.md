@@ -9,21 +9,19 @@
 | [pi-codex-conversion](packages/pi-codex-conversion/README.md) | Codex provider、工具执行、Code/Notebook、默认工具卡 |
 | [pi-ask](packages/pi-ask/README.md) | 交互式提问、steer/handoff/review |
 | [pi-codex-imagegen](packages/pi-codex-imagegen/README.md) | 图像生成与编辑 |
-| [pi-codex-guardian](packages/pi-codex-guardian/README.md) | 复用 Codex 默认审批政策，自动审核工具调用；支持原生/网关连接与可选拦截规则 |
+| [pi-agent-comms](packages/pi-agent-comms/README.md) | Notes、历史检索、上下文窗口、共享任务板与只读查看器 |
 | [pi-shepherdr](packages/pi-shepherdr/README.md) | Herdr 多代理编排 |
-| [pi-agent-board](packages/pi-agent-board/README.md) | 独立可选的共享任务板与查看器 |
 | [pi-auto-trees](packages/pi-auto-trees/README.md) | 会话 marker、prime 与 end |
-| [pi-notes-compaction](packages/pi-notes-compaction/README.md) | 独立可选的 Notes、历史检索与共享上下文；使用 SQLite 原生模块 |
 | [pi-suggestions](packages/pi-suggestions/README.md) | 空输入框中的下一步请求草稿；独立模型，默认关闭 |
 | [pi-github-watch](packages/pi-github-watch/README.md) | 按需监控 GitHub Issue、PR 反馈、仓库新 Issue/PR 和 Actions 运行，通知当前会话 |
 | [pi-ui](packages/pi-ui/README.md) | Thinking、Footer、活动完成提示、置顶用户消息和可配置模型的自动会话命名 |
 | [pi-session-recap](packages/pi-session-recap/README.md) | TUI 的 `/recap` 与默认开启的空闲任务摘要；临时展示，不写入模型上下文 |
 
-默认逐包注册，只启用需要的包。可选的 [pi-extensions](packages/pi-extensions/README.md) 一次登记上述全部十二个扩展的独立入口，可在 `pi config` 中分别开关；不要与其中成员重复登记。context-view 从其独立上游安装。
+默认逐包注册，只启用需要的包。可选的 [pi-extensions](packages/pi-extensions/README.md) 一次登记上述全部十个扩展的独立入口，可在 `pi config` 中分别开关；不要与其中成员重复登记。context-view 从其独立上游安装。
 
-Notes/History 由独立 Notes 包提供，不内置于 conversion。需要时单独登记 Notes，或启用整合包中的 Notes 入口；旧 Notes 设置不会被静默关闭，缺少新扩展时会提示迁移。详见 [Notes README](packages/pi-notes-compaction/README.md)。
+Notes/History 由 Agent Comms 提供，不内置于 conversion。需要时单独登记 Agent Comms，或启用整合包中的 Agent Comms 入口；旧 Notes 与 Board 设置会按迁移规则保留，详见 [Agent Comms README](packages/pi-agent-comms/README.md)。
 
-Shepherdr 需要 Herdr Core ≥0.1.21，不再支持旧 Herdr TUI 后端；Notes 与 Board 都是可选集成。本仓保留这两个独立包，不引入上游的 Agent Comms 合包。详见 [Shepherdr README](packages/pi-shepherdr/README.md)。
+Shepherdr 需要 Herdr Core ≥0.1.21，不再支持旧 Herdr TUI 后端；Agent Comms 的 Notes 与 Board 都是可选集成。本仓不再保留独立的 Board、Notes 或 Guardian 包。详见 [Shepherdr README](packages/pi-shepherdr/README.md)。
 
 ## 开发与部署
 

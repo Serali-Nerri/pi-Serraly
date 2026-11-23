@@ -4,14 +4,12 @@ import test from "node:test";
 import { runRuntimeAcceptance } from "./fixtures/runtime.mjs";
 
 const extensionEntries = [
-	"packages/pi-agent-board/index.ts",
+	"packages/pi-agent-comms/index.ts",
 	"packages/pi-ask/index.ts",
 	"packages/pi-auto-trees/index.ts",
 	"packages/pi-codex-conversion/dist/index.js",
-	"packages/pi-codex-guardian/index.ts",
 	"packages/pi-codex-imagegen/index.ts",
 	"packages/pi-github-watch/index.ts",
-	"packages/pi-notes-compaction/index.ts",
 	"packages/pi-session-recap/index.ts",
 	"packages/pi-shepherdr/index.ts",
 	"packages/pi-suggestions/index.ts",
@@ -31,14 +29,12 @@ test("released Pi 1.6 loads every imported package and completes session cleanup
 		extensionEntries,
 	);
 	assert.deepEqual(report.packageDirectories, [
-		"packages/pi-agent-board",
+		"packages/pi-agent-comms",
 		"packages/pi-ask",
 		"packages/pi-auto-trees",
 		"packages/pi-codex-conversion",
-		"packages/pi-codex-guardian",
 		"packages/pi-codex-imagegen",
 		"packages/pi-github-watch",
-		"packages/pi-notes-compaction",
 		"packages/pi-session-recap",
 		"packages/pi-shepherdr",
 		"packages/pi-suggestions",
@@ -73,7 +69,6 @@ test("released Pi 1.6 loads every imported package and completes session cleanup
 		"codex",
 		"ui",
 		"end",
-		"guardian",
 		"herdr",
 		"marker",
 		"notes",
@@ -140,20 +135,11 @@ test("released Pi 1.6 loads every imported package and completes session cleanup
 		"notes",
 	]);
 	assert.deepEqual(report.optionalIntegrations.promptMode.tools, [
-		"agents",
-		"ask",
-		"board",
 		"change_reasoning",
 		"exec",
-		"get_context_remaining",
-		"github_watch",
-		"history",
-		"imagegen",
-		"new_context",
-		"notes",
 	]);
 	assert.equal(report.optionalIntegrations.promptMode.errors, 0);
-	assert.notEqual(
+	assert.equal(
 		report.optionalIntegrations.promptMode.imagegenActiveDescription,
 		report.optionalIntegrations.promptMode.imagegenOrdinaryDescription,
 	);

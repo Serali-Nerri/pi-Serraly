@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Replace standalone Notes Compaction and Agent Board integration with the coordinated Agent Comms 0.0.5 package while retaining Shepherdr's local reliability and offline-test changes.
 - Sync upstream c3b422c to 4006488 (1.0.2): restore resumed-worker reporting and sticky unwatch, publish identity before launch readiness, fix standalone Bun helper execution, suppress empty unassigned completion notices, refresh sender guidance and adopt the new general profile.
 - Adopt upstream Oxfmt/Oxlint/tsrs static checks without publishing hooks; retain separate offline tests and standalone Notes Compaction 0.0.18 / Agent Board 0.0.8 integration dependencies.
 - Retain the local Core 0.1.21 native-turn settlement gates, remote/voice attachment and shutdown safeguards, parent-read retry ownership, Windows acknowledged-close handling and scoped monitor/cache optimizations; upstream's new lifecycle fixes do not replace them.

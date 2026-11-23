@@ -20,8 +20,7 @@
     "**/package-lock.json",
     "packages/pi-codex-conversion/src/tools/apply-patch/bin/",
     "packages/pi-codex-conversion/src/voice/bin/",
-    "packages/pi-codex-guardian/policy/",
-    "packages/pi-agent-board/src/board/viewer/web/"
+    "packages/pi-agent-comms/src/board/viewer/web/"
   ],
   "overrides": [
     {

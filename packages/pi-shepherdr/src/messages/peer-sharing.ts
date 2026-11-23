@@ -8,7 +8,7 @@ import {
 	str,
 	union,
 } from "@earendil-works/pi-schema";
-import type { ContextSharingService } from "@howaboua/pi-notes-compaction/context-sharing";
+import type { ContextSharingService } from "@howaboua/pi-agent-comms/context-sharing";
 import {
 	attachmentOwner,
 	attachmentRoutes,

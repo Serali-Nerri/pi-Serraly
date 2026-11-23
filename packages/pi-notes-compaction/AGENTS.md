@@ -1,2 +1,0 @@
-- This workspace maintains the standalone package source directly; there is no local Agent Comms source owner or sync step. Feature maintenance rules live in `src/notes/AGENTS.md`; shared helpers remain package-local.
-- Preserve standalone Notes commands and public import keys. Do not require Agent Comms at runtime or load it alongside this package.

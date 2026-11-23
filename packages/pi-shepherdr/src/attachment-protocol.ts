@@ -10,7 +10,7 @@ import {
 	union,
 	unknown,
 } from "@earendil-works/pi-schema";
-import type { SharedContextResult } from "@howaboua/pi-notes-compaction/context-sharing";
+import type { SharedContextResult } from "@howaboua/pi-agent-comms/context-sharing";
 import { BindingSchema } from "./board/records.js";
 
 const AgentPath = str({

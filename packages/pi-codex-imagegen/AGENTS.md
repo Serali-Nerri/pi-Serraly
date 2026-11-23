@@ -1,5 +1,4 @@
-- Compare generation/edit contracts with the OpenAI Codex checkout's `codex-rs/ext/image-generation/`, `codex-rs/codex-api/src/endpoint/images.rs` and `codex-rs/codex-api/src/images.rs`. `UPSTREAM_SYNC.md` pins the reference and reviewed deltas. Inspect changes since that pin when touching the adapter; do not restore inert Rust snapshots. Pi-facing auth, artifacts, rendering and Code Mode projection remain TypeScript.
-- Codex edit targets accept validated PNG, JPEG, GIF, or WebP bytes; OpenAI API targets accept PNG, JPEG, or WebP. Recent targets come only from Pi's active compaction-aware context.
-- Native Pi and nested Code wrappers own result-content images. Keep custom result renderers text-only; never mutate model-visible results to fix display.
-- API endpoint and credential-provider settings are independent of the chat model and Codex resolver. Quality choices follow upstream for all API models; keep 2.6-only complexity and GIF/SVG controls aligned across settings UI, request construction and ordinary/Code Mode tool schemas.
-- The settings heading adds a row; translate mouse coordinates before forwarding to SettingsList.
+- Adapter changes: compare generation/edit against `UPSTREAM_SYNC.md` pin. `~/Frameworks/codex/codex-rs/ext/image-generation/` and `codex-rs/` paths `codex-api/src/endpoint/images.rs`, `codex-api/src/images.rs`. No Rust snapshots. Pi auth, artefacts, rendering and Code Mode projection stay TypeScript.
+- Local edit targets: validated PNG/JPEG/GIF/WebP bytes. Recent targets: active compaction-aware context only.
+- Native Pi/nested Code wrappers own result images. Custom renderers text-only, no model-result edits.
+- Update `src/codex-runtime` together in pi-codex-web-run and pi-codex-imagegen. Byte-identical, no shared package.

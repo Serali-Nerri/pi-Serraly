@@ -15,21 +15,19 @@ Each member declares one Pi extension entry; the aggregate has no standalone cha
 | Package               | Local version | Provenance                                     |
 | --------------------- | ------------- | ---------------------------------------------- |
 | `pi-codex-conversion` | 5.0.2         | [UPSTREAM](../pi-codex-conversion/UPSTREAM.md) |
-| `pi-ask`              | 0.0.21        | [UPSTREAM](../pi-ask/UPSTREAM.md)              |
-| `pi-codex-imagegen`   | 0.0.16        | [UPSTREAM](../pi-codex-imagegen/UPSTREAM.md)   |
-| `pi-codex-guardian`   | 0.0.1         | [UPSTREAM](../pi-codex-guardian/UPSTREAM.md)   |
-| `pi-agent-board`      | 0.0.9         | [UPSTREAM](../pi-agent-board/UPSTREAM.md)      |
+| `pi-ask`              | 0.0.22        | [UPSTREAM](../pi-ask/UPSTREAM.md)              |
+| `pi-codex-imagegen`   | 0.0.17        | [UPSTREAM](../pi-codex-imagegen/UPSTREAM.md)   |
+| `pi-agent-comms`      | 0.0.5         | [UPSTREAM](../pi-agent-comms/UPSTREAM.md)      |
 | `pi-auto-trees`       | 0.1.19        | [UPSTREAM](../pi-auto-trees/UPSTREAM.md)       |
-| `pi-shepherdr`        | 1.0.3         | [UPSTREAM](../pi-shepherdr/UPSTREAM.md)        |
-| `pi-notes-compaction` | 0.0.19        | [UPSTREAM](../pi-notes-compaction/UPSTREAM.md) |
+| `pi-shepherdr`        | 1.0.4         | [UPSTREAM](../pi-shepherdr/UPSTREAM.md)        |
 | `pi-suggestions`      | 0.0.4         | [UPSTREAM](../pi-suggestions/UPSTREAM.md)      |
-| `pi-github-watch`     | 0.0.8         | [UPSTREAM](../pi-github-watch/UPSTREAM.md)     |
+| `pi-github-watch`     | 0.0.9         | [UPSTREAM](../pi-github-watch/UPSTREAM.md)     |
 | `pi-ui`               | 0.3.0         | [UPSTREAM](../pi-ui/UPSTREAM.md)               |
 | `pi-session-recap`    | 0.1.0         | [UPSTREAM](../pi-session-recap/UPSTREAM.md)    |
 
-The ten Howaboua members come from the same pinned commit through this repository's retained packages. UI and Recap have independent provenance. Each member retains its own license and applicable changelogs and third-party notices.
+The retained Howaboua members come from the synchronized upstream packages. Agent Comms replaces the former standalone Board and Notes packages. UI and Recap have independent provenance. Each member retains its own license and applicable changelogs and third-party notices.
 
-All twelve extensions are dependencies and have explicit forwarding entries. Each entry can be disabled through Pi's package resource filters. Members remain independently installable, but must not be registered alongside this aggregate.
+All ten extensions are dependencies and have explicit forwarding entries. Each entry can be disabled through Pi's package resource filters. Members remain independently installable, but must not be registered alongside this aggregate.
 
 ## License
 

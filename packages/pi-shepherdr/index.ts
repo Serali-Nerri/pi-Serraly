@@ -48,35 +48,10 @@ export default async function shepherdrExtension(
 		(ctx) => workerRole.isWorker(ctx.sessionManager),
 	);
 	registerWorkerService(pi, fleet, sharedContext, board, workerRole);
-	let promptMode: { readonly active: boolean } | undefined;
-	const tool = createAgentsTool(
-		fleet,
-		sharedContext,
-		board,
-		pi,
-		peerCommands,
-		() => promptMode?.active ?? false,
-	);
+	const tool = createAgentsTool(fleet, sharedContext, board, pi, peerCommands);
 
 	registerAgentEventRenderer(pi);
 	pi.registerTool(tool);
-	try {
-		const { registerGptPromptMode } =
-			await import("@howaboua/pi-codex-conversion/prompt-mode");
-		promptMode = registerGptPromptMode(pi, () => [tool]);
-	} catch (error) {
-		if (
-			!(error instanceof Error) ||
-			!("code" in error) ||
-			![
-				"ERR_MODULE_NOT_FOUND",
-				"MODULE_NOT_FOUND",
-				"ERR_PACKAGE_PATH_NOT_EXPORTED",
-			].includes(String(error.code)) ||
-			!error.message.includes(CODE_MODE_PACKAGE)
-		)
-			throw error;
-	}
 	await registerAgentsInCodeMode(pi, tool);
 	registerAgentController(pi, fleet, peerCommands);
 }
@@ -105,7 +80,7 @@ async function registerAgentsInCodeMode(
 			throw new Error(
 				"Update " +
 					CODE_MODE_PACKAGE +
-					" to 5.0.2 or newer to use Shepherdr with it",
+					" to 3.0.24 or newer to use Shepherdr with it",
 				{ cause: error },
 			);
 		}

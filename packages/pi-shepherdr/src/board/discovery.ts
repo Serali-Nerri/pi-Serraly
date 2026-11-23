@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import type { BoardRuntime } from "@howaboua/pi-agent-board/runtime";
+import type { BoardRuntime } from "@howaboua/pi-agent-comms/runtime";
 
 const CLAIM = "@howaboua/pi-agent-board.owner/v1";
 const AVAILABLE = "@howaboua/pi-agent-board.available/v1";
