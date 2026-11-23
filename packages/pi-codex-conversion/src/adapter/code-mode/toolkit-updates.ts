@@ -10,10 +10,7 @@ import {
 	isCodexDeveloperMessageDetails,
 	type CodexDeveloperMessageDetails,
 } from "../../developer-messages.ts";
-import {
-	formatCodeModeToolHelp,
-	isCodeModeToolDiscoverable,
-} from "../../tools/code-mode/custom-tool-prompt.ts";
+import { formatCodeModeToolHelp } from "../../tools/code-mode/custom-tool-prompt.ts";
 import {
 	codeModeGlobalName,
 	translateCodeModeToolReferences,
@@ -155,8 +152,10 @@ export function recordCodeModeToolkit(
 			: undefined;
 	const discoverable = catalog.filter(
 		(tool) =>
-			isCodeModeToolDiscoverable(tool) &&
-			!("discovery" in tool && tool.discovery === "server"),
+			"command" in tool ||
+			(tool.deferLoading &&
+				tool.discoverWhenDeferred === true &&
+				tool.discovery !== "server"),
 	);
 	const current = new Map(
 		discoverable.map((tool) => [codeModeGlobalName(tool.name), tool]),
@@ -313,7 +312,7 @@ export function recordCodeModeToolkit(
 		]).flat(),
 		...(newlyUnlisted.length
 			? [
-					`Unlisted: ${newlyUnlisted.join(", ")}. Still callable by name; omitted from ALL_TOOLS`,
+					`No longer announced: ${newlyUnlisted.join(", ")}. Still callable by name`,
 				]
 			: []),
 		...(removed.length

@@ -47,7 +47,7 @@
   "devDependencies": {
     "typescript": "^7.0.2",
     "@earendil-works/pi-coding-agent": "1.6.0",
-    "@howaboua/pi-codex-conversion": "5.0.2",
+    "@howaboua/pi-codex-conversion": "5.1.0",
     "oxfmt": "^0.78.0"
   },
   "scripts": {

@@ -1,6 +1,7 @@
 import {
 	type CodexConversionConfig,
 	GIPPITY_VOICE_MODELS,
+	GIPPITY_VOICE_MODEL_OPTIONS,
 	OPENAI_REALTIME_VOICES,
 	normalizeRealtimeV3Voice,
 	normalizeVoiceContextReasoning,
@@ -10,6 +11,8 @@ import {
 } from "../../adapter/activation/config.ts";
 import { type ConfigSetting, setting } from "./config-items-shared.ts";
 
+const DEFAULT_CONTEXT_LABEL = "Default";
+
 export function buildVoiceSettings(
 	config: CodexConversionConfig,
 	availableContextModels: VoiceContextModel[],
@@ -18,19 +21,27 @@ export function buildVoiceSettings(
 	const contextModels = new Map(
 		availableContextModels.map((model) => [formatContextModel(model), model]),
 	);
-	const currentContextModel = config.voice.contextModel
-		? formatContextModel(config.voice.contextModel)
-		: "off";
+	const contextModel = config.voice.contextModel;
+	const currentContextModel =
+		contextModel === "current"
+			? DEFAULT_CONTEXT_LABEL
+			: contextModel
+				? formatContextModel(contextModel)
+				: "off";
 	const currentContextReasoning = config.voice.contextReasoning;
+	const { kind } = GIPPITY_VOICE_MODEL_OPTIONS[config.voice.model];
+	const apiModel = kind !== "codex";
 	return [
 		setting(
 			{
 				id: "voiceModel",
 				label: "Voice model",
 				description:
-					"Codex Live uses the login or gateway settings below. GPT-Realtime uses the API provider. Changes apply on the next call.",
-				currentValue: formatVoiceModel(config.voice.model),
-				values: GIPPITY_VOICE_MODELS.map(formatVoiceModel),
+					"Codex Live uses your Codex login. API models require an API key and are billed separately. Applies on the next call.",
+				currentValue: GIPPITY_VOICE_MODEL_OPTIONS[config.voice.model].label,
+				values: GIPPITY_VOICE_MODELS.map(
+					(model) => GIPPITY_VOICE_MODEL_OPTIONS[model].label,
+				),
 			},
 			(value, current) => ({
 				...current,
@@ -38,19 +49,19 @@ export function buildVoiceSettings(
 					...current.voice,
 					model:
 						GIPPITY_VOICE_MODELS.find(
-							(model) => formatVoiceModel(model) === value,
+							(model) => GIPPITY_VOICE_MODEL_OPTIONS[model].label === value,
 						) ?? current.voice.model,
 				},
 			}),
 		),
-		...(config.voice.model !== "codex-live-1.1"
+		...(apiModel
 			? [
 					setting(
 						{
 							id: "apiProvider",
 							label: "API provider",
 							description:
-								"Exact Pi provider name. Uses its API key and endpoint on the next Realtime call. Default: openai.",
+								"Exact Pi provider name. Uses its API key and endpoint on the next call. Default: openai.",
 							currentValue: config.voice.apiProvider,
 						},
 						(value, current) => ({
@@ -60,7 +71,7 @@ export function buildVoiceSettings(
 					),
 				]
 			: []),
-		...(config.voice.model === "codex-live-1.1"
+		...(kind === "codex"
 			? [
 					setting(
 						{
@@ -115,7 +126,6 @@ export function buildVoiceSettings(
 				]
 			: []),
 		...(["primary", "alternate"] as const).map((role) => {
-			const apiModel = config.voice.model !== "codex-live-1.1";
 			const codexKey = role === "primary" ? "v3Voice" : "v3AlternateVoice";
 			const realtimeKey =
 				role === "primary" ? "realtimeVoice" : "realtimeAlternateVoice";
@@ -153,7 +163,7 @@ export function buildVoiceSettings(
 			};
 			return setting(item, update);
 		}),
-		...(config.voice.model !== "codex-live-1.1"
+		...(kind === "realtime"
 			? [
 					setting(
 						{
@@ -180,7 +190,7 @@ export function buildVoiceSettings(
 			{
 				id: "autoResumeRealtime",
 				description:
-					"Reconnect automatically if an active realtime voice call drops.",
+					"Try to start a replacement when an established voice call drops.",
 				label: "Auto-resume realtime voice",
 				currentValue: config.voice.autoResumeRealtime ? "on" : "off",
 				values: ["off", "on"],
@@ -193,23 +203,29 @@ export function buildVoiceSettings(
 				},
 			}),
 		),
-		setting(
-			{
-				id: "delegationAcknowledgements",
-				description:
-					"Let the voice model speak a brief acknowledgement when handing a task to the coding agent.",
-				label: "Speak delegation acknowledgements",
-				currentValue: config.voice.delegationAcknowledgements ? "on" : "off",
-				values: ["off", "on"],
-			},
-			(value, current) => ({
-				...current,
-				voice: {
-					...current.voice,
-					delegationAcknowledgements: value === "on",
-				},
-			}),
-		),
+		...(kind === "codex"
+			? [
+					setting(
+						{
+							id: "delegationAcknowledgements",
+							description:
+								"Let the voice model speak a brief acknowledgement when handing a task to the coding agent.",
+							label: "Speak delegation acknowledgements",
+							currentValue: config.voice.delegationAcknowledgements
+								? "on"
+								: "off",
+							values: ["off", "on"],
+						},
+						(value, current) => ({
+							...current,
+							voice: {
+								...current.voice,
+								delegationAcknowledgements: value === "on",
+							},
+						}),
+					),
+				]
+			: []),
 		setting(
 			{
 				id: "forwardReasoningSummaries",
@@ -251,20 +267,26 @@ export function buildVoiceSettings(
 			{
 				id: "voiceContextModel",
 				description:
-					"Choose a model to summarize the coding session for voice startup. Off starts voice without that summary.",
+					"Default uses the current Pi model for GPT Live and Codex Luna otherwise. Off skips the summary.",
 				label: "Context summarisation model",
 				currentValue: currentContextModel,
 				values: [
 					"off",
+					DEFAULT_CONTEXT_LABEL,
 					...new Set([
-						...(config.voice.contextModel ? [currentContextModel] : []),
+						...(contextModel && contextModel !== "current"
+							? [currentContextModel]
+							: []),
 						...[...contextModels.keys()].sort(),
 					]),
 				],
 			},
 			(value, current) => {
 				const { contextModel: _contextModel, ...voice } = current.voice;
-				const selected = contextModels.get(value);
+				const selected =
+					value === DEFAULT_CONTEXT_LABEL
+						? "current"
+						: contextModels.get(value);
 				return {
 					...current,
 					voice:
@@ -298,7 +320,7 @@ export function buildVoiceSettings(
 			{
 				id: "refreshRealtimeAfterCompaction",
 				description:
-					"Summarize and start a fresh voice call at each context rollover or compaction. Requires a summarization model.",
+					"After context rollover or compaction, replace the active call if a fresh context summary is available. Requires a summary model.",
 				label: "Refresh voice context",
 				currentValue: config.voice.refreshRealtimeAfterCompaction
 					? "on"
@@ -316,11 +338,6 @@ export function buildVoiceSettings(
 	];
 }
 
-function formatGatewaySetting(value: string): string {
-	if (value === "") return "default";
-	return value.trim() ? value : "invalid";
-}
-
 function formatVoiceName(voice: string): string {
 	return `${voice.slice(0, 1).toUpperCase()}${voice.slice(1)}`;
 }
@@ -329,8 +346,7 @@ function formatContextModel(model: VoiceContextModel): string {
 	return `${model.provider}/${model.modelId}`;
 }
 
-function formatVoiceModel(model: string): string {
-	if (model === "realtime-2.1") return "GPT-Realtime-2.1 (API)";
-	if (model === "realtime-2.1-mini") return "GPT-Realtime-2.1 Mini (API)";
-	return "Codex Live";
+function formatGatewaySetting(value: string): string {
+	if (value === "") return "default";
+	return value.trim() ? value : "invalid";
 }

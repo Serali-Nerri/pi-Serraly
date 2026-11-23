@@ -3,7 +3,7 @@ import { runIsolated } from "../../scripts/lib/workspace.mjs";
 
 const normalTools = ["apply_patch", "exec_command", "view_image", "write_stdin"];
 
-for (const mode of ["normal", "code", "ts", "js"]) {
+for (const mode of ["normal", "code", "ts", "vm"]) {
 	test(`${mode} tree navigation keeps never-enabled tools inactive`, {
 		timeout: 120_000,
 	}, async () => {

@@ -6,10 +6,9 @@ import { resolveCodexRuntimePlan } from "../src/adapter/activation/runtime-plan.
 
 test("Codex and configured keeps eligible models on the full adapter", () => {
 	const config = structuredClone(DEFAULT_CODEX_CONVERSION_CONFIG);
-	config.executionMode = "notebook";
+	config.executionMode = "ts";
 	config.scope.allProviders = "off";
 	config.scope.additionalProviders = ["configured-proxy"];
-	config.tools.applyPatchOnly = true;
 
 	for (const model of [
 		modelDescriptor("openai-codex", "openai-codex-responses", "gpt-6.2-sol"),
@@ -18,7 +17,7 @@ test("Codex and configured keeps eligible models on the full adapter", () => {
 		const plan = resolveCodexRuntimePlan({ model }, config);
 		assert.deepEqual(
 			{ kind: plan.kind, toolNames: plan.toolNames },
-			{ kind: "notebook", toolNames: ["exec", "wait", "notebook"] },
+			{ kind: "ts", toolNames: ["exec", "wait", "notebook"] },
 		);
 	}
 
@@ -34,7 +33,7 @@ test("Codex and configured keeps eligible models on the full adapter", () => {
 	);
 	assert.deepEqual(
 		{ kind: ordinaryPlan.kind, toolNames: ordinaryPlan.toolNames },
-		{ kind: "extras", toolNames: ["apply_patch"] },
+		{ kind: "inactive", toolNames: [] },
 	);
 });
 

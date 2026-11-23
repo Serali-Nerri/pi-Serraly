@@ -81,7 +81,10 @@ try {
 	assert.deepEqual(requests.at(-1), options.expectedAfter ?? expected);
 	assert.equal(requests.length, 3);
 	assert.deepEqual(errors, []);
-	assert.equal(await readFile(configPath, "utf8"), config);
+	assert.deepEqual(JSON.parse(await readFile(configPath, "utf8")), {
+		...JSON.parse(config),
+		settingsVersion: 1,
+	});
 } finally {
 	await runtime?.dispose();
 }

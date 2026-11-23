@@ -56,7 +56,6 @@ function completionMessage(completions: readonly ExecSessionCompletion[]) {
 export function registerCodexShellLifecycle(
 	pi: ExtensionAPI,
 	sessions: ExecSessionManager,
-	enabled: () => boolean,
 ): CodexShellLifecycle {
 	let active: ShellContext | undefined;
 	let timer: ReturnType<typeof setTimeout> | undefined;
@@ -74,7 +73,6 @@ export function registerCodexShellLifecycle(
 	function idle(owner: ShellContext): boolean {
 		return (
 			!disposed &&
-			enabled() &&
 			active === owner &&
 			!owner.paused &&
 			owner.ctx.sessionManager.getSessionId() === owner.sessionId &&
@@ -150,8 +148,7 @@ export function registerCodexShellLifecycle(
 		activate(ctx).paused = false;
 	});
 	pi.on("turn_end", (event, ctx) => {
-		if (!enabled() || event.outcome !== "completed" || ctx.signal?.aborted)
-			return;
+		if (event.outcome !== "completed" || ctx.signal?.aborted) return;
 		const completions = sessions.collectCompletions(activate(ctx).sessionId);
 		if (!completions.length) return;
 		return {
@@ -177,7 +174,7 @@ export function registerCodexShellLifecycle(
 
 	return {
 		recordBriefing(ctx, messages) {
-			if (disposed || !enabled()) return false;
+			if (disposed) return false;
 			const owner = activate(ctx);
 			if (
 				owner.admitted &&

@@ -135,8 +135,8 @@ test("released Pi 1.6 loads every imported package and completes session cleanup
 		"notes",
 	]);
 	assert.deepEqual(report.optionalIntegrations.promptMode.tools, [
-		"change_reasoning",
-		"exec",
+		// Prompt-mode preparation needs the active session context; this fixture
+		// deliberately exercises the broker without selecting a model.
 	]);
 	assert.equal(report.optionalIntegrations.promptMode.errors, 0);
 	assert.equal(

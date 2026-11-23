@@ -46,6 +46,7 @@ export interface ProgrammaticCodeModeToolDefinition extends CodeModeToolMetadata
 	textOutput?: "command" | "plain-command" | undefined;
 	blocking?: boolean | undefined;
 	isBlocking?(input: unknown): boolean;
+	/** For deferred tools: true enables availability notices, false omits catalogue listing. */
 	discoverWhenDeferred?: boolean | undefined;
 	/** Compact callable spine; full help remains in ALL_TOOLS. */
 	discoveryUsage?: string | undefined;
@@ -150,6 +151,8 @@ export interface RuntimeToolTrace {
 	/** Completed Pi nested-call identities; may stay empty until in-flight calls return. */
 	nativeCallIds?: string[] | undefined;
 	result?: RuntimeToolResult | undefined;
+	/** Positions of result images stored in the same Pi message's outer content. */
+	emittedImages?: { contentIndex: number; imageIndex: number }[] | undefined;
 	error?: string | undefined;
 }
 
@@ -164,14 +167,6 @@ export interface OpaqueToolOutput {
 	resultId: string;
 	name: string;
 	encryptedOutput: string;
-}
-
-export interface NotebookMemoryUsage {
-	heapUsedBytes: number;
-	heapTotalBytes: number;
-	rssBytes: number;
-	externalBytes: number;
-	heapLimitBytes: number;
 }
 
 export type NotebookHook = "startup" | "tool_result";
@@ -220,5 +215,4 @@ export type RuntimeResponse = (
 	execSessionIds?: number[] | undefined;
 	traces?: RuntimeToolTrace[] | undefined;
 	droppedTraceCount?: number | undefined;
-	notebookMemory?: NotebookMemoryUsage | undefined;
 };

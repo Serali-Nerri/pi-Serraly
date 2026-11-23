@@ -15,7 +15,7 @@ import {
 	normalizeCacheDiagnosticsMode,
 	normalizeCodexVerbosity,
 	normalizeCompactionMethod,
-	normalizeCompactToolsMode,
+	normalizeToolDetailsMode,
 	normalizeCustomRustBinariesDir,
 	normalizeDictationShortcutMode,
 	normalizeLunaCacheKeepaliveMinutes,
@@ -49,17 +49,19 @@ export function normalizeCodexConversionConfig(
 	const openai = isObject(value["openai"]) ? value["openai"] : {};
 	const inputDevice = normalizeOptionalString(voice["inputDevice"]);
 	const outputDevice = normalizeOptionalString(voice["outputDevice"]);
-	const contextModel = normalizeVoiceContextModel(voice["contextModel"]);
-	const notebookProfile = normalizeNotebookProfile(notebook["profile"]);
+	const contextModel =
+		voice["contextModel"] === "current"
+			? "current"
+			: normalizeVoiceContextModel(voice["contextModel"]);
+	const notebookProfile =
+		value["executionMode"] === "notebook"
+			? undefined
+			: normalizeNotebookProfile(notebook["profile"]);
 	const executionMode =
 		normalizeExecutionMode(value["executionMode"]) ??
 		DEFAULT_CODEX_CONVERSION_CONFIG.executionMode;
 	return {
 		executionMode,
-		voiceFeaturesOnly: normalizeBoolean(
-			value["voiceFeaturesOnly"],
-			DEFAULT_CODEX_CONVERSION_CONFIG.voiceFeaturesOnly,
-		),
 		prompt: {
 			currentTimeReminderMinutes:
 				prompt["currentTimeReminderMinutes"] === 30 ||
@@ -68,9 +70,7 @@ export function normalizeCodexConversionConfig(
 					: 0,
 			heavySystemPromptOverwrite:
 				prompt["heavySystemPromptOverwrite"] === "gpt" ||
-				typeof prompt["heavySystemPromptOverwrite"] === "boolean"
-					? prompt["heavySystemPromptOverwrite"]
-					: DEFAULT_CODEX_CONVERSION_CONFIG.prompt.heavySystemPromptOverwrite,
+				prompt["heavySystemPromptOverwrite"] === true,
 		},
 		scope: {
 			allProviders:
@@ -90,14 +90,6 @@ export function normalizeCodexConversionConfig(
 				tools["viewImageFallback"],
 				DEFAULT_CODEX_CONVERSION_CONFIG.tools["viewImageFallback"],
 			),
-			applyPatchOnly: normalizeBoolean(
-				tools["applyPatchOnly"],
-				DEFAULT_CODEX_CONVERSION_CONFIG.tools["applyPatchOnly"],
-			),
-			viewImageOnly: normalizeBoolean(
-				tools["viewImageOnly"],
-				DEFAULT_CODEX_CONVERSION_CONFIG.tools["viewImageOnly"],
-			),
 		},
 		ui: {
 			statusLine: normalizeBoolean(
@@ -111,13 +103,9 @@ export function normalizeCodexConversionConfig(
 					DEFAULT_CODEX_CONVERSION_CONFIG.ui["toolRenaming"],
 				),
 			),
-			compactTools:
-				normalizeCompactToolsMode(ui["compactTools"]) ??
-				DEFAULT_CODEX_CONVERSION_CONFIG.ui.compactTools,
-			codeModeDetails: normalizeBoolean(
-				ui["codeModeDetails"],
-				DEFAULT_CODEX_CONVERSION_CONFIG.ui["codeModeDetails"],
-			),
+			toolDetails:
+				normalizeToolDetailsMode(ui["toolDetails"]) ??
+				DEFAULT_CODEX_CONVERSION_CONFIG.ui.toolDetails,
 			backgroundShellWidget: normalizeBoolean(
 				ui["backgroundShellWidget"],
 				DEFAULT_CODEX_CONVERSION_CONFIG.ui["backgroundShellWidget"],
@@ -148,15 +136,6 @@ export function normalizeCodexConversionConfig(
 				DEFAULT_CODEX_CONVERSION_CONFIG.compaction.v2UserMessageRetention,
 		},
 		notebook: {
-			journals:
-				notebook["journals"] === "off" || notebook["journals"] === "on"
-					? notebook["journals"]
-					: "week",
-			checkpointCleanup:
-				notebook["checkpointCleanup"] === "month" ||
-				notebook["checkpointCleanup"] === "week"
-					? notebook["checkpointCleanup"]
-					: "never",
 			maxHeapMiB: normalizeIntegerInRange(
 				notebook["maxHeapMiB"],
 				DEFAULT_CODEX_CONVERSION_CONFIG.notebook.maxHeapMiB,
@@ -280,14 +259,6 @@ export function normalizeCodexConversionConfig(
 			cacheDiagnostics:
 				normalizeCacheDiagnosticsMode(openai["cacheDiagnostics"]) ??
 				DEFAULT_CODEX_CONVERSION_CONFIG.openai.cacheDiagnostics,
-			harnessIdentifierHeader:
-				openai["harnessIdentifierHeader"] === "codex"
-					? "codex"
-					: normalizeBoolean(
-							openai["harnessIdentifierHeader"],
-							DEFAULT_CODEX_CONVERSION_CONFIG.openai.harnessIdentifierHeader ===
-								true,
-						),
 		},
 	};
 }

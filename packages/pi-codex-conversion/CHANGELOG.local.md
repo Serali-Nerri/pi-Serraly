@@ -1,6 +1,12 @@
 # Local changelog
 
-Local changes and their background, relative to upstream **5.0.1** (`4006488d10e01b7da55c3ebac5b0a7913005ba00`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
+Local changes and their background, relative to upstream **5.1.0** (`c4f48525475f278d41dc311f2707926216bfa35b`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
+
+## Upstream 5.1.0 sync
+
+- Adopt the upstream VM Code runtime, configuration migration, tool-details settings, API Live voice path, WebSocket size recovery, and refreshed native helpers. Remove Deno, QuickJS, Voice-only and standalone extra-tool runtime paths as upstream directs.
+- Retain local MCP envelope and `ALL_TOOLS` filtering guidance, Pi-aligned request timeout semantics, completed-turn shell delivery, independent Code/Notebook expansion, Codex Live gateway fields, and manual LAN voice access.
+- Keep this package source-loaded and offline at startup: omit upstream publication hooks, browser-CDP synchronization and `pi-browser` integration while retaining the local installation boundary and provenance files.
 
 ## Native `apply_patch` guidance
 
