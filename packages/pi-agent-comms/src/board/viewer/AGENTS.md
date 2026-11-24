@@ -1,1 +1,2 @@
-Independent `tsconfig.viewer.json` build. Runtime imports: this subtree or packaged dependencies only.
+- Independent `tsconfig.viewer.json` build. Runtime imports: this subtree or packaged dependencies only.
+- Point reads must constrain both folder and board ID before aggregating posts; preserve the selected current board's empty fallback when no row exists.

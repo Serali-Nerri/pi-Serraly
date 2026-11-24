@@ -4,7 +4,10 @@ import {
 	type Theme,
 } from "@earendil-works/pi-coding-agent";
 import { SettingsList, type TUI } from "@earendil-works/pi-tui";
-import { normalizeVoiceApiProvider } from "../../../adapter/activation/config.ts";
+import {
+	normalizeVoiceApiProvider,
+	normalizeVoiceBaseUrl,
+} from "../../../adapter/activation/config.ts";
 import type {
 	CodexConversionConfig,
 	VoiceContextModel,
@@ -137,6 +140,73 @@ export function createSettingsConfiguration(
 										}
 										apiProviderPickerOpen = false;
 										back(selected);
+									},
+									() => {
+										apiProviderPickerOpen = false;
+										back();
+									},
+									theme,
+								);
+							},
+						},
+					};
+				if (definition.item.id === "codexLiveProvider")
+					return {
+						...definition,
+						item: {
+							...definition.item,
+							submenu: (_value, back) => {
+								apiProviderPickerOpen = true;
+								return new TextSettingSubmenu(
+									definition.item.label,
+									definition.item.description,
+									draft.voice.codexLiveProvider,
+									(selected) => {
+										if (
+											selected !== "" &&
+											!normalizeVoiceApiProvider(selected)
+										) {
+											ctx.ui.notify(
+												"Enter a provider name, at most 512 bytes, without surrounding whitespace or control characters, or leave blank.",
+												"error",
+											);
+											return;
+										}
+										apiProviderPickerOpen = false;
+										back(selected);
+									},
+									() => {
+										apiProviderPickerOpen = false;
+										back();
+									},
+									theme,
+								);
+							},
+						},
+					};
+				if (definition.item.id === "codexLiveBaseUrl")
+					return {
+						...definition,
+						item: {
+							...definition.item,
+							submenu: (_value, back) => {
+								apiProviderPickerOpen = true;
+								return new TextSettingSubmenu(
+									definition.item.label,
+									definition.item.description,
+									draft.voice.codexLiveBaseUrl,
+									(selected) => {
+										const normalized =
+											selected === "" ? "" : normalizeVoiceBaseUrl(selected);
+										if (normalized === undefined) {
+											ctx.ui.notify(
+												"Enter a valid HTTP or HTTPS base URL without credentials, query or fragment, or leave blank.",
+												"error",
+											);
+											return;
+										}
+										apiProviderPickerOpen = false;
+										back(normalized);
 									},
 									() => {
 										apiProviderPickerOpen = false;

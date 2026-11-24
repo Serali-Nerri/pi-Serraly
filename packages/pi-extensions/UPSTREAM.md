@@ -14,7 +14,7 @@ Each member declares one Pi extension entry; the aggregate has no standalone cha
 
 | Package               | Local version | Provenance                                     |
 | --------------------- | ------------- | ---------------------------------------------- |
-| `pi-codex-conversion` | 5.0.2         | [UPSTREAM](../pi-codex-conversion/UPSTREAM.md) |
+| `pi-codex-conversion` | 5.1.0         | [UPSTREAM](../pi-codex-conversion/UPSTREAM.md) |
 | `pi-ask`              | 0.0.22        | [UPSTREAM](../pi-ask/UPSTREAM.md)              |
 | `pi-codex-imagegen`   | 0.0.17        | [UPSTREAM](../pi-codex-imagegen/UPSTREAM.md)   |
 | `pi-agent-comms`      | 0.0.5         | [UPSTREAM](../pi-agent-comms/UPSTREAM.md)      |

@@ -2,8 +2,10 @@
 - Launch via originating Core with `caller` for qualified parent links. Target `parent` may bind wrong same-ID terminal. `no_notify`, not `no_parent`: preserve sidebar ancestry.
 - Aggregates omit slow remotes. Local snapshots plus selected Core's own view. Remote events invalidate watches. Empty startup mirror → direct `terminal.get`, not rollback.
 - `remote-helper.ts`: data URL bundles for peer/session/context readers. Maintain explicit map and rewritten relative imports. Bootstrap under command limit. Send bundle after credited attachment admission. No helper installs or `machine.exec` polling.
+- Create controller focus wires only after attachment readiness or its first data callback; during graceful helper close, stop creating wires while feeding an existing wire until credit and closed acknowledgement drain.
 - Optional saved Notes bundle: public reader, manifest dependency, exact-session lookup. Broken optional bundle → deferred error module, not base failure. Checkpoints lazy-import bundle or unavailable stub, never remote package. Notes owns discovery/parsing. Preserve cancel/frame bounds, reject oversize without truncation.
 - Voice focus private helper, isolated from Notes payloads. App verifies window on target Core, no terminal-ID inference.
 - Close request doesn't cancel accepted work. Preserve uncertainty, bound startup/cleanup, abort callbacks before release. Kill late accepted helper after cancel. Wire lease bounds route-loss cleanup.
 - Fleet teardown sync, helper close async. `remote-transport.ts` context routes: await old owner close before startup, remove only owned route after bounded cleanup. Align transport/wire/helper frame/context limits.
 - Admission ends at native readiness/read completion, not settlement. Control, subscriptions, reverse context outside lanes. Core 16-exec limit excludes native terminal launches. Broker loss: no replay of accepted work or model-visible scheduling.
+- Initial parent-read retry timers belong to their tracked parent and only enqueue work; forget/close cancels timers and closing disables retries while keeping final parent/child verification after observation grace.

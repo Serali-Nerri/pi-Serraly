@@ -5,17 +5,17 @@
 - Identity by backend, not name/endpoint. Renamed/proxied `openai-codex-responses` keeps Codex transport, Fast Mode, account isolation. Proxies: policy/monitoring/routing. Env proxies keep ChatGPT contracts; explicit `openai-responses` passthrough limited to backend capabilities.
 - Native compaction only for OpenAI Codex or configured OpenAI/Codex passthrough. V2 requires raw Responses output items, not arbitrary streams. Agent Comms owns Notes/history/window.
 - Nested adapters preserve declared `structuredContent` after protected-output checks. Protected results: opaque receipts, never JS data.
-- Prompt: short, argv-shaped. README: foldable, user-facing, no duplicate APIs/developer setup. Contracts: `../../docs/extension-apis.md`.
+- Prompt: short, argv-shaped. README: foldable, user-facing, no duplicate APIs/developer setup.
+- Use `package.json`'s scoped JS/TS/JSON/CSS glob for Oxfmt so Cargo manifests and pinned vendor/license resources stay untouched. Session startup is offline; never poll npm for updates.
 - Run bundled helpers directly. Rebuild checkout, don't patch npm install. Web/image: TS packages. `tools.customRustBinariesDir`: filename-based helper override, not Code host. Incompatibility errors point there, no loader noise.
-- `src/voice/rust/**` and `scripts/build-voice-helper.mjs`: byte-identical with `pi-gippity-control`; change and changeset together.
-- Native builds: `github_watch` if help supports Actions URLs, else `gh run watch <id> --exit-status` near 10–15 min. No polling loops, background shells or temp logs.
+- Keep `src/voice/rust/**` and `scripts/build-voice-helper.mjs` paired; this repository maintains the only voice copy.
+- Tool-card renderers must not retain the host render context or `lastComponent` (see `src/tools/code-mode/AGENTS.md`). `view_image` result-content images are Pi-owned; draw only the details-only text-model preview respecting `showImages`.
 - Instructions → `src/developer-messages.ts`. `trySendCodexDeveloperCustomMessage` preserves rendering; false = unsent → `pi.sendMessage`. Delivery errors throw.
 - `src/adapter/developer-messages.ts`: authenticated carriers → in-place Responses developer items. Preserve chronology and UI/history identity independent of provider role. No system-prompt updates.
-- TS topology changes → root `bun run knip`.
 
 ## Upstream routes
 
-Before upstream-derived edits: pin vs `~/Frameworks/codex` HEAD + path history. Reference only, no automatic upgrade. Keep Pi adaptations; provenance for adopted code only. Paths relative to `~/Frameworks/codex/codex-rs/`:
+Before upstream-derived edits: compare the recorded pin against an OpenAI Codex checkout's HEAD and path history. Reference only, no automatic upgrade. Keep Pi adaptations; provenance for adopted code only. Paths relative to `codex-rs/`:
 
 - Code host: `code-mode-host/src/`, `code-mode-runtime/src/`, `code-mode-protocol/src/`. Official executable pinned in `src/tools/code-mode/host-assets.ts`; no vendored source/local build.
 - `apply-patch/src/`, `utils/absolute-path/src/`, `utils/path-uri/src/`: one pin, `src/tools/rust/UPSTREAM.apply-patch`. Product changes in sync-preserved `standalone_executable.rs` and `pi-apply-patch-fs`. Keep API adaptations in `src/tools/rust/VENDORED.md`.

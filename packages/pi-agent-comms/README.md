@@ -50,7 +50,6 @@ Both tabs open on **Enabled**. Notes offers **Off**, **On** for all models, and 
 - [Board](docs/BOARD.md): discussions, summaries, enablement, archives and browser access
 - [Host integration](INTEGRATION.md): Board membership and routing
 - [Optional PCC integration](PCC-INTEGRATION.md): Notes and provider capabilities
-- [Extension APIs](../../docs/extension-apis.md): public imports and integration lifecycles
 
 Earlier release history remains in the [Notes changelog](docs/NOTES-CHANGELOG.md) and [Board changelog](docs/BOARD-CHANGELOG.md).
 

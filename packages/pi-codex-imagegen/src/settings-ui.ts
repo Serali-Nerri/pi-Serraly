@@ -23,7 +23,7 @@ function items(settings: ImagegenSettings): SettingItem[] {
 			currentValue: settings.access === "codex" ? "Codex OAuth" : "OpenAI API",
 			values: ["Codex OAuth", "OpenAI API"],
 			description:
-				"Codex uses the current model’s provider if compatible, otherwise your Pi Codex login. OpenAI API uses Pi’s openai credentials and separate API billing. No fallback between modes.",
+				"Codex uses the current model’s provider if compatible, otherwise your Pi Codex login. API access uses the endpoint and credential provider below. No fallback between modes.",
 		},
 	];
 	if (settings.access === "codex") return result;

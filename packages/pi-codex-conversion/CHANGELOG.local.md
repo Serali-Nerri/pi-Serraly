@@ -4,9 +4,9 @@ Local changes and their background, relative to upstream **5.1.0** (`c4f48525475
 
 ## Upstream 5.1.0 sync
 
-- Adopt the upstream VM Code runtime, configuration migration, tool-details settings, API Live voice path, WebSocket size recovery, and refreshed native helpers. Remove Deno, QuickJS, Voice-only and standalone extra-tool runtime paths as upstream directs.
-- Retain local MCP envelope and `ALL_TOOLS` filtering guidance, Pi-aligned request timeout semantics, completed-turn shell delivery, independent Code/Notebook expansion, Codex Live gateway fields, and manual LAN voice access.
-- Keep this package source-loaded and offline at startup: omit upstream publication hooks, browser-CDP synchronization and `pi-browser` integration while retaining the local installation boundary and provenance files.
+- Adopt the upstream VM Code runtime, configuration migration, tool-details settings, structured `apply_patch` guidelines (superseding the local `d2dca68` inline guidance), API Live voice path, WebSocket size recovery, and refreshed `view_image` and `pi-codex-voice` helpers. Remove Deno, QuickJS, Voice-only and standalone extra-tool runtime paths as upstream directs.
+- Retain local MCP envelope and `ALL_TOOLS` filtering guidance, default `find`/`grep`/`ls` loadout replacement, Pi-aligned request timeout semantics, WebSocket route retirement, completed-turn shell delivery, aborted-run guards, independent Code/Notebook expansion, Codex Live gateway fields, manual LAN voice access, and the six locally rebuilt `apply_patch` and `exec_bridge` helpers with their provenance.
+- Keep this package source-loaded and offline at startup: omit upstream publication hooks, the coupled image benchmark script, browser-CDP synchronization and `pi-browser` integration while retaining the local installation boundary and provenance files.
 
 ## Native `apply_patch` guidance
 

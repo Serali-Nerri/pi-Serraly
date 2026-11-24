@@ -9,6 +9,6 @@
 - package.json removes npm publish/prepack/pack lifecycle configuration, adds UPSTREAM.md to the shipped files.
 - README.md uses a separately prepared installation workspace and native Pi registration, keeps an explicit one-session load, and states the supported host and optional Pi Codex Conversion versions.
 - AGENTS.md retains the local composition-root instruction.
-- The 0.0.22 compact help is adopted without changing the local package entry and installation documentation.
+- The 0.0.22 compact help is adopted without changing the local package entry and installation documentation; the outdated-PCC Code Mode error message aligns with the 5.1.0 peer floor.
 
 Other runtime TypeScript sources match the selected upstream baseline.

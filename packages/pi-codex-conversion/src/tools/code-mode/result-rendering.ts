@@ -68,9 +68,11 @@ export function renderTrackedCodeModeResult(
 			details.status === "yielded" ? "yielded" : "done",
 		);
 	}
-	const retained = new Set(details.traces?.map((trace) => trace.id));
-	for (const id of component.traces.keys()) {
-		if (!retained.has(id)) component.traces.delete(id);
+	if (details.traces) {
+		const retained = new Set(details.traces.map((trace) => trace.id));
+		for (const id of component.traces.keys()) {
+			if (!retained.has(id)) component.traces.delete(id);
+		}
 	}
 	component.clear();
 	component.addChild(

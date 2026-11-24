@@ -42,7 +42,7 @@ Thinking 以连续 reasoning run 为粒度，支持标题、尾部预览、局�
 
 - pi-session-recap 使用 TS 入口；默认自动摘要在 settled 后空闲 30 分钟、3 个已完成用户 exchange 且距上次摘要新增 2 个 exchange 时请求模型。只展示临时 widget，不持久化 recap、不进入上下文；可独立配置摘要模型和关闭自动请求，详见包 README。许可随包交付。
 - conversion 保留原生工具源码/随附二进制、WASM、tokenizer、vendor、Code runtime 资源和许可。
-- conversion 的 TS/JS Notebook 与 Deno Code 按需准备各自运行时；普通启动不要求提前下载全部可选运行时。
+- conversion 的 Code、VM Code 与 TS Notebook 按需准备各自运行时；普通启动不要求提前下载全部可选运行时。
 - Agent Comms 保留 TS 入口、历史检索 worker、Board 查看器与许可；Notes 的 better-sqlite3 和 Board 的 Node SQLite 在开发、生产安装和离线快照中均须验证数据库可加载。会话裁剪默认关闭，只由用户显式启用。
 - Suggestions 使用 TS 入口；Markdown 默认指令和原生 ESM 会话资源清理模块随包交付。预测默认关闭，配置见包 README。
 - ask、imagegen、Shepherdr、auto-trees、github-watch 使用 Pi 支持的 TS 入口；prompts、profiles、远端脚本及包内资源跟随交付。

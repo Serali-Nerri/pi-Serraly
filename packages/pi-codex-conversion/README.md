@@ -52,11 +52,11 @@ Choose an execution mode under `/codex` → **General**:
 
 Code starts fresh for each cell. VM Code keeps `let`, `const`, `function` and `class` bindings for the conversation, without notebook controls or a saved heap. TS Notebook retains state between cells and provides notebook management controls. See [execution modes](#code-mode-and-custom-tools) below.
 
-Execution mode is separate from provider scope. Apply the adapter to **Codex and configured** providers or **all providers**. For voice and dictation without the Codex adapter, install [GipPity Control](../pi-gippity-control) instead.
+Execution mode is separate from provider scope. Apply the adapter to **Codex and configured** providers or **all providers**. For voice and dictation without the Codex adapter, use a standalone voice extension such as GipPity Control.
 
-The Codex toolset reads files through the shell and edits with `apply_patch`, rather than Pi's separate text read, edit and write tools.
+The Codex toolset reads files through the shell and edits with `apply_patch`, rather than Pi's separate text read, edit, write, find, grep and ls tools.
 
-Background shells survive context compaction and Notes rollover. The agent receives a fresh shell inventory without changing the standing prompt. If a command finishes with an uncollected result, PCC wakes the agent only when idle. Normal monitoring remains primary; these notices are a safety net.
+Background shells survive context compaction and Notes rollover. The agent receives a fresh shell inventory without changing the standing prompt. Uncollected completions join the next model request after normal tool results at completed turn boundaries; if the agent is idle, they wake it. Normal monitoring remains primary; these notices are a safety net.
 
 </details>
 
@@ -71,7 +71,7 @@ Background shells survive context compaction and Notes rollover. The agent recei
 | --- | --- |
 | General | Settings scope, execution mode, providers, prompt overwrite, time reminders |
 | Context | Compaction method and retained user messages |
-| Tools | Auto reasoning, image descriptions, Code and Notebook shell output |
+| Tools | Auto reasoning, image descriptions |
 | OpenAI | Fast and Ultrafast modes, Daybreak, verbosity, transport, diagnostics, Responses Lite |
 | Display | Statusline, tool naming and details, background shells |
 | Voice | Realtime voice, remote access, summarisation, dictation, shortcuts, prompt paths |
@@ -167,7 +167,7 @@ Code downloads its runtime on first use. TS Notebook reuses matching installed p
 
 In TS Notebook, ask your agent to inspect, save, load or clean up notebook state. The `notebook` tool provides its own action help. **Restart and cancellation do not undo file changes or other external tool effects.**
 
-If you used Deno Notebook, follow the [recovery and cleanup guide](../../docs/deno-to-ts-notebook.md). The old mode setting now selects TS Notebook, but Deno notebooks and profiles are not imported or deleted.
+If you used Deno Notebook, follow the [recovery and cleanup guide](https://github.com/IgorWarzocha/howaboua-pi-stuff/blob/main/docs/deno-to-ts-notebook.md). The old mode setting now selects TS Notebook, but Deno notebooks and profiles are not imported or deleted.
 
 ### TS Notebook
 
@@ -204,11 +204,11 @@ Existing QuickJS Code settings (`js`) select VM Code automatically. Use **Code**
 
 Installed Pi tools and enabled MCP servers are available inside Code, VM Code and TS Notebook. Configure MCP servers through Pi. Existing permissions, tool restrictions and disabled servers still apply.
 
-Use `content(result.content)` to emit mixed MCP text and images in their original order. The helper also accepts a single content block. Resource blocks remain JSON text; audio and encrypted text are not supported.
+Deferred-tool announcements group tools by their declared namespace, falling back to the registering extension when Pi provides a file source. Pass only verified MCP blocks or block arrays (often `result.content`) to `content(...)` to emit mixed text and images in their original order; serialize other values with `text(...)`. Resource blocks remain JSON text; audio and encrypted text are not supported.
 
 `exec` and `wait` wait for their active Pi tool calls to return before yielding, even when the cell's yield timeout has elapsed.
 
-If a server is still connecting, the agent may need to retry its call. Use **Ctrl+O** to expand or collapse tool details, or click individual notices in fullscreen mode.
+If a server is still connecting, the agent may need to retry its call. In fullscreen mode, click the script, console output or an individual nested call to expand or collapse it independently; **Ctrl+O** controls the whole card and resets local choices. Nested `view_image` calls show only title, path and errors, while top-level `view_image` and `image(...)` outputs are rendered once by Pi.
 
 ### Custom commands
 
@@ -219,7 +219,7 @@ Command-backed tools use TOML definitions in either location:
 <project>/.pi/codex-conversion-custom-tools/
 ```
 
-See the [working examples](./examples/custom-tools/) and [definition contract](./src/tools/code-mode/CUSTOM-TOOLS.md). For on-demand skill discovery, use [Better Skills Tool](../pi-better-skills-tool).
+See the [working examples](./examples/custom-tools/) and [definition contract](./src/tools/code-mode/CUSTOM-TOOLS.md). For on-demand skill discovery, use a separate skills extension.
 
 </details>
 
@@ -245,7 +245,7 @@ Codex Live rewrites the current voice conversation interval into a self-containe
 
 GPT Live 1.1 on the API uses the current Pi model to prepare voice requests before sending them to Pi. The **Default** context summarisation setting also uses the current Pi model for API Live.
 
-Realtime models use `send_task` to send Pi a self-contained task with relevant voice-discussion decisions and constraints. Busy Pi sessions receive it as steering, with existing tools and confirmations preserved. Realtime models can also use developer-registered voice tools. For optional search, load `@howaboua/pi-codex-web-run`, configure its access and enable **Realtime web search**. Search uses Web Run's configured provider and credentials.
+Realtime models use `send_task` to send Pi a self-contained task with relevant voice-discussion decisions and constraints. Busy Pi sessions receive it as steering, with existing tools and confirmations preserved. Realtime models can also use developer-registered voice tools. Optional **Realtime web search** uses an external compatible web-search service when loaded.
 
 | Shortcut | Action |
 | --- | --- |
@@ -299,7 +299,7 @@ Codex Live voice, dictation, usage and image descriptions can use the Codex logi
 - **Bundled helper cannot run:** report the platform and error. Custom builds can be selected with `tools.customRustBinariesDir`, followed by `/reload`. Do not replace system glibc.
 - **Configured provider fails:** the endpoint must support the selected API and features, including Responses Lite or native compaction when enabled.
 
-See the [changelog](./CHANGELOG.md) or [report an issue](https://github.com/IgorWarzocha/howaboua-pi-stuff/issues).
+See [`CHANGELOG.local.md`](./CHANGELOG.local.md) for local changes, [`CHANGELOG.md`](./CHANGELOG.md) for upstream releases, [`UPSTREAM_SYNC.md`](./UPSTREAM_SYNC.md) for synchronization notes or [report an issue](https://github.com/IgorWarzocha/howaboua-pi-stuff/issues). Session startup does not poll npm for updates.
 
 </details>
 
@@ -308,9 +308,9 @@ See the [changelog](./CHANGELOG.md) or [report an issue](https://github.com/Igor
 <details>
 <summary><strong>Building an integration</strong></summary>
 
-Normal Pi tools work with PCC without additional registration. For custom tool behaviour, shared agent context, developer messages or voice announcements, use the [extension API guide](../../docs/extension-apis.md) and [Code Mode example](./examples/code-mode-extension).
+Normal Pi tools work with PCC without additional registration. The [Code Mode example](./examples/code-mode-extension) shows custom tool integration. PCC exposes `code-mode`, `code-mode-hooks`, `code-mode-preflight`, `prompt-mode`, `developer-messages`, `compaction`, `agent-relationship`, `apply-patch-display`, `realtime-voice` and `host-settings` entry points; shared notes and context belong to [Agent Comms](../pi-agent-comms/README.md).
 
-To expose a tool directly to Realtime voice models, use `registerGippityVoiceTool` from `@howaboua/pi-codex-conversion/realtime-voice` during extension loading. Calls snapshot the registered tools at startup. Ordinary Pi tools are not automatically exposed to the voice model. Standalone GipPity exports the same API from `@howaboua/pi-gippity-control`.
+The `host-settings` entry point exports `hostSettings` for reading or patching global voice settings without starting Pi or voice. To expose a tool directly to Realtime voice models, use `registerGippityVoiceTool` from `@howaboua/pi-codex-conversion/realtime-voice` during extension loading; calls snapshot registered tools at startup.
 
 </details>
 

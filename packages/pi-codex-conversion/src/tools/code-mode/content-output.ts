@@ -3,7 +3,7 @@ type ContentImage = {
 	detail: "auto" | "low" | "high" | "original";
 };
 
-// Literal source keeps all four runtimes independent of host transpiler helpers.
+// Literal source keeps all three runtimes independent of host transpiler helpers.
 export const contentOutputFactorySource = String.raw`(text, image) => {
 	const record = value => typeof value === "object" && value !== null && !Array.isArray(value);
 	const invalid = () => { throw new TypeError("content expects an MCP content block or iterable of blocks"); };

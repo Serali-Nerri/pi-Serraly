@@ -49,15 +49,17 @@ Reviewed Codex `e58bf8f523` for `codex-api/src/error.rs` and `codex-api/src/api_
 
 Pi still classifies outer automatic retries from final error text. Ordinary denial messages remain intact and do not trigger that heuristic. Pi exposes no structured terminal-rejection override, so denial text that itself resembles a transient error remains subject to Pi's heuristic.
 
-## Pi 1.5.1 compatibility
+## Pi 1.5.2 compatibility
 
-Compared the released `v1.5.0` to `v1.5.1` delta. The stock Codex provider's only transport change removes abort listeners after SSE retry delays. PCC already removes those listeners. Its `session-id` headers also already use the spelling corrected in Pi's OpenAI Responses provider.
+Compared released Pi `1.5.2` for request shape, transport and headers, reasoning and service tiers, retries and stream termination. PCC retains its documented developer-instruction placement, tool replay, identity headers, terminal-rejection handling and bounded recovery differences. Normal requests still match Pi's lack of implicit header or stream-idle deadlines; explicit timeoutMs does not bound SSE body streaming. HTTP serialization and compression now wait until SSE is selected.
+
+Tool declarations now use Pi's public `@earendil-works/pi-schema` API instead of TypeBox. Pi validates routed calls; adapter-owned calls still use Pi's public argument validator. The previously reviewed `v1.5.0` to `v1.5.1` retry-delay abort-listener cleanup and `session-id` spelling are already present in PCC.
 
 Pi's native cache warmer remains disabled for Codex and Responses Lite because those routes cannot honour its one-token output cap. Other providers inherit Pi's idle warming and Anthropic message threads. PCC's opt-in isolated Codex keepalive remains separate.
 
 Responses Lite proxies now honour `compat.promptCacheKeyMode: "disabled"` by omitting `prompt_cache_key` before the payload hook. Native Codex request shaping is unchanged.
 
-JS Notebook now pins Pi codemode `1.5.1`. It reuses that exact version when resolvable beside the extension, otherwise it installs on demand. A separate global Pi installation does not guarantee reuse. Pi `1.5.0` hosts remain supported but may need to download the newer runtime. PCC consumes its WASM loader, which is unchanged. The separately pinned QuickJS engine and local bridge are unchanged, so existing snapshots retain their fingerprint. Pi's declaration and one-shot prelude fixes do not alter PCC's independent tool contracts or persistent prelude.
+(QuickJS Code, formerly pinned to Pi codemode `1.5.2`, was removed in the 5.1.0 sync in favour of VM Code.)
 
 ## Pi 1.5 adoption
 
@@ -74,6 +76,12 @@ Pi now owns extension update notices. PCC's generated changelog renderer and sta
 Compared published Pi `1.5.0` for request shape, headers, reasoning, service tiers, retries and stream termination. The three Codex catalogue overrides above remove unsupported reasoning-off selections. Existing instruction placement, Lite requests, identity headers, service-tier pricing and transport-recovery differences remain intentional.
 
 Codex `2e58636d16794a150e562cc34b63ca3035494e50` still marks `interrupt_on_cancel` as under development with `default_enabled: false`. PCC includes dormant Responses Lite cancellation support behind a hard-disabled code guard, with no configuration switch. Cancellation still discards the connection and its continuation, as in stock Pi. Recheck the upstream default before the next PR. The dormant protocol path has not had live validation.
+
+## November 3 request timeouts
+
+Compared the published Pi `1.4.0` and `1.5.0` Codex providers; their request-timeout policy is unchanged. Normal requests now share that policy: no implicit response-header or stream-idle deadline, positive `timeoutMs` bounds SSE headers or WebSocket idle waits, and zero disables it. SSE body parsing has no idle timer. Header timers are cleared when fetch settles so they cannot later abort the body; caller cancellation remains active.
+
+This replaces PCC's fixed 20-second SSE header deadline and default five-minute stream-idle deadline, not its transport implementation. Responses Lite, request conversion, cache continuation, recovery/advice budgets, retry policy, WebSocket setup/prewarm deadlines and stream settlement are unchanged. Whole-provider delegation would discard PCC's wire adaptations; Pi exports no standalone Codex header-timeout helper. No newer Codex behavior or reference pin is adopted by this change.
 
 ## October 23 continuity ownership
 
@@ -146,7 +154,7 @@ Deterministic protocol checks establish handshake overlap, final prompt/tool cap
 - Standard Responses request, retry, error, usage, and terminal-stream handling
 - Chronological system sections and tool declarations, collapsed for models without mid-conversation system messages
 - Prompt/tool checkpoints across Pi compaction and context-window cuts
-- GPT-6.1 Sol, GPT-6 Astra, Sol and Luna, plus GPT-5.6 Luna, Terra and Sol model support
+- GPT-6.2 Sol/Astra, GPT-6.1 Sol/Terra, GPT-6 Astra/Sol/Luna and GPT-5.6 Luna/Terra/Sol model support
 - Code and Notebook modes backed by Responses Lite on eligible models
 - Lite instructions and tools represented as input items
 - Lite all-turn reasoning context and standalone tools
@@ -175,11 +183,11 @@ The official Code Mode runtime pin and bridge boundary are recorded in [`code-mo
 
 ### Responses Lite model scope
 
-The explicit Lite allowlist covers GPT-6 Astra, Sol and Luna, GPT-5.6 Luna, Terra and Sol, and Daybreak Blue/Red aliases. Pi model metadata does not expose `use_responses_lite`; do not add startup catalogue fetches solely for this gate.
+The explicit Lite allowlist covers GPT-6.2 Sol/Astra, GPT-6.1 Sol/Terra, GPT-6 Astra/Sol/Luna, GPT-5.6 Luna/Terra/Sol and Daybreak Blue/Red aliases. Pi model metadata does not expose `use_responses_lite`; do not add startup catalogue fetches solely for this gate.
 
 The live Codex catalogue verified GPT-6 Sol and Luna with `use_responses_lite` and `supports_reasoning_effort_updates` enabled, 272K default context and 872K maximum context. Both completed live Lite requests and native reasoning updates through this adapter. Cost metadata follows [published Standard API rates](https://developers.openai.com/api/docs/pricing), including cache writes and the long-context tier above 272K input tokens. Reserve and generated keepalive retain their existing GPT-5.6 contracts.
 
-Built-in Lite follows the `openai-codex-responses` transport, including renamed providers. Explicitly configured `openai-responses` proxies may opt into Lite for GPT-6 Astra/Sol/Luna, GPT-5.6 Luna/Terra/Sol and the `gpt-5.6` alias; those routes own backend compatibility and use this package's provider overlay.
+Built-in Lite follows the `openai-codex-responses` transport, including renamed providers. Explicitly configured `openai-responses` proxies may opt into Lite for those GPT models and the `gpt-5.6` alias; those routes own backend compatibility and use this package's provider overlay.
 
 Check:
 
@@ -231,7 +239,7 @@ Do not invent a migration based on comments alone. Revisit when Codex changes th
 
 ### Hosted tools
 
-Current Codex uses hosted Responses `web_search` only outside Lite. Image generation and Lite web search are client-executed standalone tools. The separate `pi-codex-web-run` and `pi-codex-imagegen` extensions follow those standalone paths and compose into Code Mode through its extension-tool bridge.
+Current Codex uses hosted Responses `web_search` only outside Lite. Image generation and Lite web search are client-executed standalone tools. `pi-codex-imagegen` and an external web-search extension follow those standalone paths and compose into Code Mode through its extension-tool bridge.
 
 Do not add hosted file search, code interpreter, computer use, MCP, or image generation merely because the wider Responses API offers them. Reconsider only when Codex itself exposes them through the same model/provider path.
 

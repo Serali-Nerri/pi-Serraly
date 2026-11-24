@@ -58,6 +58,7 @@ export async function recordNotebookStatus(
 	messages: readonly AgentMessage[],
 	codeMode: Pick<CodeModeRegistration, "notebookStatus">,
 ): Promise<boolean> {
+	if (ctx.signal?.aborted) return false;
 	if (
 		state.notebookStatusMessageId &&
 		messages.some(
@@ -90,11 +91,11 @@ export async function recordNotebookStatus(
 			.filter(Boolean)
 			.join(" · ");
 	} catch (error) {
-		if (ctx.signal?.aborted) throw error;
+		if (ctx.signal?.aborted) return false;
 		title = "TS status unavailable";
 		content = `TS startup status unavailable: ${error instanceof Error ? error.message : String(error)}\nUse notebook diagnostics to inspect the failure before relying on retained state`;
 	}
-	ctx.signal?.throwIfAborted();
+	if (ctx.signal?.aborted) return false;
 	const status: NotebookStatus = {
 		protocol: 1,
 		id: randomUUID(),

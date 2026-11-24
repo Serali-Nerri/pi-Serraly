@@ -1,6 +1,7 @@
 - Ghost text display-only until accepted. No editor substitution or auto-submit. Compose editor factories, forward public callbacks after construction. Unknown layouts cannot accept invisible drafts.
 - Suggest next steps, not user imitations. Completed request yields draft, not abstention. Display width independent of draft length.
 - `agent_settled`, not `agent_end`. Cancel input in editor wrapper so Right accepts. Leave Tab to Pi. Install factory once, not per `before_agent_start`.
+- Skip settled snapshot work while disabled, after cancellation and non-human-TUI cleanup; keep prediction sync before the aborted-turn gate when enabled. Ignore non-model custom entries when checking draft validity, while preserving message/context-edit invalidation and Notes window checks.
 - Append-only prediction history per actual provider/model and main window. Failed primary preserves fallback. Provisional history becomes active only on successful switch. Retain full provider replies, project only main user/final assistant text.
 - Notes owns retirement. Use optional projection even inactive. Discard auxiliary history at boundaries. Abort before public resource cleanup. Never use main session ID.
 - `session-resources.js` native ESM. Pi 1.3 TS loader splits pi-ai registry from compiled providers. Verify via Pi loader, not direct imports.

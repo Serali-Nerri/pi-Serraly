@@ -2,6 +2,10 @@
 
 The current upstream artifact/help refresh is in [CHANGELOG.md](CHANGELOG.md). [UPSTREAM.md](UPSTREAM.md) owns the current split.
 
+## Upstream 0.0.17 alignment
+
+- Adopt upstream 0.0.17's compact help and Code Mode entry registration while retaining the configurable Images API base URL, Pi credential provider, custom image model, JSON edit request format and local input/size validation.
+
 ## Upstream 0.0.15 alignment
 
 - The upstream text-only renderer now covers the earlier local duplicate-preview fix. Retain the settings-aware schema call for gateway and custom-model controls.

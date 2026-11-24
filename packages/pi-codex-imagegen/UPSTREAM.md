@@ -17,6 +17,6 @@
 - API settings retain the local explicit base URL, Pi credential-provider ID and custom image model. Official defaults and Codex OAuth routing remain separate; gateway credentials are never written into the imagegen settings file.
 - Custom models retain the upstream quality choices but expose only still-image controls. Preset-only complexity, GIF and SVG controls stay aligned across settings, request validation and Code Mode schemas.
 - Local input boundaries retain PNG chunk integrity validation, encoded data-URL size admission before reading local files, and the distinction between Codex's larger edit inputs and OpenAI API limits.
-- The local Code Mode description keeps the detailed, settings-aware selector and result guidance needed by this workspace. The package continues to use Pi's result-image display rather than drawing a duplicate preview in the tool card.
+- The `/imagegen` Access setting description reflects the configurable API endpoint and credential provider rather than assuming built-in `openai` credentials. Code Mode registration uses upstream 0.0.17's compact usage and schema help, and Pi continues to own result-image display without drawing a duplicate preview in the tool card.
 
 Usage is defined in [README.md](README.md); the Codex reference and review history remain in [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md).

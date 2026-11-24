@@ -123,7 +123,19 @@ export function collectNotes(
 	store: Pick<NotesStore, "read">,
 	entries: readonly SessionEntry[],
 ): Map<string, NoteRevision> {
-	const notes = new Map<string, NoteRevision>();
+	const selected = new Map<
+		string,
+		{
+			revision: NoteRevision;
+			receipt?: boolean;
+			edits?: {
+				id: string;
+				action: "write" | "append";
+				text: string;
+				time: number;
+			}[];
+		}
+	>();
 	for (const entry of entries) {
 		if (
 			entry.type === "branch_summary" &&
@@ -135,7 +147,7 @@ export function collectNotes(
 				entry.details.codexContextNoteHandoff,
 				entry.id,
 			) ?? [])
-				notes.set(note.path, note);
+				selected.set(note.path, { revision: note });
 			continue;
 		}
 		if (entry.type !== "custom") continue;
@@ -145,9 +157,10 @@ export function collectNotes(
 				throw new Error(
 					"A saved note could not be read. Open an intact session branch to recover it.",
 				);
-			// A fork carries the receipt even when its source session was explicitly pruned.
-			const revision = store.read(receipt.revision.id) ?? receipt.revision;
-			notes.set(revision.path, revision);
+			selected.set(receipt.revision.path, {
+				revision: receipt.revision,
+				receipt: true,
+			});
 		} else if (entry.customType === "codex-context-note") {
 			const data = entry.data as
 				| {
@@ -166,25 +179,50 @@ export function collectNotes(
 			)
 				continue;
 			const path = relativeLegacyPath(data.path);
-			const previous = notes.get(path);
+			const previous = selected.get(path);
 			const time = typeof data.timestamp === "number" ? data.timestamp : 0;
-			notes.set(path, {
-				id: entry.id,
-				path,
-				text:
-					data.action === "append"
-						? (previous?.text ?? "") + data.text
-						: data.text,
-				mode: "replace",
-				createdAt: previous?.createdAt ?? time,
-				updatedAt: time,
-			});
+			if (previous) {
+				(previous.edits ??= []).push({
+					id: entry.id,
+					action: data.action,
+					text: data.text,
+					time,
+				});
+			} else {
+				selected.set(path, {
+					revision: {
+						id: entry.id,
+						path,
+						text: data.text,
+						mode: "replace",
+						createdAt: time,
+						updatedAt: time,
+					},
+				});
+			}
 		} else if (entry.customType === "codex-context-note-snapshot") {
 			const snapshot = snapshotNotes(entry.data, entry.id);
 			if (!snapshot) continue;
-			notes.clear();
-			for (const note of snapshot) notes.set(note.path, note);
+			selected.clear();
+			for (const note of snapshot) selected.set(note.path, { revision: note });
 		}
+	}
+	const notes = new Map<string, NoteRevision>();
+	for (const note of selected.values()) {
+		// Read only surviving bases. Legacy edits still consume their database-backed
+		// predecessor; forks retain the receipt fallback when that row was pruned.
+		let revision = note.receipt
+			? (store.read(note.revision.id) ?? note.revision)
+			: note.revision;
+		for (const edit of note.edits ?? [])
+			revision = {
+				...revision,
+				id: edit.id,
+				text: edit.action === "append" ? revision.text + edit.text : edit.text,
+				mode: "replace",
+				updatedAt: edit.time,
+			};
+		notes.set(revision.path, revision);
 	}
 	return notes;
 }

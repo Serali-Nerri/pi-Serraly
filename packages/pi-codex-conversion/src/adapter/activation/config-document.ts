@@ -129,6 +129,8 @@ const settingsDocument = compile(
 			voice: section({
 				model: values(...GIPPITY_VOICE_MODELS),
 				apiProvider: string,
+				codexLiveProvider: string,
+				codexLiveBaseUrl: string,
 				realtimeVoice: string,
 				realtimeAlternateVoice: string,
 				v3Voice: values(...REALTIME_V3_VOICES),

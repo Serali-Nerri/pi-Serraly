@@ -24,9 +24,33 @@ test("a live run still reports an unavailable status", async () => {
 				throw new Error("kernel offline");
 			},
 		},
-		"notebook",
 	);
 
 	assert.equal(recorded, true);
 	assert.equal(entries.length, 1);
+});
+
+test("an aborted run discards notebook startup status failures", async () => {
+	const entries: unknown[] = [];
+	const pi: Pick<ExtensionAPI, "appendEntry"> = {
+		appendEntry: (customType, data) => {
+			entries.push({ customType, data });
+		},
+	};
+	const controller = new AbortController();
+	const recorded = await recordNotebookStatus(
+		pi,
+		{ signal: controller.signal } as ExtensionContext,
+		{ notebookStatusMessageId: undefined },
+		[],
+		{
+			notebookStatus: async () => {
+				controller.abort(new Error("This operation was aborted"));
+				throw controller.signal.reason;
+			},
+		},
+	);
+
+	assert.equal(recorded, false);
+	assert.equal(entries.length, 0);
 });

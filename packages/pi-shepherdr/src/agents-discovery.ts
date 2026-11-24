@@ -185,6 +185,7 @@ export async function listFleetAgents(
 							.filter(
 								(agent) =>
 									agent.agent === "pi" &&
+									(!params.status || agent.agent_status === params.status) &&
 									(!machine.local ||
 										agent.terminal_id !== process.env["HC_TERMINAL_ID"]),
 							)

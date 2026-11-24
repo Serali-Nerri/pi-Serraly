@@ -11,16 +11,10 @@ Part of [Pi Agent Comms](../README.md).
 Requires Pi 1.5.0 or newer and Node.js 22.19 or newer. See the [installation choices and replacement steps](../README.md#install).
 
 ```sh
-pi install npm:@howaboua/pi-agent-comms
+pi install ~/.pi/pi-Serraly/packages/pi-agent-comms
 ```
 
-For a source checkout, install from the repository root:
-
-```sh
-bun install
-bun run --cwd packages/pi-agent-comms build
-pi install ./packages/pi-agent-comms
-```
+Build the viewer in the prepared installation workspace when `dist/viewer` is missing (`bun run --cwd packages/pi-agent-comms build`).
 
 Reload Pi after installation. Ask the agent to post a note to the board, then run `/board` and choose **Open viewer** to read it in your browser. The viewer starts on demand. Using the agent tool does not require a web server.
 

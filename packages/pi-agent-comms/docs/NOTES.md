@@ -9,7 +9,7 @@ Part of [Pi Agent Comms](../README.md).
 Requires Pi 1.5.0 or newer and Node.js 22.19 or newer. See the [installation choices and replacement steps](../README.md#install).
 
 ```sh
-pi install npm:@howaboua/pi-agent-comms
+pi install ~/.pi/pi-Serraly/packages/pi-agent-comms
 ```
 
 Reload Pi, then ask the agent to save a checkpoint and start a new context window. It can read those notes and search earlier session history to continue.
@@ -19,6 +19,8 @@ Pi Codex Conversion is optional. Compatible releases add Code Mode, Notebook and
 ## Notes and windows
 
 The agent keeps the familiar `notes`, `history`, `new_context` and `get_context_remaining` tools. Notes use virtual paths. Relative paths belong to the current agent. History searches the selected Pi session branch, including earlier windows. It does not create a second transcript archive.
+
+In fullscreen Pi, click a context-window or reminder card to expand or collapse it independently; the configured expand shortcut still controls all expandable cards. With **New window requests** set to **off**, conversation-tree navigation does not automatically enable `new_context` on a branch that never enabled it.
 
 History uses case-sensitive substring search by default. Turn on **Ranked history search** in `/notes` to search earlier context in the current session with BM25. Ranked search matches all query words, ignoring case, accents and word order. Set `recent_first: true` to put the newest matches first. Arguments and result IDs are unchanged. Notes search remains a case-sensitive substring search.
 

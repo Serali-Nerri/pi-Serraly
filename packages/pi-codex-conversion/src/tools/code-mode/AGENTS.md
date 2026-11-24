@@ -1,9 +1,10 @@
 - Conversion activation/nested definitions stay outside.
-- Code host: checksummed official release in `host-assets.ts`, cached by release/platform. No local build, bundled host or `customRustBinariesDir`. Upstream routes in package AGENTS.md.
+- Code host: checksummed official release in `host-assets.ts`, cached by release/platform. No local build, bundled host or `customRustBinariesDir`. Stdout frames check length on 4-byte header completion, buffer pending fragments, join once per frame and reset on teardown.
 - Native `exec`/`wait`: no rename, config or collision fallback. State stays mode-local. Notebook controls TS only.
 - Code/Notebook: one standing entry per promoted tool. `ALL_TOOLS` lists current public callables regardless of promotion/notices, excludes deliberately unlisted controls. Not Structured mode.
 - Only explicit `discovery: "help"` omits signatures; empty call returns usage without execution. Never infer from optional args or apply to arbitrary third-party tools.
 - `src/code-mode-preflight.ts`: lightweight public guard. Shared protocol dependency stays outside extension graph.
 - Shared Code turn hook can precede PCC. Prepare prompt mode at capture, before provider selection/host prep/`collectPromptTools`, not PCC's later hook.
 - Delegation: retire admission before delayed cleanup; keep buffers/exec-session routing through yields; abort controllers before clearing cell stores. Opaque capture: reserve capacity, validate context, then append.
-- Pi owns outer result images. Matching trace occurrences reference that row's images, no byte copies. Live/restored traces consume same counts in order; keep unmatched occurrences. Renderers honour `showImages`. UI belongs to row, not capture store.
+- Local expansion wrappers never capture the host render context or `lastComponent`; keep only local choices and the latest `invalidate` in per-call `context.state`. Updates without `details.traces` preserve both local choices and cached `NestedRenderState` rows; explicit snapshots prune only absent call IDs.
+- Nested `view_image` calls show only title/path and errors and never cache hidden raw results. Pi owns outer result images; matching trace occurrences reference that row's images without byte copies, and renderers honour `showImages`.

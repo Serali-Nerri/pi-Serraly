@@ -1,5 +1,5 @@
 - Only loaded Agent Comms or standalone Board activates. Discovery never imports engine. Disabled: retain binding/settings routes, reconcile inherited enablement before preparation, replay briefings natively. Viewer/settings reads never activate.
-- Preserve schema-v1 archive paths/identity and `shepherdr-board-*` records across takeover. Sequence orders posts/cursors, never timestamp text.
+- Preserve schema-v1 archive paths/identity and `shepherdr-board-*` records across takeover. Sequence orders posts/cursors, never timestamp text. Keep unread catch-up seen-ID membership uncorrelated in SQLite and deduplicate saved IDs before transport.
 - Native session IDs own public refs. Legacy names only aliases. Adoption preserves parent-session associations for descendant authorisation and notice routing.
 - Status and comment: one transaction/invocation ID. Check open status for new replies inside transaction after invocation replay. Never reapply replayed status. Legacy reads default open without creating tables.
 - Derived summaries invalidated in status transaction. Late save must match closing comment and latest covered post. Tool/viewer search substitutes summaries unless `full`. Legacy reads never create summary tables.

@@ -8,7 +8,7 @@
 
 | 包 | 当前基线版本 | 来源与当前差异 |
 | --- | --- | --- |
-| pi-codex-conversion | 5.0.2 | [UPSTREAM](packages/pi-codex-conversion/UPSTREAM.md) |
+| pi-codex-conversion | 5.1.0 | [UPSTREAM](packages/pi-codex-conversion/UPSTREAM.md) |
 | pi-ask | 0.0.22 | [UPSTREAM](packages/pi-ask/UPSTREAM.md) |
 | pi-codex-imagegen | 0.0.17 | [UPSTREAM](packages/pi-codex-imagegen/UPSTREAM.md) |
 | pi-agent-comms | 0.0.5 | [UPSTREAM](packages/pi-agent-comms/UPSTREAM.md) |
