@@ -16,6 +16,7 @@ export async function runtimePackage(
 	agentDir: string,
 	mode: string,
 	signal?: AbortSignal,
+	verify?: (pkg: RuntimePackage) => Promise<void> | void,
 ): Promise<RuntimePackage> {
 	signal?.throwIfAborted();
 	try {
@@ -29,8 +30,21 @@ export async function runtimePackage(
 				value.name === name &&
 				"version" in value &&
 				value.version === version
-			)
-				return { resolve: createRequire(manifest).resolve, manifest };
+			) {
+				const candidate: RuntimePackage = {
+					resolve: createRequire(manifest).resolve,
+					manifest,
+				};
+				const valid = verify
+					? await Promise.resolve()
+							.then(() => verify(candidate))
+							.then(
+								() => true,
+								() => false,
+							)
+					: true;
+				if (valid) return candidate;
+			}
 		}
 	} catch (error) {
 		if (
@@ -48,6 +62,12 @@ export async function runtimePackage(
 			join(agentDir, "cache", "pi-codex-conversion", "runtimes"),
 			signal,
 			true,
+			verify
+				? {
+						verify: (manifest) =>
+							verify({ resolve: createRequire(manifest).resolve, manifest }),
+					}
+				: undefined,
 		);
 		const manifest = join(location.cwd, "node_modules", name, "package.json");
 		return { resolve: createRequire(manifest).resolve, manifest };

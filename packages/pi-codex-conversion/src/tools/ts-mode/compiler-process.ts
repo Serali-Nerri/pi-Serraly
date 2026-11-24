@@ -1,6 +1,7 @@
 import { execFile, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { rm } from "node:fs/promises";
+import { createServer, type Server, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout } from "node:timers/promises";
@@ -17,19 +18,22 @@ export async function startTsCompiler(
 	runtime: TsRuntime,
 	options: { cwd: string; tsserverPath?: string },
 ): Promise<TsCompilerProcess> {
+	const isWin = process.platform === "win32";
 	const directory = join(tmpdir(), `pi-ts-${randomUUID()}`);
-	const pipe =
-		process.platform === "win32"
-			? `\\\\.\\pipe\\pi-ts-${randomUUID()}`
-			: join(directory, "socket");
-	const args = [
-		"--api",
-		"--async",
-		"--cwd",
-		options.cwd,
-		"--pipe",
-		process.platform === "win32" ? pipe : directory,
-	];
+	const pipe = isWin
+		? `\\\\.\\pipe\\pi-ts-${randomUUID()}`
+		: join(directory, "socket");
+	// On Windows, tsrs --pipe creates a non-overlapped pipe for SyncRpcChannel that
+	// deadlocks net.createConnection; run tsrs over stdio and bridge via an overlapped server.
+	const args = isWin
+		? [
+				"--api",
+				"--async",
+				"--cwd",
+				options.cwd,
+				"--useCaseSensitiveFileNames=false",
+			]
+		: ["--api", "--async", "--cwd", options.cwd, "--pipe", directory];
 	// Keep the notebook's optimized compiler policy; an explicit user environment wins.
 	const child = spawn(
 		options.tsserverPath ?? process.execPath,
@@ -37,16 +41,54 @@ export async function startTsCompiler(
 		{
 			cwd: options.cwd,
 			env: { ...process.env, TSRS_FAST: process.env["TSRS_FAST"] ?? "1" },
-			detached: process.platform !== "win32",
-			stdio: ["ignore", "ignore", "inherit"],
+			detached: !isWin,
+			stdio: isWin
+				? ["pipe", "pipe", "inherit"]
+				: ["ignore", "ignore", "inherit"],
 		},
 	);
 	let failure: Error | undefined;
 	child.once("error", (error) => {
 		failure = error;
 	});
+	child.stdin?.on("error", () => {});
+	child.stdout?.on("error", () => {});
+
+	const sockets = new Set<Socket>();
+	let bridge: Server | undefined;
+	if (isWin) {
+		const srv = createServer((socket) => {
+			if (
+				child.exitCode !== null ||
+				child.signalCode !== null ||
+				!child.stdin ||
+				!child.stdout
+			) {
+				socket.destroy();
+				return;
+			}
+			sockets.add(socket);
+			const stdout = child.stdout;
+			socket.on("error", () => socket.destroy());
+			socket.once("close", () => {
+				sockets.delete(socket);
+				stdout.unpipe(socket);
+			});
+			socket.pipe(child.stdin, { end: false });
+			stdout.pipe(socket, { end: false });
+		});
+		await new Promise<void>((resolve, reject) => {
+			srv.once("error", reject);
+			srv.listen(pipe, () => resolve());
+		});
+		bridge = srv;
+	}
+
 	const closed = new Promise<void>((resolve) =>
-		child.once("close", () => resolve()),
+		child.once("close", () => {
+			for (const socket of sockets) socket.destroy();
+			resolve();
+		}),
 	);
 	let api = new runtime.api.API({ pipe });
 	let closing: Promise<void> | undefined;
@@ -56,12 +98,22 @@ export async function startTsCompiler(
 				await api.close();
 			} finally {
 				try {
+					if (bridge) {
+						for (const socket of sockets) socket.destroy();
+						const srv = bridge;
+						bridge = undefined;
+						await new Promise<void>((resolve) => srv.close(() => resolve()));
+					}
+					if (isWin && child.exitCode === null && child.signalCode === null) {
+						child.stdin?.end();
+						await Promise.race([closed, setTimeout(500)]);
+					}
 					if (
 						child.pid &&
 						child.exitCode === null &&
 						child.signalCode === null
 					) {
-						if (process.platform === "win32")
+						if (isWin)
 							await new Promise<void>((resolve, reject) =>
 								execFile(
 									"taskkill",
@@ -95,8 +147,7 @@ export async function startTsCompiler(
 					}
 					await closed;
 				} finally {
-					if (process.platform !== "win32")
-						await rm(directory, { recursive: true, force: true });
+					if (!isWin) await rm(directory, { recursive: true, force: true });
 				}
 			}
 		})());
@@ -113,7 +164,10 @@ export async function startTsCompiler(
 				await api.close();
 				if (
 					!(
-						error instanceof Error && /ENOENT|ECONNREFUSED/.test(error.message)
+						error instanceof Error &&
+						/ENOENT|ECONNREFUSED|ECONNRESET|Socket error|closed the connection/i.test(
+							error.message,
+						)
 					) ||
 					performance.now() >= deadline
 				)

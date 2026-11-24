@@ -1,11 +1,54 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { existsSync } from "node:fs";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { acquireDirectoryLock } from "./directory-lock.ts";
 
 export const runImportCommand = promisify(execFile);
+
+export interface CacheNpmImportOptions {
+	verify?: ((manifestPath: string) => Promise<void> | void) | undefined;
+	runCommand?:
+		| ((
+				file: string,
+				args: string[],
+				options: {
+					cwd: string;
+					timeout: number;
+					maxBuffer: number;
+					signal?: AbortSignal | undefined;
+				},
+		  ) => Promise<unknown>)
+		| undefined;
+}
+
+export function resolveNpmCommand(
+	args: readonly string[],
+	options?: {
+		platform?: NodeJS.Platform | undefined;
+		execPath?: string | undefined;
+		appData?: string | undefined;
+	},
+): { file: string; args: string[] } {
+	const platform = options?.platform ?? process.platform;
+	if (platform !== "win32") return { file: "npm", args: [...args] };
+	const execPath = options?.execPath ?? process.execPath;
+	const appData = options?.appData ?? process.env["APPDATA"];
+	// Windows Node distributions ship npm.cmd + npm-cli.js rather than npm.exe,
+	// and execFile rejects .cmd scripts without a shell (CVE-2024-27980).
+	const candidates = [
+		...(appData
+			? [join(appData, "npm", "node_modules", "npm", "bin", "npm-cli.js")]
+			: []),
+		join(dirname(execPath), "node_modules", "npm", "bin", "npm-cli.js"),
+	];
+	const cli = candidates.find((candidate) => existsSync(candidate));
+	return cli
+		? { file: execPath, args: [cli, ...args] }
+		: { file: "npm.exe", args: [...args] };
+}
 
 export function parseExactNpmImport(specifier: string): {
 	name: string;
@@ -26,6 +69,7 @@ export async function cacheExactNpmImport(
 	cacheDir: string,
 	signal?: AbortSignal,
 	includeOptional = false,
+	options?: CacheNpmImportOptions,
 ): Promise<{ cwd: string; bare: string }> {
 	signal?.throwIfAborted();
 	const { name, version, subpath } = parseExactNpmImport(specifier);
@@ -59,7 +103,21 @@ export async function cacheExactNpmImport(
 			)
 				throw error;
 		}
+		if (installed && options?.verify) {
+			const verify = options.verify;
+			installed = await Promise.resolve()
+				.then(() => verify(manifest))
+				.then(
+					() => true,
+					() => false,
+				);
+		}
 		if (!installed) {
+			await Promise.all([
+				rm(join(cwd, "node_modules"), { recursive: true, force: true }),
+				rm(join(cwd, "package-lock.json"), { force: true }),
+				rm(completed, { force: true }),
+			]);
 			await writeFile(
 				join(cwd, "package.json"),
 				JSON.stringify({
@@ -69,17 +127,18 @@ export async function cacheExactNpmImport(
 				}),
 				{ mode: 0o600 },
 			);
+			const command = resolveNpmCommand([
+				"install",
+				"--ignore-scripts",
+				...(includeOptional ? ["--include=optional"] : []),
+				"--no-audit",
+				"--no-fund",
+				"--save-exact",
+			]);
 			try {
-				await runImportCommand(
-					"npm",
-					[
-						"install",
-						"--ignore-scripts",
-						...(includeOptional ? ["--include=optional"] : []),
-						"--no-audit",
-						"--no-fund",
-						"--save-exact",
-					],
+				await (options?.runCommand ?? runImportCommand)(
+					command.file,
+					command.args,
 					{ cwd, timeout: 120_000, maxBuffer: 1024 * 1024, signal },
 				);
 			} catch (error) {
@@ -97,6 +156,8 @@ export async function cacheExactNpmImport(
 				value.version !== version
 			)
 				throw new Error(`Installed version does not match ${identity}`);
+			// npm exits 0 even when optionalDependencies fail to download; verify before marking complete.
+			await options?.verify?.(manifest);
 			await writeFile(completed, identity, { mode: 0o600 });
 		}
 		return { cwd, bare: `${name}${subpath}` };

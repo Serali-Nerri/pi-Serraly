@@ -2,6 +2,12 @@
 
 Local changes and their background, relative to upstream **5.1.0** (`c4f48525475f278d41dc311f2707926216bfa35b`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
 
+## Windows TS runtime installation and compiler IPC
+
+- Resolve Windows `npm` installations through `process.execPath` and the bundled `npm-cli.js` entrypoint instead of bare `execFile("npm", ...)`, which fails with `ENOENT` on standard Windows Node.js distributions that ship `npm.cmd` rather than `npm.exe`.
+- Verify that the host platform's `@tsrs/<platform>-<arch>` binary is present before reusing or recording a cached `tsrs` runtime install, and clean partial cache entries before retrying so failed `optionalDependencies` downloads cannot leave a permanently broken `.installed` marker.
+- Run the Windows `tsrs` async API server over `stdio` bridged through an overlapped Node named-pipe server rather than `tsrs --pipe`, avoiding the non-overlapped Win32 pipe deadlock introduced with `tsrs 7.1.0-beta.tsrs4` while keeping `TSRS_FAST` scoped to the compiler child.
+
 ## Upstream 5.1.0 sync
 
 - Adopt the upstream VM Code runtime, configuration migration, tool-details settings, structured `apply_patch` guidelines (superseding the local `d2dca68` inline guidance), API Live voice path, WebSocket size recovery, and refreshed `view_image` and `pi-codex-voice` helpers. Remove Deno, QuickJS, Voice-only and standalone extra-tool runtime paths as upstream directs.

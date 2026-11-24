@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import manifest from "../../../package.json" with { type: "json" };
@@ -11,6 +12,30 @@ export interface TsRuntime {
 	launcher: string;
 }
 
+export function verifyTsrsBinary(
+	pkg: { resolve: (id: string) => string },
+	platform: NodeJS.Platform = process.platform,
+	arch: string = process.arch,
+): void {
+	const override = process.env["TSRS_BINARY"];
+	if (override && existsSync(override)) return;
+	const candidates =
+		platform === "linux"
+			? [`@tsrs/linux-${arch}-gnu`, `@tsrs/linux-${arch}-musl`]
+			: [`@tsrs/${platform}-${arch}`];
+	const binary = platform === "win32" ? "tsrs.exe" : "tsrs";
+	for (const candidate of candidates) {
+		let resolved: string | undefined;
+		try {
+			resolved = pkg.resolve(`${candidate}/package.json`);
+		} catch {
+			continue;
+		}
+		if (existsSync(join(dirname(resolved), binary))) return;
+	}
+	throw new Error(`Missing tsrs binary for ${platform}-${arch}`);
+}
+
 export async function loadTsRuntime(
 	agentDir: string,
 	signal?: AbortSignal,
@@ -21,6 +46,7 @@ export async function loadTsRuntime(
 		agentDir,
 		"TS",
 		signal,
+		verifyTsrsBinary,
 	);
 	const node = await runtimePackage(
 		"@types/node",
