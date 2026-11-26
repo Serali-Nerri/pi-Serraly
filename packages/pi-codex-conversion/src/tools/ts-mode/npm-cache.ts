@@ -1,8 +1,7 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { basename, delimiter, dirname, isAbsolute, join } from "node:path";
 import { promisify } from "node:util";
 import { acquireDirectoryLock } from "./directory-lock.ts";
 
@@ -24,30 +23,40 @@ export interface CacheNpmImportOptions {
 		| undefined;
 }
 
-export function resolveNpmCommand(
-	args: readonly string[],
-	options?: {
-		platform?: NodeJS.Platform | undefined;
-		execPath?: string | undefined;
-		appData?: string | undefined;
-	},
-): { file: string; args: string[] } {
-	const platform = options?.platform ?? process.platform;
-	if (platform !== "win32") return { file: "npm", args: [...args] };
-	const execPath = options?.execPath ?? process.execPath;
-	const appData = options?.appData ?? process.env["APPDATA"];
-	// Windows Node distributions ship npm.cmd + npm-cli.js rather than npm.exe,
-	// and execFile rejects .cmd scripts without a shell (CVE-2024-27980).
-	const candidates = [
-		...(appData
-			? [join(appData, "npm", "node_modules", "npm", "bin", "npm-cli.js")]
-			: []),
-		join(dirname(execPath), "node_modules", "npm", "bin", "npm-cli.js"),
-	];
-	const cli = candidates.find((candidate) => existsSync(candidate));
-	return cli
-		? { file: execPath, args: [cli, ...args] }
-		: { file: "npm.exe", args: [...args] };
+export async function resolveWindowsNpmCli({
+	execPath,
+	env,
+}: Pick<NodeJS.Process, "execPath" | "env">): Promise<string> {
+	const fromNpm = env["npm_execpath"];
+	const candidates =
+		fromNpm &&
+		isAbsolute(fromNpm) &&
+		basename(fromNpm).toLowerCase() === "npm-cli.js"
+			? [fromNpm]
+			: [];
+	// Official npm.cmd installs place the JS entry point beside the shim.
+	// Run that entry point directly: execFile cannot launch a batch file.
+	const appData = env["APPDATA"]?.replace(/^"(.*)"$/, "$1");
+	for (const entry of [
+		dirname(execPath),
+		...(env["PATH"] ?? "").split(delimiter),
+		...(appData ? [join(appData, "npm")] : []),
+	]) {
+		const directory = entry.replace(/^"(.*)"$/, "$1");
+		if (isAbsolute(directory))
+			candidates.push(
+				join(directory, "node_modules", "npm", "bin", "npm-cli.js"),
+			);
+	}
+	for (const candidate of new Set(candidates)) {
+		const info = await stat(candidate).catch((error: NodeJS.ErrnoException) => {
+			if (error.code !== "ENOENT" && error.code !== "ENOTDIR") throw error;
+		});
+		if (info?.isFile()) return candidate;
+	}
+	throw new Error(
+		"npm not found. Install npm with Node.js or add its directory to PATH, then retry.",
+	);
 }
 
 export function parseExactNpmImport(specifier: string): {
@@ -127,24 +136,32 @@ export async function cacheExactNpmImport(
 				}),
 				{ mode: 0o600 },
 			);
-			const command = resolveNpmCommand([
-				"install",
-				"--ignore-scripts",
-				...(includeOptional ? ["--include=optional"] : []),
-				"--no-audit",
-				"--no-fund",
-				"--save-exact",
-			]);
+			const npmCli =
+				!options?.runCommand && process.platform === "win32"
+					? await resolveWindowsNpmCli(process)
+					: undefined;
 			try {
 				await (options?.runCommand ?? runImportCommand)(
-					command.file,
-					command.args,
+					npmCli
+						? process.versions["bun"]
+							? "node"
+							: process.execPath
+						: "npm",
+					[
+						...(npmCli ? [npmCli] : []),
+						"install",
+						"--ignore-scripts",
+						...(includeOptional ? ["--include=optional"] : []),
+						"--no-audit",
+						"--no-fund",
+						"--save-exact",
+					],
 					{ cwd, timeout: 120_000, maxBuffer: 1024 * 1024, signal },
 				);
 			} catch (error) {
 				signal?.throwIfAborted();
 				throw new Error(
-					`Could not install ${identity} without lifecycle scripts. Check registry access; packages needing install scripts are unavailable.`,
+					`Could not install ${identity} without lifecycle scripts. Check registry access. Packages needing install scripts are unavailable.`,
 					{ cause: error },
 				);
 			}

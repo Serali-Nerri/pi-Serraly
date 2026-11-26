@@ -9,10 +9,10 @@
     ]
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": ">=1.0.0",
-    "@howaboua/pi-codex-conversion": ">=5.0.2"
+    "@earendil-works/pi-coding-agent": ">=1.6.1",
+    "@howaboua/pi-codex-conversion": ">=5.1.2"
   },
   "dependencies": {
-    "@earendil-works/pi-schema": "1.6.0"
+    "@earendil-works/pi-schema": "1.6.1"
   }
 }

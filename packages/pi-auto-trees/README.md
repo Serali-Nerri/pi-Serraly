@@ -16,7 +16,7 @@ Try it for one session:
 pi --no-extensions --no-skills -e ~/.pi/pi-Serraly/packages/pi-auto-trees
 ```
 
-Requires Pi 1.6.0 or newer. Pi Codex Conversion 5.0.2 or newer is optional.
+Requires Pi 1.6.1 or newer. The commands work without Pi Codex Conversion. With Conversion 5.1.2 or newer, an active voice session can also announce the start and completion of `/end`.
 
 ## Usage
 

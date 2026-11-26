@@ -8,11 +8,11 @@ Prepare the installation workspace as described in [development](../../docs/deve
 
     pi install ~/.pi/pi-Serraly/packages/pi-codex-imagegen
 
-Requires Pi 1.6.0 or newer and Node.js 22.19 or newer.
+Requires Pi 1.6.1 or newer and Node.js 22.19 or newer.
 
 Run `/login openai-codex` for the normal Codex route, including when chatting with another provider. Compatible active Codex transports keep their own credentials. Pi Codex's resolver is preferred when present, but its conversation-provider scope does not select tool endpoints. Neither Pi Codex nor an install script is required.
 
-Pi Codex Conversion 5.1.0 or newer is optional. With it installed, the normal imagegen tool becomes tools.image_gen__imagegen inside Code and Notebook Mode.
+Pi Codex Conversion 5.1.2 or newer is optional. With it installed, the normal imagegen tool becomes tools.image_gen__imagegen inside Code and Notebook Mode.
 
 ## Access and preferences
 

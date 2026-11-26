@@ -198,25 +198,6 @@ export async function runRuntimeAcceptance({ directory = root } = {}) {
 				),
 			}),
 		);
-		const promptModeTools = [];
-		const promptModeErrors = [];
-		const imagegenOrdinaryDescription = registeredTools.get("imagegen")?.description;
-		extensionEventBus.emit(
-			"@howaboua/pi-codex-conversion.prompt-mode-prepare/v1",
-			{
-				active: true,
-				context: undefined,
-				errors: promptModeErrors,
-				add(tools) {
-					promptModeTools.push(...tools.map((tool) => tool.name));
-				},
-			},
-		);
-		const imagegenDescription = runner
-			.getAllRegisteredTools()
-			.find((registered) => registered.definition.name === "imagegen")
-			?.definition.description;
-
 		const abortController = new AbortController();
 		const execTool = registeredTools.get("exec_command");
 		const applyPatchTool = registeredTools.get("apply_patch");
@@ -331,12 +312,6 @@ export async function runRuntimeAcceptance({ directory = root } = {}) {
 								.flatMap(({ toolNames }) => toolNames),
 						),
 					].sort(),
-				},
-				promptMode: {
-					tools: [...new Set(promptModeTools)].sort(),
-					errors: promptModeErrors.length,
-					imagegenOrdinaryDescription,
-					imagegenActiveDescription: imagegenDescription,
 				},
 			},
 			config: {

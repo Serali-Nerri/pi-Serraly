@@ -1,6 +1,12 @@
 # Local changelog
 
-Local changes and their background, relative to upstream **5.1.0** (`c4f48525475f278d41dc311f2707926216bfa35b`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
+Local changes and their background, relative to upstream **5.1.2** (`5b641f0a7c7c93c53f9e9cda6abef498fc1441ef`). [UPSTREAM.md](./UPSTREAM.md) lists current local differences; [CHANGELOG.md](./CHANGELOG.md) retains upstream release history. The package version tracks the upstream baseline, not local revisions.
+
+## Upstream 5.1.2 sync
+
+- Carry the local file-tool selection into upstream's request-time filtering so reloads and model switches preserve Pi's selections. Keep turn-boundary shell reports, clickable trace rows and MCP result guidance alongside the new execution contracts.
+- Move local tsrs binary validation and incomplete-cache recovery to the TS Notebook runtime. Resolve an installed package from its real manifest path so Bun workspace links can reuse the verified platform binary offline.
+- Retain Codex Live gateway settings in the shared voice settings module. The workspace still does not depend on `pi-browser`.
 
 ## Windows TS runtime installation and compiler IPC
 

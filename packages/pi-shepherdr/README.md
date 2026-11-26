@@ -16,7 +16,7 @@ Prepare the installation workspace as described in [development](../../docs/deve
 pi install ~/.pi/pi-Serraly/packages/pi-shepherdr
 ```
 
-Requires Pi 1.6.0 or newer, Node.js 22.19 or newer and Herdr Core 0.1.21 or newer on the controller and every target. Run Pi in a Core terminal, through `hc` or a Herdr app connected to that Core. Shepherdr reports Pi status to Core and discovers other Pi sessions with Shepherdr installed. No separate Pi integration is needed.
+Requires Pi 1.6.1 or newer, Node.js 22.19 or newer and Herdr Core 0.1.21 or newer on the controller and every target. Run Pi in a Core terminal, through `hc` or a Herdr app connected to that Core. Shepherdr reports Pi status to Core and discovers other Pi sessions with Shepherdr installed. No separate Pi integration is needed.
 
 Do not load Pi Codex's example `agents.toml` custom tool alongside Shepherdr; they own the same agent surface.
 

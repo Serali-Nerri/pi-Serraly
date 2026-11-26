@@ -1,6 +1,10 @@
-# Local changes relative to upstream 0.0.17
+# Local changes relative to upstream 0.0.18
 
-The current upstream artifact/help refresh is in [CHANGELOG.md](CHANGELOG.md). [UPSTREAM.md](UPSTREAM.md) owns the current split.
+The current upstream release notes are in [CHANGELOG.md](CHANGELOG.md). [UPSTREAM.md](UPSTREAM.md) owns the current split.
+
+## Upstream 0.0.18 alignment
+
+- Adopt upstream 0.0.18's shortened validation, Codex login/provider and configured-provider access errors alongside Pi 1.6.1 and optional Pi Codex Conversion 5.1.2 alignment (including the outdated-PCC Code Mode error message in `index.ts`), while retaining configurable Images API base URL, Pi credential provider, custom image model, gateway-aware missing-credential and access-rejection errors in `src/execute.ts`, local input/size validation and text-only tool card rendering.
 
 ## Upstream 0.0.17 alignment
 

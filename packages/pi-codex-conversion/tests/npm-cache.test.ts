@@ -3,15 +3,15 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import test from "node:test";
 import {
 	cacheExactNpmImport,
-	resolveNpmCommand,
-} from "../src/tools/code-mode/npm-cache.ts";
+	resolveWindowsNpmCli,
+} from "../src/tools/ts-mode/npm-cache.ts";
 import { verifyTsrsBinary } from "../src/tools/ts-mode/runtime.ts";
 
-test("resolveNpmCommand uses Node + npm-cli.js on Windows instead of bare npm", async () => {
+test("resolveWindowsNpmCli locates npm-cli.js from npm_execpath, execPath, PATH and APPDATA", async () => {
 	const root = await mkdtemp(join(tmpdir(), "pcc-win-npm-"));
 	try {
 		const nodeDir = join(root, "nodejs");
@@ -28,24 +28,62 @@ test("resolveNpmCommand uses Node + npm-cli.js on Windows instead of bare npm", 
 		});
 		await writeFile(bundledCli, "// npm-cli");
 
-		const resolved = resolveNpmCommand(["install", "--ignore-scripts"], {
-			platform: "win32",
-			execPath,
-			appData: join(root, "appdata"),
-		});
-		assert.deepEqual(resolved, {
-			file: execPath,
-			args: [bundledCli, "install", "--ignore-scripts"],
-		});
+		assert.equal(await resolveWindowsNpmCli({ execPath, env: {} }), bundledCli);
 
-		const posix = resolveNpmCommand(["install"], {
-			platform: "darwin",
-			execPath: "/usr/local/bin/node",
+		const explicitCli = join(root, "explicit", "npm-cli.js");
+		await mkdir(join(root, "explicit"), { recursive: true });
+		await writeFile(explicitCli, "// explicit");
+		assert.equal(
+			await resolveWindowsNpmCli({
+				execPath,
+				env: { npm_execpath: explicitCli },
+			}),
+			explicitCli,
+		);
+
+		const pathDir = join(root, "on-path");
+		const pathCli = join(pathDir, "node_modules", "npm", "bin", "npm-cli.js");
+		await mkdir(join(pathDir, "node_modules", "npm", "bin"), {
+			recursive: true,
 		});
-		assert.deepEqual(posix, {
-			file: "npm",
-			args: ["install"],
+		await writeFile(pathCli, "// path");
+		assert.equal(
+			await resolveWindowsNpmCli({
+				execPath: join(root, "missing", "node.exe"),
+				env: { PATH: `"${pathDir}"${delimiter}relative` },
+			}),
+			pathCli,
+		);
+
+		const appData = join(root, "appdata");
+		const appDataCli = join(
+			appData,
+			"npm",
+			"node_modules",
+			"npm",
+			"bin",
+			"npm-cli.js",
+		);
+		await mkdir(join(appData, "npm", "node_modules", "npm", "bin"), {
+			recursive: true,
 		});
+		await writeFile(appDataCli, "// appdata");
+		assert.equal(
+			await resolveWindowsNpmCli({
+				execPath: join(root, "missing", "node.exe"),
+				env: { APPDATA: appData },
+			}),
+			appDataCli,
+		);
+
+		await assert.rejects(
+			() =>
+				resolveWindowsNpmCli({
+					execPath: join(root, "missing", "node.exe"),
+					env: {},
+				}),
+			/npm not found/,
+		);
 	} finally {
 		await rm(root, { recursive: true, force: true });
 	}
@@ -54,7 +92,7 @@ test("resolveNpmCommand uses Node + npm-cli.js on Windows instead of bare npm", 
 test("cacheExactNpmImport self-heals a stale tsrs cache missing its platform binary and refuses to mark partial installs complete", async () => {
 	const cacheDir = await mkdtemp(join(tmpdir(), "pcc-tsrs-cache-"));
 	try {
-		const version = "7.1.0-beta.tsrs4";
+		const version = "7.1.0-beta.tsrs5";
 		const identity = `tsrs@${version}`;
 		const entryDir = join(
 			cacheDir,

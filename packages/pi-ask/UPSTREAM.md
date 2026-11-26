@@ -1,14 +1,14 @@
 # Upstream provenance
 
-- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/c4f48525475f278d41dc311f2707926216bfa35b/packages/pi-ask
-- Baseline version: 0.0.22
+- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/5b641f0a7c7c93c53f9e9cda6abef498fc1441ef/packages/pi-ask
+- Baseline version: 0.0.23
 - Upstream history and license: CHANGELOG.md and LICENSE are retained.
+- Local history: [CHANGELOG.local.md](./CHANGELOG.local.md) records workspace-specific behavior changes.
 
 ## Current local differences
 
-- package.json removes npm publish/prepack/pack lifecycle configuration, adds UPSTREAM.md to the shipped files.
-- README.md uses a separately prepared installation workspace and native Pi registration, keeps an explicit one-session load, and states the supported host and optional Pi Codex Conversion versions.
-- AGENTS.md retains the local composition-root instruction.
-- The 0.0.22 compact help is adopted without changing the local package entry and installation documentation; the outdated-PCC Code Mode error message aligns with the 5.1.0 peer floor.
+- package.json removes npm publish/prepack/pack lifecycle configuration, adds UPSTREAM.md and CHANGELOG.local.md to the shipped files, and aligns Pi 1.6.1 and optional Pi Codex Conversion 5.1.2 pins/peers.
+- README.md uses a separately prepared installation workspace and native Pi registration, keeps an explicit one-session load, and states the supported Pi 1.6.1 and optional Pi Codex Conversion 5.1.2 versions.
+- 0.0.23's shortened Ask replies, steering receipts and invalid-field errors are adopted; the outdated-PCC Code Mode error message in `index.ts` aligns with the 5.1.2 peer floor.
 
 Other runtime TypeScript sources match the selected upstream baseline.

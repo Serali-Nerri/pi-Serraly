@@ -4,7 +4,7 @@ import type {
 	ExtensionAPI,
 	ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
-import { recordNotebookStatus } from "../src/adapter/notebook-status.ts";
+import { recordBindingStatus } from "../src/adapter/binding-status.ts";
 
 test("a live run still reports an unavailable status", async () => {
 	const entries: unknown[] = [];
@@ -14,14 +14,18 @@ test("a live run still reports an unavailable status", async () => {
 		},
 	};
 	const ctx = { signal: new AbortController().signal } as ExtensionContext;
-	const recorded = await recordNotebookStatus(
+	const recorded = await recordBindingStatus(
 		pi,
 		ctx,
-		{ notebookStatusMessageId: undefined },
+		{ bindingStatus: undefined },
+		"ts",
 		[],
 		{
 			notebookStatus: async () => {
 				throw new Error("kernel offline");
+			},
+			vmBindingStatus: async () => {
+				throw new Error("vm offline");
 			},
 		},
 	);
@@ -38,15 +42,19 @@ test("an aborted run discards notebook startup status failures", async () => {
 		},
 	};
 	const controller = new AbortController();
-	const recorded = await recordNotebookStatus(
+	const recorded = await recordBindingStatus(
 		pi,
 		{ signal: controller.signal } as ExtensionContext,
-		{ notebookStatusMessageId: undefined },
+		{ bindingStatus: undefined },
+		"ts",
 		[],
 		{
 			notebookStatus: async () => {
 				controller.abort(new Error("This operation was aborted"));
 				throw controller.signal.reason;
+			},
+			vmBindingStatus: async () => {
+				throw new Error("vm offline");
 			},
 		},
 	);

@@ -1,6 +1,6 @@
 {
   "name": "@howaboua/pi-shepherdr",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Persistent blocking and asynchronous Pi agents through Herdr.",
   "type": "module",
   "license": "MIT",
@@ -44,10 +44,10 @@
     "format:check": "oxfmt --check '**/*.{js,cjs,mjs,jsx,ts,cts,mts,tsx,json,jsonc,json5,css}'"
   },
   "peerDependencies": {
-    "@howaboua/pi-codex-conversion": ">=5.1.0",
-    "@earendil-works/pi-ai": ">=1.1.0",
-    "@earendil-works/pi-coding-agent": ">=1.5.0",
-    "@earendil-works/pi-tui": ">=1.1.0"
+    "@howaboua/pi-codex-conversion": ">=5.1.2",
+    "@earendil-works/pi-ai": ">=1.6.1",
+    "@earendil-works/pi-coding-agent": ">=1.6.1",
+    "@earendil-works/pi-tui": ">=1.6.1"
   },
   "peerDependenciesMeta": {
     "@howaboua/pi-codex-conversion": {
@@ -55,11 +55,11 @@
     }
   },
   "devDependencies": {
-    "@howaboua/pi-agent-comms": "0.0.5",
-    "@howaboua/pi-codex-conversion": "5.1.0",
-    "@earendil-works/pi-ai": "1.6.0",
-    "@earendil-works/pi-coding-agent": "1.6.0",
-    "@earendil-works/pi-tui": "1.6.0",
+    "@howaboua/pi-agent-comms": "0.0.7",
+    "@howaboua/pi-codex-conversion": "5.1.2",
+    "@earendil-works/pi-ai": "1.6.1",
+    "@earendil-works/pi-coding-agent": "1.6.1",
+    "@earendil-works/pi-tui": "1.6.1",
     "@types/node": "26.6.6",
     "typescript": "7.0.2",
     "oxfmt": "0.79.0"
@@ -78,6 +78,6 @@
     "./worker-api": "./worker-api.ts"
   },
   "dependencies": {
-    "@earendil-works/pi-schema": "1.6.0"
+    "@earendil-works/pi-schema": "1.6.1"
   }
 }

@@ -28,7 +28,7 @@ Prepare the installation workspace as described in [development](../../docs/deve
 pi install ~/.pi/pi-Serraly/packages/pi-codex-conversion
 ```
 
-Requires Pi 1.6.0 or newer and Node.js 22.19 or newer. Native helpers for macOS, Linux and Windows are bundled for x64 and arm64. TS Notebook has [narrower platform support](#code-mode-and-custom-tools).
+Requires Pi 1.6.1 or newer and Node.js 22.19 or newer. Native helpers for macOS, Linux and Windows are bundled for x64 and arm64. TS Notebook has [narrower platform support](#code-mode-and-custom-tools).
 
 Open `/codex` after installation. Codex-like GPT models use **Structured** mode by default.
 
@@ -56,7 +56,7 @@ Execution mode is separate from provider scope. Apply the adapter to **Codex and
 
 The Codex toolset reads files through the shell and edits with `apply_patch`, rather than Pi's separate text read, edit, write, find, grep and ls tools.
 
-Background shells survive context compaction and Notes rollover. The agent receives a fresh shell inventory without changing the standing prompt. Uncollected completions join the next model request after normal tool results at completed turn boundaries; if the agent is idle, they wake it. Normal monitoring remains primary; these notices are a safety net.
+Background shells survive context compaction and Notes rollover. The agent receives a fresh shell inventory without changing the standing prompt. Uncollected completions join the next model request after normal tool results at completed turn boundaries; if the agent is idle, they wake it. Use `write_stdin` for input or output needed before exit, not to poll for completion.
 
 </details>
 
@@ -96,7 +96,7 @@ Press **Ctrl+O** to expand tool output and see the available source, output and 
 
 ### Optional controls
 
-- **Heavy system prompt overwrite:** **on** replaces Pi's default instructions with compact guidance and keeps other extensions' contributions. **Off** keeps Pi's defaults. Pi Codex uses compact wording in both cases.
+- **Heavy system prompt overwrite:** **Off** keeps Pi's default prompt and adds Codex guidance in plain prose. **On** replaces Pi's default instructions with shorter Codex guidance. Both preserve other extensions' contributions.
 - **Current time reminders:** adds periodic time updates for the model. Choose 30 or 60 minutes under General. Off by default.
 - **Auto reasoning:** asks supported GPT-6 models to adjust effort during work, never below your selected level. Your selection returns when the run settles. Off by default. The model can ignore the instruction, so this is not a guarantee of adaptive effort.
 - **Fast Mode:** choose off, priority processing or Ultrafast independently for Astra, Sol, Terra and Luna. Availability depends on the model and account.
@@ -196,7 +196,7 @@ Top-level `await` works, and `const`, `var` and function hoisting stay the same 
 
 VM Code is not an isolation boundary for untrusted code.
 
-A script error keeps the bindings. A stall, cancellation, memory limit, `terminate` or conversation change drops them, and the next `exec` starts fresh.
+A script error keeps the bindings. A stall, cancellation, memory limit, `terminate` or conversation change drops them. When the binding inventory is refreshed, an idle VM at 90% of its memory budget also resets. Values saved with `store()` survive in-session VM resets, not a change of conversation.
 
 Existing QuickJS Code settings (`js`) select VM Code automatically. Use **Code** if you need fresh JavaScript for every cell. Old JS Notebook files are neither loaded nor deleted.
 
@@ -206,7 +206,7 @@ Installed Pi tools and enabled MCP servers are available inside Code, VM Code an
 
 Deferred-tool announcements group tools by their declared namespace, falling back to the registering extension when Pi provides a file source. Pass only verified MCP blocks or block arrays (often `result.content`) to `content(...)` to emit mixed text and images in their original order; serialize other values with `text(...)`. Resource blocks remain JSON text; audio and encrypted text are not supported.
 
-`exec` and `wait` wait for their active Pi tool calls to return before yielding, even when the cell's yield timeout has elapsed.
+`exec` and `wait` wait for their active Pi tool calls to return before yielding, even when the cell's yield timeout has elapsed. VM Code and TS Notebook use the `exec` yield timeout and `wait` to resume; only Code supports explicit `yield_control()`.
 
 If a server is still connecting, the agent may need to retry its call. In fullscreen mode, click the script, console output or an individual nested call to expand or collapse it independently; **Ctrl+O** controls the whole card and resets local choices. Nested `view_image` calls show only title, path and errors, while top-level `view_image` and `image(...)` outputs are rendered once by Pi.
 
@@ -308,7 +308,7 @@ See [`CHANGELOG.local.md`](./CHANGELOG.local.md) for local changes, [`CHANGELOG.
 <details>
 <summary><strong>Building an integration</strong></summary>
 
-Normal Pi tools work with PCC without additional registration. The [Code Mode example](./examples/code-mode-extension) shows custom tool integration. PCC exposes `code-mode`, `code-mode-hooks`, `code-mode-preflight`, `prompt-mode`, `developer-messages`, `compaction`, `agent-relationship`, `apply-patch-display`, `realtime-voice` and `host-settings` entry points; shared notes and context belong to [Agent Comms](../pi-agent-comms/README.md).
+Normal Pi tools work with PCC without additional registration. The [Code Mode example](./examples/code-mode-extension) shows custom tool integration. PCC exposes `code-mode`, `code-mode-hooks`, `code-mode-preflight`, `developer-messages`, `compaction`, `agent-relationship`, `apply-patch-display`, `realtime-voice` and `host-settings` entry points; shared notes and context belong to [Agent Comms](../pi-agent-comms/README.md).
 
 The `host-settings` entry point exports `hostSettings` for reading or patching global voice settings without starting Pi or voice. To expose a tool directly to Realtime voice models, use `registerGippityVoiceTool` from `@howaboua/pi-codex-conversion/realtime-voice` during extension loading; calls snapshot registered tools at startup.
 

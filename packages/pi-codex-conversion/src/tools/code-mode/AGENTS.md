@@ -4,7 +4,8 @@
 - Code/Notebook: one standing entry per promoted tool. `ALL_TOOLS` lists current public callables regardless of promotion/notices, excludes deliberately unlisted controls. Not Structured mode.
 - Only explicit `discovery: "help"` omits signatures; empty call returns usage without execution. Never infer from optional args or apply to arbitrary third-party tools.
 - `src/code-mode-preflight.ts`: lightweight public guard. Shared protocol dependency stays outside extension graph.
-- Shared Code turn hook can precede PCC. Prepare prompt mode at capture, before provider selection/host prep/`collectPromptTools`, not PCC's later hook.
+- Shared Code turn hook can precede PCC. Capture Heavy system prompt overwrite from the active provider, not PCC's later hook.
 - Delegation: retire admission before delayed cleanup; keep buffers/exec-session routing through yields; abort controllers before clearing cell stores. Opaque capture: reserve capacity, validate context, then append.
+- Nested failures: report each completed failure once across exec/wait, independently of bounded display traces. Preserve caught-error semantics and the cell's own status.
 - Local expansion wrappers never capture the host render context or `lastComponent`; keep only local choices and the latest `invalidate` in per-call `context.state`. Updates without `details.traces` preserve both local choices and cached `NestedRenderState` rows; explicit snapshots prune only absent call IDs.
-- Nested `view_image` calls show only title/path and errors and never cache hidden raw results. Pi owns outer result images; matching trace occurrences reference that row's images without byte copies, and renderers honour `showImages`.
+- Nested `view_image` calls show only title/path and errors and never cache hidden raw results. Pi owns outer result images; matching trace occurrences reference that row's images, no byte copies. Live/restored traces consume same counts in order; keep unmatched occurrences. Renderers honour `showImages`. UI belongs to row, not capture store.

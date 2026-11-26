@@ -32,7 +32,8 @@
     "UPSTREAM.md",
     "LICENSE",
     "tsconfig.json",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "CHANGELOG.local.md"
   ],
   "pi": {
     "extensions": [
@@ -40,14 +41,14 @@
     ]
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": ">=1.5.0",
-    "@earendil-works/pi-tui": ">=1.0.0",
-    "@howaboua/pi-codex-conversion": ">=5.0.2"
+    "@earendil-works/pi-coding-agent": ">=1.6.1",
+    "@earendil-works/pi-tui": ">=1.6.1",
+    "@howaboua/pi-codex-conversion": ">=5.1.2"
   },
   "devDependencies": {
     "typescript": "^7.0.2",
-    "@earendil-works/pi-coding-agent": "1.6.0",
-    "@howaboua/pi-codex-conversion": "5.1.0",
+    "@earendil-works/pi-coding-agent": "1.6.1",
+    "@howaboua/pi-codex-conversion": "5.1.2",
     "oxfmt": "^0.78.0"
   },
   "scripts": {

@@ -11,7 +11,11 @@ import { model } from "./codex-tools-extension.mjs";
 const mode = process.argv[2];
 const options = JSON.parse(process.argv[3] ?? "{}");
 const expected = options.expected ?? ["exec", "wait"];
-const expectedActive = options.expectedActive ?? expected;
+const selectedPiTools = options.selectedPiTools ?? ["read", "bash", "edit", "write"];
+// Pi keeps these tools admitted; PCC omits their declarations from the model request.
+const expectedActive = [...expected, ...selectedPiTools].sort();
+const expectedAfter = options.expectedAfter ?? expected;
+const expectedActiveAfter = [...expectedAfter, ...selectedPiTools].sort();
 const cwd = join(process.env.HOME, "work");
 const agentDir = process.env.PI_CODING_AGENT_DIR;
 await mkdir(cwd, { recursive: true });
@@ -38,7 +42,7 @@ const modelRuntime = await ModelRuntime.create({
 	authPath: join(agentDir, "auth.json"), modelsPath: null,
 	allowModelNetwork: false, refreshOnCreate: false,
 });
-const settingsManager = SettingsManager.inMemory({});
+const settingsManager = SettingsManager.inMemory({ defaultTools: selectedPiTools });
 let runtime;
 try {
 	runtime = await createAgentSessionRuntime(async (options) => {
@@ -73,12 +77,12 @@ try {
 		await writeFile(configPath, config);
 		await session.reload();
 		await session.setModel(model);
-		assert.deepEqual(session.getActiveToolNames().sort(), options.expectedAfterConfig);
+		assert.deepEqual(session.getActiveToolNames().sort(), expectedActiveAfter);
 	}
 	await session.navigateTree(target, { summarize: false });
 	await session.prompt("Continue after loadout synchronization");
-	assert.deepEqual(session.getActiveToolNames().sort(), options.expectedAfter ?? expectedActive);
-	assert.deepEqual(requests.at(-1), options.expectedAfter ?? expected);
+	assert.deepEqual(session.getActiveToolNames().sort(), expectedActiveAfter);
+	assert.deepEqual(requests.at(-1), expectedAfter);
 	assert.equal(requests.length, 3);
 	assert.deepEqual(errors, []);
 	assert.deepEqual(JSON.parse(await readFile(configPath, "utf8")), {

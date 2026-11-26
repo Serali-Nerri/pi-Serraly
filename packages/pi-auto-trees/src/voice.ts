@@ -13,22 +13,10 @@ function announce(pi: ExtensionAPI, id: string, prompt: string): void {
 	pi.events.emit(REALTIME_VOICE_PROMPT_CHANNEL, { id, active: false, prompt });
 }
 
-export function announceEndStarted(pi: ExtensionAPI, gpt = false): void {
-	announce(
-		pi,
-		"pi-auto-trees:end-started",
-		gpt
-			? "Brief natural announcement: summarising conversation BEFORE return to marker"
-			: END_STARTED_PROMPT,
-	);
+export function announceEndStarted(pi: ExtensionAPI): void {
+	announce(pi, "pi-auto-trees:end-started", END_STARTED_PROMPT);
 }
 
-export function announceEndCompleted(pi: ExtensionAPI, gpt = false): void {
-	announce(
-		pi,
-		"pi-auto-trees:end-completed",
-		gpt
-			? "Brief natural announcement: conversation summary saved; marker advanced"
-			: END_COMPLETED_PROMPT,
-	);
+export function announceEndCompleted(pi: ExtensionAPI): void {
+	announce(pi, "pi-auto-trees:end-completed", END_COMPLETED_PROMPT);
 }

@@ -1,6 +1,6 @@
 - `bridge-client.ts`: framing. `bridge-session.ts`: per-process startup, decode, poll, exit, terminate. `session-manager.ts`: IDs, retention, wait policy, snapshots, public operations.
 - Decode arbitrary bytes incrementally per process stream; flush after bridge closes. Raw bounded TTY. Display strips controls/collapses CR and backspace, no grid.
-- Wait policy host-side, model wording generic. Non-TTY output extends inactivity wait; silence yields session. Empty polls: bounded waits with backoff.
+- Wait policy host-side. Non-TTY output extends inactivity wait; silence yields session. Completion reports automatically at completed turn boundaries or when idle; intermediate reads use bounded waits with backoff.
 - Finalised sessions outlive helper retention. Serve stored output without polling/writing expired handles; replay bound doesn't limit exit-observing delivery. Copy replay-cache tails into independent UTF-16 storage.
 - Serialize foreground and background reads per process before capturing `after_seq` and decoding. Native Read waits run concurrently across processes while mutations stay ordered and stdout frames stay atomic; keep background reads event-driven without fixed polling sleeps.
 - Bounded completion notices don't drain truncated unread output. Ctrl-C isn't shell exit.

@@ -116,7 +116,7 @@ export async function generateImageArtifacts(
 			(args.output_format && args.output_format !== "png"))
 	)
 		throw new Error(
-			"These output controls require OpenAI API access. The user can select it in /imagegen; Codex access is unchanged. For Codex, describe size and aspect ratio in the prompt.",
+			"These output controls require OpenAI API access. The user can switch in /imagegen. With Codex, put size and aspect ratio in the prompt.",
 		);
 	const { readCodexToolRouteConfig, resolveCodexToolModel } =
 		await import("./codex-runtime/config.js");
@@ -134,11 +134,7 @@ export async function generateImageArtifacts(
 		recentImages?.length !== args.num_last_images_to_include
 	)
 		throw new Error(
-			"requested the last " +
-				args.num_last_images_to_include +
-				" conversation images, but only " +
-				(recentImages?.length ?? 0) +
-				" were available",
+			`Recent conversation images: ${recentImages?.length ?? 0} available, ${args.num_last_images_to_include} requested`,
 		);
 	const request = routeConfig
 		? await buildImageGenerationRequest(
@@ -163,7 +159,7 @@ export async function generateImageArtifacts(
 		);
 		if (!key)
 			throw new Error(
-				"Image API credentials are unavailable. Check the credential provider selected in /imagegen and configure its API key in Pi.",
+				"Image API credentials unavailable. Check the credential provider selected in /imagegen and configure its API key in Pi, or choose Codex access.",
 			);
 		headers = new Headers({
 			authorization: "Bearer " + key,
@@ -196,8 +192,8 @@ export async function generateImageArtifacts(
 					provider.authProvider === "openai-codex"
 					? codexLoginDiagnostic(true)
 					: settings.access === "openai"
-						? "Image API access was rejected. Check the endpoint, credential provider and model selected in /imagegen. No fallback request was made."
-						: "Image generation access was rejected. Ask the user to check access for their configured provider.",
+						? "Image API access rejected. Check the endpoint, credential provider and model selected in /imagegen. No fallback request sent."
+						: "Image generation access rejected. Ask the user to check configured provider access.",
 			);
 		throw new Error(
 			"Image generation failed: HTTP " +

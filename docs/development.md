@@ -2,7 +2,7 @@
 
 ## 工具链与命令
 
-Node ≥22.19、Bun 1.4.2、Pi 1.6.0。静态检查使用 Oxfmt、类型感知 Oxlint 和 tsrs；JavaScript 与类型声明的构建输出仍使用 tsc。根命令保留隔离的 build/check/test 流程，不采用上游全仓发布框架。依赖只在安装阶段访问 registry：
+Node ≥22.19、Bun 1.4.2、Pi 1.6.1。静态检查使用 Oxfmt、类型感知 Oxlint 和 tsrs；JavaScript 与类型声明的构建输出仍使用 tsc。根命令保留隔离的 build/check/test 流程，不采用上游全仓发布框架。依赖只在安装阶段访问 registry：
 
 ```sh
 bun install --frozen-lockfile --ignore-scripts

@@ -32,24 +32,11 @@ function parseEndMode(args: string): EndMode {
 	return { mode: "custom", prompt: trimmed };
 }
 
-const GPT_PRIME_PROMPT = [
-	"Prime requested scope directly; NO subagents; implement ONLY if explicitly asked.",
-	"Trace main callflow, ownership/state/effects, key files/boundaries.",
-	"Repo-local; NO dependencies; broad scope→paths first→narrow search paths→tight queries; direct refs ONLY; boundary clear→STOP.",
-	"README.md ONLY if scoped source/config unhelpful OR docs explicitly scoped.",
-	"End: concise orientation briefing; STOP.",
-].join("\n");
-const GPT_END_PROMPT =
-	"Keep continuation outcomes/decisions/open questions; omit superseded details.";
-
-export function buildPrimePrompt(scope: string, gpt = false): string {
-	return `${gpt ? GPT_PRIME_PROMPT : INCREMENTAL_WORKFLOW_PRIME_PROMPT}\n\nScope: ${scope}`;
+export function buildPrimePrompt(scope: string): string {
+	return `${INCREMENTAL_WORKFLOW_PRIME_PROMPT}\n\nScope: ${scope}`;
 }
 
-export function buildEndNavigationOptions(
-	args: string,
-	gpt = false,
-): TreeNavigationOptions {
+export function buildEndNavigationOptions(args: string): TreeNavigationOptions {
 	const mode = parseEndMode(args);
 	switch (mode.mode) {
 		case "full":
@@ -57,9 +44,7 @@ export function buildEndNavigationOptions(
 		case "git":
 			return {
 				summarize: true,
-				customInstructions: gpt
-					? `${GPT_END_PROMPT}\nCompleted changes→intended git commit: concise subject+key body notes.`
-					: INCREMENTAL_WORKFLOW_GIT_END_PROMPT,
+				customInstructions: INCREMENTAL_WORKFLOW_GIT_END_PROMPT,
 				replaceInstructions: false,
 			};
 		case "custom": {

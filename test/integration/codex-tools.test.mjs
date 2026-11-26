@@ -19,8 +19,8 @@ test("tree navigation reapplies the current tool configuration instead of the hi
 	await runIsolated(process.execPath, ["test/integration/fixtures/codex-tools.mjs", "normal", JSON.stringify({
 		config: { tools: { autoReasoning: true } },
 		expected: ["apply_patch", "change_reasoning", "exec_command", "view_image", "write_stdin"],
+		selectedPiTools: ["bash", "find", "grep", "ls", "write"],
 		switchConfig: { tools: { autoReasoning: false } },
-		expectedAfterConfig: normalTools,
 		expectedAfter: normalTools,
 	})], { timeoutMs: 90_000 });
 });

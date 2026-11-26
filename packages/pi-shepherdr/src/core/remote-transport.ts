@@ -93,7 +93,7 @@ export class CoreRemoteTransport {
 				this.finish(
 					id,
 					new Error(
-						`Remote request ${reason}; it may already have completed. Inspect the target before retrying`,
+						`Remote request ${reason}. May have completed; inspect the target before retrying`,
 					),
 				);
 				try {

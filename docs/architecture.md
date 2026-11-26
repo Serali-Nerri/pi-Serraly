@@ -13,12 +13,12 @@
 | pi-shepherdr | Herdr Core fleet、agent 工具、profiles 与共享上下文 | Herdr Core；可选接入 conversion 与 Agent Comms |
 | pi-auto-trees | marker/prime/end 会话流程 | 可选接入 conversion 公共协议 |
 | pi-suggestions | 下一步用户请求草稿、空编辑器展示与预测请求清理 | 只依赖 Pi host；可选接入 Notes 窗口投影和 Shepherdr worker 识别 |
-| pi-github-watch | 当前会话的 GitHub 反馈、仓库新 Issue/PR 与 Actions 运行监控、通知和清理 | 已认证的 gh CLI；可选接入 conversion 公共协议 |
+| pi-github-watch | 当前会话的 GitHub Issue、PR 反馈与 Actions 运行监控、通知和清理 | 已认证的 gh CLI；可选接入 conversion 公共协议 |
 | pi-ui | Thinking、Footer、活动完成提示、置顶用户消息、展示设置与清理 | 只依赖 Pi host，不接管工具或执行 |
 | pi-session-recap | TUI 手动/空闲 recap、历史裁剪、临时卡片与请求清理 | 只依赖公开 Pi host API；模型注册表发起独立摘要请求 |
 | pi-extensions | 显式组合仓库全部十个扩展的注册入口 | workspace 运行依赖；调用成员公开导出 |
 
-跨包依赖使用公开导出，不读取兄弟私有源码。宿主包是 peer，不随正式运行树安装；开发使用精确 Pi 1.6.0。工具 schema 使用 Pi 原生 schema 包，外部运行依赖由 workspace 安装。
+跨包依赖使用公开导出，不读取兄弟私有源码。宿主包是 peer，不随正式运行树安装；开发使用精确 Pi 1.6.1。工具 schema 使用 Pi 原生 schema 包，外部运行依赖由 workspace 安装。
 
 pi-extensions 显式维护成员依赖和 manifest 入口顺序。十个成员各有一个 TS 转发入口，默认全部启用，可由 `pi config` 分别开关。更新提示的边界见 [整合包 README](../packages/pi-extensions/README.md)。默认仍逐包登记，整合包不能与其成员重复加载。
 

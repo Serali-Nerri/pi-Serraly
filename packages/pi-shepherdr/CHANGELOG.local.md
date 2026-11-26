@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Sync to upstream 1.0.5 (`5b641f0`) for Pi 1.6.1, optional Pi Codex Conversion 5.1.2 (including `index.ts` Code Mode error alignment) and Agent Comms 0.0.7: adopt shortened delegation help/receipts/recovery messages, final-report follow-up guidance and `hc run --bg` help while retaining the Core 0.1.21 compatibility floor, lifecycle/settlement/remote/Windows-close/monitor/cache adaptations, Agent Comms-only saved-notes resolution and offline regression tests.
 - Replace standalone Notes Compaction and Agent Board integration with the coordinated Agent Comms 0.0.5 package while retaining Shepherdr's local reliability and offline-test changes.
 - Sync upstream c3b422c to 4006488 (1.0.2): restore resumed-worker reporting and sticky unwatch, publish identity before launch readiness, fix standalone Bun helper execution, suppress empty unassigned completion notices, refresh sender guidance and adopt the new general profile.
 - Adopt upstream Oxfmt/Oxlint/tsrs static checks without publishing hooks; retain separate offline tests and standalone Notes Compaction 0.0.18 / Agent Board 0.0.8 integration dependencies.

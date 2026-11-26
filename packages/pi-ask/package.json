@@ -1,6 +1,6 @@
 {
   "name": "@howaboua/pi-ask",
-  "version": "0.0.22",
+  "version": "0.0.23",
   "description": "Interactive decisions, review triage, and human handoffs for Pi.",
   "type": "module",
   "license": "MIT",
@@ -33,7 +33,8 @@
     "UPSTREAM.md",
     "LICENSE",
     "tsconfig.json",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "CHANGELOG.local.md"
   ],
   "pi": {
     "extensions": [
@@ -41,10 +42,10 @@
     ]
   },
   "peerDependencies": {
-    "@howaboua/pi-codex-conversion": ">=5.1.0",
-    "@earendil-works/pi-ai": ">=1.0.0",
-    "@earendil-works/pi-coding-agent": ">=1.5.0",
-    "@earendil-works/pi-tui": ">=1.0.0"
+    "@howaboua/pi-codex-conversion": ">=5.1.2",
+    "@earendil-works/pi-ai": ">=1.6.1",
+    "@earendil-works/pi-coding-agent": ">=1.6.1",
+    "@earendil-works/pi-tui": ">=1.6.1"
   },
   "peerDependenciesMeta": {
     "@howaboua/pi-codex-conversion": {
@@ -52,10 +53,10 @@
     }
   },
   "devDependencies": {
-    "@howaboua/pi-codex-conversion": "5.1.0",
-    "@earendil-works/pi-ai": "1.6.0",
-    "@earendil-works/pi-coding-agent": "1.6.0",
-    "@earendil-works/pi-tui": "1.6.0",
+    "@howaboua/pi-codex-conversion": "5.1.2",
+    "@earendil-works/pi-ai": "1.6.1",
+    "@earendil-works/pi-coding-agent": "1.6.1",
+    "@earendil-works/pi-tui": "1.6.1",
     "typescript": "7.0.2",
     "oxfmt": "0.79.0"
   },
@@ -69,6 +70,6 @@
   "main": "index.ts",
   "exports": "./index.ts",
   "dependencies": {
-    "@earendil-works/pi-schema": "1.6.0"
+    "@earendil-works/pi-schema": "1.6.1"
   }
 }

@@ -4,7 +4,7 @@ Keep checkpoints and searchable session history across fresh context windows, an
 
 ## Install
 
-Requires Pi 1.5.0 or newer and Node.js 22.19 or newer.
+Requires the latest Pi release and Node.js 22.19 or newer.
 
 Prepare the installation workspace as described in [development](../../docs/development.md#本地安装工作区), then register its package path:
 

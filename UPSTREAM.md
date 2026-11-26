@@ -2,24 +2,24 @@
 
 仓库保留的八个 Howaboua 包来自
 [IgorWarzocha/howaboua-pi-stuff](https://github.com/IgorWarzocha/howaboua-pi-stuff)，另有本仓维护的
-`pi-ui` 和 `pi-session-recap`。本轮同步将已选上游基线推进到
-`c4f48525475f278d41dc311f2707926216bfa35b`，并将根工程与宿主依赖统一到 Pi `1.6.0`。
+`pi-ui` 和 `pi-session-recap`。七个仍由上游维护的包固定到
+`5b641f0a7c7c93c53f9e9cda6abef498fc1441ef`，开发与集成验证使用 Pi `1.6.1`。
 各包的 UPSTREAM 文档记录仍然存在的本地适配；Agent Comms 统一提供 Notes、History、共享上下文和 Board。
 
 | 包 | 当前基线版本 | 来源与当前差异 |
 | --- | --- | --- |
-| pi-codex-conversion | 5.1.0 | [UPSTREAM](packages/pi-codex-conversion/UPSTREAM.md) |
-| pi-ask | 0.0.22 | [UPSTREAM](packages/pi-ask/UPSTREAM.md) |
-| pi-codex-imagegen | 0.0.17 | [UPSTREAM](packages/pi-codex-imagegen/UPSTREAM.md) |
-| pi-agent-comms | 0.0.5 | [UPSTREAM](packages/pi-agent-comms/UPSTREAM.md) |
-| pi-shepherdr | 1.0.4 | [UPSTREAM](packages/pi-shepherdr/UPSTREAM.md) |
+| pi-codex-conversion | 5.1.2 | [UPSTREAM](packages/pi-codex-conversion/UPSTREAM.md) |
+| pi-ask | 0.0.23 | [UPSTREAM](packages/pi-ask/UPSTREAM.md) |
+| pi-codex-imagegen | 0.0.18 | [UPSTREAM](packages/pi-codex-imagegen/UPSTREAM.md) |
+| pi-agent-comms | 0.0.7 | [UPSTREAM](packages/pi-agent-comms/UPSTREAM.md) |
+| pi-shepherdr | 1.0.5 | [UPSTREAM](packages/pi-shepherdr/UPSTREAM.md) |
 | pi-auto-trees | 0.1.19 | [UPSTREAM](packages/pi-auto-trees/UPSTREAM.md) |
 | pi-suggestions | 0.0.4 | [UPSTREAM](packages/pi-suggestions/UPSTREAM.md) |
-| pi-github-watch | 0.0.9 | [UPSTREAM](packages/pi-github-watch/UPSTREAM.md) |
+| pi-github-watch | 0.0.10 | [UPSTREAM](packages/pi-github-watch/UPSTREAM.md) |
 | pi-ui | 0.3.0 | [UPSTREAM](packages/pi-ui/UPSTREAM.md) |
 | pi-session-recap | 0.1.0 | [UPSTREAM](packages/pi-session-recap/UPSTREAM.md) |
 
-上游当前主线已移除 `pi-auto-trees`；本仓保留它作为本地独立包，未伪装成当前主线成员。本轮移除独立的 Board、Notes 和 Guardian 源码包，由 Agent Comms 接替 Board 与 Notes。
+上游当前主线已移除 `pi-auto-trees`；本仓保留它作为本地独立包，未伪装成当前主线成员。Board 与 Notes 由 Agent Comms 提供，独立 Guardian 不在本仓维护。
 
 保留各包 LICENSE、NOTICE、vendor 和嵌套来源；MIT 包许可不替代所含 Apache-2.0 等第三方条款。conversion 卡片来源与 MIT 文本在包内 CARD-LICENSE.md。根工程不将继承代码重新授权为统一自有许可。
 

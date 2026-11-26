@@ -1,5 +1,9 @@
+import {
+	defineOwnedSection,
+	upsertOpaqueSection,
+} from "../../prompt/owned-sections.ts";
 import type { CodeModeToolDefinition, CustomToolDefinition } from "./types.js";
-import type { CodeModeExecutionKind } from "./shared-runtime.js";
+import type { CodeModeExecutionKind } from "../execution/runtime.js";
 import {
 	codeModeGlobalName,
 	translateCodeModeGuideline,
@@ -7,31 +11,12 @@ import {
 	translateCodeModeUsage,
 } from "./tool-identity.ts";
 
-const JS_CELL_DESCRIPTION =
-	"JavaScript computation/tool calls; source ONLY, NO JSON/fences";
-const MCP_OUTPUT_GUIDANCE =
-	"MCP results may be envelopes: pass only verified blocks or block arrays (often result.content) to content(...); serialize other values with text(...)";
-
-export const EXEC_DESCRIPTION = `${JS_CELL_DESCRIPTION}
-Optional // @exec: {"yield_time_ms": 10000, "max_output_tokens": 1000}; defaults=30000ms/10000tokens
-Bare values discarded; globals: tools, image, generatedImage, store, load, exit, setTimeout, clearTimeout, ALL_TOOLS; content(value)→emit MCP text/images in order; text(value)→print serialized output; notify(value)→emit; both→undefined; yield_control()→yield
-${MCP_OUTPUT_GUIDANCE}`;
-
-export const ISOLATED_EXEC_GUIDANCE =
-	'Concurrent isolated: // @exec: {"isolated":true}; last checkpoint; shared vars unchanged';
-
-export const VM_EXEC_DESCRIPTION = `${JS_CELL_DESCRIPTION}
-Optional // @exec: {"yield_time_ms": 10000, "max_output_tokens": 1000}; defaults=30000ms/10000tokens
-Bare values discarded; globals: tools, text, image, notify, generatedImage, store, load, yield_control, exit, console, ALL_TOOLS
-content(value)→emit MCP text/images in order
-${MCP_OUTPUT_GUIDANCE}`;
-
-export const WAIT_DESCRIPTION = "Resume or terminate a yielded exec cell";
-
 const BUNDLED_TOOLS_HEADING = "Tools available in exec:";
 const CUSTOM_TOOLS_HEADING = "Configured custom tools:";
 const DEFERRED_TOOLS_GUIDANCE =
 	"For tools and contracts listed in ALL_TOOLS, including MCP tools, prefer filtering by name or keyword and printing only matching entries (for a known NAME, use text(ALL_TOOLS.find(t=>t.name==='NAME'))); use the full catalogue only when necessary.";
+const COMPACT_DEFERRED_TOOLS_GUIDANCE =
+	"Listed/MCP tools in ALL_TOOLS→filter by name/keyword and print matches only (known NAME→text(ALL_TOOLS.find(t=>t.name==='NAME'))); full catalogue only when necessary";
 const CUSTOM_TOOLS_GUIDANCE =
 	"Prefer custom tools for command-backed capabilities";
 export const CODE_MODE_TOOLS_SECTION = "exec_tools";
@@ -41,25 +26,20 @@ export interface CodeModeSystemPromptOptions {
 	sections?: Record<string, string> | undefined;
 }
 
-const customizationGuidance = new WeakMap<
-	CodeModeSystemPromptOptions,
-	() => string
->();
-const promptToolNames = new WeakMap<
-	CodeModeSystemPromptOptions,
-	readonly string[]
->();
-
-export function codeModePromptToolNames(
-	options: CodeModeSystemPromptOptions,
-): readonly string[] {
-	return promptToolNames.get(options) ?? [];
+interface CodeModePromptCapture {
+	toolNames: readonly string[];
+	customizationGuidance(): string;
 }
 
-export function codeModeCustomizationGuidance(
+const promptCaptures = new WeakMap<
+	CodeModeSystemPromptOptions,
+	CodeModePromptCapture
+>();
+
+export function getCodeModePromptCapture(
 	options: CodeModeSystemPromptOptions,
-): string {
-	return customizationGuidance.get(options)?.() ?? "";
+): CodeModePromptCapture | undefined {
+	return promptCaptures.get(options);
 }
 
 function isConfiguredCustomTool(
@@ -125,16 +105,10 @@ function renderStandingTool(tool: CodeModeToolDefinition): string[] {
 		tool.description ?? "",
 		tool.name,
 	).trim();
-	const capability =
-		help &&
-		name === "agents" &&
-		description.endsWith("; {} lists action fields")
-			? description.slice(0, -"; {} lists action fields".length)
-			: description;
 	const usage = translateCodeModeUsage(tool.usage, tool.name);
 	const call = usage.startsWith(`${binding}(`) ? usage : undefined;
 	const entry = help
-		? `- ${binding}()${capability ? `: ${capability}` : ""}`
+		? `- ${binding}()${description ? `: ${description}` : ""}`
 		: call
 			? `- ${call}${description ? `; ${description}` : ""}`
 			: `- ${binding}: ${[description, `Usage: ${usage}`].filter(Boolean).join("; ")}`;
@@ -180,7 +154,7 @@ function buildUsageSection(
 export function buildCodeModeToolsPrompt(
 	tools: CodeModeToolDefinition[],
 	executionKind: CodeModeExecutionKind = "code",
-	heavy = false,
+	heavySystemPromptOverwrite = false,
 ): string {
 	const bundled = tools.filter(
 		(tool) => !isConfiguredCustomTool(tool) && !tool.deferLoading,
@@ -188,21 +162,38 @@ export function buildCodeModeToolsPrompt(
 	const custom = tools.filter(isConfiguredCustomTool);
 	const promotedCustom = custom.filter((tool) => !tool.deferLoading);
 	const usageCalls = bundled.filter(hasUsageCall);
+	const prose = (plain: string, compact: string) =>
+		heavySystemPromptOverwrite ? compact : plain;
 	const sections = [
 		executionKind === "vm"
-			? "exec=one JS context for this conversation; let/const/function/class persist; NO Node/imports/fetch/timers; stall/cancel/memory limit/terminate drops bindings"
+			? prose(
+					"exec uses one JavaScript context for the conversation. Top-level declarations persist across cells and retain their values. Node, imports, fetch, and timers are unavailable. A stall, cancellation, memory limit, or termination clears bindings.",
+					"exec=one JS context per conversation; top-level declarations and values persist across cells; no Node/imports/fetch/timers; stall/cancel/memory limit/termination clears bindings",
+				)
 			: executionKind === "ts"
-				? "exec=persistent TS; imports/npm/Node/Web APIs; bindings/modules persist"
-				: "exec=fresh restricted JS; NO console/imports/Node/browser APIs",
+				? prose(
+						"exec runs TypeScript with persistent bindings, values, and modules across cells. Imports, npm, Node, and Web APIs are available.",
+						"exec=persistent TS; bindings/values/modules persist across cells; imports/npm/Node/Web APIs available",
+					)
+				: prose(
+						"Each exec call runs in a fresh JavaScript context without console, imports, Node, or browser APIs.",
+						"exec=fresh restricted JS; no console/imports/Node/browser APIs",
+					),
 		executionKind !== "code"
-			? "One-off const/let→{ ... }; top-level ONLY for reuse across cells"
+			? prose(
+					"For one-off work, print the tool result directly or start the cell with a block and use let inside it. Declare at top level only for cross-cell reuse. Give each retained binding a distinct, task-specific name.",
+					executionKind === "vm"
+						? "One-off exec cells MUST start with { and end with }. Temporary bindings→let inside. Top level→cross-cell reuse only; distinct, task-specific names."
+						: "One-off work→print directly or start cell with { ... } and use let inside. Top level→cross-cell reuse only; distinct, task-specific names.",
+				)
 			: undefined,
 		executionKind === "ts"
-			? "Whole-cell strictcheck INCL toolargs; typeerror→NO execution"
+			? prose(
+					"The entire cell, including tool arguments, is checked strictly. A type error prevents execution.",
+					"Strict check: entire cell, including tool args. Type error→no execution",
+				)
 			: undefined,
-		executionKind === "ts"
-			? 'Markdown/multiline text→ordinary quoted line arrays joined with "\\n"; template literals require escaping backticks and ${...}'
-			: undefined,
+		"Do not add decorative backticks to text in tool calls.",
 		buildUsageSection(
 			BUNDLED_TOOLS_HEADING,
 			bundled.filter((tool) => !hasUsageCall(tool)),
@@ -216,54 +207,19 @@ export function buildCodeModeToolsPrompt(
 			],
 		),
 		buildUsageSection(
-			heavy
+			heavySystemPromptOverwrite
 				? "Usage calls below. MUST NOT guess args. Unknown args→call for usage first, separately; known args→call directly"
 				: "These calls show usage. MUST NOT guess arguments. If you don't know the current arguments, call for usage separately before the operation. If you know them, call the operation directly.",
 			usageCalls,
 		),
 		buildUsageSection(CUSTOM_TOOLS_HEADING, promotedCustom),
 		// The catalogue is always available, even when its first or last tool is unlisted.
-		DEFERRED_TOOLS_GUIDANCE,
-		custom.length > 0 ? CUSTOM_TOOLS_GUIDANCE : undefined,
+		prose(DEFERRED_TOOLS_GUIDANCE, COMPACT_DEFERRED_TOOLS_GUIDANCE),
+		custom.length > 0
+			? prose(`${CUSTOM_TOOLS_GUIDANCE}.`, CUSTOM_TOOLS_GUIDANCE)
+			: undefined,
 	].filter(Boolean);
 	return sections.join("\n");
-}
-
-function upsertCodeModeToolsSection(
-	systemPrompt: string,
-	section: string,
-): string {
-	const open = `<${CODE_MODE_TOOLS_SECTION}>`;
-	const close = `</${CODE_MODE_TOOLS_SECTION}>`;
-	const start = systemPrompt.indexOf(open);
-	const end =
-		start === -1 ? -1 : systemPrompt.indexOf(close, start + open.length);
-	if (start !== -1 && end !== -1) {
-		const after = end + close.length;
-		if (!section)
-			return `${systemPrompt.slice(0, start)}${systemPrompt.slice(after)}`
-				.replace(/\n{3,}/g, "\n\n")
-				.trim();
-		return `${systemPrompt.slice(0, start)}${open}\n${section}\n${close}${systemPrompt.slice(after)}`;
-	}
-	if (!section) return systemPrompt;
-	return `${systemPrompt.trimEnd()}\n\n${open}\n${section}\n${close}`;
-}
-
-function defineCodeModeToolsSection(
-	sections: Record<string, string>,
-	section: string,
-	isEnabled: () => boolean,
-): void {
-	let override: string | undefined;
-	Object.defineProperty(sections, CODE_MODE_TOOLS_SECTION, {
-		configurable: true,
-		enumerable: true,
-		get: () => override ?? (isEnabled() ? section : ""),
-		set: (value: string) => {
-			override = value;
-		},
-	});
 }
 
 export function prepareCodeModeToolsPrompt(
@@ -272,27 +228,34 @@ export function prepareCodeModeToolsPrompt(
 	documentationPath?: string,
 	isEnabled: () => boolean = () => true,
 	executionKind: CodeModeExecutionKind = "code",
-	heavy = false,
+	heavySystemPromptOverwrite = false,
 ): string {
 	const sections = (options.sections ??= {});
 	// Share this turn's canonical snapshot, not the changing live catalogue.
-	promptToolNames.set(
-		options,
-		tools.map((tool) => tool.name),
+	promptCaptures.set(options, {
+		toolNames: tools.map((tool) => tool.name),
+		customizationGuidance: () =>
+			documentationPath && isEnabled()
+				? heavySystemPromptOverwrite
+					? `exec custom tools→read ${documentationPath}, not Pi docs`
+					: `For exec custom tools, read ${documentationPath} instead of the Pi documentation.`
+				: "",
+	});
+	const section = buildCodeModeToolsPrompt(
+		tools,
+		executionKind,
+		heavySystemPromptOverwrite,
 	);
-	customizationGuidance.set(options, () =>
-		documentationPath && isEnabled()
-			? `exec custom tools→read ${documentationPath}, NOT Pi docs`
-			: "",
-	);
-	const section = buildCodeModeToolsPrompt(tools, executionKind, heavy);
 	if (options.forceSystemPrompt !== undefined) {
-		options.forceSystemPrompt = upsertCodeModeToolsSection(
+		options.forceSystemPrompt = upsertOpaqueSection(
 			options.forceSystemPrompt,
+			CODE_MODE_TOOLS_SECTION,
 			isEnabled() ? section : "",
 		);
 	} else {
-		defineCodeModeToolsSection(sections, section, isEnabled);
+		defineOwnedSection(sections, CODE_MODE_TOOLS_SECTION, () =>
+			isEnabled() ? section : "",
+		);
 	}
 	return section;
 }

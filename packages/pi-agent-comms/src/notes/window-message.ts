@@ -26,23 +26,13 @@ Save relevant notes before handoff. Recovery→relevant notes, necessary links, 
 </context_window_guidance>`;
 
 export function registerWindowRenderer(pi: ExtensionAPI): void {
-	// Pi recreates renderer output on invalidation; keep clicks until the global toggle changes.
-	const expansion = new WeakMap<
-		object,
-		{ globalExpanded: boolean; expanded: boolean }
-	>();
+	// Pi recreates renderer output on invalidation; keep per-card clicks until the global toggle changes.
+	const views = new WeakMap<object, { expanded: boolean; open: boolean }>();
 	pi.registerMessageRenderer(
 		WINDOW_MESSAGE,
 		(message, { expanded, outputPad, keyHint }, theme) => {
 			const details = parseWindowDetails(message.details);
-			const content = message.content;
-			if (!details || typeof content !== "string") return undefined;
-			const previous = expansion.get(message);
-			const state =
-				previous && previous.globalExpanded === expanded
-					? previous
-					: { globalExpanded: expanded, expanded };
-			expansion.set(message, state);
+			if (!details || typeof message.content !== "string") return undefined;
 			const title =
 				details.kind === "task-boundary"
 					? "Task-boundary reminder"
@@ -51,35 +41,51 @@ export function registerWindowRenderer(pi: ExtensionAPI): void {
 						: details.kind === "reminder"
 							? "Context checkpoint reminder · Save notes and start a new window"
 							: `Context window ${details.identity.windowNumber + 1} · Notes and history`;
-			const box = new Box(outputPad, 1, (text) =>
-				theme.bg("customMessageBg", text),
-			);
-			const update = () => {
-				box.clear();
-				box.addChild(
-					state.expanded
-						? new Text(theme.fg("customMessageText", content), 0, 0)
-						: new TruncatedText(
-								theme.fg(
-									details.kind === "urgent" ? "warning" : "customMessageLabel",
-									title,
-								) +
-									theme.fg(
-										"dim",
-										` (${keyHint("app.tools.expand", "to expand")})`,
-									),
-								0,
-								0,
-							),
+			let view = views.get(message);
+			if (!view || view.expanded !== expanded) {
+				view = { expanded, open: expanded };
+				views.set(message, view);
+			}
+			const state = view;
+			const colour =
+				details.kind === "urgent" ? "warning" : "customMessageLabel";
+			const makeBox = (open: boolean) => {
+				const box = new Box(outputPad, 1, (text) =>
+					theme.bg("customMessageBg", text),
 				);
+				const hint = open
+					? ""
+					: theme.fg("dim", ` (${keyHint("app.tools.expand", "to expand")})`);
+				box.addChild(
+					new TruncatedText(
+						theme.fg(colour, `${open ? "▾" : "▸"} ${title}`) + hint,
+						0,
+						0,
+					),
+				);
+				return box;
 			};
-			update();
-			return new MouseRegion(box, (event) => {
-				if (event.type !== "click" || event.button !== "left") return undefined;
-				state.expanded = !state.expanded;
-				update();
-				return { handled: true };
-			});
+			const closed = makeBox(false);
+			const opened = makeBox(true);
+			opened.addChild(
+				new Text(theme.fg("customMessageText", message.content), 0, 0),
+			);
+			return new MouseRegion(
+				{
+					render: (width) => (state.open ? opened : closed).render(width),
+					invalidate() {
+						closed.invalidate();
+						opened.invalidate();
+					},
+				},
+				(event) => {
+					// Accept left-clicks anywhere on the context card, not only on the header row.
+					if (event.type !== "click" || event.button !== "left")
+						return undefined;
+					state.open = !state.open;
+					return { handled: true };
+				},
+			);
 		},
 	);
 }

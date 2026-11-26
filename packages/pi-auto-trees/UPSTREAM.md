@@ -8,7 +8,6 @@ The current upstream mainline no longer ships `pi-auto-trees`. This package is i
 
 ## Current local differences
 
-- package.json removes npm publish/prepack/prepare/pack lifecycle configuration and adds UPSTREAM.md to the shipped files.
+- package.json removes npm publication hooks and ships the local provenance and changelog.
 - README.md uses a separately prepared installation workspace and native Pi registration, states the supported host and optional Pi Codex Conversion versions, and keeps a local development flow without a pack dry run.
-
-Runtime TypeScript sources match the retained 0.1.19 baseline. Its host dependency references are aligned with Pi 1.6.0 in this workspace.
+- Commands and voice announcements use the standalone prompt wording, independent of PCC's Heavy setting. The removed PCC `prompt-mode` export is not required. The retained package is checked against Pi 1.6.1 and PCC 5.1.2; see [local history](CHANGELOG.local.md).

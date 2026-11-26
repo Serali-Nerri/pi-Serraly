@@ -1,6 +1,6 @@
 # pi-Serraly
 
-自用的 Pi 扩展源码工作区：Bun workspaces，**Pi 1.6.0 / Node ≥22.19 / Bun 1.4.2**，不发布 npm。
+自用的 Pi 扩展源码工作区：Bun workspaces，**Pi 1.6.1 / Node ≥22.19 / Bun 1.4.2**，不发布 npm。
 
 ## 扩展
 
@@ -13,7 +13,7 @@
 | [pi-shepherdr](packages/pi-shepherdr/README.md) | Herdr 多代理编排 |
 | [pi-auto-trees](packages/pi-auto-trees/README.md) | 会话 marker、prime 与 end |
 | [pi-suggestions](packages/pi-suggestions/README.md) | 空输入框中的下一步请求草稿；独立模型，默认关闭 |
-| [pi-github-watch](packages/pi-github-watch/README.md) | 按需监控 GitHub Issue、PR 反馈、仓库新 Issue/PR 和 Actions 运行，通知当前会话 |
+| [pi-github-watch](packages/pi-github-watch/README.md) | 按需监控 GitHub Issue、PR 反馈 和 Actions 运行，通知当前会话 |
 | [pi-ui](packages/pi-ui/README.md) | Thinking、Footer、活动完成提示、置顶用户消息和可配置模型的自动会话命名 |
 | [pi-session-recap](packages/pi-session-recap/README.md) | TUI 的 `/recap` 与默认开启的空闲任务摘要；临时展示，不写入模型上下文 |
 

@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
 import { createRequire, findPackageJSON } from "node:module";
 import { join } from "node:path";
 import { cacheExactNpmImport } from "./npm-cache.ts";
@@ -31,9 +31,11 @@ export async function runtimePackage(
 				"version" in value &&
 				value.version === version
 			) {
+				// Resolve workspace symlinks (Bun/pnpm) so optionalDependencies resolve beside the real package.
+				const resolvedManifest = await realpath(manifest);
 				const candidate: RuntimePackage = {
-					resolve: createRequire(manifest).resolve,
-					manifest,
+					resolve: createRequire(resolvedManifest).resolve,
+					manifest: resolvedManifest,
 				};
 				const valid = verify
 					? await Promise.resolve()
@@ -74,7 +76,7 @@ export async function runtimePackage(
 	} catch (cause) {
 		signal?.throwIfAborted();
 		throw new RuntimeInstallError(
-			`${mode} runtime installation failed. Check npm and registry access, then retry; other execution modes remain available.`,
+			`${mode} runtime install failed. Check npm and registry access before retrying. Other modes remain available.`,
 			{ cause },
 		);
 	}

@@ -6,7 +6,7 @@ This private package includes the retained Howaboua packages, Agent Comms, `pi-u
 
 ## Requirements
 
-- Pi 1.6.0 or newer.
+- Pi 1.6.1 or newer.
 - Node.js 22.19 or newer.
 - Agent orchestration also needs the [Shepherdr runtime requirements](../pi-shepherdr/README.md#install).
 - GitHub watches need the [GitHub Watch requirements](../pi-github-watch/README.md#install).
@@ -23,7 +23,7 @@ This private package includes the retained Howaboua packages, Agent Comms, `pi-u
 | `pi-auto-trees`       | The `/marker`, prime and `/end` session workflow.                                                               |
 | `pi-shepherdr`        | Herdr multi-agent orchestration, including its Agent Comms Board integration.                                  |
 | `pi-suggestions`      | Next-prompt drafts in the empty editor and the `/suggestions` settings command.                                 |
-| `pi-github-watch`     | The `github_watch` tool for opt-in feedback, new issue/PR and Actions run notifications in the current session. |
+| `pi-github-watch`     | The `github_watch` tool for opt-in issue/PR feedback and Actions run notifications in the current session.       |
 | `pi-ui`               | Thinking, footer, activity-completion hints, sticky user messages and opt-in session naming.                    |
 | `pi-session-recap`    | Manual and idle session recap cards.                                                                            |
 

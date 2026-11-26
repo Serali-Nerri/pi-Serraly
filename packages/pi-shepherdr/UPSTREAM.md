@@ -1,20 +1,19 @@
 # Upstream provenance
 
-- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/c4f48525475f278d41dc311f2707926216bfa35b/packages/pi-shepherdr
-- Baseline version: 1.0.4
+- Source: https://github.com/IgorWarzocha/howaboua-pi-stuff/tree/5b641f0a7c7c93c53f9e9cda6abef498fc1441ef/packages/pi-shepherdr
+- Baseline version: 1.0.5
 - Upstream history and license: CHANGELOG.md and LICENSE are retained.
 - Local history: [CHANGELOG.local.md](./CHANGELOG.local.md) records workspace-specific integration and reliability changes.
 
 ## Selected upstream changes adopted
 
-- 1.0.4 delegation, discovery, settings and recovery wording is adopted.
-- The stale-attachment routing fix is adopted, so outdated attachments no longer block Notes or History lookup for unrelated agents.
-- Shepherdr's shared-context and Board integrations now consume Agent Comms 0.0.5's public exports.
+- 1.0.5 shortened delegation help, agent receipts and recovery messages, final-report follow-up prompt, and `hc run --bg` vs `hc wait` guidance are adopted.
+- Shepherdr's shared-context and Board integrations consume Agent Comms 0.0.7's public exports and align with Pi 1.6.1 and optional Pi Codex Conversion 5.1.2.
 
 ## Current local differences
 
-- package.json and README.md use the prepared installation workspace, provenance files and local changelog rather than the upstream npm publication workflow.
-- The local Core 0.1.21 compatibility floor, native turn baseline, bounded parent-read retry, Windows close handling, attachment startup/cleanup, affected-session monitor refresh and bounded saved-session cache remain in place.
+- package.json, README.md and index.ts use the prepared installation workspace, provenance files, local changelog, Pi 1.6.1 / PCC 5.1.2 floors (including the outdated-PCC Code Mode error message) and Core 0.1.21 floor rather than the upstream npm publication workflow.
+- The local Core 0.1.21 compatibility floor, native turn baseline, bounded parent-read retry, Windows close handling, attachment startup/cleanup, affected-session monitor refresh, Agent Comms-only saved-notes module resolution (`src/remote/notes-reader.mjs`) and bounded saved-session cache remain in place.
 - Local regression tests cover attachment startup/cleanup, settlement and parent supervision. They are retained as package-owned offline checks.
 
-Other runtime sources, Core-native resources and bundled profiles match the selected 1.0.4 baseline apart from the explicit Agent Comms integration and reliability boundaries above.
+Other runtime sources, Core-native resources and bundled profiles match the selected 1.0.5 baseline apart from the explicit Agent Comms integration and reliability boundaries above.

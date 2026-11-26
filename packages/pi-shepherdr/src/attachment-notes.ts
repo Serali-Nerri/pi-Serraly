@@ -67,7 +67,7 @@ export class AttachmentNotes {
 					error.message.startsWith("Account mismatch.")
 				)
 					throw new Error(
-						"Account mismatch. Context was not shared. Each agent keeps its own notes and history. Use messages to exchange the context you need.",
+						"Account mismatch. No context shared; each agent keeps its Notes and history. Exchange needed context by message.",
 						{ cause: error },
 					);
 				throw error;
@@ -90,7 +90,7 @@ export class AttachmentNotes {
 	checkTransport(value: unknown) {
 		if (Buffer.byteLength(JSON.stringify(value), "utf8") > 7 * 1024 * 1024)
 			throw new Error(
-				"Attached checkpoints exceed the transport limit; attachment or detach was not committed",
+				"Checkpoints exceed transport limit. No attach or detach committed",
 			);
 	}
 	canRead(request: SharedContextRequest) {
@@ -111,7 +111,7 @@ export class AttachmentNotes {
 	): Promise<SharedContextResult> {
 		if (request.namespace !== "notes")
 			throw new Error(
-				"Counterpart history requires its live attached owner; native history is unchanged",
+				"Counterpart history needs its live attached owner. Native history unchanged",
 			);
 		if (
 			!["read_file", "list_files_by_prefix", "search_contents"].includes(
@@ -119,7 +119,7 @@ export class AttachmentNotes {
 			)
 		)
 			throw new Error(
-				"Retained checkpoints are read-only; resume the attached owner to write notes",
+				"Read-only checkpoints. Resume the attached owner to write notes",
 			);
 		let snapshot = retained;
 		let source = "retained-checkpoints";
@@ -171,8 +171,8 @@ export class AttachmentNotes {
 			detached
 				? " Counterpart detached."
 				: unavailable
-					? " Live owner and saved updates unavailable; these checkpoints may be stale. Resume the counterpart for current notes."
-					: " Live owner unavailable; reading saved checkpoints."
+					? " Live owner and saved updates unavailable. May be stale; resume the counterpart for current notes."
+					: " Live owner unavailable."
 		}`;
 		const result = this.service().read(snapshot, request.params, {
 			read_only: true,
